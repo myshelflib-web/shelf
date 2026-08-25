@@ -22,7 +22,7 @@ A personal study library. Upload PDFs, organize collections and pages, highlight
                     └──────────────┘
 ```
 
-**Study AI:** chats live in Postgres. Page text is chunked, embedded (`EMBEDDING_MODEL`), and upserted into the vector DB (filtered by `userId`). Each question retrieves those chunks, the LLM is prompted for the user’s **study goal**, and answers include **citations** back to collection pages. If `VECTOR_DB_URL` is unset, retrieval falls back to keyword search over the library.
+**Study AI:** chats live in Postgres. Page text is chunked, embedded (`EMBEDDING_MODEL`), and upserted into the vector DB (filtered by `userId`). Each question retrieves those chunks, the LLM is prompted for the user’s **study goal**, and answers include **citations** back to collection pages. If `VECTOR_DB_URL` is unset, retrieval falls back to keyword search over the library in shelf.
 
 ## Features
 
