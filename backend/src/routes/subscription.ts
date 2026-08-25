@@ -2,6 +2,10 @@ import { Router, Request, Response } from "express";
 import crypto from "crypto";
 import prisma from "../utils/prisma.js";
 import { authMiddleware } from "../middleware/auth.js";
+import {
+  sendEmailInBackground,
+  subscriptionThankYouEmail,
+} from "../services/email/index.js";
 import { isPremiumUser } from "../utils/paywall.js";
 import { logger } from "../utils/logger.js";
 import { metrics } from "../utils/metrics.js";
@@ -155,7 +159,7 @@ router.post("/verify", authMiddleware, async (req: Request, res: Response) => {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + payment.planDays);
 
-  await prisma.$transaction([
+  const [, updatedUser] = await prisma.$transaction([
     prisma.payment.update({
       where: { id: payment.id },
       data: {
@@ -170,8 +174,19 @@ router.post("/verify", authMiddleware, async (req: Request, res: Response) => {
         plan: "PREMIUM",
         subscriptionExpiresAt: expiresAt,
       },
+      select: { email: true, name: true },
     }),
   ]);
+
+  sendEmailInBackground({
+    to: updatedUser.email,
+    ...subscriptionThankYouEmail(
+      updatedUser.name,
+      expiresAt,
+      payment.planDays,
+      payment.amount
+    ),
+  });
 
   res.json({
     success: true,

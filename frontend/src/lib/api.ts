@@ -317,10 +317,25 @@ export const api = {
         "/api/auth/login",
         { method: "POST", body: JSON.stringify({ email, password }) }
       ),
-    register: (email: string, password: string, name: string) =>
+    register: (email: string, password: string, name: string, otp: string) =>
       request<{ user: import("@/types").User; token: string }>(
         "/api/auth/register",
-        { method: "POST", body: JSON.stringify({ email, password, name }) }
+        { method: "POST", body: JSON.stringify({ email, password, name, otp }) }
+      ),
+    sendRegisterOtp: (email: string, name?: string) =>
+      request<{ ok: boolean; message: string }>("/api/auth/register/send-otp", {
+        method: "POST",
+        body: JSON.stringify({ email, name }),
+      }),
+    sendPasswordResetOtp: (email: string) =>
+      request<{ ok: boolean; message: string }>(
+        "/api/auth/forgot-password/send-otp",
+        { method: "POST", body: JSON.stringify({ email }) }
+      ),
+    resetPassword: (email: string, otp: string, newPassword: string) =>
+      request<{ ok: boolean; message: string }>(
+        "/api/auth/forgot-password/reset",
+        { method: "POST", body: JSON.stringify({ email, otp, newPassword }) }
       ),
     me: () => request<{ user: import("@/types").User }>("/api/auth/me"),
     updateMe: (data: {

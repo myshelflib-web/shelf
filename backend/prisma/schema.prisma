@@ -57,6 +57,23 @@ enum Role {
   ADMIN
 }
 
+enum EmailOtpPurpose {
+  SIGNUP
+  PASSWORD_RESET
+}
+
+model EmailOtp {
+  id        String          @id @default(uuid())
+  email     String
+  codeHash  String
+  purpose   EmailOtpPurpose
+  expiresAt DateTime
+  attempts  Int             @default(0)
+  createdAt DateTime        @default(now())
+
+  @@index([email, purpose])
+}
+
 enum StudyItemKind {
   TASK
   EVENT
