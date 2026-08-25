@@ -1,4 +1,5 @@
 import "dotenv/config";
+// Shelf API entrypoint
 import express from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.js";

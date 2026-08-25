@@ -1,4 +1,5 @@
 import "dotenv/config";
+// Shelf PDF processing worker entrypoint
 import express from "express";
 import {
   getInFlightCount,
