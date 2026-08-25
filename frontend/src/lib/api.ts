@@ -1,5 +1,6 @@
 import { clearAccountLocalState } from "@/lib/accountLocalState";
 
+/** Production (Vercel): set NEXT_PUBLIC_API_URL to the Render backend, e.g. https://your-api.onrender.com */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
 export class ApiError extends Error {
