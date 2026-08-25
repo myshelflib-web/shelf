@@ -35,6 +35,7 @@ model User {
   studyTasks       StudyTask[]
   chatThreads      ChatThread[]
   relevancyDocs    StudyRelevancyDoc[]
+  blogPosts        BlogPost[]
 }
 
 enum Plan {
@@ -72,6 +73,33 @@ model EmailOtp {
   createdAt DateTime        @default(now())
 
   @@index([email, purpose])
+}
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model BlogPost {
+  id             String         @id @default(uuid())
+  slug           String         @unique
+  title          String
+  description    String
+  excerpt        String
+  tags           String[]
+  readingMinutes Int            @default(5)
+  status         BlogPostStatus @default(DRAFT)
+  coverImageKey  String?
+  heroImageKey   String?
+  contentKey     String
+  publishedAt    DateTime?
+  authorId       String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([status, publishedAt])
 }
 
 enum StudyItemKind {

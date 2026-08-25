@@ -5,7 +5,7 @@ import Link from "next/link";
 import { StatsCards } from "@/components/admin/StatsCards";
 import { api } from "@/lib/api";
 import { AdminStats, AdminTopic } from "@/types";
-import { Upload, ArrowRight, FileText } from "lucide-react";
+import { Upload, ArrowRight, FileText, BookOpen } from "lucide-react";
 import clsx from "clsx";
 
 const statusStyles: Record<string, string> = {
@@ -37,7 +37,7 @@ export default function AdminDashboardPage() {
 
       {stats && <StatsCards stats={stats} />}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-8 mb-8">
         <Link
           href="/admin/upload"
           className="flex items-center gap-4 p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)] transition group"
@@ -69,6 +69,24 @@ export default function AdminDashboardPage() {
             </p>
             <p className="text-sm text-[var(--text-muted)]">
               View, reprocess, or delete articles
+            </p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--accent)]" />
+        </Link>
+
+        <Link
+          href="/admin/blog"
+          className="flex items-center gap-4 p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)] transition group"
+        >
+          <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center">
+            <BookOpen className="w-6 h-6 text-violet-500" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold group-hover:text-[var(--accent)] transition">
+              Blog
+            </p>
+            <p className="text-sm text-[var(--text-muted)]">
+              Feature guides stored in S3
             </p>
           </div>
           <ArrowRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--accent)]" />

@@ -1,4 +1,10 @@
 import { getAppUrl } from "./config.js";
+import {
+  blogLinksHtml,
+  blogLinksText,
+  PREMIUM_BLOG_LINKS,
+  WELCOME_BLOG_LINKS,
+} from "./blogLinks.js";
 import { getDisplayFirstName, getEmailGreetingParts } from "./greeting.js";
 import {
   bulletList,
@@ -86,6 +92,7 @@ ${detailCard([
   { label: "Study AI", value: "50k tokens / month" },
   { label: "Next step", value: "Add your first PDF or note" },
 ])}
+${blogLinksHtml(WELCOME_BLOG_LINKS, "Guides to get started")}
 <p style="margin: 0; color: #9b9ba0; font-size: 14px;">We're glad you're here — happy studying!</p>`,
     ctaLabel: "Go to my library",
     ctaHref: `${appUrl}/my-content`,
@@ -93,7 +100,7 @@ ${detailCard([
   return {
     subject,
     html,
-    text: `${greetingText(name)}\n\nWelcome to Shelf! ${appUrl}/my-content`,
+    text: `${greetingText(name)}\n\nWelcome to Shelf! ${appUrl}/my-content${blogLinksText(WELCOME_BLOG_LINKS)}`,
   };
 }
 
@@ -132,6 +139,7 @@ ${bulletList([
   "10,000 indexed library chunks for deeper search",
   "300 chat messages per Study AI thread",
 ])}
+${blogLinksHtml(PREMIUM_BLOG_LINKS, "Make the most of Premium")}
 <p style="margin: 0; color: #9b9ba0; font-size: 14px;">Thank you for supporting Shelf — it means a lot to us.</p>`,
     ctaLabel: "Start studying",
     ctaHref: `${appUrl}/my-content`,
@@ -139,6 +147,6 @@ ${bulletList([
   return {
     subject,
     html,
-    text: `${greetingText(name)}\n\nPremium active until ${expiry}. Thank you! ${appUrl}/my-content`,
+    text: `${greetingText(name)}\n\nPremium active until ${expiry}. Thank you! ${appUrl}/my-content${blogLinksText(PREMIUM_BLOG_LINKS)}`,
   };
 }

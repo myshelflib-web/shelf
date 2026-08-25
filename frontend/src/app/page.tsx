@@ -9,6 +9,7 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { LandingHeroMockup } from "@/components/landing/LandingHeroMockup";
 import { LandingShowcases } from "@/components/landing/LandingShowcases";
+import { BlogPreviewSection } from "@/components/blog/BlogPreviewSection";
 import { useAuth } from "@/hooks/useAuth";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
@@ -96,6 +97,8 @@ export default function HomePage() {
         </section>
 
         <LandingFeatureGrid title="Everything at a glance" />
+
+        <BlogPreviewSection />
       </main>
 
       <MarketingFooter />

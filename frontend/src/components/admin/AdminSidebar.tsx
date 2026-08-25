@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Upload,
   FileText,
+  BookOpen,
   ArrowLeft,
 } from "lucide-react";
 
@@ -14,6 +15,7 @@ const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/upload", label: "Upload PDFs", icon: Upload },
   { href: "/admin/topics", label: "Manage Articles", icon: FileText },
+  { href: "/admin/blog", label: "Blog", icon: BookOpen },
 ];
 
 export function AdminSidebar() {

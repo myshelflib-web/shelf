@@ -309,3 +309,32 @@ export interface ChatThread extends ChatThreadSummary {
   messages: ChatMessage[];
   memoryLimit?: number;
 }
+
+export interface AdminBlogSection {
+  heading?: string;
+  paragraphs: string[];
+  bullets?: string[];
+}
+
+export interface AdminBlogPostRow {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  excerpt: string;
+  tags: string[];
+  readingMinutes: number;
+  status: "DRAFT" | "PUBLISHED";
+  coverImageKey?: string | null;
+  heroImageKey?: string | null;
+  contentKey: string;
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminBlogPostDetail extends AdminBlogPostRow {
+  content: { sections: AdminBlogSection[] };
+  coverImageUrl?: string | null;
+  heroIllustrationUrl?: string | null;
+}

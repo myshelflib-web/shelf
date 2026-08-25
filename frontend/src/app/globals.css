@@ -1878,6 +1878,50 @@
   color: var(--text-muted);
 }
 
+/* Marketing blog articles */
+.blog-prose {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+
+.blog-prose h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.75rem;
+  color: var(--text-primary);
+}
+
+.blog-prose p {
+  margin: 0 0 1rem;
+  color: var(--text-secondary);
+}
+
+.blog-prose ul {
+  margin: 0 0 1.25rem;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.blog-prose li {
+  margin-bottom: 0.5rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.blog-prose li::marker {
+  color: var(--accent);
+}
+
+.blog-figure {
+  margin: 0 0 1.25rem;
+}
+
+.blog-figure-hero {
+  margin-bottom: 1.75rem;
+}
+
 .app-shell-wide {
   width: 100%;
   max-width: 92rem;

@@ -1,0 +1,40 @@
+---
+description: Add a blog post when shipping new user-visible product features
+alwaysApply: true
+---
+
+# Feature blog mandate
+
+When you ship a **new user-visible product feature** (not bug fixes, refactors, copy tweaks, or minor UI polish), add or update a blog article so marketing and SEO stay current.
+
+## When to add a blog post
+
+**Do add** when the change introduces something a student would discover in the product:
+
+- New tools, modes, or workflows (reader panels, AI capabilities, planner item types)
+- New page types, integrations, or subscription tiers
+- Meaningful expansions to existing features (e.g. split view, new scope for Study AI)
+
+**Do not add** for:
+
+- Bug fixes, performance work, internal refactors
+- Dependency bumps, CI, deploy, or agent-doc-only changes
+- Minor visual tweaks, spacing, or copy edits that do not change capability
+- Backend-only changes with no user-facing surface
+
+## How to add
+
+1. **Preferred:** Admin dashboard → **Blog** → **New article** (saves content + illustrations to S3).
+2. **Or** create `frontend/src/lib/blog/posts/<slug>.ts` for the static fallback catalog, register in `registry.ts`, then run `npm run blog:seed --prefix backend` to sync to S3 + Postgres.
+3. SEO fields required: `slug`, `title`, `description` (150–160 chars ideal), `excerpt`, `tags`, `readingMinutes`, `publishedAt`, and at least three `sections` with headings.
+4. Run `npm run check --prefix frontend` and `npm run check --prefix backend` when touching blog APIs.
+
+## Updating existing posts
+
+When a feature ** materially changes** behavior documented in an existing article, update that post's sections and set `updatedAt` (ISO date string) instead of creating a duplicate.
+
+## Reference
+
+- Index: `/blog` — `frontend/src/app/blog/page.tsx`
+- Post template: copy structure from `frontend/src/lib/blog/posts/personal-study-library.ts`
+- Landing preview: `BlogPreviewSection` on `/` shows the three newest posts

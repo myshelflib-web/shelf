@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { fetchAllBlogSlugs } from "@/lib/blog/fetchBlog";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
@@ -19,12 +20,20 @@ type SubjectList = {
 };
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const blogSlugs = await fetchAllBlogSlugs();
+
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "weekly", priority: 1 },
+    { url: `${SITE_URL}/blog`, changeFrequency: "weekly", priority: 0.85 },
     { url: `${SITE_URL}/learn`, changeFrequency: "daily", priority: 0.9 },
     { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE_URL}/contact`, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE_URL}/subscribe`, changeFrequency: "monthly", priority: 0.4 },
+    ...blogSlugs.map((slug) => ({
+      url: `${SITE_URL}/blog/${slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.75,
+    })),
   ];
 
   try {

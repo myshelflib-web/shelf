@@ -15,6 +15,8 @@ Express + TypeScript (`"type": "module"`), Prisma 6, PostgreSQL. Entry: `src/ind
 | `/api/highlights` | `routes/highlights.ts` | Curriculum article highlights |
 | `/api/progress` | `routes/progress.ts` | Curriculum progress |
 | `/api/subscription` | `routes/subscription.ts` | Plans / paywall |
+| `/api/blog` | `routes/blog.ts` | Public blog list, post, S3 media |
+| `/api/admin/blog` | `routes/adminBlog.ts` | Admin blog CRUD + cover upload |
 | `/api/internal` | `routes/internal.ts` | Processor callbacks (shared secret) |
 
 Health: `GET /health`, `GET /metrics`. JSON body limit 10mb. CORS from `CORS_ORIGIN` (comma-separated).

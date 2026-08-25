@@ -514,6 +514,55 @@ export const api = {
       request<{ success: boolean }>(`/api/admin/topics/${id}`, {
         method: "DELETE",
       }),
+    listBlogPosts: () =>
+      request<{ posts: import("@/types").AdminBlogPostRow[] }>(
+        "/api/admin/blog"
+      ),
+    getBlogPost: (id: string) =>
+      request<{ post: import("@/types").AdminBlogPostDetail }>(
+        `/api/admin/blog/${id}`
+      ),
+    createBlogPost: (data: {
+      title: string;
+      slug?: string;
+      description: string;
+      excerpt: string;
+      tags?: string[];
+      readingMinutes?: number;
+      status?: "DRAFT" | "PUBLISHED";
+      sections: import("@/types").AdminBlogSection[];
+    }) =>
+      request<{ post: import("@/types").AdminBlogPostRow }>("/api/admin/blog", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    updateBlogPost: (
+      id: string,
+      data: {
+        title?: string;
+        slug?: string;
+        description?: string;
+        excerpt?: string;
+        tags?: string[];
+        readingMinutes?: number;
+        status?: "DRAFT" | "PUBLISHED";
+        sections?: import("@/types").AdminBlogSection[];
+      }
+    ) =>
+      request<{ post: import("@/types").AdminBlogPostRow }>(
+        `/api/admin/blog/${id}`,
+        { method: "PATCH", body: JSON.stringify(data) }
+      ),
+    uploadBlogCover: (id: string, file: File) => {
+      const formData = new FormData();
+      formData.append("cover", file);
+      return request<{ coverImageUrl: string }>(
+        `/api/admin/blog/${id}/cover`,
+        { method: "POST", body: formData }
+      );
+    },
+    deleteBlogPost: (id: string) =>
+      request<{ ok: boolean }>(`/api/admin/blog/${id}`, { method: "DELETE" }),
   },
 
   subscription: {

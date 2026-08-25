@@ -15,6 +15,7 @@ API client: `src/lib/api.ts` (`NEXT_PUBLIC_API_URL`, default `http://localhost:4
 | `/profile` | Name, picture, password, delete account. |
 | `/study-ai` | Full Study AI (multi-turn chat, RAG, images, save/download). Also `/study-ai/[id]`. Per-thread **library scope** (collection/topic/page) and **syllabus / relevancy docs** (paste or upload; free 10 / paid 50). Reader panel is multi-turn page Ask with the same formatting, and its chats are **saved** as page-scoped threads that appear here. |
 | `/learn/...` | Curriculum articles (admin content), not personal collections. |
+| `/blog`, `/blog/[slug]` | Public SEO feature guides (marketing). New user-visible features need a post — see `.cursor/rules/feature-blog.mdc`. |
 
 ## Header (`Header.tsx`)
 
