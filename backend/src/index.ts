@@ -20,7 +20,7 @@ import { logger } from "./utils/logger.js";
 import { metrics } from "./utils/metrics.js";
 import { errorFields } from "./utils/logger.js";
 import { startVectorIndexWorker } from "./services/vectorIndexWorker.js";
-import { isVectorConfigured } from "./services/vectorStore.js";
+import { isVectorConfigured, vectorConfigSummary } from "./services/vectorStore.js";
 import { logEmbeddingConfig } from "./services/embeddings.js";
 import { llmConfigSummary } from "./services/llmConfig.js";
 import { ensureBucketCors } from "./services/s3.js";
@@ -153,6 +153,7 @@ app.listen(PORT, () => {
   });
   logger.info("llm.config", llmConfigSummary());
   logEmbeddingConfig();
+  logger.info("vector.config", vectorConfigSummary());
   void ensureBucketCors()
     .then(() => logger.info("s3.cors.ok"))
     .catch((err) =>

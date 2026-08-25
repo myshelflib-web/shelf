@@ -27,9 +27,9 @@ When `OTEL_EXPORTER_OTLP_ENDPOINT` (+ `OTEL_EXPORTER_OTLP_HEADERS`) is set, `src
 
 - Threads: `ChatThread` / `ChatMessage` in Postgres.
 - Reader Ask AI (`POST /api/study/ask`, `/ask/stream`) answers come from the page-ask pipeline but are **saved as a thread** when the body sets `persist: true`: `services/chatThreads.ts` reuses (or creates) one `PAGE`-scoped thread per page, appends the question + answer, and the response / `done` event returns `threadId`. Saving never fails the answer. `GET /chats?pageId=` returns that thread so the reader panel can restore it.
-- Retrieval: `services/rag.ts` — Qdrant (`VECTOR_DB_URL`, `VECTOR_DB_API_KEY`, `VECTOR_DB_COLLECTION`) plus OpenAI-compatible embeddings (`EMBEDDING_MODEL`). Keyword fallback if vector DB is unset.
+- Retrieval: `services/rag.ts` — vector store (`VECTOR_DB_PROVIDER`: `qdrant` + `VECTOR_DB_URL`, or `pgvector` + Neon `DATABASE_URL`) plus OpenAI-compatible embeddings (`EMBEDDING_MODEL`). Keyword fallback if vector DB is unset.
 - Indexing: `services/libraryIndex.ts` — `scheduleIndexPage` after page create/update and after the processing service callback; `purgePageVectors` on page delete.
-- Background worker: `services/vectorIndexWorker.ts` polls for stale/unindexed pages when `VECTOR_DB_URL` is set (`VECTOR_INDEX_WORKER=false` to disable). One-shot backfill: `npm run vector:reindex -- 50`.
+- Background worker: `services/vectorIndexWorker.ts` polls for stale/unindexed pages when vectors are configured (`VECTOR_INDEX_WORKER=false` to disable). One-shot backfill: `npm run vector:reindex -- 50`.
 - Per-user vector quotas: `utils/quotas.ts` (`FREE_VECTOR_CHUNKS`, `PREMIUM_VECTOR_CHUNKS`, `MAX_CHUNKS_PER_PAGE`). Tracked in `User.vectorChunksUsed` + `PageVectorIndex` (LRU eviction of oldest indexed pages when over quota).
 - Prompts: `services/goalPrompt.ts` using `User.studyGoal`; answers must be structured Markdown (headings, lists, tables when comparing).
 - Default chat model: **`gemini-flash-latest`** (Google rolling alias). On 404 / retired model, auto-retries fallbacks (`LLM_MODEL_FALLBACKS`) and caches the working model in-process.
