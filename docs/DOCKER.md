@@ -11,12 +11,12 @@ GitHub push to main
 
 ## Images (Render only)
 
-Docker Hub **Personal** allows **one private repository**. Both images share `upsc-backend`; the service is the tag.
+Docker Hub **Personal** allows **one private repository**. Both images share `shelf`; the service is the tag.
 
 | Service | Image |
 |---------|--------|
-| Backend | `vishnubhardwaj8826/upsc-backend:main` |
-| Processing service | `vishnubhardwaj8826/upsc-backend:processor-main` |
+| Backend | `vishnubhardwaj8826/shelf:main` |
+| Processing service | `vishnubhardwaj8826/shelf:processor-main` |
 
 | Tag | Purpose |
 |-----|---------|
@@ -34,7 +34,7 @@ In Vercel project → **Settings → Environment Variables**:
 
 | Name | Value |
 |------|--------|
-| `NEXT_PUBLIC_API_URL` | your Render backend URL, e.g. `https://upsc-backend.onrender.com` |
+| `NEXT_PUBLIC_API_URL` | your Render backend URL, e.g. `https://shelf.onrender.com` |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | optional |
 
 Vercel injects these at **build time** on every **frontend** deploy. After you change them, trigger a Redeploy.
@@ -52,8 +52,8 @@ Also set backend `CORS_ORIGIN` to your Vercel URL (e.g. `https://your-app.vercel
 
 | Service | Image |
 |---------|--------|
-| Backend | `docker.io/vishnubhardwaj8826/upsc-backend:main` |
-| Processing service | `docker.io/vishnubhardwaj8826/upsc-backend:processor-main` |
+| Backend | `docker.io/vishnubhardwaj8826/shelf:main` |
+| Processing service | `docker.io/vishnubhardwaj8826/shelf:processor-main` |
 
 3. Private registry: add Docker Hub username + access token in Render credentials  
 4. Env vars on each service (see below)  
@@ -75,11 +75,11 @@ Also set backend `CORS_ORIGIN` to your Vercel URL (e.g. `https://your-app.vercel
 | `RENDER_DEPLOY_HOOK_BACKEND` | optional |
 | `RENDER_DEPLOY_HOOK_PROCESSOR` | optional |
 
-Keep **one** private Hub repo: `upsc-backend` (Personal-plan limit). Do not create a second repo for the processing service.
+Keep **one** private Hub repo: `shelf` (Personal-plan limit). Do not create a second repo for the processing service.
 
 CI enforces this automatically:
 
-1. Before push → create/keep `upsc-backend` private
+1. Before push → create/keep `shelf` private
 2. After push → verify `is_private=true` or **fail the job**
 3. Prune tags → keep **at most 10** (`main`, `latest`, `processor-main`, `processor-latest` always kept; oldest SHA tags deleted)
 
@@ -111,7 +111,7 @@ PORT=4000
 ### Processing service
 
 ```
-BACKEND_URL=https://upsc-backend.onrender.com
+BACKEND_URL=https://shelf.onrender.com
 INTERNAL_SECRET=   # same as backend
 S3_ENDPOINT=
 S3_ACCESS_KEY=

@@ -177,7 +177,7 @@ jobs:
         run: |
           SHA_SHORT="${GITHUB_SHA::7}"
           echo "sha=$SHA_SHORT" >> "$GITHUB_OUTPUT"
-          echo "image=${{ secrets.DOCKERHUB_USERNAME }}/upsc-backend" >> "$GITHUB_OUTPUT"
+          echo "image=${{ secrets.DOCKERHUB_USERNAME }}/shelf" >> "$GITHUB_OUTPUT"
       - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
@@ -190,7 +190,7 @@ jobs:
           ENSURE_MODE: ensure
         run: |
           chmod +x scripts/ensure-private-dockerhub-repos.sh
-          ./scripts/ensure-private-dockerhub-repos.sh upsc-backend
+          ./scripts/ensure-private-dockerhub-repos.sh shelf
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Build & push backend
@@ -209,7 +209,7 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           ENSURE_MODE: verify
-        run: ./scripts/ensure-private-dockerhub-repos.sh upsc-backend
+        run: ./scripts/ensure-private-dockerhub-repos.sh shelf
       - name: Prune old tags (keep max 10)
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -218,7 +218,7 @@ jobs:
           PROTECTED_DOCKER_TAGS: "main,latest,processor-main,processor-latest"
         run: |
           chmod +x scripts/prune-dockerhub-tags.sh
-          ./scripts/prune-dockerhub-tags.sh upsc-backend
+          ./scripts/prune-dockerhub-tags.sh shelf
       - name: Trigger Render redeploy
         env:
           RENDER_DEPLOY_HOOK_BACKEND: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}
@@ -262,7 +262,7 @@ jobs:
         run: |
           SHA_SHORT="${GITHUB_SHA::7}"
           echo "sha=$SHA_SHORT" >> "$GITHUB_OUTPUT"
-          echo "image=${{ secrets.DOCKERHUB_USERNAME }}/upsc-backend" >> "$GITHUB_OUTPUT"
+          echo "image=${{ secrets.DOCKERHUB_USERNAME }}/shelf" >> "$GITHUB_OUTPUT"
       - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
@@ -275,7 +275,7 @@ jobs:
           ENSURE_MODE: ensure
         run: |
           chmod +x scripts/ensure-private-dockerhub-repos.sh
-          ./scripts/ensure-private-dockerhub-repos.sh upsc-backend
+          ./scripts/ensure-private-dockerhub-repos.sh shelf
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
       - name: Build & push processing service
@@ -294,7 +294,7 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           ENSURE_MODE: verify
-        run: ./scripts/ensure-private-dockerhub-repos.sh upsc-backend
+        run: ./scripts/ensure-private-dockerhub-repos.sh shelf
       - name: Prune old tags (keep max 10)
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -303,7 +303,7 @@ jobs:
           PROTECTED_DOCKER_TAGS: "main,latest,processor-main,processor-latest"
         run: |
           chmod +x scripts/prune-dockerhub-tags.sh
-          ./scripts/prune-dockerhub-tags.sh upsc-backend
+          ./scripts/prune-dockerhub-tags.sh shelf
       - name: Trigger Render redeploy
         env:
           RENDER_DEPLOY_HOOK_PROCESSOR: ${{ secrets.RENDER_DEPLOY_HOOK_PROCESSOR }}
