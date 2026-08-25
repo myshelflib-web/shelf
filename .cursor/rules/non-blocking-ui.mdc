@@ -1,0 +1,42 @@
+---
+description: API and data fetches must not block the UI unless a wait is strictly required
+alwaysApply: true
+---
+
+# Non-blocking UI (API calls)
+
+**Mandate:** network work must not freeze or blank the UI. Paint the shell immediately; run fetches in the background. Block only when the user cannot proceed without that result.
+
+## Default (non-blocking)
+
+- Hydrate from localStorage / IndexedDB / in-memory cache first; revalidate in the background.
+- Show chrome + skeletons/stale data while requests run. Never `if (loading) return` a full-page spinner for auth or secondary data when a cached user/session exists.
+- Prefer `Promise.all` / `allSettled` for independent calls. Do not waterfall A→B→C when A and B are independent.
+- Mutations (star, complete, rename, planner toggle, delete-from-list): optimistic update, then API, rollback on failure.
+- Navigation (Ask AI, open page): route immediately; create/fetch on the destination if needed.
+- Popovers/search: prefetch or reuse cache; do not refetch-on-open as the only source of the badge/list.
+- Overlays that steal pointer events are forbidden on refetch when the view already has data.
+
+## When blocking is allowed
+
+- Credential submit (login/register) until success/error.
+- First paint of a document that has no cached bytes/metadata (reader content area only — chrome can still show).
+- Waiting for a user-initiated AI stream/answer the user asked to see.
+- Destructive confirm that must finish before leaving a screen, if rollback is impossible.
+
+## Examples
+
+```tsx
+// ❌ BAD — whole page waits on /me
+if (authLoading || !user) return <FullPageSpinner />;
+
+// ✅ GOOD — stored user paints now; /me refreshes later
+const stored = getStoredUser();
+if (stored) { setUser(stored); void api.auth.me().then(...) }
+
+// ❌ BAD — overlay on every listTasks()
+{tasksLoading && <div className="absolute inset-0">Loading</div>}
+
+// ✅ GOOD
+{tasksLoading && tasks.length === 0 && <PlannerSkeleton />}
+```

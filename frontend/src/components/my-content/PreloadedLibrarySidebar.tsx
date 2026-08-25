@@ -1,0 +1,368 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  FoldVertical,
+  FolderOpen,
+  Lock,
+  RefreshCw,
+  Search,
+  Star,
+} from "lucide-react";
+import clsx from "clsx";
+import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/api";
+import { isPremiumUser } from "@/lib/premium";
+import { learnHref, learnScope } from "@/lib/learnContent";
+import { STUDY_GOAL_LABELS } from "@/lib/studyGoal";
+import { GuestStudyGoalSelect } from "@/components/learn/GuestStudyGoalSelect";
+import { ArticleSummary, StudyGoal, Subject, SubjectProgress } from "@/types";
+import { ExplorerSidebarSkeleton } from "@/components/dashboard/DashboardSkeletons";
+import { LibraryModeTabs } from "@/components/my-content/LibraryModeTabs";
+import {
+  PersonalPageReaderScope,
+  scopeFromHref,
+} from "@/components/my-content/reader/types";
+import { LibraryMode } from "@/lib/libraryMode";
+
+interface PreloadedLibrarySidebarProps {
+  mode: LibraryMode;
+  onModeChange: (mode: LibraryMode) => void;
+  showPreloaded: boolean;
+  studyGoal: StudyGoal;
+  currentHref?: string;
+  workspaceMode?: boolean;
+  progressBySubject?: SubjectProgress[];
+  showGoalPicker?: boolean;
+  onStudyGoalChange?: (goal: StudyGoal) => void;
+  onOpenPage?: (payload: {
+    href: string;
+    title: string;
+    pageId: string;
+    scope: PersonalPageReaderScope;
+  }) => void;
+  className?: string;
+}
+
+export function PreloadedLibrarySidebar({
+  mode,
+  onModeChange,
+  showPreloaded,
+  studyGoal,
+  currentHref,
+  workspaceMode = false,
+  progressBySubject = [],
+  showGoalPicker = false,
+  onStudyGoalChange,
+  onOpenPage,
+  className,
+}: PreloadedLibrarySidebarProps) {
+  const router = useRouter();
+  const { user } = useAuth();
+  const isPremium = isPremiumUser(user);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
+  const [expandedSubjects, setExpandedSubjects] = useState<
+    Record<string, boolean>
+  >({});
+  const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>(
+    {}
+  );
+
+  const activeScope = currentHref ? scopeFromHref(currentHref) : null;
+  const activeSubject =
+    activeScope?.kind === "learn" ? activeScope.subjectSlug : undefined;
+  const activeTopic =
+    activeScope?.kind === "learn" ? activeScope.topicSlug : undefined;
+  const activeArticle =
+    activeScope?.kind === "learn" ? activeScope.articleSlug : undefined;
+
+  const getProgress = (slug: string) =>
+    progressBySubject.find((p) => p.slug === slug);
+
+  const load = useCallback(() => {
+    api.subjects
+      .list(studyGoal !== "GENERAL" ? { studyGoal } : undefined)
+      .then((res) => setSubjects(res.subjects))
+      .catch(() => setSubjects([]))
+      .finally(() => setLoading(false));
+  }, [studyGoal]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    if (!activeSubject) return;
+    setExpandedSubjects((prev) =>
+      prev[activeSubject] ? prev : { ...prev, [activeSubject]: true }
+    );
+    if (activeTopic) {
+      const key = `${activeSubject}:${activeTopic}`;
+      setExpandedTopics((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
+    }
+  }, [activeSubject, activeTopic]);
+
+  const filtered = subjects.filter(
+    (s) =>
+      s.name.toLowerCase().includes(query.toLowerCase()) ||
+      s.topics.some(
+        (t) =>
+          t.title.toLowerCase().includes(query.toLowerCase()) ||
+          (t.articles ?? []).some((a) =>
+            a.title.toLowerCase().includes(query.toLowerCase())
+          )
+      )
+  );
+
+  const toggleSubject = (slug: string) => {
+    setExpandedSubjects((prev) => ({ ...prev, [slug]: !prev[slug] }));
+  };
+
+  const toggleTopic = (subjectSlug: string, topicSlug: string) => {
+    const key = `${subjectSlug}:${topicSlug}`;
+    setExpandedTopics((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const collapseAll = () => {
+    setExpandedSubjects({});
+    setExpandedTopics({});
+  };
+
+  const openArticle = (
+    subjectSlug: string,
+    topicSlug: string,
+    article: ArticleSummary
+  ) => {
+    const href = learnHref(subjectSlug, topicSlug, article.slug);
+    const scope = learnScope(subjectSlug, topicSlug, article.slug);
+    if (workspaceMode && onOpenPage) {
+      onOpenPage({
+        href,
+        title: article.title,
+        pageId: article.id,
+        scope,
+      });
+      return;
+    }
+    router.push(href);
+  };
+
+  const renderArticleRow = (
+    subjectSlug: string,
+    topicSlug: string,
+    article: ArticleSummary,
+    isActive: boolean
+  ) => (
+    <div
+      key={article.id}
+      role="button"
+      tabIndex={0}
+      onClick={() => openArticle(subjectSlug, topicSlug, article)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openArticle(subjectSlug, topicSlug, article);
+        }
+      }}
+      className={clsx(
+        "library-row group flex items-center gap-1 rounded-md text-[13px] min-w-0 px-1.5 py-1 cursor-pointer",
+        isActive
+          ? "bg-[var(--accent-light)] text-[var(--accent)]"
+          : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
+      )}
+    >
+      <FileText className="w-3.5 h-3.5 shrink-0 opacity-60" />
+      <span className="flex-1 truncate">{article.title}</span>
+      {article.isPremium && !isPremium && (
+        <Lock className="w-3 h-3 shrink-0 text-amber-500" />
+      )}
+    </div>
+  );
+
+  return (
+    <aside
+      className={clsx(
+        "w-72 border-r border-[var(--border)] bg-[var(--bg-sidebar)] flex flex-col h-full overflow-hidden",
+        className
+      )}
+    >
+      <div className="p-2 border-b border-[var(--border)] space-y-2">
+        <LibraryModeTabs
+          mode={mode}
+          onChange={onModeChange}
+          showPreloaded={showPreloaded}
+        />
+        <div className="flex items-center gap-1 min-w-0 px-1">
+          <FolderOpen className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+          <h2 className="font-semibold text-sm truncate flex-1 min-w-0">
+            Explorer
+          </h2>
+          <div className="flex items-center shrink-0">
+            <button
+              type="button"
+              title="Refresh preloaded list"
+              aria-label="Refresh"
+              onClick={load}
+              className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
+            >
+              <RefreshCw className={clsx("w-4 h-4", loading && "animate-spin")} />
+            </button>
+            <button
+              type="button"
+              title="Collapse all subjects and topics"
+              aria-label="Collapse all"
+              onClick={collapseAll}
+              className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
+            >
+              <FoldVertical className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        {showGoalPicker && onStudyGoalChange ? (
+          <GuestStudyGoalSelect
+            value={studyGoal}
+            onChange={onStudyGoalChange}
+            compact
+          />
+        ) : studyGoal !== "GENERAL" ? (
+          <p className="text-[11px] text-[var(--text-muted)] px-1">
+            {STUDY_GOAL_LABELS[studyGoal]} curriculum
+          </p>
+        ) : null}
+        <div className="relative px-0.5">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search preloaded…"
+            className="w-full pl-8 pr-3 py-1.5 rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+          />
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto px-1.5 py-2">
+        {loading && subjects.length === 0 ? (
+          <ExplorerSidebarSkeleton />
+        ) : filtered.length === 0 ? (
+          <p className="px-3 py-6 text-sm text-center text-[var(--text-muted)]">
+            No preloaded material for this goal yet.
+          </p>
+        ) : (
+          <div className="space-y-0.5">
+            <div className="flex items-center justify-between gap-1 px-2 py-1">
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium">
+                Subjects
+              </p>
+              <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+                {filtered.length}
+              </span>
+            </div>
+            {filtered.map((subject) => {
+              const open = expandedSubjects[subject.slug] ?? false;
+              const prog = getProgress(subject.slug);
+              return (
+                <div key={subject.id} className="mb-0.5">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => toggleSubject(subject.slug)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleSubject(subject.slug);
+                      }
+                    }}
+                    className="group flex items-center gap-0.5 px-1.5 py-1 rounded-md cursor-pointer hover:bg-[var(--bg-elevated)]"
+                  >
+                    <span className="p-0.5 text-[var(--text-muted)] shrink-0">
+                      {open ? (
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      )}
+                    </span>
+                    <span className="shrink-0 text-sm">{subject.icon}</span>
+                    <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">
+                      {subject.name}
+                    </span>
+                    {prog && (
+                      <span className="text-[10px] text-[var(--text-muted)] shrink-0 tabular-nums">
+                        {prog.completed}/{prog.total}
+                      </span>
+                    )}
+                  </div>
+
+                  {open && (
+                    <div className="ml-3 pl-2 border-l border-[var(--border)] space-y-0.5 mt-0.5">
+                      {subject.topics.map((topic) => {
+                        const tKey = `${subject.slug}:${topic.slug}`;
+                        const tOpen = expandedTopics[tKey] ?? false;
+                        const articles = topic.articles ?? [];
+                        return (
+                          <div key={topic.id}>
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              onClick={() =>
+                                toggleTopic(subject.slug, topic.slug)
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  toggleTopic(subject.slug, topic.slug);
+                                }
+                              }}
+                              className="group flex items-center gap-0.5 px-1.5 py-1 rounded-md cursor-pointer hover:bg-[var(--bg-elevated)]"
+                            >
+                              <span className="p-0.5 text-[var(--text-muted)] shrink-0">
+                                {tOpen ? (
+                                  <ChevronDown className="w-3 h-3" />
+                                ) : (
+                                  <ChevronRight className="w-3 h-3" />
+                                )}
+                              </span>
+                              <Star className="w-3 h-3 shrink-0 text-[var(--text-muted)] opacity-50" />
+                              <span className="flex-1 min-w-0 truncate text-[13px] text-[var(--text-secondary)] text-left">
+                                {topic.title}
+                              </span>
+                              <span className="text-[10px] text-[var(--text-muted)] shrink-0">
+                                {articles.length}
+                              </span>
+                            </div>
+
+                            {tOpen && articles.length > 0 && (
+                              <div className="ml-3 pl-2 border-l border-[var(--border)] space-y-0.5 mt-0.5">
+                                {articles.map((article) => {
+                                  const isActive =
+                                    activeSubject === subject.slug &&
+                                    activeTopic === topic.slug &&
+                                    activeArticle === article.slug;
+                                  return renderArticleRow(
+                                    subject.slug,
+                                    topic.slug,
+                                    article,
+                                    isActive
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </nav>
+    </aside>
+  );
+}

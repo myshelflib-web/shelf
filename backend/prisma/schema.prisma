@@ -1,0 +1,391 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String    @unique
+  passwordHash          String?
+  googleId              String?   @unique
+  name                  String
+  avatarUrl             String?
+  role                  Role      @default(STUDENT)
+  plan                  Plan      @default(FREE)
+  subscriptionExpiresAt DateTime?
+  studyGoal             StudyGoal @default(GENERAL)
+  storageUsedBytes      BigInt    @default(0)
+  llmTokensUsed         Int       @default(0)
+  llmTokensResetAt      DateTime?
+  vectorChunksUsed      Int       @default(0)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  highlights        Highlight[]
+  pageVectorIndexes PageVectorIndex[]
+  progress      UserProgress[]
+  starredTopics StarredArticle[]
+  payments      Payment[]
+  userSubjects  UserSubject[]
+  userTopics    UserTopic[]
+  studyTasks       StudyTask[]
+  chatThreads      ChatThread[]
+  relevancyDocs    StudyRelevancyDoc[]
+}
+
+enum Plan {
+  FREE
+  PREMIUM
+}
+
+enum StudyGoal {
+  GENERAL
+  UPSC
+  STATE_PCS
+  JUDICIARY
+  CA
+  NEET_PG
+  GATE
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum StudyItemKind {
+  TASK
+  EVENT
+}
+
+model Subject {
+  id          String    @id @default(uuid())
+  name        String
+  slug        String    @unique
+  description String?
+  icon        String?
+  order       Int       @default(0)
+  studyGoal   StudyGoal @default(UPSC)
+  createdAt   DateTime  @default(now())
+
+  topics Topic[]
+
+  @@index([studyGoal])
+}
+
+model Topic {
+  id          String   @id @default(uuid())
+  subjectId   String
+  title       String
+  slug        String
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  subject  Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  articles Article[]
+
+  @@unique([subjectId, slug])
+}
+
+model Article {
+  id             String        @id @default(uuid())
+  topicId        String
+  title          String
+  slug           String
+  contentUrl     String?
+  order          Int           @default(0)
+  status         ContentStatus @default(DRAFT)
+  isPremium      Boolean       @default(false)
+  previewPercent Int           @default(30)
+  pdfKey         String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  topic      Topic            @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  highlights Highlight[]
+  progress   UserProgress[]
+  starred    StarredArticle[]
+  studyTasks StudyTask[]
+
+  @@unique([topicId, slug])
+}
+
+enum ContentStatus {
+  DRAFT
+  PROCESSING
+  PUBLISHED
+  FAILED
+}
+
+enum PdfViewMode {
+  PARSED
+  ORIGINAL
+}
+
+enum UserContentType {
+  PDF
+  HTML
+  MARKDOWN
+  TEXT
+  DOCX
+  LINK
+}
+
+enum HighlightKind {
+  TEXT
+  REGION
+}
+
+model Highlight {
+  id          String   @id @default(uuid())
+  userId      String
+  articleId   String
+  text        String   @db.Text
+  startOffset Int
+  endOffset   Int
+  color       String   @default("yellow")
+  note        String?
+  createdAt   DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([userId, articleId])
+}
+
+model UserProgress {
+  id          String    @id @default(uuid())
+  userId      String
+  articleId   String
+  completed   Boolean   @default(false)
+  readPercent Int       @default(0)
+  completedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+}
+
+model StarredArticle {
+  id        String   @id @default(uuid())
+  userId    String
+  articleId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+}
+
+model StudyTask {
+  id          String        @id @default(uuid())
+  userId      String
+  title       String
+  notes       String?       @db.Text
+  kind        StudyItemKind @default(TASK)
+  dueAt       DateTime?
+  endsAt      DateTime?
+  completed   Boolean       @default(false)
+  articleId   String?
+  href        String?
+  recurrence  String        @default("NONE")
+  recurUntil  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+
+  @@index([userId, dueAt])
+}
+
+model Payment {
+  id                String        @id @default(uuid())
+  userId            String
+  provider          String        @default("razorpay")
+  providerOrderId   String        @unique
+  providerPaymentId String?
+  amount            Int
+  currency          String        @default("INR")
+  status            PaymentStatus @default(PENDING)
+  planDays          Int           @default(365)
+  createdAt         DateTime      @default(now())
+  completedAt       DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model UserSubject {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  slug        String
+  description String?
+  icon        String   @default("📁")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicGroups UserTopicGroup[]
+  topics      UserTopic[]
+
+  @@unique([userId, slug])
+  @@index([userId])
+}
+
+model UserTopicGroup {
+  id            String   @id @default(uuid())
+  userSubjectId String
+  title         String
+  slug          String
+  order         Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  userSubject UserSubject @relation(fields: [userSubjectId], references: [id], onDelete: Cascade)
+  pages       UserTopic[]
+
+  @@unique([userSubjectId, slug])
+  @@index([userSubjectId])
+}
+
+model UserTopic {
+  id               String           @id @default(uuid())
+  userId           String
+  userSubjectId    String?
+  userTopicGroupId String?
+  title            String
+  slug             String
+  contentUrl       String?
+  sourceUrl        String?
+  pdfKey           String?
+  pdfViewMode      PdfViewMode      @default(ORIGINAL)
+  contentType      UserContentType  @default(HTML)
+  fileSizeBytes    Int              @default(0)
+  status           ContentStatus    @default(DRAFT)
+  order            Int              @default(0)
+  completed        Boolean          @default(false)
+  readPercent      Int              @default(0)
+  starred          Boolean          @default(false)
+  completedAt      DateTime?
+  /** Last PDF page (1-based) or HTML scroll — synced across devices. */
+  viewPdfPage      Int?
+  viewPageOffset   Float?
+  viewScrollTop    Int?
+  viewScale        Float?
+  viewedAt         DateTime?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userSubject    UserSubject?            @relation(fields: [userSubjectId], references: [id], onDelete: Cascade)
+  userTopicGroup UserTopicGroup?         @relation(fields: [userTopicGroupId], references: [id], onDelete: Cascade)
+  highlights     UserContentHighlight[]
+  vectorIndex    PageVectorIndex?
+
+  // Slug uniqueness: partial indexes in migration (root / notebook / topic).
+  @@index([userId])
+  @@index([userSubjectId])
+  @@index([userTopicGroupId])
+  @@index([userId, viewedAt])
+}
+
+model UserContentHighlight {
+  id          String        @id @default(uuid())
+  userId      String
+  userTopicId String
+  text        String        @db.Text
+  startOffset Int           @default(0)
+  endOffset   Int           @default(0)
+  color       String        @default("yellow")
+  note        String?
+  kind        HighlightKind @default(TEXT)
+  pageNumber  Int?
+  position    Json?
+  createdAt   DateTime      @default(now())
+
+  userTopic UserTopic @relation(fields: [userTopicId], references: [id], onDelete: Cascade)
+
+  @@index([userId, userTopicId])
+}
+
+model PageVectorIndex {
+  pageId      String   @id
+  userId      String
+  chunkCount  Int
+  contentHash String
+  indexedAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  page UserTopic @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([userId, indexedAt])
+}
+
+model StudyRelevancyDoc {
+  id               String   @id @default(uuid())
+  userId           String
+  title            String
+  body             String   @db.Text
+  source           String
+  originalFilename String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  threads ChatThread[]
+
+  @@index([userId, updatedAt])
+}
+
+model ChatThread {
+  id                 String   @id @default(uuid())
+  userId             String
+  title              String   @default("New chat")
+  contextKind        String   @default("LIBRARY")
+  contextNotebookId  String?
+  contextTopicId     String?
+  contextPageId      String?
+  relevancyDocId     String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relevancyDoc StudyRelevancyDoc?  @relation(fields: [relevancyDocId], references: [id], onDelete: SetNull)
+  messages     ChatMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([relevancyDocId])
+}
+
+model ChatMessage {
+  id         String   @id @default(uuid())
+  threadId   String
+  role       String
+  content    String   @db.Text
+  citations  Json?
+  createdAt  DateTime @default(now())
+
+  thread ChatThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+}

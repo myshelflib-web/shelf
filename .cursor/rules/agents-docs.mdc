@@ -1,0 +1,17 @@
+---
+description: Point agents at per-package architecture docs
+alwaysApply: true
+---
+
+# Shelf agent docs
+
+Before large changes, read the matching `AGENTS.md`:
+
+- Repo: `AGENTS.md`
+- UI: `frontend/AGENTS.md`
+- API: `backend/AGENTS.md`
+- Processing service: `processing-service/AGENTS.md`
+
+Follow those architecture and design notes (dashboard no-scroll, library collections/topics with optional root- and collection-level pages, reader workspace with tabs/split/collapsible panels, task vs event calendar, no default General topic, lint with zero warnings, **non-blocking UI** — API calls must not freeze the interface unless a wait is strictly required).
+
+**Preserve existing behavior** on every change unless the task explicitly changes it — see `.cursor/rules/preserve-existing-behavior.mdc` and the matching non-negotiable in `AGENTS.md`.

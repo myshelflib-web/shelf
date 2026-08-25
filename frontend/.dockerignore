@@ -1,0 +1,10 @@
+node_modules
+.next
+coverage
+.env
+.env.*
+!.env.example
+*.log
+.git
+src/**/*.test.ts
+vitest.config.ts

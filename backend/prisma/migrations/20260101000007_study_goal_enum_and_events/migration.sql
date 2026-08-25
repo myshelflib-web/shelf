@@ -1,0 +1,33 @@
+-- Study goal enum, calendar events, storage + LLM quotas (idempotent)
+
+DO $$ BEGIN
+  CREATE TYPE "StudyGoal" AS ENUM (
+    'GENERIC_STUDIES',
+    'UPSC',
+    'JEE',
+    'NEET',
+    'BOARD_EXAMS',
+    'COLLEGE',
+    'LANGUAGE',
+    'PROFESSIONAL'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE "User" DROP COLUMN IF EXISTS "studyGoal";
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "studyGoal" "StudyGoal" NOT NULL DEFAULT 'GENERIC_STUDIES';
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "storageUsedBytes" BIGINT NOT NULL DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "llmTokensUsed" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "llmTokensResetAt" TIMESTAMP(3);
+
+DO $$ BEGIN
+  CREATE TYPE "StudyItemKind" AS ENUM ('TASK', 'EVENT');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+ALTER TABLE "StudyTask" ADD COLUMN IF NOT EXISTS "kind" "StudyItemKind" NOT NULL DEFAULT 'TASK';
+ALTER TABLE "StudyTask" ADD COLUMN IF NOT EXISTS "endsAt" TIMESTAMP(3);
+
+ALTER TABLE "UserTopic" ADD COLUMN IF NOT EXISTS "fileSizeBytes" INTEGER NOT NULL DEFAULT 0;

@@ -1,0 +1,56 @@
+# Temporary keepalive for Render free-tier spin-down (~15 min idle).
+# Disable this workflow (or delete the file) once the API is on a paid plan.
+name: Keep Render awake
+
+on:
+  schedule:
+    # Every 10 minutes — under Render’s ~15 min idle timeout.
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keep-render-awake
+  cancel-in-progress: true
+
+jobs:
+  ping:
+    name: Ping /health
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Resolve backend URL
+        id: url
+        env:
+          BACKEND_URL: ${{ vars.RENDER_BACKEND_URL || vars.NEXT_PUBLIC_API_URL }}
+          PROCESSOR_URL: ${{ vars.RENDER_PROCESSOR_URL }}
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "::error::Set repo variable RENDER_BACKEND_URL (or NEXT_PUBLIC_API_URL) to your Render API origin, e.g. https://your-api.onrender.com"
+            exit 1
+          fi
+          # Strip trailing slash
+          BACKEND_URL="${BACKEND_URL%/}"
+          echo "backend=$BACKEND_URL" >> "$GITHUB_OUTPUT"
+          if [ -n "$PROCESSOR_URL" ]; then
+            echo "processor=${PROCESSOR_URL%/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: GET backend /health
+        env:
+          URL: ${{ steps.url.outputs.backend }}/health
+        run: |
+          echo "GET $URL"
+          # Light request: HEAD would be ideal but Express only exposes GET /health.
+          # Short connect timeout; allow cold-start latency on first wake.
+          curl -fsS --connect-timeout 10 --max-time 90 "$URL" | head -c 200
+          echo
+
+      - name: GET processor /health (optional)
+        if: steps.url.outputs.processor != ''
+        continue-on-error: true
+        env:
+          URL: ${{ steps.url.outputs.processor }}/health
+        run: |
+          echo "GET $URL"
+          curl -fsS --connect-timeout 10 --max-time 90 "$URL" | head -c 200
+          echo

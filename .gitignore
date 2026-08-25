@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.vercel/
+
+# TypeScript
+*.tsbuildinfo
+
+# Environment & secrets (keep *.example files)
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing & coverage
+coverage/
+.nyc_output/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Local data (MinIO, Postgres volumes if created locally)
+minio-data/
+postgres_data/
+*.pem
+*.key
+
+# Misc
+.cache/
+.turbo/

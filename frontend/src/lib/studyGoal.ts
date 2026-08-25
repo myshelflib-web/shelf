@@ -1,0 +1,51 @@
+import { StudyGoal } from "@/types";
+
+export const STUDY_GOAL_LABELS: Record<StudyGoal, string> = {
+  GENERAL: "General",
+  UPSC: "UPSC (Civil Services)",
+  STATE_PCS: "State PCS",
+  JUDICIARY: "Judiciary",
+  CA: "CA (Inter / Final)",
+  NEET_PG: "NEET PG / INI-CET",
+  GATE: "GATE",
+};
+
+export type StudyGoalGroup = {
+  label: string;
+  options: StudyGoal[];
+};
+
+export const STUDY_GOAL_GROUPS: StudyGoalGroup[] = [
+  { label: "General", options: ["GENERAL"] },
+  {
+    label: "Civil services",
+    options: ["UPSC", "STATE_PCS", "JUDICIARY"],
+  },
+  {
+    label: "Professional / PG",
+    options: ["CA", "NEET_PG", "GATE"],
+  },
+];
+
+/** Flat list kept for callers that need every goal. */
+export const STUDY_GOAL_OPTIONS = Object.entries(STUDY_GOAL_LABELS) as [
+  StudyGoal,
+  string,
+][];
+
+export function isStudyGoal(value: unknown): value is StudyGoal {
+  return typeof value === "string" && value in STUDY_GOAL_LABELS;
+}
+
+/** Map legacy / unknown values (e.g. stale localStorage) to a valid goal. */
+export function normalizeStudyGoal(value: unknown): StudyGoal {
+  if (value === "UPSC") return "UPSC";
+  if (isStudyGoal(value)) return value;
+  return "GENERAL";
+}
+
+export function goalHasPreloadedLibrary(
+  goal: StudyGoal | null | undefined
+): boolean {
+  return normalizeStudyGoal(goal) !== "GENERAL";
+}

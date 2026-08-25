@@ -1,0 +1,31 @@
+---
+description: New changes must not break existing behavior — preserve APIs, flows, and UX unless the task explicitly changes them
+alwaysApply: true
+---
+
+# Preserve existing behavior
+
+**New work must not break existing behavior.** This is a hard mandate for every agent change.
+
+## Default
+
+- Treat unrelated features, APIs, props, routes, persistence keys, shortcuts, and user-visible flows as **frozen** unless the user explicitly asks to change them.
+- Prefer the smallest diff that solves the stated problem. No drive-by refactors, renames, or “while we’re here” rewires.
+- If a fix could affect another mode or surface (e.g. pen vs text select, PDF vs notebook), keep the other path’s behavior identical.
+
+## When behavior must change
+
+- Only change behavior that the task names (or that is required to fix the named bug).
+- Call out intentional behavior changes in the reply so the user can verify them.
+- Do not silently change defaults, empty states, navigation, or save/autosave semantics.
+
+## Refactors and extractions
+
+- Move-only: same public APIs, side effects, and UX after the split.
+- Do not mix behavior changes into a structural split. Ship the move first, or keep the intentional change clearly scoped.
+
+## Verify before done
+
+- Run the relevant lint / typecheck / tests for the packages you touched.
+- Mentally check adjacent flows (other tools, modes, entry points) that share the code you edited.
+- If you cannot preserve behavior without a larger redesign, stop and ask rather than shipping a regression.

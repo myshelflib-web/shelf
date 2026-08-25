@@ -1,0 +1,31 @@
+---
+description: Hard cap — no source file over 500 lines; split instead of growing
+alwaysApply: true
+---
+
+# File size limit (500 lines)
+
+**Never** create or grow a source file past **500 lines**. This is a hard mandate from now on.
+
+## Preserve behavior
+
+- Splits and extractions are **move-only refactors**: same public APIs, props, side effects, persistence keys, and user-visible behavior unless the task explicitly changes them.
+- Do **not** “clean up,” rename, or rewire behavior while splitting. No drive-by fixes in the same change.
+- After a split, run the relevant package checks/tests and fix any breakage before considering the work done.
+
+## When editing
+
+- Before adding code, check the target file’s length. If the change would push it over 500 (or it is already over), **split first**, then change.
+- Prefer extracting hooks, helpers, subcomponents, types, or constants into new colocated files rather than appending to a large file.
+- Existing oversized files (e.g. legacy viewers) must be **shrunk via extraction** when touched for non-trivial work — do not make them longer.
+
+## What counts
+
+- Applies to application source: `.ts`, `.tsx`, `.js`, `.jsx`, `.css`, and similar hand-written modules.
+- Does **not** apply to generated artifacts, lockfiles, migrations dumps, or vendor bundles.
+
+## Split guidance
+
+- One concern per file when practical (hook, pure helpers, UI piece, types).
+- Keep public API at the original path via thin re-exports only when needed for imports.
+- New files must also stay ≤ 500 lines.

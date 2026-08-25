@@ -1,0 +1,141 @@
+# Docker images & deploy (Vercel + Render)
+
+```
+GitHub push to main
+  ├─ Detect which apps changed (backend / processing-service / frontend)
+  ├─ CI: lint / test / build — changed apps only
+  ├─ Docker Hub: push only changed images (main and/or processor-main)
+  ├─ Render deploy hooks → only for images just pushed
+  └─ Vercel → frontend only when frontend/ (or .nvmrc) changed
+```
+
+## Images (Render only)
+
+Docker Hub **Personal** allows **one private repository**. Both images share `upsc-backend`; the service is the tag.
+
+| Service | Image |
+|---------|--------|
+| Backend | `vishnubhardwaj8826/upsc-backend:main` |
+| Processing service | `vishnubhardwaj8826/upsc-backend:processor-main` |
+
+| Tag | Purpose |
+|-----|---------|
+| **`main`** / `processor-main` | Constant tags for Render |
+| `latest` / `processor-latest` | Same pointers |
+| `<sha>` / `processor-<sha>` | Rollback pins |
+
+Frontend is **not** pushed to Docker Hub — Vercel builds it from the repo.
+
+---
+
+## Frontend on Vercel (API URL injection)
+
+In Vercel project → **Settings → Environment Variables**:
+
+| Name | Value |
+|------|--------|
+| `NEXT_PUBLIC_API_URL` | your Render backend URL, e.g. `https://upsc-backend.onrender.com` |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | optional |
+
+Vercel injects these at **build time** on every **frontend** deploy. After you change them, trigger a Redeploy.
+
+Root Directory must stay `frontend`. Builds are skipped when that folder (and `.nvmrc`) did not change.
+
+Also set backend `CORS_ORIGIN` to your Vercel URL (e.g. `https://your-app.vercel.app`).
+
+---
+
+## Backend + worker on Render
+
+1. Create 2 services → **Deploy an existing image from a registry**
+2. Image URLs:
+
+| Service | Image |
+|---------|--------|
+| Backend | `docker.io/vishnubhardwaj8826/upsc-backend:main` |
+| Processing service | `docker.io/vishnubhardwaj8826/upsc-backend:processor-main` |
+
+3. Private registry: add Docker Hub username + access token in Render credentials  
+4. Env vars on each service (see below)  
+5. Deploy Hooks → GitHub secrets (CI triggers them after image push). **Do not** also enable Render auto-deploy from Git — that would bounce both services on every commit.
+
+| Secret | Value |
+|--------|--------|
+| `RENDER_DEPLOY_HOOK_BACKEND` | backend deploy hook URL |
+| `RENDER_DEPLOY_HOOK_PROCESSOR` | processing-service deploy hook URL |
+
+---
+
+## GitHub secrets (for Docker publish)
+
+| Name | Value |
+|------|--------|
+| `DOCKERHUB_USERNAME` | `vishnubhardwaj8826` |
+| `DOCKERHUB_TOKEN` | Docker Hub PAT with **Read, Write, Delete** (not account password) |
+| `RENDER_DEPLOY_HOOK_BACKEND` | optional |
+| `RENDER_DEPLOY_HOOK_PROCESSOR` | optional |
+
+Keep **one** private Hub repo: `upsc-backend` (Personal-plan limit). Do not create a second repo for the processing service.
+
+CI enforces this automatically:
+
+1. Before push → create/keep `upsc-backend` private
+2. After push → verify `is_private=true` or **fail the job**
+3. Prune tags → keep **at most 10** (`main`, `latest`, `processor-main`, `processor-latest` always kept; oldest SHA tags deleted)
+
+No frontend image is published (Vercel only).
+
+> Creating a second private repo fails on Personal (`No more private repositories available`). Upgrade to Pro only if you want separate repos.
+> Tag prune needs a PAT with **Read, Write, Delete**.
+
+---
+
+## Runtime env (Render containers)
+
+### Backend
+
+```
+DATABASE_URL=
+JWT_SECRET=
+INTERNAL_SECRET=
+CORS_ORIGIN=https://your-app.vercel.app
+S3_ENDPOINT=
+S3_ACCESS_KEY=
+S3_SECRET_KEY=
+S3_BUCKET=upsc-content
+S3_REGION=auto
+LOG_LEVEL=info
+PORT=4000
+```
+
+### Processing service
+
+```
+BACKEND_URL=https://upsc-backend.onrender.com
+INTERNAL_SECRET=   # same as backend
+S3_ENDPOINT=
+S3_ACCESS_KEY=
+S3_SECRET_KEY=
+S3_BUCKET=upsc-content
+S3_REGION=auto
+POLL_INTERVAL_MS=15000
+PORT=4001
+```
+
+---
+
+## Pipeline behavior
+
+On **push to `main`**, only apps whose files (or dependents) changed are rebuilt and redeployed. The other two keep running on the last good deploy.
+
+| Change in | CI checks | Docker + Render | Vercel |
+|-----------|-----------|-----------------|--------|
+| `backend/**` | backend | backend image + hook | skip |
+| `processing-service/**` | processing service | processor image + hook | skip |
+| `frontend/**` | frontend | skip | deploy |
+| `.nvmrc` | all three | skip (images pin `node:22-alpine`) | deploy |
+| workflow / docs / other | skip | skip | skip |
+
+The three packages do not import each other. A backend-only change does **not** bounce the worker or frontend; change both trees in the same commit if an API contract requires it.
+
+PRs only run CI checks for the apps that changed.
