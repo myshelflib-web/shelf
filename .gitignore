@@ -16,6 +16,8 @@ out/
 .env.*
 !.env.example
 !.env.*.example
+cloudSecrets.txt
+cloudSecrets.*
 
 # Logs
 logs/
