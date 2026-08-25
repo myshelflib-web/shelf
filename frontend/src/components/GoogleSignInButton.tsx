@@ -1,6 +1,7 @@
 "use client";
 
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
+import { useGoogleClientId } from "@/components/GoogleAuthProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -40,7 +41,7 @@ export function GoogleSignInButton({ onError, redirectTo = "/my-content" }: Goog
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [buttonWidth, setButtonWidth] = useState(360);
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  const clientId = useGoogleClientId();
 
   useEffect(() => {
     const updateWidth = () => {
@@ -82,8 +83,9 @@ export function GoogleSignInButton({ onError, redirectTo = "/my-content" }: Goog
           <span className="text-sm font-medium">Continue with Google</span>
         </button>
         <p className="text-xs text-center text-[var(--text-muted)]">
-          Add your Google Client ID to{" "}
-          <code className="text-[var(--accent)]">frontend/.env.local</code>
+          Set{" "}
+          <code className="text-[var(--accent)]">GOOGLE_CLIENT_ID</code> on Vercel
+          (or <code className="text-[var(--accent)]">frontend/.env.local</code> locally)
         </p>
       </div>
     );

@@ -1,16 +1,34 @@
 "use client";
 
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import { ReactNode } from "react";
+import { createContext, ReactNode, useContext } from "react";
 
-export function GoogleAuthProvider({ children }: { children: ReactNode }) {
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+const GoogleClientIdContext = createContext("");
 
-  if (!clientId) {
-    return <>{children}</>;
+export function useGoogleClientId(): string {
+  return useContext(GoogleClientIdContext);
+}
+
+export function GoogleAuthProvider({
+  clientId,
+  children,
+}: {
+  clientId: string;
+  children: ReactNode;
+}) {
+  const value = clientId.trim();
+
+  if (!value || value.includes("your-google-client-id")) {
+    return (
+      <GoogleClientIdContext.Provider value="">
+        {children}
+      </GoogleClientIdContext.Provider>
+    );
   }
 
   return (
-    <GoogleOAuthProvider clientId={clientId}>{children}</GoogleOAuthProvider>
+    <GoogleClientIdContext.Provider value={value}>
+      <GoogleOAuthProvider clientId={value}>{children}</GoogleOAuthProvider>
+    </GoogleClientIdContext.Provider>
   );
 }

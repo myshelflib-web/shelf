@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { GoogleAuthProvider } from "@/components/GoogleAuthProvider";
+import { resolveGoogleClientId } from "@/lib/publicConfig";
 import { HotkeysProvider } from "@/hooks/useHotkeys";
 import { AppHotkeys } from "@/components/AppHotkeys";
 import { PwaInstallHint } from "@/components/PwaInstallHint";
@@ -67,11 +68,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const googleClientId = resolveGoogleClientId();
+
   return (
     <html lang="en" className={`dark h-full ${sans.variable} ${serif.variable} ${display.variable}`} suppressHydrationWarning>
       <body className="h-full antialiased" suppressHydrationWarning>
         <ThemeProvider>
-          <GoogleAuthProvider>
+          <GoogleAuthProvider clientId={googleClientId}>
             <AuthProvider>
               <HotkeysProvider>
                 <PwaRegister />
