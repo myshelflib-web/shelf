@@ -1,4 +1,5 @@
 import { API_URL } from "@/lib/api";
+import { enrichBlogPost, enrichBlogPosts } from "./enrichBlogPost";
 import type { BlogPost } from "./types";
 import { BLOG_POSTS as STATIC_BLOG_POSTS } from "./registry";
 
@@ -13,9 +14,9 @@ export async function fetchPublishedBlogPosts(): Promise<BlogPost[]> {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = (await res.json()) as ApiBlogList;
     if (!data.posts?.length) throw new Error("empty");
-    return data.posts;
+    return enrichBlogPosts(data.posts);
   } catch {
-    return STATIC_BLOG_POSTS;
+    return enrichBlogPosts(STATIC_BLOG_POSTS);
   }
 }
 
@@ -28,9 +29,10 @@ export async function fetchPublishedBlogPost(
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = (await res.json()) as ApiBlogPost;
-    return data.post;
+    return data.post ? enrichBlogPost(data.post) : undefined;
   } catch {
-    return STATIC_BLOG_POSTS.find((p) => p.slug === slug);
+    const found = STATIC_BLOG_POSTS.find((p) => p.slug === slug);
+    return found ? enrichBlogPost(found) : undefined;
   }
 }
 

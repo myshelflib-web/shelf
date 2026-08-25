@@ -6,7 +6,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Shelf — Your study library",
     short_name: "Shelf",
     description:
-      "Personal study library with collections, PDFs, highlights, calendar, and Study AI.",
+      "Personal study library for UPSC & competitive exams: PDF highlights, Study AI on your notes, planner, and free NCERT curriculum. Install as PWA.",
     start_url: "/my-content",
     scope: "/",
     display: "standalone",

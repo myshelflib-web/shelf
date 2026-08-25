@@ -157,6 +157,7 @@ export function Header() {
                   <BookOpen className="w-3.5 h-3.5" />
                   Library
                 </NavLink>
+                <NavLink href="/blog">Blog</NavLink>
                 <NavLink href="/about">About</NavLink>
               </>
             )}

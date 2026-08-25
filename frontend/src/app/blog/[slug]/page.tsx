@@ -9,6 +9,7 @@ import {
   fetchAllBlogSlugs,
   fetchPublishedBlogPost,
 } from "@/lib/blog/fetchBlog";
+import { buildPageMetadata } from "@/lib/seo/metadata";
 import { ArrowLeft, Clock } from "lucide-react";
 
 type PageProps = {
@@ -25,21 +26,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const post = await fetchPublishedBlogPost(slug);
   if (!post) return { title: "Article not found" };
 
-  return {
+  const meta = buildPageMetadata({
     title: post.title,
     description: post.description,
+    path: `/blog/${post.slug}`,
     keywords: post.tags,
+  });
+
+  return {
+    ...meta,
     openGraph: {
-      title: post.title,
-      description: post.description,
+      ...meta.openGraph,
       type: "article",
       publishedTime: post.publishedAt,
       modifiedTime: post.updatedAt ?? post.publishedAt,
       tags: post.tags,
       ...(post.coverImageUrl ? { images: [post.coverImageUrl] } : {}),
-    },
-    alternates: {
-      canonical: `/blog/${post.slug}`,
     },
   };
 }
@@ -54,7 +56,8 @@ export default async function BlogPostPage({ params }: PageProps) {
       <BlogJsonLd post={post} />
       <Header />
       <main className="flex-1">
-        <article className="px-4 sm:px-6 py-12 sm:py-16 max-w-3xl mx-auto">
+        <article className="px-4 sm:px-6 py-12 sm:py-16">
+          <div className="max-w-3xl mx-auto">
           <Link
             href="/blog"
             className="inline-flex items-center gap-1.5 text-sm text-[var(--text-secondary)] hover:text-[var(--accent)] mb-8 transition"
@@ -105,9 +108,13 @@ export default async function BlogPostPage({ params }: PageProps) {
               </span>
             </div>
           </header>
+          </div>
 
-          <BlogPostBody post={post} />
+          <div className="max-w-6xl mx-auto">
+            <BlogPostBody post={post} />
+          </div>
 
+          <div className="max-w-3xl mx-auto">
           <footer className="mt-12 pt-8 border-t border-[var(--border)]">
             <p className="text-[var(--text-secondary)] mb-4">
               Start using these features in your own library — free to sign up.
@@ -116,6 +123,7 @@ export default async function BlogPostPage({ params }: PageProps) {
               Get started on Shelf
             </Link>
           </footer>
+          </div>
         </article>
       </main>
       <MarketingFooter />

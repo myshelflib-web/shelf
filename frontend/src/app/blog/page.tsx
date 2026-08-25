@@ -6,22 +6,15 @@ import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { BlogCard } from "@/components/blog/BlogCard";
 import { BlogListingJsonLd } from "@/components/blog/BlogJsonLd";
 import { fetchPublishedBlogPosts } from "@/lib/blog/fetchBlog";
+import { BLOG_INDEX_DESCRIPTION } from "@/lib/seo/keywords";
+import { buildPageMetadata } from "@/lib/seo/metadata";
 import { ArrowRight } from "lucide-react";
 
-export const metadata: Metadata = {
-  title: "Blog — Study library guides & feature deep dives",
-  description:
-    "Explore Shelf features in depth: personal PDF libraries, Study AI on your notes, planner and calendar, reader workspace, and exam prep workflows. SEO-friendly guides for students.",
-  openGraph: {
-    title: "Shelf Blog — Feature guides for serious study",
-    description:
-      "In-depth articles on Shelf's study library, PDF highlights, Study AI, planner, and premium tools.",
-    type: "website",
-  },
-  alternates: {
-    canonical: "/blog",
-  },
-};
+export const metadata: Metadata = buildPageMetadata({
+  title: "Blog — UPSC prep guides & PDF study library tips",
+  description: BLOG_INDEX_DESCRIPTION,
+  path: "/blog",
+});
 
 export default async function BlogIndexPage() {
   const posts = await fetchPublishedBlogPosts();

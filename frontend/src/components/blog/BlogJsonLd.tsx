@@ -1,10 +1,8 @@
 import type { BlogPost } from "@/lib/blog";
-
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ||
-  "http://localhost:3000";
+import { getSiteUrl } from "@/lib/siteUrl";
 
 export function BlogJsonLd({ post }: { post: BlogPost }) {
+  const siteUrl = getSiteUrl();
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
@@ -21,12 +19,12 @@ export function BlogJsonLd({ post }: { post: BlogPost }) {
       name: "Shelf",
       logo: {
         "@type": "ImageObject",
-        url: `${SITE_URL}/icons/shelf-icon-2048.png`,
+        url: `${siteUrl}/icons/shelf-icon-2048.png`,
       },
     },
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `${SITE_URL}/blog/${post.slug}`,
+      "@id": `${siteUrl}/blog/${post.slug}`,
     },
     keywords: post.tags.join(", "),
   };
@@ -40,17 +38,18 @@ export function BlogJsonLd({ post }: { post: BlogPost }) {
 }
 
 export function BlogListingJsonLd({ posts }: { posts: BlogPost[] }) {
+  const siteUrl = getSiteUrl();
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Blog",
     name: "Shelf Blog",
     description:
-      "Guides to Shelf features: personal study libraries, PDF highlights, Study AI, planner, and exam prep workflows.",
-    url: `${SITE_URL}/blog`,
+      "Guides for UPSC prep and personal study libraries: PDF highlights, Study AI, planner, and exam workflows.",
+    url: `${siteUrl}/blog`,
     blogPost: posts.map((post) => ({
       "@type": "BlogPosting",
       headline: post.title,
-      url: `${SITE_URL}/blog/${post.slug}`,
+      url: `${siteUrl}/blog/${post.slug}`,
       datePublished: post.publishedAt,
     })),
   };

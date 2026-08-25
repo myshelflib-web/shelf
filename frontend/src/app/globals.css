@@ -1922,6 +1922,46 @@
   margin-bottom: 1.75rem;
 }
 
+.blog-article-body {
+  width: 100%;
+}
+
+.blog-hero-showcase {
+  max-width: 42rem;
+  margin-inline: auto;
+}
+
+.blog-section-grid {
+  display: grid;
+  gap: 2rem;
+  align-items: center;
+}
+
+@media (min-width: 1024px) {
+  .blog-section-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+  }
+
+  .blog-section-grid-reverse > :first-child {
+    order: 2;
+  }
+}
+
+.blog-section-visual {
+  width: 100%;
+  min-width: 0;
+}
+
+.blog-section-stack {
+  max-width: 42rem;
+  margin-inline: auto;
+}
+
+.blog-visual.landing-showcase {
+  width: 100%;
+}
+
 .app-shell-wide {
   width: 100%;
   max-width: 92rem;

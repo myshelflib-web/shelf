@@ -13,6 +13,7 @@ import { PwaRegister } from "@/components/PwaRegister";
 import { OfflineSyncProvider } from "@/components/OfflineSyncProvider";
 import { OfflineNotice } from "@/components/OfflineNotice";
 import { CompactPortraitSync } from "@/components/CompactPortraitSync";
+import { rootLayoutMetadata } from "@/lib/seo/metadata";
 
 const sans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -32,26 +33,7 @@ const display = Fredoka({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Shelf — Your study library",
-    template: "%s · Shelf",
-  },
-  description:
-    "Free exam curriculum (UPSC syllabus, NCERT, and more) plus a personal study library. Read publicly; sign in for collections, highlights, and Study AI.",
-  applicationName: "Shelf",
-  appleWebApp: {
-    capable: true,
-    title: "Shelf",
-    statusBarStyle: "black-translucent",
-  },
-  formatDetection: {
-    telephone: false,
-  },
-  other: {
-    "apple-mobile-web-app-capable": "yes",
-  },
-};
+export const metadata: Metadata = rootLayoutMetadata();
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -71,7 +53,7 @@ export default function RootLayout({
   const googleClientId = resolveGoogleClientId();
 
   return (
-    <html lang="en" className={`dark h-full ${sans.variable} ${serif.variable} ${display.variable}`} suppressHydrationWarning>
+    <html lang="en-IN" className={`dark h-full ${sans.variable} ${serif.variable} ${display.variable}`} suppressHydrationWarning>
       <body className="h-full antialiased" suppressHydrationWarning>
         <ThemeProvider>
           <GoogleAuthProvider clientId={googleClientId}>
