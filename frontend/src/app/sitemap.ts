@@ -1,11 +1,13 @@
 import type { MetadataRoute } from "next";
-import { fetchAllBlogSlugs } from "@/lib/blog/fetchBlog";
+import { BLOG_POSTS as STATIC_BLOG_POSTS } from "@/lib/blog/registry";
 import { getSiteUrl } from "@/lib/siteUrl";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
   "http://localhost:4000";
-const SITE_URL = getSiteUrl();
+
+/** Keep sitemap generation fast so Googlebot does not time out. */
+const FETCH_MS = 4_000;
 
 type SubjectList = {
   subjects: Array<{
@@ -18,55 +20,63 @@ type SubjectList = {
   }>;
 };
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const blogSlugs = await fetchAllBlogSlugs();
-
-  const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/`, changeFrequency: "weekly", priority: 1 },
-    { url: `${SITE_URL}/blog`, changeFrequency: "weekly", priority: 0.85 },
-    { url: `${SITE_URL}/learn`, changeFrequency: "daily", priority: 0.9 },
-    { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.5 },
-    { url: `${SITE_URL}/contact`, changeFrequency: "monthly", priority: 0.4 },
-    { url: `${SITE_URL}/subscribe`, changeFrequency: "monthly", priority: 0.4 },
-    ...blogSlugs.map((slug) => ({
-      url: `${SITE_URL}/blog/${slug}`,
-      changeFrequency: "monthly" as const,
-      priority: 0.75,
-    })),
-  ];
-
+async function fetchLearnRoutes(siteUrl: string): Promise<MetadataRoute.Sitemap> {
   try {
     const res = await fetch(`${API_URL}/api/subjects`, {
       next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(FETCH_MS),
     });
-    if (!res.ok) return staticRoutes;
+    if (!res.ok) return [];
     const data = (await res.json()) as SubjectList;
     const learnRoutes: MetadataRoute.Sitemap = [];
 
     for (const subject of data.subjects ?? []) {
       learnRoutes.push({
-        url: `${SITE_URL}/learn/${subject.slug}`,
+        url: `${siteUrl}/learn/${subject.slug}`,
         changeFrequency: "weekly",
         priority: 0.8,
       });
       for (const topic of subject.topics ?? []) {
         learnRoutes.push({
-          url: `${SITE_URL}/learn/${subject.slug}/${topic.slug}`,
+          url: `${siteUrl}/learn/${subject.slug}/${topic.slug}`,
           changeFrequency: "weekly",
           priority: 0.7,
         });
         for (const article of topic.articles ?? []) {
           learnRoutes.push({
-            url: `${SITE_URL}/learn/${subject.slug}/${topic.slug}/${article.slug}`,
+            url: `${siteUrl}/learn/${subject.slug}/${topic.slug}/${article.slug}`,
             changeFrequency: "weekly",
             priority: 0.85,
           });
         }
       }
     }
-
-    return [...staticRoutes, ...learnRoutes];
+    return learnRoutes;
   } catch {
-    return staticRoutes;
+    return [];
   }
+}
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const siteUrl = getSiteUrl();
+
+  // Static blog catalog — never block sitemap on a cold backend.
+  const blogSlugs = STATIC_BLOG_POSTS.map((p) => p.slug);
+
+  const staticRoutes: MetadataRoute.Sitemap = [
+    { url: `${siteUrl}/`, changeFrequency: "weekly", priority: 1 },
+    { url: `${siteUrl}/blog`, changeFrequency: "weekly", priority: 0.85 },
+    { url: `${siteUrl}/learn`, changeFrequency: "daily", priority: 0.9 },
+    { url: `${siteUrl}/about`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${siteUrl}/contact`, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${siteUrl}/subscribe`, changeFrequency: "monthly", priority: 0.4 },
+    ...blogSlugs.map((slug) => ({
+      url: `${siteUrl}/blog/${slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.75,
+    })),
+  ];
+
+  const learnRoutes = await fetchLearnRoutes(siteUrl);
+  return [...staticRoutes, ...learnRoutes];
 }
