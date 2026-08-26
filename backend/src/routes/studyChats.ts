@@ -7,7 +7,10 @@ import {
   assertChatContextOwned,
   type ChatContextKind,
 } from "../utils/chatContext.js";
-import { deleteChatMessage } from "../services/chatThreads.js";
+import {
+  deleteChatMessage,
+  truncateChatMessages,
+} from "../services/chatThreads.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -207,6 +210,36 @@ router.delete("/chats/:id/messages/:messageId", async (req: Request, res: Respon
     userId: req.user!.userId,
     threadId: param(req, "id"),
     messageId: param(req, "messageId"),
+  });
+  if (!deletedIds) {
+    res.status(404).json({ error: "Message not found" });
+    return;
+  }
+  res.json({ success: true, deletedIds });
+});
+
+/** Truncate a thread from a user message (or keep the first N) for Cursor-style edit. */
+router.post("/chats/:id/messages/truncate", async (req: Request, res: Response) => {
+  const body = req.body as { messageId?: string; keepCount?: number };
+  const messageId =
+    typeof body.messageId === "string" ? body.messageId.trim() : "";
+  const keepCount =
+    body.keepCount === undefined ? undefined : Number(body.keepCount);
+
+  if (!messageId && keepCount === undefined) {
+    res.status(400).json({ error: "messageId or keepCount required" });
+    return;
+  }
+  if (keepCount !== undefined && (!Number.isInteger(keepCount) || keepCount < 0)) {
+    res.status(400).json({ error: "keepCount must be a non-negative integer" });
+    return;
+  }
+
+  const deletedIds = await truncateChatMessages({
+    userId: req.user!.userId,
+    threadId: param(req, "id"),
+    messageId: messageId || undefined,
+    keepCount,
   });
   if (!deletedIds) {
     res.status(404).json({ error: "Message not found" });

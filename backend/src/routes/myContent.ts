@@ -1897,6 +1897,7 @@ router.post("/highlights", async (req: Request, res: Response) => {
       position: position ?? null,
     },
   });
+  scheduleIndexPage(page.id);
   res.status(201).json({ highlight });
 });
 
@@ -1919,6 +1920,9 @@ router.patch("/highlights/:id", async (req: Request, res: Response) => {
     where: { id: highlight.id },
     data: note === undefined ? {} : { note },
   });
+  if (note !== undefined) {
+    scheduleIndexPage(highlight.userTopicId);
+  }
   res.json({ highlight: updated });
 });
 
@@ -1931,7 +1935,9 @@ router.delete("/highlights/:id", async (req: Request, res: Response) => {
     res.status(404).json({ error: "Highlight not found" });
     return;
   }
+  const pageId = highlight.userTopicId;
   await prisma.userContentHighlight.delete({ where: { id: highlight.id } });
+  scheduleIndexPage(pageId);
   res.json({ success: true });
 });
 

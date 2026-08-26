@@ -1,5 +1,5 @@
 import prisma from "../utils/prisma.js";
-import { indexUserPage } from "./libraryIndex.js";
+import { INDEX_CONTENT_VERSION, indexUserPage } from "./libraryIndex.js";
 import { isVectorConfigured } from "./vectorStore.js";
 import { logger, errorFields } from "../utils/logger.js";
 import { isTransientError, withRetry } from "../utils/retry.js";
@@ -51,28 +51,47 @@ export async function findPagesNeedingIndex(batchSize: number): Promise<string[]
     return neverIndexed.map((p) => p.id);
   }
 
-  const remaining = batchSize - neverIndexed.length;
-  const maybeStale = await prisma.userTopic.findMany({
+  let remaining = batchSize - neverIndexed.length;
+  const taken = new Set(neverIndexed.map((p) => p.id));
+
+  // Refresh rows indexed before INDEX_CONTENT_VERSION (e.g. title-only v2).
+  const outdated = await prisma.pageVectorIndex.findMany({
     where: {
-      status: "PUBLISHED",
-      vectorIndex: { isNot: null },
-      id: { notIn: neverIndexed.map((p) => p.id) },
+      page: { status: "PUBLISHED" },
+      NOT: { contentHash: { startsWith: `${INDEX_CONTENT_VERSION}:` } },
+      pageId: { notIn: [...taken] },
     },
-    select: {
-      id: true,
-      updatedAt: true,
-      vectorIndex: { select: { updatedAt: true } },
-    },
+    select: { pageId: true },
     orderBy: { updatedAt: "asc" },
-    take: remaining * 10,
+    take: remaining,
   });
+  for (const row of outdated) taken.add(row.pageId);
+  remaining = batchSize - taken.size;
+
+  const maybeStale =
+    remaining > 0
+      ? await prisma.userTopic.findMany({
+          where: {
+            status: "PUBLISHED",
+            vectorIndex: { isNot: null },
+            id: { notIn: [...taken] },
+          },
+          select: {
+            id: true,
+            updatedAt: true,
+            vectorIndex: { select: { updatedAt: true } },
+          },
+          orderBy: { updatedAt: "asc" },
+          take: remaining * 10,
+        })
+      : [];
 
   const stale = maybeStale
     .filter((p) => p.vectorIndex && p.updatedAt > p.vectorIndex.updatedAt)
     .slice(0, remaining)
     .map((p) => p.id);
 
-  return [...neverIndexed.map((p) => p.id), ...stale];
+  return [...neverIndexed.map((p) => p.id), ...outdated.map((p) => p.pageId), ...stale];
 }
 
 async function indexPageWithReliability(pageId: string): Promise<void> {

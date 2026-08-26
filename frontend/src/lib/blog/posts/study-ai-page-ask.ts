@@ -25,7 +25,7 @@ export const studyAiPageAsk = buildPost(
       heading: "Selection-aware questions",
       paragraphs: [
         "Select text before asking to narrow context to that passage — ideal for dense judgments, formulae, or definitions. With nothing selected, Study AI uses the whole file: retrieved chunks spread across that PDF, plus the page you are looking at.",
-        "Scanned or image-only PDFs often have no copyable text. Study AI then sends a snapshot of the visible PDF page and still searches any indexed text from the rest of the file. Use ⌘L (Ctrl+L on Windows) from the reader to ask with the current selection, Cursor-style.",
+        "Scanned or image-only PDFs are OCR’d into searchable text when indexing (Gemini), then also get a snapshot of the visible page in the reader when copyable text is still thin. Use ⌘L (Ctrl+L on Windows) from the reader to ask with the current selection, Cursor-style.",
       ],
     },
     {

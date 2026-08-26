@@ -18,6 +18,7 @@ import {
 import { resolveContextPageIds } from "../utils/chatContext.js";
 import { titleFromQuery, trimThreadToLimit } from "../services/chatThreads.js";
 import { truncateText } from "../utils/htmlText.js";
+import { studyAiFailureStub, toUserFacingStudyError } from "../utils/studyAiUserError.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -167,7 +168,7 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
       res.status(err.status).json({ error: err.message });
       return;
     }
-    const message = err instanceof Error ? err.message : "Study AI failed";
+    const message = toUserFacingStudyError(err);
     res.status(503).json({ error: message });
   }
 });
@@ -324,7 +325,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
         data: { title: nextTitle, updatedAt: new Date() },
       });
       send("error", {
-        message: "Study AI returned an empty response.",
+        message: "Study AI couldn’t finish that reply. Please try again.",
         status: 503,
         threadId: thread.id,
         userMessage: userMsg,
@@ -370,14 +371,17 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
     res.end();
   } catch (err) {
     const status = err instanceof QuotaError ? err.status : 503;
-    const message = err instanceof Error ? err.message : "Study AI failed";
+    const message =
+      err instanceof QuotaError
+        ? err.message
+        : toUserFacingStudyError(err);
     if (persistedUser) {
       await prisma.chatMessage
         .create({
           data: {
             threadId: thread.id,
             role: "assistant",
-            content: `Study AI could not finish this reply.\n\n${message}`,
+            content: studyAiFailureStub(err),
           },
         })
         .catch(() => undefined);

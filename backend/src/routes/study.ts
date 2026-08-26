@@ -20,6 +20,10 @@ import {
   estimateTokens,
   shouldResetLlmWindow,
 } from "../utils/quotas.js";
+import {
+  studyAiFailureStub,
+  toUserFacingStudyError,
+} from "../utils/studyAiUserError.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -170,7 +174,7 @@ router.post("/ask", async (req: Request, res: Response) => {
       userTopicId: body.userTopicId ?? null,
       articleId: body.articleId ?? null,
     });
-    const message = err instanceof Error ? err.message : "Study AI failed";
+    const message = toUserFacingStudyError(err);
     res.status(503).json({ error: message });
   }
 });
@@ -260,7 +264,7 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
         answer: "Study AI could not finish this reply.",
       });
       send("error", {
-        message: "Study AI returned an empty response.",
+        message: "Study AI couldn’t finish that reply. Please try again.",
         status: 503,
         threadId,
       });
@@ -298,12 +302,19 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
         articleId: body.articleId ?? null,
       });
     }
-    const message = err instanceof Error ? err.message : "Study AI failed";
+    const message =
+      err instanceof QuotaError || err instanceof PageAskPrepareError
+        ? err.message
+        : toUserFacingStudyError(err);
     const threadId = await persistAskTurn({
       userId,
       body,
       question: askTurnLabel(body, String(body.mode ?? "ask")),
-      answer: `Study AI could not finish this reply.\n\n${message}`,
+      answer: studyAiFailureStub(
+        err instanceof QuotaError || err instanceof PageAskPrepareError
+          ? err
+          : err
+      ),
     });
     send("error", {
       message,

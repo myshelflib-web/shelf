@@ -7,6 +7,7 @@ export const vsChatbots = longPost(
     description: "Compare asking ChatGPT-style tools versus Shelf Study AI that retrieves from your uploaded PDFs and notes — with workflows for students and professionals.",
     excerpt: "Generic chatbots guess from the open web. Shelf Study AI answers from your library with retrieval and citations back to your pages — better for exam and work accuracy.",
     publishedAt: "2026-03-10",
+    updatedAt: "2026-08-26",
     tags: ["Study AI","comparison","RAG","productivity"],
   },
   [
@@ -51,7 +52,7 @@ export const vsChatbots = longPost(
     {
       heading: "Limits to know",
       paragraphs: [
-        "Unprocessed or scanned-without-OCR PDFs retrieve poorly. Prefer parsed uploads. If nothing matches, Study AI should say so — that honesty is a feature.",
+        "Very large scanned PDFs may skip OCR (size cap); the reader still attaches the visible page image. If nothing matches your question, Study AI should say so — that honesty is a feature.",
       ],
     },
     {

@@ -6,6 +6,7 @@ import { requireOnline } from "@/lib/offline/notice";
 import type { StreamStatusEvent } from "@/components/study-ai/StreamActivity";
 import type { StudyAiQueuedPrompt } from "@/lib/studyAiQueue";
 import { enqueuePrompt, takeNextPrompt } from "@/lib/studyAiQueue";
+import { toUserStudyAiError } from "@/lib/studyAiErrors";
 
 export type StudyPanelTurn = {
   id: string;
@@ -236,7 +237,7 @@ export function useStudyPanelChat({
             );
           });
         } else {
-          setError(err instanceof Error ? err.message : "Study AI failed");
+          setError(toUserStudyAiError(err));
           setTurns((prev) =>
             prev.map((t) =>
               t.id === assistantId
@@ -245,7 +246,7 @@ export function useStudyPanelChat({
                     streaming: false,
                     content:
                       t.content.trim() ||
-                      "Study AI could not finish this reply.",
+                      toUserStudyAiError(err),
                   }
                 : t
             )
@@ -311,6 +312,48 @@ export function useStudyPanelChat({
     []
   );
 
+  const editAndResubmit = useCallback(
+    async (messageId: string, text: string) => {
+      const next = text.trim();
+      if (!next) return;
+      if (guestLocked) {
+        onGuestLockedClick?.("Use Study AI");
+        return;
+      }
+
+      const idx = turnsRef.current.findIndex((t) => t.id === messageId);
+      if (idx < 0 || turnsRef.current[idx]?.role !== "user") return;
+
+      abortRef.current?.abort();
+      busyRef.current = false;
+      queueRef.current = [];
+      setQueue([]);
+      setBusy(false);
+      setStatusEvents([]);
+      setError("");
+
+      setTurns((prev) => prev.slice(0, idx));
+
+      const chatId = threadIdRef.current;
+      if (chatId) {
+        try {
+          const isPersisted =
+            !messageId.startsWith("u-") && !messageId.startsWith("a-");
+          await api.study.truncateChatMessages(
+            chatId,
+            isPersisted ? { messageId } : { keepCount: idx }
+          );
+        } catch {
+          setError("Could not edit message");
+          return;
+        }
+      }
+
+      await run("ask", next);
+    },
+    [guestLocked, onGuestLockedClick, run]
+  );
+
   return {
     question,
     setQuestion,
@@ -328,5 +371,6 @@ export function useStudyPanelChat({
     stop,
     removeQueued,
     deleteTurn,
+    editAndResubmit,
   };
 }

@@ -4,7 +4,9 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { SaveAnswerModal } from "@/components/study-ai/SaveAnswerModal";
+import { FlashcardsStudyModal } from "@/components/study-ai/FlashcardsStudyModal";
 import { StudySourcesModal } from "@/components/study-ai/StudySourcesModal";
+import { parseFlashcards } from "@/lib/parseFlashcards";
 import { StudyAiSidebar } from "@/components/study-ai/StudyAiSidebar";
 import { StudyAiMessageList } from "@/components/study-ai/StudyAiMessageList";
 import { StudyAiComposer } from "@/components/study-ai/StudyAiComposer";
@@ -46,6 +48,7 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const [attachImage, setAttachImage] = useState<string | undefined>();
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [saveContent, setSaveContent] = useState<string | null>(null);
+  const [flashcardsMd, setFlashcardsMd] = useState<string | null>(null);
   const [exportingChat, setExportingChat] = useState(false);
   const [popover, setPopover] = useState<PopoverKind>(null);
   const [renameOpen, setRenameOpen] = useState(false);
@@ -323,10 +326,22 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
                 messages={chat.messages}
                 statusEvents={chat.statusEvents}
                 liveCitations={chat.liveCitations}
+                editingDisabled={chat.loading}
                 onSave={setSaveContent}
                 onDelete={(id) => void chat.deleteMessage(id)}
+                onEditResubmit={(id, content) =>
+                  void chat.editAndResubmit(id, content)
+                }
+                onStudyFlashcards={setFlashcardsMd}
               />
-              {chat.error && <p className="text-sm text-red-400">{chat.error}</p>}
+              {chat.error && (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-red-500/25 bg-red-500/10 px-3.5 py-2.5 text-[13px] text-red-300 leading-relaxed"
+                >
+                  {chat.error}
+                </div>
+              )}
               <div ref={endRef} />
             </div>
           </div>
@@ -398,6 +413,18 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
             chat.refreshThreads();
           }}
           onClose={() => setSourcesOpen(false)}
+        />
+      )}
+
+      {flashcardsMd && (
+        <FlashcardsStudyModal
+          cards={parseFlashcards(flashcardsMd)}
+          title="Flashcards"
+          onClose={() => setFlashcardsMd(null)}
+          onSave={(md) => {
+            setFlashcardsMd(null);
+            setSaveContent(md);
+          }}
         />
       )}
 

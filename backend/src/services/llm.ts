@@ -139,12 +139,8 @@ function throwForFailedStatus(
         : `Study AI model "${model}" was not found. Check LLM_MODEL on the backend.`
     );
   }
-  if (providerMessage) {
-    throw new Error(`Study AI error (${status}): ${providerMessage}`);
-  }
-  throw new Error(
-    `Study AI request failed (${status}). ${body.slice(0, 120) || "Try again in a moment."}`
-  );
+  // Never leak raw provider JSON / Gemini internals to clients.
+  throw new Error("Study AI couldn’t finish that reply. Please try again.");
 }
 
 async function openChatWithFallbacks(

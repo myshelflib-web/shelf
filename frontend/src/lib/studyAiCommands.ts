@@ -71,7 +71,7 @@ export const STUDY_AI_COMMANDS: StudyAiCommand[] = [
     description: "Front/back recall cards.",
     prompt: (scope, args) =>
       withTopic(
-        `Make 8 flashcards from ${fileOrLibrary(scope)}. For each: **Q:** … then **A:** …. High-yield only.`,
+        `Make 8 flashcards from ${fileOrLibrary(scope)}. Use this exact format for every card (no intro):\n\n### Card 1\n**Q:** …\n**A:** …\n\n### Card 2\n**Q:** …\n**A:** …\n\nHigh-yield only. Short fronts, precise backs.`,
         args
       ),
   },

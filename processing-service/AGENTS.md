@@ -6,7 +6,7 @@ Async worker that turns uploaded PDFs into HTML for Shelf. Express health server
 
 - `src/index.ts` — `/health`, `/metrics`, `POST /process` (kick a job).
 - `src/worker.ts` — `startWorker()` polls pending jobs (~15s), `runJob()` extracts text/layout and writes HTML.
-- `src/pdfExtract.ts` / `pdfText.ts` / `processor.ts` — extraction pipeline.
+- `src/pdfExtract.ts` / `pdfText.ts` / `processor.ts` — extraction pipeline. Empty pdf.js extracts do **not** overwrite richer existing `content.html` (including Gemini OCR marked with `meta name="shelf-ocr"`).
 
 Env aligns with backend S3 + database (see `.env.example`). Internal calls from backend use a shared secret (`/api/internal` on the API).
 

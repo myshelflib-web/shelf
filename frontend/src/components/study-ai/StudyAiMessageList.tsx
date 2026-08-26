@@ -1,9 +1,10 @@
 "use client";
 
-import { Bookmark, Sparkles } from "lucide-react";
+import { Bookmark, Layers, Sparkles } from "lucide-react";
 import { StudyAIContent } from "@/lib/studyAiMarkdown";
 import { CopyMessageButton } from "@/components/study-ai/CopyMessageButton";
 import { DeleteMessageButton } from "@/components/study-ai/DeleteMessageButton";
+import { EditUserMessage } from "@/components/study-ai/EditUserMessage";
 import { CitationList } from "@/components/study-ai/CitationList";
 import {
   StreamActivity,
@@ -11,20 +12,27 @@ import {
 } from "@/components/study-ai/StreamActivity";
 import { ShelfLogo } from "@/components/ShelfLogo";
 import type { WorkspaceMessage } from "@/lib/studyAiWorkspaceUtils";
+import { hasFlashcardDeck } from "@/lib/parseFlashcards";
 import { LibraryCitation } from "@/types";
 
 export function StudyAiMessageList({
   messages,
   statusEvents,
   liveCitations,
+  editingDisabled,
   onSave,
   onDelete,
+  onEditResubmit,
+  onStudyFlashcards,
 }: {
   messages: WorkspaceMessage[];
   statusEvents: StreamStatusEvent[];
   liveCitations?: LibraryCitation[];
+  editingDisabled?: boolean;
   onSave: (content: string) => void;
   onDelete: (id: string) => void;
+  onEditResubmit: (id: string, content: string) => void;
+  onStudyFlashcards: (content: string) => void;
 }) {
   return (
     <>
@@ -32,13 +40,26 @@ export function StudyAiMessageList({
         m.role === "user" ? (
           <div key={m.id} className="study-ai-msg group flex justify-end">
             <div className="max-w-[72%]">
-              <div className="rounded-2xl rounded-br-md bg-[var(--accent)] text-white px-4 py-3 text-[13px] whitespace-pre-wrap leading-relaxed">
-                {m.content}
-              </div>
-              {!m.id.startsWith("tmp-") && (
-                <div className="mt-1 flex justify-end opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-                  <DeleteMessageButton onDelete={() => onDelete(m.id)} />
+              {m.id.startsWith("tmp-") ? (
+                <div className="rounded-2xl rounded-br-md bg-[var(--accent)] text-white px-4 py-3 text-[13px] whitespace-pre-wrap leading-relaxed">
+                  {m.content}
                 </div>
+              ) : (
+                <EditUserMessage
+                  content={m.content}
+                  disabled={editingDisabled}
+                  onResubmit={(next) => onEditResubmit(m.id, next)}
+                  actions={
+                    <DeleteMessageButton
+                      onDelete={() => onDelete(m.id)}
+                      disabled={editingDisabled}
+                    />
+                  }
+                >
+                  <div className="rounded-2xl rounded-br-md bg-[var(--accent)] text-white px-4 py-3 text-[13px] whitespace-pre-wrap leading-relaxed">
+                    {m.content}
+                  </div>
+                </EditUserMessage>
               )}
             </div>
           </div>
@@ -75,6 +96,16 @@ export function StudyAiMessageList({
               )}
               {!m.streaming && m.content && (
                 <div className="mt-2.5 flex flex-wrap items-center gap-1">
+                  {hasFlashcardDeck(m.content) && (
+                    <button
+                      type="button"
+                      onClick={() => onStudyFlashcards(m.content)}
+                      className="inline-flex items-center gap-1.5 h-[29px] px-2 rounded-[7px] text-[10px] text-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-colors"
+                    >
+                      <Layers className="w-3 h-3" />
+                      Study cards
+                    </button>
+                  )}
                   <CopyMessageButton text={m.content} variant="action" />
                   <button
                     type="button"
@@ -85,7 +116,10 @@ export function StudyAiMessageList({
                     Save
                   </button>
                   {!m.id.startsWith("tmp-") && (
-                    <DeleteMessageButton onDelete={() => onDelete(m.id)} />
+                    <DeleteMessageButton
+                      onDelete={() => onDelete(m.id)}
+                      disabled={editingDisabled}
+                    />
                   )}
                 </div>
               )}

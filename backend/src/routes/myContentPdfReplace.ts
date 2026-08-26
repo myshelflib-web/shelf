@@ -13,7 +13,7 @@ import {
   headObjectMeta,
 } from "../services/s3.js";
 import { contentKeyFromPdfKey } from "../utils/docPaths.js";
-import { scheduleDeletePageVectors } from "../services/libraryIndex.js";
+import { scheduleIndexPage } from "../services/libraryIndex.js";
 import { errorFields } from "../utils/logger.js";
 import {
   normalizeDeletedPages,
@@ -356,7 +356,8 @@ router.post(
       });
     }
 
-    scheduleDeletePageVectors(page.id);
+    // Drop stale vectors by reindexing the replacement PDF (and OCR if needed).
+    scheduleIndexPage(page.id);
 
     const updatedHighlights = await prisma.userContentHighlight.findMany({
       where: { userTopicId: page.id },

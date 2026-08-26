@@ -17,6 +17,7 @@ import {
   asCitations,
   type WorkspaceMessage,
 } from "@/lib/studyAiWorkspaceUtils";
+import { toUserStudyAiError } from "@/lib/studyAiErrors";
 
 export function useStudyAiChat({
   threadId,
@@ -239,7 +240,7 @@ export function useStudyAiChat({
             );
           });
         } else {
-          setError(err instanceof Error ? err.message : "Study AI failed");
+          setError(toUserStudyAiError(err));
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantTmpId
@@ -248,7 +249,7 @@ export function useStudyAiChat({
                     streaming: false,
                     content:
                       m.content.trim() ||
-                      "Study AI could not finish this reply.",
+                      toUserStudyAiError(err),
                   }
                 : m
             )
@@ -346,6 +347,43 @@ export function useStudyAiChat({
     []
   );
 
+  const editAndResubmit = useCallback(
+    async (messageId: string, text: string) => {
+      const chatId = activeIdRef.current;
+      const next = text.trim();
+      if (!chatId || !next || messageId.startsWith("tmp-")) return;
+
+      abortRef.current?.abort();
+      streamingRef.current = false;
+      queueRef.current = [];
+      setQueue([]);
+      setLoading(false);
+      setStatusEvents([]);
+      setLiveCitations(undefined);
+      setError("");
+
+      setMessages((prev) => {
+        const idx = prev.findIndex((m) => m.id === messageId);
+        if (idx < 0) return prev;
+        return prev.slice(0, idx);
+      });
+
+      try {
+        await api.study.truncateChatMessages(chatId, { messageId });
+      } catch {
+        setError("Could not edit message");
+        const { thread } = await api.study.getChat(chatId).catch(() => ({
+          thread: null,
+        }));
+        if (thread) setMessages(thread.messages);
+        return;
+      }
+
+      await send(next);
+    },
+    [send]
+  );
+
   return {
     threads,
     threadsLoading,
@@ -369,6 +407,7 @@ export function useStudyAiChat({
     startNewChat,
     removeThread,
     deleteMessage,
+    editAndResubmit,
     refreshThreads,
   };
 }

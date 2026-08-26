@@ -2,15 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Download, MessageSquareText, X } from "lucide-react";
+import { Download, Layers, MessageSquareText, X } from "lucide-react";
 import { isPremiumUser } from "@/lib/premium";
 import { StudyAIContent } from "@/lib/studyAiMarkdown";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudyPanelChat } from "@/hooks/useStudyPanelChat";
+import { hasFlashcardDeck, parseFlashcards } from "@/lib/parseFlashcards";
 import { GreetingBlock } from "./GreetingBlock";
 import { LivelyLine } from "./LivelyLine";
 import { CopyMessageButton } from "./study-ai/CopyMessageButton";
 import { DeleteMessageButton } from "./study-ai/DeleteMessageButton";
+import { EditUserMessage } from "./study-ai/EditUserMessage";
+import { FlashcardsStudyModal } from "./study-ai/FlashcardsStudyModal";
 import { SaveAnswerModal } from "./study-ai/SaveAnswerModal";
 import { StreamActivity } from "./study-ai/StreamActivity";
 import { StudyPanelComposer } from "./study-ai/StudyPanelComposer";
@@ -46,6 +49,7 @@ export function StudyPanel({
   const [pasted, setPasted] = useState("");
   const [attached, setAttached] = useState(false);
   const [saveContent, setSaveContent] = useState<string | null>(null);
+  const [flashcardsMd, setFlashcardsMd] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   const panel = useStudyPanelChat({
@@ -178,22 +182,31 @@ export function StudyPanel({
           t.role === "user" ? (
             <div key={t.id} className="group flex justify-end">
               <div className="max-w-[92%]">
-                <div className="rounded-2xl rounded-br-md bg-[var(--accent)] text-white px-3.5 py-2.5 text-[13px] leading-relaxed">
-                  {t.imageBase64 && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={t.imageBase64}
-                      alt="Attached"
-                      className="mb-2 max-h-28 rounded-lg border border-white/20"
-                    />
-                  )}
-                  <p className="whitespace-pre-wrap">{t.content}</p>
-                </div>
-                {!t.id.startsWith("u-") && !t.id.startsWith("a-") && (
-                  <div className="mt-1 flex justify-end opacity-0 group-hover:opacity-100">
-                    <DeleteMessageButton onDelete={() => void panel.deleteTurn(t.id)} />
+                <EditUserMessage
+                  content={t.content}
+                  disabled={panel.busy}
+                  onResubmit={(next) => void panel.editAndResubmit(t.id, next)}
+                  actions={
+                    !t.id.startsWith("u-") && !t.id.startsWith("a-") ? (
+                      <DeleteMessageButton
+                        onDelete={() => void panel.deleteTurn(t.id)}
+                        disabled={panel.busy}
+                      />
+                    ) : null
+                  }
+                >
+                  <div className="rounded-2xl rounded-br-md bg-[var(--accent)] text-white px-3.5 py-2.5 text-[13px] leading-relaxed">
+                    {t.imageBase64 && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={t.imageBase64}
+                        alt="Attached"
+                        className="mb-2 max-h-28 rounded-lg border border-white/20"
+                      />
+                    )}
+                    <p className="whitespace-pre-wrap">{t.content}</p>
                   </div>
-                )}
+                </EditUserMessage>
               </div>
             </div>
           ) : (
@@ -221,6 +234,16 @@ export function StudyPanel({
                 )}
                 {!t.streaming && t.content && (
                   <div className="mt-3 flex flex-wrap gap-3">
+                    {hasFlashcardDeck(t.content) && (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 text-[11px] text-[var(--accent)] hover:underline"
+                        onClick={() => setFlashcardsMd(t.content)}
+                      >
+                        <Layers className="w-3 h-3" />
+                        Study cards
+                      </button>
+                    )}
                     <CopyMessageButton text={t.content} />
                     <button
                       type="button"
@@ -262,7 +285,12 @@ export function StudyPanel({
           <StreamActivity events={panel.statusEvents} live />
         )}
         {panel.error && (
-          <p className="text-xs text-red-400 leading-relaxed">{panel.error}</p>
+          <div
+            role="alert"
+            className="rounded-xl border border-red-500/25 bg-red-500/10 px-3 py-2 text-[12px] text-red-300 leading-relaxed"
+          >
+            {panel.error}
+          </div>
         )}
         <div ref={endRef} />
       </div>
@@ -276,6 +304,18 @@ export function StudyPanel({
         imageBase64={imageBase64}
         contextImage={contextImage}
       />
+
+      {flashcardsMd && (
+        <FlashcardsStudyModal
+          cards={parseFlashcards(flashcardsMd)}
+          title="Flashcards"
+          onClose={() => setFlashcardsMd(null)}
+          onSave={(md) => {
+            setFlashcardsMd(null);
+            setSaveContent(md);
+          }}
+        />
+      )}
 
       {saveContent && (
         <SaveAnswerModal

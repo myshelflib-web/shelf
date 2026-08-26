@@ -40,6 +40,21 @@ async function downloadPdf(key: string): Promise<Buffer> {
   return Buffer.from(bytes!);
 }
 
+async function downloadHtmlIfExists(key: string): Promise<string | null> {
+  try {
+    const response = await s3.send(
+      new GetObjectCommand({
+        Bucket: getS3Bucket(),
+        Key: key,
+      })
+    );
+    const text = await response.Body?.transformToString();
+    return text ?? null;
+  } catch {
+    return null;
+  }
+}
+
 async function uploadHtml(key: string, html: string): Promise<void> {
   await withRetry(
     () =>
@@ -58,6 +73,18 @@ async function uploadHtml(key: string, html: string): Promise<void> {
       onRetry: () => metrics.inc("s3_retries_total", { op: "put" }),
     }
   );
+}
+
+/** Prefer existing OCR / longer HTML over an empty pdf.js extract. */
+export function shouldKeepExistingHtml(
+  existingHtml: string | null,
+  newHtml: string
+): boolean {
+  if (!existingHtml) return false;
+  if (existingHtml.includes('name="shelf-ocr"')) return true;
+  const existingLen = existingHtml.replace(/\s+/g, " ").trim().length;
+  const newLen = newHtml.replace(/\s+/g, " ").trim().length;
+  return existingLen > 200 && newLen < Math.max(120, Math.floor(existingLen * 0.35));
 }
 
 export async function processPdf(request: ProcessRequest): Promise<{
@@ -83,8 +110,21 @@ export async function processPdf(request: ProcessRequest): Promise<{
     const { html: indexedHtml, toc } = buildHtmlFromPdfText(parsed.text);
 
     const contentKey = contentKeyFromPdfKey(request.pdfKey);
-    await uploadHtml(contentKey, indexedHtml);
-    metrics.inc("s3_ops_total", { op: "put", ok: true });
+    const existingHtml = await downloadHtmlIfExists(contentKey);
+    const keepExisting = shouldKeepExistingHtml(existingHtml, indexedHtml);
+    const htmlToWrite = keepExisting ? existingHtml! : indexedHtml;
+
+    if (!keepExisting) {
+      await uploadHtml(contentKey, indexedHtml);
+      metrics.inc("s3_ops_total", { op: "put", ok: true });
+    } else {
+      log.info("processor.keep_existing_html", {
+        contentKey,
+        reason: existingHtml?.includes('name="shelf-ocr"')
+          ? "shelf-ocr"
+          : "richer-than-extract",
+      });
+    }
 
     const durationMs = Date.now() - start;
     metrics.observe("processor_duration_ms", durationMs, {
@@ -95,11 +135,12 @@ export async function processPdf(request: ProcessRequest): Promise<{
       contentKey,
       pages: parsed.numpages,
       tocCount: toc.length,
-      htmlBytes: indexedHtml.length,
+      htmlBytes: htmlToWrite.length,
+      keptExisting: keepExisting,
       durationMs,
     });
 
-    return { html: indexedHtml, toc, contentKey };
+    return { html: htmlToWrite, toc, contentKey };
   } catch (err) {
     metrics.observe("processor_duration_ms", Date.now() - start, {
       type: request.type ?? "admin",

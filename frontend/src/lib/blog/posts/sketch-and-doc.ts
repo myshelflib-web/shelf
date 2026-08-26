@@ -9,6 +9,7 @@ export const sketchAndDoc = buildPost(
     excerpt:
       "Beyond PDF uploads: draw on A4 sheets, type structured notes, or import existing documents — all live beside PDFs in your collections.",
     publishedAt: "2026-02-11",
+    updatedAt: "2026-08-26",
     tags: ["notebook", "sketch", "doc editor", "notes"],
     readingMinutes: 6,
   },
@@ -34,7 +35,7 @@ export const sketchAndDoc = buildPost(
     {
       heading: "Same library, same AI",
       paragraphs: [
-        "Imported HTML text is indexed for Study AI like PDF-derived content. Ask questions on typed notes the same way you would on a scanned chapter — retrieval runs over processed text in your library index.",
+        "PDFs, Doc pages, sketch notebooks with typed text boxes, and imported TXT/MD/DOCX all get vector chunks for Study AI — including catalog metadata and your highlights/notes. Ask on typed notes the same way you would on a chapter PDF; ink-only sketches still index by title and collection so they remain findable.",
       ],
     },
   ]

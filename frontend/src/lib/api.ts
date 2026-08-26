@@ -1050,6 +1050,18 @@ export const api = {
         `/api/study/chats/${chatId}/messages/${messageId}`,
         { method: "DELETE" }
       ),
+    /** Cursor-style edit: drop from a user message (or keep first N) onward. */
+    truncateChatMessages: (
+      chatId: string,
+      opts: { messageId?: string; keepCount?: number }
+    ) =>
+      request<{ success: boolean; deletedIds: string[] }>(
+        `/api/study/chats/${chatId}/messages/truncate`,
+        {
+          method: "POST",
+          body: JSON.stringify(opts),
+        }
+      ),
     sendChatMessage: (
       id: string,
       content: string,

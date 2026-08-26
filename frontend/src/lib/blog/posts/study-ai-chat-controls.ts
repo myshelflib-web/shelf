@@ -3,11 +3,11 @@ import { buildPost } from "../types";
 export const studyAiChatControls = buildPost(
   {
     slug: "study-ai-stop-queue-diagrams",
-    title: "Stop, Queue, Delete, and Preview Diagrams in Study AI",
+    title: "Stop, Queue, Edit, and Preview Diagrams in Study AI",
     description:
-      "Study AI now lets you stop a reply, queue the next question, run slash commands, preview Mermaid diagrams, and look up your library, planner, Google, or the web.",
+      "Study AI lets you stop a reply, queue the next question, edit a sent message like Cursor, run slash commands, and preview Mermaid diagrams.",
     excerpt:
-      "Chat like a modern tutor: stop generation, queue follow-ups, delete a bad turn, open mermaid diagrams full-screen, and let Study AI search your library, highlights, planner, or Google.",
+      "Chat like a modern tutor: stop generation, queue follow-ups, edit a prior question to branch the thread, delete a bad turn, and open mermaid diagrams full-screen.",
     publishedAt: "2026-08-26",
     updatedAt: "2026-08-26",
     tags: ["study ai", "chat", "mermaid", "rag"],
@@ -18,11 +18,14 @@ export const studyAiChatControls = buildPost(
       heading: "Control the conversation",
       paragraphs: [
         "While Study AI is writing, the stop control cancels the model stream and keeps any partial answer that already landed. Type the next question at the same time — it queues and sends automatically when the current reply finishes or you stop it.",
-        "Hover a message to delete it. Deleting your question also removes the following answer so the thread stays a clean Q&A.",
+        "Hover a message to edit or delete it. Edit works like Cursor: change your question, drop that turn and everything after it, and resubmit. Deleting your question also removes the following answer so the thread stays a clean Q&A.",
+        "When Study AI returns flashcards (/flashcards), use Study cards to flip through them in a modal, download the deck, or save it to your library.",
       ],
       bullets: [
         "Stop — halt generation without losing the rest of the chat",
         "Queue — send follow-ups while a reply is still streaming",
+        "Edit — rewrite a prior question and regenerate from that point",
+        "Flashcards — study, download, or save a deck from the reply",
         "Delete — drop a turn inside the thread, not the whole chat",
       ],
     },
