@@ -13,6 +13,12 @@ export function MarketingFooter() {
           <Link href="/blog" className="nav-link">
             Blog
           </Link>
+          <Link href="/subscribe" className="nav-link">
+            Pricing
+          </Link>
+          <Link href="/learn" className="nav-link">
+            Learn
+          </Link>
           <Link href="/about" className="nav-link">
             About
           </Link>

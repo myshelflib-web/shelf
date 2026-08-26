@@ -18,6 +18,7 @@ export default function robots(): MetadataRoute.Robots {
           "/about",
           "/contact",
           "/subscribe",
+          "/login",
         ],
         disallow: [
           "/admin",
@@ -30,7 +31,6 @@ export default function robots(): MetadataRoute.Robots {
           "/profile",
           "/study-ai",
           "/offline",
-          "/login",
           "/forgot-password",
           "/api/",
         ],

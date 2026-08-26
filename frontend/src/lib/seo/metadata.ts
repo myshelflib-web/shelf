@@ -84,6 +84,16 @@ export function rootLayoutMetadata(): Metadata {
     applicationName: "Shelf",
     authors: [{ name: "Shelf", url: siteUrl }],
     creator: "Shelf",
+    // Google SERP favicon: square PNG, multiple of 48px (SVG often ignored).
+    icons: {
+      icon: [
+        { url: "/icons/favicon-48.png", sizes: "48x48", type: "image/png" },
+        { url: "/icons/favicon-96.png", sizes: "96x96", type: "image/png" },
+        { url: "/icons/favicon-192.png", sizes: "192x192", type: "image/png" },
+      ],
+      apple: [{ url: "/apple-icon", sizes: "180x180", type: "image/png" }],
+      shortcut: ["/icons/favicon-48.png"],
+    },
     openGraph: {
       siteName: "Shelf",
       locale: "en_IN",

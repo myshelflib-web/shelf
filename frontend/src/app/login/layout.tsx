@@ -5,7 +5,6 @@ export const metadata: Metadata = buildPageMetadata({
   title: "Sign in",
   description: "Sign in to Shelf — your personal study library.",
   path: "/login",
-  noIndex: true,
 });
 
 export default function LoginLayout({
