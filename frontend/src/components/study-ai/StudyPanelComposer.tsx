@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowUp,
   ImagePlus,
@@ -17,6 +18,7 @@ import {
   studyAiSendParts,
   type StudyAiCommand,
 } from "@/lib/studyAiCommands";
+import { quizSetupHref } from "@/lib/quiz/href";
 import { StudyAiCommandsModal } from "./StudyAiCommandsModal";
 import { StudyAiSuggestChips } from "./StudyAiSuggestChips";
 
@@ -43,6 +45,7 @@ export function StudyPanelComposer({
   selection,
   imageBase64,
   contextImage,
+  pageId,
 }: {
   panel: Panel;
   guestLocked?: boolean;
@@ -50,11 +53,13 @@ export function StudyPanelComposer({
   embedMode?: boolean;
   selection?: string | null;
   imageBase64?: string;
+  pageId?: string;
   contextImage: (userImg?: string) => {
     image?: string;
     ephemeral: boolean;
   };
 }) {
+  const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
   const [commandsOpen, setCommandsOpen] = useState(false);
   const [commandSeed, setCommandSeed] = useState("/");
@@ -87,7 +92,19 @@ export function StudyPanelComposer({
       runWithContext(parts.mode, undefined, userImg);
       return;
     }
-    runWithContext("ask", parts.display, userImg, { prompt: parts.prompt });
+    if (parts.kind === "quiz") {
+      router.push(
+        quizSetupHref({
+          contextKind: "PAGE",
+          pageId,
+          focus: parts.topic,
+        })
+      );
+      return;
+    }
+    if (parts.kind === "send") {
+      runWithContext("ask", parts.display, userImg, { prompt: parts.prompt });
+    }
   };
 
   const pickCommand = (cmd: StudyAiCommand) => {

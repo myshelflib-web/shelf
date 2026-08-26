@@ -36,6 +36,8 @@ export type ChatRequestOpts = {
   tools?: ChatToolDef[];
   toolChoice?: "auto" | "none";
   signal?: AbortSignal;
+  maxTokens?: number;
+  temperature?: number;
 };
 
 export type ChatResult = {

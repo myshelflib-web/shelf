@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type RefObject } from "react";
+import { useRouter } from "next/navigation";
 import { ArrowUp, Library, Paperclip, Square, X } from "lucide-react";
 import type { StudyAiQueuedPrompt } from "@/lib/studyAiQueue";
 import { readFileAsDataUrl } from "@/lib/studyAiWorkspaceUtils";
@@ -9,6 +10,8 @@ import {
   studyAiSendParts,
   type StudyAiCommand,
 } from "@/lib/studyAiCommands";
+import { quizSetupHref } from "@/lib/quiz/href";
+import type { QuizLaunch } from "@/lib/quiz/types";
 import { StudyAiCommandsModal } from "./StudyAiCommandsModal";
 import { StudyAiSuggestChips } from "./StudyAiSuggestChips";
 
@@ -31,6 +34,7 @@ export function StudyAiComposer({
   onRemoveQueued,
   memoryLimit,
   planLabel,
+  quizLaunch,
 }: {
   input: string;
   onInput: (v: string) => void;
@@ -50,7 +54,9 @@ export function StudyAiComposer({
   onRemoveQueued: (id: string) => void;
   memoryLimit: number;
   planLabel: string;
+  quizLaunch?: QuizLaunch;
 }) {
+  const router = useRouter();
   const [commandsOpen, setCommandsOpen] = useState(false);
   const [commandSeed, setCommandSeed] = useState("/");
   const canSend = Boolean(input.trim() || attachImage);
@@ -65,6 +71,10 @@ export function StudyAiComposer({
     if (parts.kind === "help") {
       setCommandSeed("/");
       setCommandsOpen(true);
+      return;
+    }
+    if (parts.kind === "quiz") {
+      router.push(quizSetupHref({ ...quizLaunch, focus: parts.topic || quizLaunch?.focus }));
       return;
     }
     if (parts.kind === "send") {

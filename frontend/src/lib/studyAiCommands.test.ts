@@ -34,11 +34,11 @@ describe("studyAiCommands", () => {
     });
     expect(resolveStudyAiInput("/help", "library")).toEqual({ kind: "help" });
     const quiz = resolveStudyAiInput("/quiz", "library");
-    expect(quiz.kind).toBe("prompt");
-    if (quiz.kind === "prompt") {
-      expect(quiz.text.toLowerCase()).toContain("quiz");
-      expect(quiz.display).toBe("/quiz");
-    }
+    expect(quiz).toEqual({ kind: "quiz", topic: "" });
+    expect(resolveStudyAiInput("/quiz federalism", "page")).toEqual({
+      kind: "quiz",
+      topic: "federalism",
+    });
   });
 
   it("keeps bubble labels short for commands and chips", () => {
@@ -64,5 +64,16 @@ describe("studyAiCommands", () => {
     if (leaked.kind === "send") {
       expect(leaked.display).toBe("/flashcards");
     }
+  });
+
+  it("launches the quiz workspace from /quiz", () => {
+    expect(studyAiSendParts("/quiz polity", "library")).toEqual({
+      kind: "quiz",
+      topic: "polity",
+    });
+    expect(studyAiSendParts("/quiz", "page", { label: "Quiz this page" })).toEqual({
+      kind: "quiz",
+      topic: "",
+    });
   });
 });

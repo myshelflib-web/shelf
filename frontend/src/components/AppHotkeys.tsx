@@ -57,6 +57,7 @@ function GlobalHotkeyBindings() {
   useHotkey("g d", () => go("/dashboard"), { enabled: signedIn });
   useHotkey("g c", () => go("/planner"), { enabled: signedIn });
   useHotkey("g a", () => go("/study-ai"), { enabled: signedIn });
+  useHotkey("g q", () => go("/quiz"), { enabled: signedIn });
   useHotkey("g s", () => go("/settings"), { enabled: signedIn });
   useHotkey("g p", () => go("/profile"), { enabled: signedIn });
   useHotkey("c n", () => create("notebook"), { enabled: signedIn });

@@ -267,6 +267,7 @@ export const HOTKEY_HELP: Array<{
       { keys: ["g d"], label: "Go to Dashboard" },
       { keys: ["g c"], label: "Go to Planner" },
       { keys: ["g a"], label: "Go to Study AI" },
+      { keys: ["g q"], label: "Go to Quiz" },
       { keys: ["g s"], label: "Go to Settings" },
       { keys: ["g p"], label: "Go to Profile" },
       { keys: ["escape"], label: "Close dialog" },

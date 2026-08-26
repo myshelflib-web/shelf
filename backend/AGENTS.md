@@ -9,6 +9,7 @@ Express + TypeScript (`"type": "module"`), Prisma 6, PostgreSQL. Entry: `src/ind
 | `/api/auth` | `routes/auth.ts` | Register, login, Google, `PATCH /me`, `DELETE /me` |
 | `/api/my-content` | `routes/myContent.ts` | Collections, topics, pages, uploads, highlights, clips; library files use `POST /uploads/init` (presigned S3 PUT) then `POST /uploads/complete`; PDF reads use `GET …/pages/:id/pdf-url` (presigned S3 GET, browser Range); `GET/HEAD …/pages/:id/pdf` remains as a fallback stream; `GET /last-read` + `PATCH …/pages/:id/progress` `{ view }` sync reading position across devices |
 | `/api/study` | `routes/study.ts`, `routes/studyChats.ts` | Page Ask + `library-ask` RAG; chat threads |
+| `/api/quiz` | `routes/quiz.ts` | Generate/take/grade quizzes (library, upload, exam bank); MCQ auto-grade; written/image via vision LLM |
 | `/api/tasks` | `routes/tasks.ts` | Tasks **and** events |
 | `/api/subjects` | `routes/subjects.ts` | Curriculum (admin catalog); PDF reads use `GET …/articles/:slug/pdf-url` (presigned S3 GET); `GET/HEAD …/pdf` remains as a fallback stream |
 | `/api/admin` | `routes/admin.ts` | Admin PDF upload / catalog |
@@ -41,6 +42,11 @@ When `OTEL_EXPORTER_OTLP_ENDPOINT` (+ `OTEL_EXPORTER_OTLP_HEADERS`) is set, `src
 - Retrieval: hybrid Qdrant (top-24, score floor) + keyword RRF blend, diversified across pages → packed excerpts. Query rewrite for short follow-ups. Gemini embeddings use RETRIEVAL_QUERY vs RETRIEVAL_DOCUMENT task types when indexing/searching. Page-ask with no highlight lists that PDF's chunks (spread across the file) and, for scanned pages, the client attaches the visible page JPEG.
 - Per-thread **library scope** (`ChatThread.contextKind`: LIBRARY | NOTEBOOK | TOPIC | PAGE) filters RAG to those pages.
 - Saved **relevancy / syllabus docs** (`StudyRelevancyDoc`): paste or PDF/txt upload; free **10** / premium **50**; optional `ChatThread.relevancyDocId` injects into the system prompt (unset = general).
+
+## Quiz
+
+- `Quiz` / `QuizQuestion` in Postgres. Sources: `LIBRARY` (collection/topic/page), `UPLOAD` (file or paste), `EXAM_BANK` (PYQ titles in the library + preloaded curriculum + goal syllabus).
+- Generate with `services/quiz/` (goal-tuned paper setter, JSON questions). MCQ keys hidden until submit. Written/image answers graded with the chat/vision model. Uses the same LLM token quota as Study AI.
 
 ## Domain model (personal library)
 

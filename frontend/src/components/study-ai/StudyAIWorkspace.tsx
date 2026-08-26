@@ -12,6 +12,7 @@ import { StudyAiMessageList } from "@/components/study-ai/StudyAiMessageList";
 import { StudyAiComposer } from "@/components/study-ai/StudyAiComposer";
 import { StudyAiSuggestChips } from "@/components/study-ai/StudyAiSuggestChips";
 import { studyAiSendParts } from "@/lib/studyAiCommands";
+import { quizSetupHref } from "@/lib/quiz/href";
 import {
   StudyAiAttachMenu,
   StudyAiChatMenu,
@@ -325,6 +326,19 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
                         const parts = studyAiSendParts(item.insert, "library", {
                           label: item.label,
                         });
+                        if (parts.kind === "quiz") {
+                          router.push(
+                            quizSetupHref({
+                              contextKind: threadMeta?.contextKind,
+                              notebookId: threadMeta?.contextNotebookId,
+                              topicId: threadMeta?.contextTopicId,
+                              pageId: threadMeta?.contextPageId,
+                              relevancyDocId: threadMeta?.relevancyDocId,
+                              focus: parts.topic,
+                            })
+                          );
+                          return;
+                        }
                         if (parts.kind === "send") {
                           void chat.send(parts.display, undefined, {
                             prompt: parts.prompt,
@@ -379,6 +393,13 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
             onRemoveQueued={chat.removeQueued}
             memoryLimit={memoryLimit}
             planLabel={isPremiumUser(user) ? "Premium" : "Free"}
+            quizLaunch={{
+              contextKind: threadMeta?.contextKind,
+              notebookId: threadMeta?.contextNotebookId,
+              topicId: threadMeta?.contextTopicId,
+              pageId: threadMeta?.contextPageId,
+              relevancyDocId: threadMeta?.relevancyDocId,
+            }}
           />
         </main>
       </div>

@@ -16,10 +16,12 @@ import { keyboardShortcuts } from "./posts/keyboard-shortcuts";
 import { spotifyFocus } from "./posts/spotify-focus";
 import { pwaOffline } from "./posts/pwa-offline";
 import { studyAiChatControls } from "./posts/study-ai-chat-controls";
+import { examStyleQuiz } from "./posts/exam-style-quiz";
 import { EXTRA_BLOG_POSTS } from "./posts/extra";
 
 const ALL_POSTS: BlogPost[] = [
   ...EXTRA_BLOG_POSTS,
+  examStyleQuiz,
   studyAiChatControls,
   pwaOffline,
   spotifyFocus,

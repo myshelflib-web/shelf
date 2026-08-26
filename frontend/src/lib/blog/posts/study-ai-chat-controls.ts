@@ -39,7 +39,7 @@ export const studyAiChatControls = buildPost(
       heading: "Tools and better retrieval",
       paragraphs: [
         "Library-wide Study AI can search your collections, open a page, list recents and starred files, read highlights and syllabus docs, check the planner, search Google, and fetch a public page when your notes do not cover the question. Answers still prefer your files and cite them as [1], [2].",
-        "Type / in the composer — or tap the / button — for a command palette: quiz, mind map, PYQ drill, flashcards, notes, plan, and more. Suggestion chips above the box rotate the way greetings do, so the chat stays easy to start. Retrieval now fuses vector search with keywords, spreads excerpts across pages, and rewrites short follow-ups like “explain this” using the previous question so the next search is not lost.",
+        "Type / in the composer — or tap the / button — for a command palette: quiz opens the dedicated Quiz workspace (MCQ, written, and photo answers), plus mind map, PYQ drill, flashcards, notes, plan, and more. Suggestion chips above the box rotate the way greetings do, so the chat stays easy to start. Retrieval now fuses vector search with keywords, spreads excerpts across pages, and rewrites short follow-ups like “explain this” using the previous question so the next search is not lost.",
       ],
     },
   ]

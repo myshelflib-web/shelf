@@ -35,6 +35,7 @@ model User {
   studyTasks       StudyTask[]
   chatThreads      ChatThread[]
   relevancyDocs    StudyRelevancyDoc[]
+  quizzes          Quiz[]
   blogPosts        BlogPost[]
 }
 
@@ -398,6 +399,7 @@ model StudyRelevancyDoc {
 
   user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   threads ChatThread[]
+  quizzes Quiz[]
 
   @@index([userId, updatedAt])
 }
@@ -434,3 +436,90 @@ model ChatMessage {
 
   @@index([threadId, createdAt])
 }
+
+enum QuizSourceKind {
+  LIBRARY
+  UPLOAD
+  EXAM_BANK
+}
+
+enum QuizDifficulty {
+  EASY
+  MEDIUM
+  HARD
+  EXAM
+}
+
+enum QuizQuestionType {
+  MCQ
+  WRITTEN
+  IMAGE
+}
+
+enum QuizStatus {
+  GENERATING
+  READY
+  IN_PROGRESS
+  SUBMITTED
+  GRADED
+  FAILED
+}
+
+model Quiz {
+  id                String         @id @default(uuid())
+  userId            String
+  title             String         @default("Quiz")
+  sourceKind        QuizSourceKind
+  contextKind       String         @default("LIBRARY")
+  contextNotebookId String?
+  contextTopicId    String?
+  contextPageId     String?
+  relevancyDocId    String?
+  sourceLabel       String?
+  focusTopic        String?
+  sourceExcerpt     String?        @db.Text
+  difficulty        QuizDifficulty @default(EXAM)
+  timeLimitSec      Int?
+  mcqCount          Int            @default(5)
+  writtenCount      Int            @default(2)
+  status            QuizStatus     @default(GENERATING)
+  startedAt         DateTime?
+  submittedAt       DateTime?
+  errorMessage      String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relevancyDoc StudyRelevancyDoc? @relation(fields: [relevancyDocId], references: [id], onDelete: SetNull)
+  questions    QuizQuestion[]
+
+  @@index([userId, updatedAt])
+  @@index([relevancyDocId])
+}
+
+model QuizQuestion {
+  id                String           @id @default(uuid())
+  quizId            String
+  order             Int
+  type              QuizQuestionType
+  prompt            String           @db.Text
+  options           Json?
+  correctOptionId   String?
+  modelAnswer       String?          @db.Text
+  explanation       String?          @db.Text
+  marks             Int              @default(1)
+  syllabusHeading   String?
+  sourceTag         String?
+  userAnswerText    String?          @db.Text
+  userAnswerOption  String?
+  userImageKey      String?
+  userImageMime     String?
+  gradedScore       Float?
+  gradedFeedback    String?          @db.Text
+  createdAt         DateTime         @default(now())
+
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([quizId, order])
+}
+

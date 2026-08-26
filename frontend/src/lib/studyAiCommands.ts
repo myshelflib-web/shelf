@@ -58,7 +58,7 @@ export const STUDY_AI_COMMANDS: StudyAiCommand[] = [
   {
     slash: "quiz",
     name: "Quiz",
-    description: "Practice questions with answers after a break.",
+    description: "Open an exam-style quiz on this scope.",
     prompt: (scope, args) =>
       withTopic(
         `Quiz me on ${fileOrLibrary(scope)}. Give 5 questions (mix of short and MCQ). After all questions, a blank line, then ### Answers with brief explanations. Match my exam track.`,
@@ -260,6 +260,7 @@ export function filterCommands(query: string): StudyAiCommand[] {
 export type ResolvedStudyAiInput =
   | { kind: "help" }
   | { kind: "mode"; mode: StudyAiPageMode }
+  | { kind: "quiz"; topic: string }
   | { kind: "prompt"; text: string; display: string }
   | { kind: "plain"; text: string };
 
@@ -291,6 +292,7 @@ export function resolveStudyAiInput(
   const cmd = commandBySlash(parsed.slash);
   if (!cmd) return { kind: "plain", text: raw };
   if (cmd.slash === "help") return { kind: "help" };
+  if (cmd.slash === "quiz") return { kind: "quiz", topic: parsed.args };
   if (cmd.pageMode && scope === "page" && !parsed.args) {
     return { kind: "mode", mode: cmd.pageMode };
   }
@@ -314,6 +316,7 @@ export function studyAiSendParts(
 ):
   | { kind: "help" }
   | { kind: "mode"; mode: StudyAiPageMode }
+  | { kind: "quiz"; topic: string }
   | { kind: "send"; display: string; prompt: string } {
   const trimmed = raw.trim();
   const label = opts?.label?.trim();
@@ -327,6 +330,7 @@ export function studyAiSendParts(
 
   const resolved = resolveStudyAiInput(trimmed, scope);
   if (resolved.kind === "help") return { kind: "help" };
+  if (resolved.kind === "quiz") return { kind: "quiz", topic: resolved.topic };
   if (resolved.kind === "mode") return { kind: "mode", mode: resolved.mode };
   if (resolved.kind === "prompt") {
     return {

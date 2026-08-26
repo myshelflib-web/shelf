@@ -11,9 +11,9 @@ import { searchLibrary, LibrarySearchHit } from "@/lib/librarySearch";
 
 type Result = LibrarySearchHit & { kind: "PAGE" | "NOTEBOOK" };
 
-const SUGGESTIONS = [
+const SUGGESTIONS: Array<{ label: string; query?: string; href?: string }> = [
   { label: "Summarize this week", query: "Summarize what I studied this week" },
-  { label: "Quiz me", query: "Quiz me on my latest notes" },
+  { label: "Start a quiz", href: "/quiz" },
   { label: "Key terms to revise", query: "Key terms I should revise" },
   { label: "Make a revision plan", query: "Make a revision plan from my collections" },
 ];
@@ -193,10 +193,17 @@ export function SearchModal({
               {!debounced && !aiAnswer && (
                 <ul>
                   {SUGGESTIONS.map((s) => (
-                    <li key={s.query}>
+                    <li key={s.label}>
                       <button
                         type="button"
-                        onClick={() => void askAi(s.query)}
+                        onClick={() => {
+                          if (s.href) {
+                            router.push(s.href);
+                            onClose();
+                            return;
+                          }
+                          if (s.query) void askAi(s.query);
+                        }}
                         className="no-focus-ring w-full text-left text-[13px] px-3.5 py-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
                       >
                         {s.label}

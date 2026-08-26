@@ -21,6 +21,7 @@ import {
   BookOpen,
   CalendarDays,
   MessageSquareText,
+  ListChecks,
   Search,
   Keyboard,
   Shield,
@@ -146,6 +147,10 @@ export function Header() {
                 <NavLink href="/planner" className="inline-flex items-center gap-1.5">
                   <CalendarDays className="w-3.5 h-3.5" />
                   Planner
+                </NavLink>
+                <NavLink href="/quiz" className="inline-flex items-center gap-1.5">
+                  <ListChecks className="w-3.5 h-3.5" />
+                  Quiz
                 </NavLink>
                 <NavLink href="/study-ai" className="inline-flex items-center gap-1.5">
                   <MessageSquareText className="w-3.5 h-3.5" />

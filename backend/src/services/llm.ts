@@ -81,8 +81,8 @@ async function requestChatCompletion(
 ): Promise<Response> {
   const payload: Record<string, unknown> = {
     model,
-    temperature: 0.2,
-    max_tokens: llmMaxOutputTokens(),
+    temperature: opts.temperature ?? 0.2,
+    max_tokens: opts.maxTokens ?? llmMaxOutputTokens(),
     stream: opts.stream,
     messages,
   };

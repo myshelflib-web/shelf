@@ -52,6 +52,7 @@ export const DEFAULT_KEYWORDS: string[] = [
   "digital notebook",
   "mind map from PDF",
   "exam preparation",
+  "exam quiz",
   "revision calendar",
   "offline PDF reader",
   "college notes app",
@@ -85,6 +86,11 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "queue chat messages",
     "mermaid diagram preview",
     "Google search study AI",
+  ],
+  "exam-style-quiz-from-your-notes": [
+    "exam quiz app",
+    "MCQ from PDF",
+    "PYQ practice quiz",
   ],
   "study-ai-summaries-mind-maps": [
     "mind map from PDF",

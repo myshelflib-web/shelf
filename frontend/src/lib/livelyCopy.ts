@@ -14,6 +14,7 @@ export type LivelySurface =
   | "dashboard"
   | "calendar"
   | "planner"
+  | "quiz"
   | "settings"
   | "profile"
   | "generic";
@@ -136,6 +137,13 @@ const SURFACE_LINES: Record<LivelySurface, string[]> = {
     "Tasks and events, side by side on the board.",
     "Weekly or monthly — same calm planner.",
     "Block time for what you mean to finish.",
+  ],
+  quiz: [
+    "Exam-level questions from your notes — or the bank.",
+    "Set difficulty and time. Then sit the paper.",
+    "MCQ, written, or a photo of your working.",
+    "If a syllabus is on, every stem maps to a heading.",
+    "Same quiz chrome from Library, Study AI, or here.",
   ],
   settings: [
     "Tune the quiet parts: theme, goals, plan.",

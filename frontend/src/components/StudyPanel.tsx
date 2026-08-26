@@ -306,6 +306,7 @@ export function StudyPanel({
         selection={selection}
         imageBase64={imageBase64}
         contextImage={contextImage}
+        pageId={userTopicId}
       />
 
       {flashcardsMd && (
