@@ -16,4 +16,12 @@ describe("chunkText", () => {
     expect(chunks.length).toBeGreaterThan(1);
     expect(chunks[0].length).toBeLessThanOrEqual(900);
   });
+
+  it("keeps heading sections as separate chunks when they fit", () => {
+    const text = `## Intro\n${"alpha ".repeat(20)}\n\n## Later\n${"beta ".repeat(20)}`;
+    const chunks = chunkText(text, 220, 20);
+    expect(chunks.length).toBeGreaterThan(1);
+    expect(chunks.some((c) => /intro/i.test(c))).toBe(true);
+    expect(chunks.some((c) => /later/i.test(c))).toBe(true);
+  });
 });

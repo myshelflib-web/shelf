@@ -4,12 +4,13 @@ import { getFromS3 } from "./s3.js";
 import { htmlToPlainText } from "../utils/htmlText.js";
 import { logger, errorFields } from "../utils/logger.js";
 import { extractPageBody } from "./libraryIndex.js";
-import { retrievePageAskContext } from "./rag.js";
+import { retrievePageAskContext } from "./ragRetrieve.js";
 import { pageAskSystemPrompt } from "./goalPrompt.js";
 import {
   joinPackedContext,
   packPageAskContext,
 } from "../utils/pageAskContext.js";
+import { rewriteSearchQuery } from "../utils/queryRewrite.js";
 import { chatHistoryWindow } from "../utils/quotas.js";
 import type { ChatContentPart, ChatMessage } from "./llm.js";
 
@@ -198,8 +199,17 @@ export async function preparePageAsk(
   const fullFileText =
     pageBody && pageBody !== title ? pageBody : pageBody || "";
 
-  const retrievalQuery = [
+  const rewrittenQuestion = rewriteSearchQuery(
     String(input.question ?? "").trim(),
+    (input.history ?? [])
+      .filter((h) => h.role === "user" || h.role === "assistant")
+      .map((h) => ({
+        role: h.role as string,
+        content: String(h.content ?? ""),
+      }))
+  );
+  const retrievalQuery = [
+    rewrittenQuestion,
     input.selection?.trim() ?? "",
     resolvedMode !== "ask" ? `${resolvedMode} ${title}` : "",
     title,

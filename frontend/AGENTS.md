@@ -13,7 +13,7 @@ API client: `src/lib/api.ts` (`NEXT_PUBLIC_API_URL`, default `http://localhost:4
 | `/my-content` | **Signed-in home** (Library). Collections + root pages; inside collection, topics + collection pages; topic → pages. Readers: `file/[page]`, `[notebook]/file/[page]`, `[notebook]/[topic]/[page]`. |
 | `/settings` | App settings: theme, study goal, reading goal, plan usage. |
 | `/profile` | Name, picture, password, delete account. |
-| `/study-ai` | Full Study AI (multi-turn chat, RAG, images, save/download). Also `/study-ai/[id]`. Per-thread **library scope** (collection/topic/page) and **syllabus / relevancy docs** (paste or upload; free 10 / paid 50). Reader panel is multi-turn page Ask with the same formatting, and its chats are **saved** as page-scoped threads that appear here. |
+| `/study-ai` | Full Study AI (multi-turn chat, RAG, tools, images, save/download). Also `/study-ai/[id]`. Per-thread **library scope** (collection/topic/page) and **syllabus / relevancy docs** (paste or upload; free 10 / paid 50). Stop generation, queue the next message, delete a turn, and preview Mermaid diagrams. Tools can search the library, highlights, recents, starred pages, planner, Google, and public URLs. Reader panel is multi-turn page Ask with the same formatting, and its chats are **saved** as page-scoped threads that appear here. |
 | `/learn/...` | Curriculum articles (admin content), not personal collections. |
 | `/blog`, `/blog/[slug]` | Public SEO feature guides (marketing). New user-visible features need a post — see `.cursor/rules/feature-blog.mdc`. |
 

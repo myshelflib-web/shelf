@@ -14,14 +14,23 @@ import {
   parseProviderError,
   resolveGeminiEmbeddingModel,
 } from "./llmConfig.js";
+import {
+  acquireGeminiEmbedSlot,
+  DEFAULT_GEMINI_EMBED_BATCH,
+  DEFAULT_GEMINI_EMBED_PAUSE_MS,
+} from "./geminiLimits.js";
 
 /** Keep Qdrant vectors compact; gemini-embedding-001 supports 768/1536/3072. */
 const GEMINI_EMBED_DIMENSIONS = Number(
   process.env.EMBEDDING_DIMENSIONS ?? 768
 );
-/** Free-tier Gemini counts each text; keep batches small. */
-const GEMINI_EMBED_BATCH = Number(process.env.GEMINI_EMBED_BATCH ?? 8);
-const GEMINI_EMBED_PAUSE_MS = Number(process.env.GEMINI_EMBED_PAUSE_MS ?? 1200);
+/** Free-tier gemini-embedding-001: ~100 RPM / ~30k TPM; small batches + pause. */
+const GEMINI_EMBED_BATCH = Number(
+  process.env.GEMINI_EMBED_BATCH ?? DEFAULT_GEMINI_EMBED_BATCH
+);
+const GEMINI_EMBED_PAUSE_MS = Number(
+  process.env.GEMINI_EMBED_PAUSE_MS ?? DEFAULT_GEMINI_EMBED_PAUSE_MS
+);
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -33,22 +42,34 @@ function parseRetrySeconds(body: string): number {
   return 25;
 }
 
+export type EmbedTask = "document" | "query";
+
+function geminiTaskType(task?: EmbedTask): string | undefined {
+  if (task === "document") return "RETRIEVAL_DOCUMENT";
+  if (task === "query") return "RETRIEVAL_QUERY";
+  return undefined;
+}
+
 async function geminiBatchOnce(
   texts: string[],
   apiKey: string,
   modelId: string,
-  modelSlug: string
+  modelSlug: string,
+  task?: EmbedTask
 ): Promise<number[][]> {
   const path = `${geminiNativeBaseUrl()}/models/${modelSlug}:batchEmbedContents`;
+  const taskType = geminiTaskType(task);
   const body = JSON.stringify({
     requests: texts.map((text) => ({
       model: modelId,
       content: { parts: [{ text }] },
       outputDimensionality: GEMINI_EMBED_DIMENSIONS,
+      ...(taskType ? { taskType } : {}),
     })),
   });
 
   const timeoutMs = Number(process.env.EMBEDDING_TIMEOUT_MS ?? 45_000);
+  await acquireGeminiEmbedSlot();
   const response = await fetchWithTimeout(path, {
     method: "POST",
     timeoutMs,
@@ -128,7 +149,8 @@ async function geminiBatchOnce(
 async function embedTextsGeminiNative(
   texts: string[],
   apiKey: string,
-  model: string
+  model: string,
+  task?: EmbedTask
 ): Promise<number[][]> {
   const resolved = resolveGeminiEmbeddingModel(model);
   const modelId = geminiEmbeddingModelId(resolved);
@@ -137,7 +159,7 @@ async function embedTextsGeminiNative(
 
   for (let i = 0; i < texts.length; i += GEMINI_EMBED_BATCH) {
     const slice = texts.slice(i, i + GEMINI_EMBED_BATCH);
-    const vectors = await geminiBatchOnce(slice, apiKey, modelId, modelSlug);
+    const vectors = await geminiBatchOnce(slice, apiKey, modelId, modelSlug, task);
     out.push(...vectors);
     if (i + GEMINI_EMBED_BATCH < texts.length) {
       await sleep(GEMINI_EMBED_PAUSE_MS);
@@ -146,8 +168,12 @@ async function embedTextsGeminiNative(
   return out;
 }
 
-export async function embedTexts(texts: string[]): Promise<number[][]> {
+export async function embedTexts(
+  texts: string[],
+  opts?: { task?: EmbedTask }
+): Promise<number[][]> {
   if (texts.length === 0) return [];
+  const task = opts?.task;
 
   const baseUrl = embeddingBaseUrl();
   const model = embeddingModel();
@@ -180,7 +206,7 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   }
 
   if (isGeminiBaseUrl(baseUrl)) {
-    return embedTextsGeminiNative(texts, apiKey, model);
+    return embedTextsGeminiNative(texts, apiKey, model, task);
   }
 
   const timeoutMs = Number(process.env.EMBEDDING_TIMEOUT_MS ?? 45_000);

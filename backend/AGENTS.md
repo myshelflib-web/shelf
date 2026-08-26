@@ -33,11 +33,12 @@ When `OTEL_EXPORTER_OTLP_ENDPOINT` (+ `OTEL_EXPORTER_OTLP_HEADERS`) is set, `src
 - Indexing: `services/libraryIndex.ts` — `scheduleIndexPage` after page create/update and after the processing service callback; `purgePageVectors` on page delete.
 - Background worker: `services/vectorIndexWorker.ts` polls for stale/unindexed pages when vectors are configured (`VECTOR_INDEX_WORKER=false` to disable). One-shot backfill: `npm run vector:reindex -- 50`.
 - Per-user vector quotas: `utils/quotas.ts` (`FREE_VECTOR_CHUNKS`, `PREMIUM_VECTOR_CHUNKS`, `MAX_CHUNKS_PER_PAGE`). Tracked in `User.vectorChunksUsed` + `PageVectorIndex` (LRU eviction of oldest indexed pages when over quota).
-- Prompts: `services/goalPrompt.ts` using `User.studyGoal`; answers must be structured Markdown (headings, lists, tables when comparing).
-- Default chat model: **`gemini-flash-latest`** (Google rolling alias). On 404 / retired model, auto-retries fallbacks (`LLM_MODEL_FALLBACKS`) and caches the working model in-process.
-- Chat memory: free **30** / premium **300** messages per thread (`FREE_CHAT_MESSAGES` / `PREMIUM_CHAT_MESSAGES`); oldest trimmed.
+- Prompts: `services/goalPrompt.ts` using `User.studyGoal`; answers must be structured Markdown (headings, lists, tables when comparing). Library chat may call tools (`library_search`, `lookup_page`, `list_library`, `lookup_collection`, `lookup_recent_pages`, `lookup_starred`, `lookup_highlights`, `lookup_relevancy`, `lookup_planner`, `current_time`, `web_search`, `fetch_url`) when excerpts are thin.
+- Default chat model: **`gemini-flash-lite-latest`**. On 404 / retired model, auto-retries fallbacks (`LLM_MODEL_FALLBACKS`) and caches the working model in-process. Free-tier pacing: `GEMINI_CHAT_RPM` (default 15) + 4s 429 backoff.
+- Embeddings default: **`gemini-embedding-001`** (native `batchEmbedContents`, RETRIEVAL_QUERY vs RETRIEVAL_DOCUMENT). Pacing: `GEMINI_EMBED_RPM` (100), batch 4, 2s pause (30k TPM headroom).
+- Chat memory: free **30** / premium **300** messages per thread (`FREE_CHAT_MESSAGES` / `PREMIUM_CHAT_MESSAGES`); oldest trimmed. Individual messages can be deleted (`DELETE /api/study/chats/:id/messages/:messageId`); a user turn also drops the following assistant reply. Stop aborts the LLM stream and persists a partial answer.
 - Answers return `citations[]` (collection/topic/title/href).
-- Retrieval: hybrid Qdrant (top-16, score floor) + keyword blend → up to 8 excerpts.
+- Retrieval: hybrid Qdrant (top-24, score floor) + keyword RRF blend, diversified across pages → packed excerpts. Query rewrite for short follow-ups. Gemini embeddings use RETRIEVAL_QUERY vs RETRIEVAL_DOCUMENT task types when indexing/searching.
 - Per-thread **library scope** (`ChatThread.contextKind`: LIBRARY | NOTEBOOK | TOPIC | PAGE) filters RAG to those pages.
 - Saved **relevancy / syllabus docs** (`StudyRelevancyDoc`): paste or PDF/txt upload; free **10** / premium **50**; optional `ChatThread.relevancyDocId` injects into the system prompt (unset = general).
 

@@ -471,7 +471,11 @@
   overflow-x: auto;
 }
 
-.study-ai-mermaid svg {
+.study-ai-mermaid-wrap {
+  position: relative;
+}
+
+.study-ai-mermaid-preview svg {
   display: block;
   max-width: 100%;
   height: auto;

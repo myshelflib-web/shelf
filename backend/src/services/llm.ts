@@ -3,6 +3,7 @@ import {
   apiKeyHint,
   chatModelCandidates,
   clearWorkingChatModel,
+  isGeminiBaseUrl,
   isModelUnavailableError,
   llmApiKey,
   llmBaseUrl,
@@ -10,17 +11,27 @@ import {
   parseProviderError,
   rememberWorkingChatModel,
 } from "./llmConfig.js";
+import {
+  acquireGeminiChatSlot,
+  geminiChatMaxAttempts,
+  parseGeminiRetryMs,
+} from "./geminiLimits.js";
+import type {
+  ChatMessage,
+  ChatRequestOpts,
+  ChatResult,
+  ChatToolCall,
+} from "./llmTypes.js";
 
-export type ChatContentPart =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
-
-export type ChatMessage = {
-  role: "system" | "user" | "assistant";
-  content: string | ChatContentPart[];
-};
-
-type ChatResult = { text: string; tokens: number };
+export type {
+  ChatContentPart,
+  ChatMessage,
+  ChatRequestOpts,
+  ChatResult,
+  ChatToolCall,
+  ChatToolDef,
+} from "./llmTypes.js";
+export { isToolsUnsupportedMessage } from "./llmTypes.js";
 
 function isTransientStatus(status: number): boolean {
   return status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
@@ -28,16 +39,6 @@ function isTransientStatus(status: number): boolean {
 
 async function sleep(ms: number) {
   await new Promise((r) => setTimeout(r, ms));
-}
-
-/** Gemini often says "Please retry in 21.5s" in the 429 body. */
-function parseRetryMs(body: string, attempt: number): number {
-  const m = body.match(/retry in ([0-9.]+)\s*s/i);
-  if (m) {
-    return Math.min(90_000, Math.ceil((Number(m[1]) + 0.5) * 1000));
-  }
-  // Exponential backoff for free-tier RPM: ~2s, 4s, 8s…
-  return Math.min(45_000, 2000 * Math.pow(2, attempt - 1));
 }
 
 /** Per-model free-tier RPD/RPM — other Gemini models on the same key may still work. */
@@ -66,21 +67,27 @@ async function requestChatCompletion(
   apiKey: string,
   model: string,
   messages: ChatMessage[],
-  stream: boolean
+  opts: ChatRequestOpts
 ): Promise<Response> {
+  const payload: Record<string, unknown> = {
+    model,
+    temperature: 0.2,
+    max_tokens: llmMaxOutputTokens(),
+    stream: opts.stream,
+    messages,
+  };
+  if (opts.tools?.length) {
+    payload.tools = opts.tools;
+    payload.tool_choice = opts.toolChoice ?? "auto";
+  }
   return fetch(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model,
-      temperature: 0.2,
-      max_tokens: llmMaxOutputTokens(),
-      stream,
-      messages,
-    }),
+    body: JSON.stringify(payload),
+    signal: opts.signal,
   });
 }
 
@@ -136,7 +143,7 @@ function throwForFailedStatus(
 
 async function openChatWithFallbacks(
   messages: ChatMessage[],
-  stream: boolean
+  opts: ChatRequestOpts
 ): Promise<{ response: Response; model: string; baseUrl: string; apiKey: string }> {
   const apiKey = llmApiKey();
   if (!apiKey) {
@@ -151,20 +158,29 @@ async function openChatWithFallbacks(
 
   for (let i = 0; i < candidates.length; i++) {
     const model = candidates[i];
-    // Free-tier Gemini RPM: give 429s more attempts with provider-suggested waits.
-    const maxAttempts = 3;
+    const gemini = isGeminiBaseUrl(baseUrl);
+    const maxAttempts = gemini ? geminiChatMaxAttempts() : 3;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       let response: Response;
       try {
+        if (attempt === 1 && gemini) {
+          await acquireGeminiChatSlot();
+        }
         response = await requestChatCompletion(
           baseUrl,
           apiKey,
           model,
           messages,
-          stream
+          opts
         );
       } catch (err) {
+        if (
+          opts.signal?.aborted ||
+          (err instanceof Error && err.name === "AbortError")
+        ) {
+          throw err;
+        }
         logger.error("llm.request.network_failed", {
           model,
           baseUrl,
@@ -211,7 +227,7 @@ async function openChatWithFallbacks(
       ) {
         const waitMs =
           response.status === 429
-            ? parseRetryMs(body, attempt)
+            ? parseGeminiRetryMs(body, attempt)
             : 500 * attempt;
         logger.warn("llm.request.retry", {
           model,
@@ -243,7 +259,7 @@ async function openChatWithFallbacks(
             providerMessage: providerMessage || null,
           });
         } else if (canFallbackQuotaOrRate) {
-          const waitMs = Math.min(15_000, parseRetryMs(body, 1));
+          const waitMs = Math.min(25_000, parseGeminiRetryMs(body, 1));
           logger.warn("llm.model.rate_limited_trying_next", {
             model,
             next: candidates[i + 1],
@@ -279,20 +295,57 @@ async function openChatWithFallbacks(
   throw new Error("Study AI request failed. Try again in a moment.");
 }
 
+function readToolCalls(
+  raw: unknown
+): ChatToolCall[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const calls: ChatToolCall[] = [];
+  for (const row of raw) {
+    if (!row || typeof row !== "object") continue;
+    const rec = row as {
+      id?: string;
+      type?: string;
+      function?: { name?: string; arguments?: string };
+    };
+    const name = rec.function?.name;
+    if (!name) continue;
+    calls.push({
+      id: rec.id || `call_${calls.length}`,
+      type: "function",
+      function: {
+        name,
+        arguments:
+          typeof rec.function?.arguments === "string"
+            ? rec.function.arguments
+            : "{}",
+      },
+    });
+  }
+  return calls.length ? calls : undefined;
+}
+
 export async function completeChat(
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  opts?: Omit<ChatRequestOpts, "stream">
 ): Promise<ChatResult> {
-  const { response, model } = await openChatWithFallbacks(messages, false);
+  const { response } = await openChatWithFallbacks(messages, {
+    stream: false,
+    ...opts,
+  });
   const data = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string } }>;
+    choices?: Array<{
+      message?: { content?: string | null; tool_calls?: unknown };
+    }>;
     usage?: {
       total_tokens?: number;
       prompt_tokens?: number;
       completion_tokens?: number;
     };
   };
-  const text = data.choices?.[0]?.message?.content?.trim();
-  if (!text) {
+  const message = data.choices?.[0]?.message;
+  const text = (message?.content ?? "").trim();
+  const toolCalls = readToolCalls(message?.tool_calls);
+  if (!text && !toolCalls?.length) {
     throw new Error("Study AI returned an empty response.");
   }
   const tokens =
@@ -301,19 +354,30 @@ export async function completeChat(
   return {
     text,
     tokens: tokens || Math.ceil((text.length + 200) / 4),
-    ...(model ? {} : {}),
+    toolCalls,
   };
 }
 
 export type StreamChatEvent =
   | { type: "delta"; text: string }
+  | { type: "tool_calls"; calls: ChatToolCall[] }
   | { type: "done"; tokens: number; model: string };
+
+type ToolCallAcc = {
+  id: string;
+  name: string;
+  arguments: string;
+};
 
 /** OpenAI-compatible SSE token stream with model fallbacks + transient retries. */
 export async function* streamChat(
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  opts?: Omit<ChatRequestOpts, "stream">
 ): AsyncGenerator<StreamChatEvent> {
-  const { response, model } = await openChatWithFallbacks(messages, true);
+  const { response, model } = await openChatWithFallbacks(messages, {
+    stream: true,
+    ...opts,
+  });
   if (!response.body) {
     throw new Error("Study AI returned an empty stream.");
   }
@@ -322,35 +386,88 @@ export async function* streamChat(
   const decoder = new TextDecoder();
   let buffer = "";
   let full = "";
+  const acc = new Map<number, ToolCallAcc>();
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
-
-    for (const raw of lines) {
-      const line = raw.trim();
-      if (!line.startsWith("data:")) continue;
-      const payload = line.slice(5).trim();
-      if (!payload || payload === "[DONE]") continue;
-      try {
-        const parsed = JSON.parse(payload) as {
-          choices?: Array<{ delta?: { content?: string } }>;
-        };
-        const piece = parsed.choices?.[0]?.delta?.content;
-        if (piece) {
-          full += piece;
-          yield { type: "delta", text: piece };
-        }
-      } catch {
-        // ignore malformed SSE chunks
+  const absorbToolDelta = (raw: unknown) => {
+    if (!Array.isArray(raw)) return;
+    for (const row of raw) {
+      if (!row || typeof row !== "object") continue;
+      const rec = row as {
+        index?: number;
+        id?: string;
+        function?: { name?: string; arguments?: string };
+      };
+      const index = typeof rec.index === "number" ? rec.index : acc.size;
+      const prev = acc.get(index) ?? { id: "", name: "", arguments: "" };
+      if (rec.id) prev.id = rec.id;
+      if (rec.function?.name) prev.name += rec.function.name;
+      if (typeof rec.function?.arguments === "string") {
+        prev.arguments += rec.function.arguments;
       }
+      acc.set(index, prev);
+    }
+  };
+
+  try {
+    while (true) {
+      if (opts?.signal?.aborted) break;
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line.startsWith("data:")) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === "[DONE]") continue;
+        try {
+          const parsed = JSON.parse(payload) as {
+            choices?: Array<{
+              delta?: { content?: string; tool_calls?: unknown };
+            }>;
+          };
+          const delta = parsed.choices?.[0]?.delta;
+          if (delta?.tool_calls) absorbToolDelta(delta.tool_calls);
+          const piece = delta?.content;
+          if (piece) {
+            full += piece;
+            yield { type: "delta", text: piece };
+          }
+        } catch {
+          // ignore malformed SSE chunks
+        }
+      }
+    }
+  } catch (err) {
+    if (opts?.signal?.aborted || (err as Error)?.name === "AbortError") {
+      // persist whatever streamed
+    } else {
+      throw err;
+    }
+  } finally {
+    try {
+      await reader.cancel();
+    } catch {
+      /* ignore */
     }
   }
 
-  if (!full.trim()) {
+  const calls: ChatToolCall[] = [...acc.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([, row], i) => ({
+      id: row.id || `call_${i}`,
+      type: "function" as const,
+      function: { name: row.name, arguments: row.arguments || "{}" },
+    }))
+    .filter((c) => c.function.name);
+
+  if (calls.length) {
+    yield { type: "tool_calls", calls };
+  }
+
+  if (!full.trim() && !calls.length && !opts?.signal?.aborted) {
     throw new Error("Study AI returned an empty response.");
   }
 

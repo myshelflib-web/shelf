@@ -80,7 +80,7 @@ export function chatModel(): string {
   const base = (process.env.LLM_BASE_URL ?? "").toLowerCase();
   if (isOllamaBaseUrl(base)) return "llama3.2:1b";
   if (base.includes("api.groq.com")) return "llama-3.1-8b-instant";
-  // Lite is much faster on free tier; set LLM_MODEL=gemini-flash-latest for quality.
+  // Lite-first keeps free-tier latency down; set LLM_MODEL=gemini-flash-latest for quality.
   return "gemini-flash-lite-latest";
 }
 

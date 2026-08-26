@@ -80,6 +80,12 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "PDF question answering",
     "cross document AI chat",
   ],
+  "study-ai-stop-queue-diagrams": [
+    "stop AI generation",
+    "queue chat messages",
+    "mermaid diagram preview",
+    "Google search study AI",
+  ],
   "study-ai-summaries-mind-maps": [
     "mind map from PDF",
     "AI summary notes",

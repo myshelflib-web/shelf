@@ -198,17 +198,31 @@ Disable or delete that workflow once the backend is on a paid always-on plan.
 | `EMBEDDING_BASE_URL` | `https://api.jina.ai/v1` |
 | `EMBEDDING_MODEL` | `jina-embeddings-v3` |
 
-**Gemini Flash (chat)** — set all three. Prefer Google’s rolling alias:
+**Gemini Flash-Lite (chat) + gemini-embedding-001** — set all of these. Prefer Google’s rolling lite alias:
 
-| Variable | Gemini chat |
-|----------|-------------|
+| Variable | Gemini |
+|----------|--------|
 | `LLM_API_KEY` | Google AI Studio key (`AIza…`) |
 | `LLM_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/openai` |
-| `LLM_MODEL` | `gemini-flash-lite-latest` (fast free-tier default) or `gemini-flash-latest` |
+| `LLM_MODEL` | `gemini-flash-lite-latest` (default) or `gemini-flash-latest` |
+| `EMBEDDING_API_KEY` | Same AI Studio key (or a dedicated one) |
+| `EMBEDDING_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/openai` |
+| `EMBEDDING_MODEL` | `gemini-embedding-001` |
+| `GEMINI_CHAT_RPM` | `15` free-tier Flash-Lite (raise if billed) |
+| `GEMINI_EMBED_RPM` | `100` free-tier embedding-001 |
+
+Optional Google web lookup (Custom Search JSON API — does not burn Gemini RPM). Create a Programmable Search Engine and enable Custom Search API:
+
+| Variable | Google web search |
+|----------|-------------------|
+| `GOOGLE_CSE_ID` | Search engine `cx` |
+| `GOOGLE_SEARCH_API_KEY` | API key with Custom Search API enabled |
+
+If CSE is unset, Study AI falls back to Gemini Google Search grounding (uses Flash-Lite RPM), then Wikipedia / DuckDuckGo.
 
 If a model returns 404 / “no longer available”, the backend retries `LLM_MODEL_FALLBACKS` and remembers the working model until restart.
 
-**Free-tier speed tips (Render):** use lite model, keep `PAGE_ASK_CONTEXT_BUDGET` ≤ 6500 (default), avoid `PAGE_ASK_ALWAYS_VECTORS=true` unless you need retrieval on every ask. Render free cold starts add 30–60s after idle — unrelated to Gemini.
+**Free-tier speed tips (Render):** stay on lite, keep `PAGE_ASK_CONTEXT_BUDGET` ≤ 6500 (default), leave embedding batch at 4 / 2s pause, avoid `PAGE_ASK_ALWAYS_VECTORS=true` unless you need retrieval on every ask. Render free cold starts add 30–60s after idle — unrelated to Gemini.
 
 **“Study AI failed” with no backend logs:** the browser usually got a non-JSON error (404/502 HTML) before Express handled the request — often Vercel frontend ahead of a Render redeploy for `/api/study/ask/stream`, or a cold-start gateway timeout. Rate limits *do* log (`llm.request.failed` / `study.ask.*`) and return a clear “rate limit” / “quota” message. Check the **backend** Render service logs (not the processing worker) for `study.ask.stream.start` / `study.ask.start`.
 

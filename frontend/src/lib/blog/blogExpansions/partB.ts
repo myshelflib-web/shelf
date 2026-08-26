@@ -323,4 +323,27 @@ export const BLOG_EXPANSIONS_B: Record<string, BlogSection[]> = {
       ],
     },
   ],
+  "study-ai-stop-queue-diagrams": [
+    {
+      heading: "Reader panel vs full workspace",
+      paragraphs: [
+        "The same stop, queue, and delete controls work in the reader Study AI panel. Page-scoped chats still save to /study-ai so you can continue a document conversation in the full workspace with library tools.",
+        "Queued questions stay in the current thread. Switching documents clears the reader panel queue so you do not send a leftover prompt against the wrong PDF.",
+      ],
+    },
+    {
+      heading: "How citations stay honest",
+      paragraphs: [
+        "Library search, highlights, recents, starred pages, and page lookup return numbered excerpts. Study AI is instructed to cite those as [1], [2] and not invent titles. Google / web lookup is labeled as general knowledge — never as a quote from your files.",
+        "If retrieval finds nothing in scope, the model should say so under Gaps instead of filling from memory. Attach a relevancy or syllabus doc when you want exam framing on top of your notes.",
+      ],
+    },
+    {
+      heading: "When to reindex",
+      paragraphs: [
+        "Better embeddings use document titles and query-vs-document task types. Newly processed pages index automatically; a one-shot backfill is available if older PDFs still miss search.",
+        "Free accounts have a vector chunk cap. Premium raises it so large collections stay searchable during peak revision.",
+      ],
+    },
+  ],
 };

@@ -4,6 +4,7 @@ import { contentKeyFromPdfKey, pageHref } from "../utils/docPaths.js";
 import { getFromS3 } from "./s3.js";
 import { htmlToPlainText } from "../utils/htmlText.js";
 import { chunkText } from "../utils/chunkText.js";
+import { labeledChunk } from "../utils/embedLabel.js";
 import { logger, errorFields } from "../utils/logger.js";
 import { MAX_CHUNKS_PER_PAGE, vectorChunkLimit } from "../utils/quotas.js";
 import { embedTexts } from "./embeddings.js";
@@ -104,7 +105,7 @@ export async function indexUserPage(pageId: string): Promise<void> {
   if (!page || page.status !== "PUBLISHED") return;
 
   const body = await extractPageBody(page);
-  const contentHash = hashContent(body);
+  const contentHash = hashContent(`v2:${body}`);
 
   const existing = await prisma.pageVectorIndex.findUnique({ where: { pageId } });
   if (existing?.contentHash === contentHash) {
@@ -178,7 +179,12 @@ export async function indexUserPage(pageId: string): Promise<void> {
 
   await deleteVectorsForPage(pageId);
 
-  const vectors = await embedTexts(chunks);
+  const notebook = page.userSubject?.name ?? "Library";
+  const topic = page.userTopicGroup?.title ?? "";
+  const labeled = chunks.map((text) =>
+    labeledChunk({ title: page.title, notebook, topic }, text)
+  );
+  const vectors = await embedTexts(labeled, { task: "document" });
   await upsertVectors(
     chunks.map((text, i) => ({
       id: chunkPointId(pageId, i),
@@ -187,8 +193,8 @@ export async function indexUserPage(pageId: string): Promise<void> {
         userId: page.userId,
         pageId: page.id,
         title: page.title,
-        notebook: page.userSubject?.name ?? "Library",
-        topic: page.userTopicGroup?.title ?? "",
+        notebook,
+        topic,
         href,
         text,
         chunkIndex: i,

@@ -1044,6 +1044,11 @@ export const api = {
       request<{ success: boolean }>(`/api/study/chats/${id}`, {
         method: "DELETE",
       }),
+    deleteChatMessage: (chatId: string, messageId: string) =>
+      request<{ success: boolean; deletedIds: string[] }>(
+        `/api/study/chats/${chatId}/messages/${messageId}`,
+        { method: "DELETE" }
+      ),
     sendChatMessage: (
       id: string,
       content: string,

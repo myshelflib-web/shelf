@@ -1,5 +1,6 @@
 import prisma from "../utils/prisma.js";
 import { chatMessageLimit } from "../utils/quotas.js";
+import { messageIdsToDelete } from "../utils/chatMessages.js";
 
 export function titleFromQuery(q: string) {
   const t = q.trim().replace(/\s+/g, " ");
@@ -114,4 +115,31 @@ export async function savePageAskTurn(input: {
       updatedAt: new Date(),
     },
   });
+}
+
+export async function deleteChatMessage(opts: {
+  userId: string;
+  threadId: string;
+  messageId: string;
+}): Promise<string[] | null> {
+  const thread = await prisma.chatThread.findFirst({
+    where: { id: opts.threadId, userId: opts.userId },
+    select: { id: true },
+  });
+  if (!thread) return null;
+
+  const messages = await prisma.chatMessage.findMany({
+    where: { threadId: thread.id },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, role: true },
+  });
+  const ids = messageIdsToDelete(messages, opts.messageId);
+  if (!ids) return null;
+
+  await prisma.chatMessage.deleteMany({ where: { id: { in: ids } } });
+  await prisma.chatThread.update({
+    where: { id: thread.id },
+    data: { updatedAt: new Date() },
+  });
+  return ids;
 }
