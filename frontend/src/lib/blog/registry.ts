@@ -17,10 +17,12 @@ import { spotifyFocus } from "./posts/spotify-focus";
 import { pwaOffline } from "./posts/pwa-offline";
 import { studyAiChatControls } from "./posts/study-ai-chat-controls";
 import { examStyleQuiz } from "./posts/exam-style-quiz";
+import { documentSharing } from "./posts/document-sharing";
 import { EXTRA_BLOG_POSTS } from "./posts/extra";
 
 const ALL_POSTS: BlogPost[] = [
   ...EXTRA_BLOG_POSTS,
+  documentSharing,
   examStyleQuiz,
   studyAiChatControls,
   pwaOffline,

@@ -5,6 +5,7 @@ export type PersonalPageReaderScope =
   | { kind: "topic"; notebookSlug: string; topicSlug: string; pageSlug: string }
   | { kind: "notebook-file"; notebookSlug: string; pageSlug: string }
   | { kind: "root-file"; pageSlug: string }
+  | { kind: "shared"; pageId: string; linkToken?: string }
   | {
       kind: "learn";
       subjectSlug: string;
@@ -154,6 +155,12 @@ export function scopeHref(scope: PersonalPageReaderScope): string {
   if (scope.kind === "learn") {
     return `/learn/${scope.subjectSlug}/${scope.topicSlug}/${scope.articleSlug}`;
   }
+  if (scope.kind === "shared") {
+    const t = scope.linkToken
+      ? `?t=${encodeURIComponent(scope.linkToken)}`
+      : "";
+    return `/my-content/shared/${scope.pageId}${t}`;
+  }
   if (scope.kind === "root-file") return pageHref(null, null, scope.pageSlug);
   if (scope.kind === "notebook-file")
     return pageHref(scope.notebookSlug, null, scope.pageSlug);
@@ -167,6 +174,9 @@ export function navHref(
   if (scope.kind === "learn") {
     return `/learn/${scope.subjectSlug}/${scope.topicSlug}/${pageSlug}`;
   }
+  if (scope.kind === "shared") {
+    return `/my-content/shared/${scope.pageId}`;
+  }
   if (scope.kind === "root-file") return pageHref(null, null, pageSlug);
   if (scope.kind === "notebook-file")
     return pageHref(scope.notebookSlug, null, pageSlug);
@@ -179,6 +189,8 @@ export function afterDeletePath(_scope: PersonalPageReaderScope): string {
 
 export function scopeFromHref(href: string): PersonalPageReaderScope | null {
   const path = href.split("?")[0] ?? href;
+  const search = href.includes("?") ? href.slice(href.indexOf("?") + 1) : "";
+  const linkToken = new URLSearchParams(search).get("t") ?? undefined;
   const learnMatch = path.match(/^\/learn\/([^/]+)\/([^/]+)\/([^/]+)$/);
   if (learnMatch) {
     return {
@@ -186,6 +198,14 @@ export function scopeFromHref(href: string): PersonalPageReaderScope | null {
       subjectSlug: learnMatch[1]!,
       topicSlug: learnMatch[2]!,
       articleSlug: learnMatch[3]!,
+    };
+  }
+  const sharedMatch = path.match(/^\/my-content\/shared\/([^/]+)$/);
+  if (sharedMatch) {
+    return {
+      kind: "shared",
+      pageId: sharedMatch[1]!,
+      ...(linkToken ? { linkToken } : {}),
     };
   }
   const parts = path.replace(/^\/my-content\/?/, "").split("/").filter(Boolean);

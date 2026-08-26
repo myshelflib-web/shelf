@@ -29,7 +29,10 @@ import {
   FoldVertical,
   Search,
   ArrowDownWideNarrow,
+  Share2,
 } from "lucide-react";
+import { SharedWithMeSection } from "@/components/my-content/SharedWithMeSection";
+import { SharePageModal } from "@/components/my-content/SharePageModal";
 import { FolderMark } from "@/components/FolderMark";
 import { folderTone } from "@/lib/folderTone";
 import { ExplorerSidebarSkeleton } from "@/components/dashboard/DashboardSkeletons";
@@ -164,6 +167,10 @@ export function MyContentSidebar({
   const [totalNotebookPages, setTotalNotebookPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [editNotebook, setEditNotebook] = useState<UserSubject | null>(null);
+  const [shareTarget, setShareTarget] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   const searching = debouncedQ.length > 0;
   const scheduledHrefs = useScheduledPageHrefs(true);
@@ -532,6 +539,15 @@ export function MyContentSidebar({
           className="flex items-center gap-0.5 shrink-0"
           onClick={(e) => e.stopPropagation()}
         >
+          <button
+            type="button"
+            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--accent)] opacity-0 group-hover:opacity-100"
+            title="Share page"
+            aria-label="Share page"
+            onClick={() => setShareTarget({ id: page.id, title: page.title })}
+          >
+            <Share2 className="w-3 h-3" />
+          </button>
           <button
             type="button"
             className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] opacity-0 group-hover:opacity-100"
@@ -1028,6 +1044,15 @@ export function MyContentSidebar({
             )}
           </>
         )}
+        <SharedWithMeSection
+          workspaceMode={workspaceMode}
+          onOpenPage={onOpenPage}
+          activePageId={
+            currentHref?.includes("/shared/")
+              ? currentHref.split("/shared/")[1]?.split("?")[0]
+              : null
+          }
+        />
       </nav>
 
       {!searching && totalNotebookPages > 1 && (
@@ -1064,6 +1089,17 @@ export function MyContentSidebar({
         onClose={() => setEditNotebook(null)}
       />
     )}
-    </>
+    {shareTarget && (
+      <SharePageModal
+        open
+        pageId={shareTarget.id}
+        pageTitle={shareTarget.title}
+        onClose={() => {
+          setShareTarget(null);
+          window.dispatchEvent(new Event("shelf:shares-changed"));
+        }}
+      />
+    )}
+  </>
   );
 }

@@ -20,6 +20,13 @@ import { Crop, Trash2, Lock, ChevronRight, Sparkles, X } from "lucide-react";
 import { PaywallBanner } from "@/components/PaywallBanner";
 import { RenameButton } from "@/components/my-content/RenameButton";
 import { ReadProgressBar } from "@/components/my-content/ReadProgressBar";
+import { SharePageModal } from "@/components/my-content/SharePageModal";
+import {
+  AccessDeniedState,
+  ShareChromeButton,
+  SharedByBanner,
+} from "./SharedDocChrome";
+import { ApiError } from "@/lib/api";
 import { FullscreenButton } from "@/components/FullscreenButton";
 import { StudyPanel } from "@/components/StudyPanel";
 import { useFullscreen } from "@/hooks/useFullscreen";
@@ -85,6 +92,9 @@ export interface LoadedPage {
   isPreloaded?: boolean;
   isLocked?: boolean;
   subjectMeta?: { name: string; slug: string; icon?: string | null } | null;
+  /** Present when opened via share / link. */
+  access?: import("@/types").PageAccessInfo;
+  accessDenied?: boolean;
 }
 
 async function fetchCurriculumPage(
@@ -129,6 +139,8 @@ async function fetchPage(scope: PersonalPageReaderScope): Promise<{
   isLocked?: boolean;
   subjectMeta?: { name: string; slug: string; icon?: string | null } | null;
   topicMeta?: { title: string; slug: string } | null;
+  access?: import("@/types").PageAccessInfo;
+  accessDenied?: boolean;
 }> {
   if (scope.kind === "learn") {
     const curriculum = await fetchCurriculumPage(scope);
@@ -140,6 +152,42 @@ async function fetchPage(scope: PersonalPageReaderScope): Promise<{
       subjectMeta: curriculum.subjectMeta,
       topicMeta: curriculum.topicMeta,
     };
+  }
+  if (scope.kind === "shared") {
+    try {
+      const res = await api.myContent.getPageById(
+        scope.pageId,
+        scope.linkToken
+      );
+      return {
+        page: res.page,
+        navigation: res.navigation,
+        access: res.access,
+      };
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 403) {
+        return {
+          page: {
+            id: scope.pageId,
+            title: "Access removed",
+            slug: "access-removed",
+            content: "",
+            status: "DRAFT",
+            contentType: "HTML",
+            hasPdf: false,
+            completed: false,
+            readPercent: 0,
+            starred: false,
+            isPersonal: true,
+            notebook: null,
+            topic: null,
+          },
+          navigation: { prev: null, next: null },
+          accessDenied: true,
+        };
+      }
+      throw err;
+    }
   }
   if (scope.kind === "root-file") {
     return api.myContent.getRootPage(scope.pageSlug);
@@ -273,6 +321,7 @@ export function DocumentPane({
   const [draftUrl, setDraftUrl] = useState("");
   editingRef.current = editing;
   const [htmlClip, setHtmlClip] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [dropActive, setDropActive] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
   const pdfCommandsRef = useRef<PdfViewerCommands | null>(null);
@@ -317,7 +366,7 @@ export function DocumentPane({
   }, [currentHref]);
 
   const flushViewToServer = useCallback((pageId: string, view: TabViewState) => {
-    if (scope.kind === "learn") return;
+    if (scope.kind === "learn" || scope.kind === "shared") return;
     const payload = toServerView(view);
     if (
       payload.pdfPage == null &&
@@ -366,8 +415,27 @@ export function DocumentPane({
     fetchPage(scope)
       .then((result) => {
         if (gen !== pageLoadGen.current) return;
-        const { page, navigation, isPreloaded, isLocked, subjectMeta, topicMeta } =
+        const { page, navigation, isPreloaded, isLocked, subjectMeta, topicMeta, access, accessDenied } =
           result;
+        if (accessDenied) {
+          setPageData({
+            id: page.id,
+            title: page.title,
+            content: "",
+            contentType: "HTML",
+            completed: false,
+            starred: false,
+            readPercent: 0,
+            navigation: { prev: null, next: null },
+            notebookSlug: null,
+            topicSlug: null,
+            notebookMeta: null,
+            topicMeta: null,
+            accessDenied: true,
+          });
+          setLoading(false);
+          return;
+        }
         const loaded: LoadedPage = {
           id: page.id,
           title: page.title,
@@ -401,6 +469,7 @@ export function DocumentPane({
           isPreloaded,
           isLocked,
           subjectMeta: subjectMeta ?? null,
+          access,
         };
         setPageData(loaded);
         setLiveReadPercent(loaded.readPercent);
@@ -795,6 +864,9 @@ export function DocumentPane({
   );
 
   const isPreloadedDoc = Boolean(pageData?.isPreloaded);
+  const isSharedRecipient = Boolean(
+    pageData?.access && !pageData.access.isOwner
+  );
   const curriculumPdfSource =
     scope.kind === "learn"
       ? () =>
@@ -804,7 +876,9 @@ export function DocumentPane({
             scope.articleSlug
           )
       : undefined;
-  const guestLocked = Boolean(signInGate?.active);
+  const guestLocked =
+    Boolean(signInGate?.active) ||
+    Boolean(pageData?.access && !pageData.access.canAnnotate);
   const onGuestLockedClick = signInGate?.active
     ? (feature: string) => signInGate.prompt(feature)
     : undefined;
@@ -978,6 +1052,8 @@ export function DocumentPane({
         <div className="flex-1 flex items-center justify-center">
           <CircleLoader size="lg" label="Loading page" />
         </div>
+      ) : pageData?.accessDenied ? (
+        <AccessDeniedState />
       ) : pageData ? (
         <>
           {showChrome && (
@@ -1000,7 +1076,9 @@ export function DocumentPane({
                   }}
                   className="hover:text-[var(--text-primary)] shrink-0"
                 >
-                  Library
+                  {pageData.access && !pageData.access.isOwner
+                    ? "Shared with me"
+                    : "Library"}
                 </Link>
                 {crumbNotebook ? (
                   <>
@@ -1019,7 +1097,7 @@ export function DocumentPane({
                   </>
                 ) : null}
                 <ChevronRight className="w-3 h-3 shrink-0 opacity-60" />
-                {isPreloadedDoc ? (
+                {isPreloadedDoc || isSharedRecipient ? (
                   <span
                     className="truncate text-[11px] text-[var(--text-secondary)]"
                     title={pageData.title}
@@ -1084,6 +1162,10 @@ export function DocumentPane({
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 bg-[var(--bg-secondary)] text-[var(--text-muted)]">
                     Preloaded
                   </span>
+                ) : pageData.access && !pageData.access.isOwner ? (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent-light)] text-[var(--accent)] shrink-0">
+                    Shared
+                  </span>
                 ) : (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)] flex items-center gap-1 shrink-0">
                     <Lock className="w-3 h-3" />
@@ -1133,7 +1215,12 @@ export function DocumentPane({
                     <Crop className="w-4 h-4" />
                   </button>
                 )}
-                {!isPreloadedDoc && (
+                {!isPreloadedDoc &&
+                  (!pageData.access || pageData.access.isOwner) && (
+                  <ShareChromeButton onClick={() => setShareOpen(true)} />
+                )}
+                {!isPreloadedDoc &&
+                  (!pageData.access || pageData.access.isOwner) && (
                 <button
                   onClick={handleDelete}
                   className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-500"
@@ -1146,6 +1233,33 @@ export function DocumentPane({
               </div>
             </div>
           )}
+
+          {pageData.access && !pageData.access.isOwner && showChrome && (
+            <SharedByBanner
+              access={pageData.access}
+              onSaveCopy={() => {
+                void api.myContent
+                  .saveSharedCopy(pageData.id, {
+                    t: scope.kind === "shared" ? scope.linkToken : undefined,
+                  })
+                  .then(() => {
+                    window.dispatchEvent(new Event("shelf:shares-changed"));
+                    window.dispatchEvent(new Event("shelf:content-changed"));
+                  })
+                  .catch(() => undefined);
+              }}
+            />
+          )}
+
+          <SharePageModal
+            open={shareOpen}
+            pageId={pageData.id}
+            pageTitle={pageData.title}
+            onClose={() => {
+              setShareOpen(false);
+              window.dispatchEvent(new Event("shelf:shares-changed"));
+            }}
+          />
 
           <div
             className={`flex-1 flex overflow-hidden min-h-0${

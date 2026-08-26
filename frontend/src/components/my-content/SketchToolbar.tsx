@@ -65,7 +65,9 @@ export function SketchToolbar({
   onRedo,
 }: SketchToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-1 px-3 py-2 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
+    <div className="shrink-0 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
+      <div className="flex items-center justify-center gap-0.5 px-3 py-2 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-0.5 shrink-0">
       <button
         type="button"
         className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] disabled:opacity-40"
@@ -84,10 +86,11 @@ export function SketchToolbar({
       >
         <Redo2 className="w-4 h-4" />
       </button>
+      </div>
 
-      <div className="w-px h-6 bg-[var(--border)] mx-1" />
+      <div className="w-px h-6 bg-[var(--border)] mx-1 shrink-0" />
 
-      <div className="flex items-center gap-0.5 mr-1 rounded-lg bg-[var(--bg-secondary)] p-0.5">
+      <div className="flex items-center gap-0.5 mr-1 rounded-lg bg-[var(--bg-secondary)] p-0.5 shrink-0">
         <button
           type="button"
           className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium ${
@@ -133,7 +136,7 @@ export function SketchToolbar({
       </div>
 
       {drawTool === "pen" && (
-        <>
+        <div className="flex items-center gap-0.5 shrink-0">
           <span className="text-[10px] font-medium text-[var(--text-muted)] mr-1">
             Size
           </span>
@@ -171,11 +174,12 @@ export function SketchToolbar({
               onClick={() => onPenColorChange(c.color)}
             />
           ))}
-        </>
+        </div>
       )}
 
-      <div className="w-px h-6 bg-[var(--border)] mx-1" />
+      <div className="w-px h-6 bg-[var(--border)] mx-1 shrink-0" />
 
+      <div className="flex items-center gap-0.5 shrink-0">
       <span className="text-[10px] font-medium text-[var(--text-muted)] mr-1">
         Paper
       </span>
@@ -195,9 +199,11 @@ export function SketchToolbar({
           {t.label}
         </button>
       ))}
+      </div>
 
-      <div className="w-px h-6 bg-[var(--border)] mx-1" />
+      <div className="w-px h-6 bg-[var(--border)] mx-1 shrink-0" />
 
+      <div className="flex items-center gap-0.5 shrink-0">
       {SKETCH_BACKGROUNDS.map((c) => (
         <button
           key={c.id}
@@ -213,10 +219,11 @@ export function SketchToolbar({
           onClick={() => onPageBgChange(c.color)}
         />
       ))}
+      </div>
 
-      <div className="flex-1" />
+      <div className="w-px h-6 bg-[var(--border)] mx-1 shrink-0" />
 
-      <div className="flex items-center gap-0.5 rounded-lg bg-[var(--bg-secondary)] p-0.5">
+      <div className="flex items-center gap-0.5 rounded-lg bg-[var(--bg-secondary)] p-0.5 shrink-0">
         <button
           type="button"
           className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-40"
@@ -247,6 +254,7 @@ export function SketchToolbar({
           <Plus className="w-3.5 h-3.5" />
           Page
         </button>
+      </div>
       </div>
     </div>
   );

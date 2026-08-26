@@ -113,9 +113,15 @@ export function ReaderWorkspace({
   } = workspace;
 
   const pageSlug =
-    routeScope.kind === "learn" ? routeScope.articleSlug : routeScope.pageSlug;
+    routeScope.kind === "learn"
+      ? routeScope.articleSlug
+      : routeScope.kind === "shared"
+        ? routeScope.pageId
+        : routeScope.pageSlug;
   const notebookSlug =
-    routeScope.kind === "root-file" || routeScope.kind === "learn"
+    routeScope.kind === "root-file" ||
+    routeScope.kind === "learn" ||
+    routeScope.kind === "shared"
       ? null
       : routeScope.notebookSlug;
   const topicSlug =
@@ -221,7 +227,9 @@ export function ReaderWorkspace({
     // Only remember pages that actually loaded for this account (not 404 / leaked tabs).
     if (!focusedTab?.pageId) return;
     const notebook =
-      focusedTab.scope.kind === "root-file" || focusedTab.scope.kind === "learn"
+      focusedTab.scope.kind === "root-file" ||
+      focusedTab.scope.kind === "learn" ||
+      focusedTab.scope.kind === "shared"
         ? null
         : focusedTab.scope.notebookSlug;
     const topic =

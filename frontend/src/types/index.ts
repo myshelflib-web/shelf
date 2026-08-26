@@ -200,6 +200,7 @@ export interface UserPageDetail {
   readPercent: number;
   starred: boolean;
   isPersonal: boolean;
+  shared?: boolean;
   notebook: { name: string; slug: string; icon: string } | null;
   topic: { title: string; slug: string } | null;
   view?: {
@@ -210,6 +211,23 @@ export interface UserPageDetail {
     viewedAt?: string | null;
   } | null;
 }
+
+export type PageAccessInfo = {
+  role: "owner" | "view" | "edit";
+  canEdit: boolean;
+  canAnnotate: boolean;
+  canManageShares: boolean;
+  isOwner: boolean;
+  owner: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl: string | null;
+  };
+  linkShareEnabled: boolean;
+  linkToken: string | null;
+  viewerId: string;
+};
 
 /** @deprecated */
 export type UserTopicDetail = UserPageDetail;

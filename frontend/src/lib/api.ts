@@ -938,6 +938,128 @@ export const api = {
       request<{ success: boolean }>(`/api/my-content/pages/${id}`, {
         method: "DELETE",
       }),
+    getPageById: (id: string, linkToken?: string | null) => {
+      const qs = linkToken ? `?t=${encodeURIComponent(linkToken)}` : "";
+      return request<{
+        page: import("@/types").UserPageDetail;
+        navigation: {
+          prev: { slug: string; title: string } | null;
+          next: { slug: string; title: string } | null;
+        };
+        context: {
+          notebookSlug: string | null;
+          topicSlug: string | null;
+          shared?: boolean;
+        };
+        access: import("@/types").PageAccessInfo;
+      }>(`/api/my-content/pages/${encodeURIComponent(id)}${qs}`);
+    },
+    listShares: (pageId: string) =>
+      request<{
+        owner: {
+          id: string;
+          name: string;
+          email: string;
+          avatarUrl: string | null;
+        };
+        shares: Array<{
+          id: string;
+          email: string;
+          role: "view" | "edit";
+          status: string;
+          pending: boolean;
+          user: {
+            id: string;
+            name: string;
+            email: string;
+            avatarUrl: string | null;
+          } | null;
+        }>;
+        generalAccess: "restricted" | "link";
+        linkToken: string | null;
+        linkPath: string | null;
+      }>(`/api/my-content/pages/${encodeURIComponent(pageId)}/shares`),
+    saveShares: (
+      pageId: string,
+      data: {
+        people: Array<{ email: string; role: "view" | "edit" }>;
+        generalAccess: "restricted" | "link";
+      }
+    ) =>
+      request<{
+        owner: {
+          id: string;
+          name: string;
+          email: string;
+          avatarUrl: string | null;
+        };
+        shares: Array<{
+          id: string;
+          email: string;
+          role: "view" | "edit";
+          status: string;
+          pending: boolean;
+          user: {
+            id: string;
+            name: string;
+            email: string;
+            avatarUrl: string | null;
+          } | null;
+        }>;
+        generalAccess: "restricted" | "link";
+        linkToken: string | null;
+        linkPath: string | null;
+      }>(`/api/my-content/pages/${encodeURIComponent(pageId)}/shares`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+      }),
+    listSharedWithMe: () =>
+      request<{
+        unread: number;
+        items: Array<{
+          shareId: string;
+          pageId: string;
+          title: string;
+          contentType: string;
+          role: "view" | "edit";
+          status: "active" | "removed";
+          href: string;
+          owner: {
+            id: string;
+            name: string;
+            email: string;
+            avatarUrl: string | null;
+          };
+          unread: boolean;
+          copiedPageId: string | null;
+          updatedAt: string;
+        }>;
+      }>("/api/my-content/shared-with-me"),
+    hideSharedItem: (shareId: string) =>
+      request<{ ok: boolean }>(
+        `/api/my-content/shared-with-me/${encodeURIComponent(shareId)}/hide`,
+        { method: "POST" }
+      ),
+    lookupUsers: (q: string) =>
+      request<{
+        users: Array<{
+          id: string;
+          name: string;
+          email: string;
+          avatarUrl: string | null;
+          onShelf: boolean;
+        }>;
+      }>(`/api/my-content/users/lookup?q=${encodeURIComponent(q)}`),
+    saveSharedCopy: (
+      pageId: string,
+      data?: { subjectId?: string; topicGroupId?: string; t?: string }
+    ) =>
+      request<{
+        page: { id: string; title: string; slug: string; contentType: string };
+      }>(`/api/my-content/pages/${encodeURIComponent(pageId)}/save-copy`, {
+        method: "POST",
+        body: JSON.stringify(data ?? {}),
+      }),
     updatePageTitle: (id: string, title: string) =>
       request<{ page: { id: string; title: string } }>(
         `/api/my-content/pages/${id}/title`,

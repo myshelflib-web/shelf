@@ -44,6 +44,8 @@ model User {
   referredEarnings        AffiliateEarning[]  @relation("ReferredUser")
   couponRedemptions       CouponRedemption[]
   recurringSubscriptions  RecurringSubscription[]
+  pageSharesOwned         PageShare[]         @relation("PageShareOwner")
+  pageSharesReceived      PageShare[]         @relation("PageShareGrantee")
 }
 
 enum Plan {
@@ -459,6 +461,9 @@ model UserTopic {
   viewScrollTop    Int?
   viewScale        Float?
   viewedAt         DateTime?
+  /** Anyone with the link (signed-in) may view when set with linkShareToken. */
+  linkShareEnabled Boolean          @default(false)
+  linkShareToken   String?          @unique
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -467,12 +472,51 @@ model UserTopic {
   userTopicGroup UserTopicGroup?         @relation(fields: [userTopicGroupId], references: [id], onDelete: Cascade)
   highlights     UserContentHighlight[]
   vectorIndex    PageVectorIndex?
+  shares         PageShare[]
 
   // Slug uniqueness: partial indexes in migration (root / notebook / topic).
   @@index([userId])
   @@index([userSubjectId])
   @@index([userTopicGroupId])
   @@index([userId, viewedAt])
+}
+
+enum PageShareRole {
+  VIEWER
+  EDITOR
+}
+
+enum PageShareStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
+model PageShare {
+  id           String          @id @default(uuid())
+  pageId       String
+  ownerId      String
+  granteeId    String?
+  granteeEmail String
+  role         PageShareRole   @default(VIEWER)
+  status       PageShareStatus @default(PENDING)
+  /** Recipient hid the row from Shared with me (access unchanged until revoked). */
+  hiddenAt     DateTime?
+  seenAt       DateTime?
+  /** Independent copy in the recipient's library, if they saved one. */
+  copiedPageId String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  page    UserTopic @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  owner   User      @relation("PageShareOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  grantee User?     @relation("PageShareGrantee", fields: [granteeId], references: [id], onDelete: SetNull)
+
+  @@unique([pageId, granteeEmail])
+  @@index([granteeId, status])
+  @@index([granteeEmail, status])
+  @@index([pageId, status])
+  @@index([ownerId])
 }
 
 model UserContentHighlight {

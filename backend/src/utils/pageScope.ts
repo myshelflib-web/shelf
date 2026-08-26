@@ -12,8 +12,8 @@ export function slugify(value: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-/** Reserved so `/my-content/file/...` never collides with a notebook/topic named "file". */
-export const RESERVED_SLUGS = new Set(["file"]);
+/** Reserved so `/my-content/file/...` and `/my-content/shared/...` never collide. */
+export const RESERVED_SLUGS = new Set(["file", "shared"]);
 
 export function isReservedSlug(slug: string): boolean {
   return RESERVED_SLUGS.has(slug);

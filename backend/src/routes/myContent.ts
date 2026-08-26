@@ -39,6 +39,10 @@ import {
   parsePageView,
 } from "../utils/pageView.js";
 import {
+  canAnnotate,
+  findAccessiblePage,
+} from "../utils/pageAccess.js";
+import {
   DOCUMENT_MAX_BYTES,
   detectFileKind,
   bufferToHtml,
@@ -1344,9 +1348,10 @@ router.get(
 
 async function streamPagePdf(req: Request, res: Response) {
   const userId = req.user!.userId;
-  const page = await prisma.userTopic.findFirst({
-    where: { id: param(req, "id"), userId },
+  const access = await findAccessiblePage(userId, param(req, "id"), {
+    linkToken: typeof req.query.t === "string" ? req.query.t : null,
   });
+  const page = access?.page;
   if (!page?.pdfKey) {
     res.status(404).json({ error: "PDF not found" });
     return;
@@ -1433,10 +1438,10 @@ async function streamPagePdf(req: Request, res: Response) {
 
 router.get("/pages/:id/pdf-url", async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const page = await prisma.userTopic.findFirst({
-    where: { id: param(req, "id"), userId },
-    select: { pdfKey: true, fileSizeBytes: true, updatedAt: true },
+  const access = await findAccessiblePage(userId, param(req, "id"), {
+    linkToken: typeof req.query.t === "string" ? req.query.t : null,
   });
+  const page = access?.page;
   if (!page?.pdfKey) {
     res.status(404).json({ error: "PDF not found" });
     return;
@@ -1846,16 +1851,16 @@ router.delete("/pages/:id", async (req: Request, res: Response) => {
 
 router.get("/pages/:topicId/highlights", async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const page = await prisma.userTopic.findFirst({
-    where: { id: param(req, "topicId"), userId },
+  const access = await findAccessiblePage(userId, param(req, "topicId"), {
+    linkToken: typeof req.query.t === "string" ? req.query.t : null,
   });
-  if (!page) {
+  if (!access) {
     res.status(404).json({ error: "Page not found" });
     return;
   }
 
   const highlights = await prisma.userContentHighlight.findMany({
-    where: { userId, userTopicId: page.id },
+    where: { userId, userTopicId: access.page.id },
     orderBy: { createdAt: "asc" },
   });
   res.json({ highlights });
@@ -1875,13 +1880,14 @@ router.post("/highlights", async (req: Request, res: Response) => {
     position,
   } = req.body;
 
-  const page = await prisma.userTopic.findFirst({
-    where: { id: userTopicId, userId },
+  const access = await findAccessiblePage(userId, String(userTopicId), {
+    linkToken: typeof req.body?.t === "string" ? req.body.t : null,
   });
-  if (!page) {
+  if (!access || !canAnnotate(access.role)) {
     res.status(404).json({ error: "Page not found" });
     return;
   }
+  const page = access.page;
 
   const highlight = await prisma.userContentHighlight.create({
     data: {
