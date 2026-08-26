@@ -581,19 +581,68 @@ export const api = {
         plan: string;
         isPremium: boolean;
         subscriptionExpiresAt: string | null;
+        coinBalance: number;
         priceInr: number;
         planDays: number;
+        plans: {
+          once: { amountPaise: number; priceInr: number; planDays: number; label: string };
+          monthly: { amountPaise: number; priceInr: number; planDays: number; label: string };
+          yearly: { amountPaise: number; priceInr: number; planDays: number; label: string };
+        };
+        recurring: {
+          id: string;
+          interval: string;
+          status: string;
+          amount: number;
+          currentPeriodEnd: string | null;
+          cancelAtPeriodEnd: boolean;
+        } | null;
       }>("/api/subscription/status"),
-    createOrder: () =>
+    preview: (data: {
+      interval?: string;
+      couponCode?: string;
+      applyCoins?: boolean;
+    }) =>
       request<{
-        orderId: string;
+        interval: string;
+        planDays: number;
+        label: string;
+        listAmount: number;
+        couponDiscount: number;
+        coinsApplied: number;
+        chargeAmount: number;
+        fullyCoveredByCredit: boolean;
+        couponCode: string | null;
+        coinBalance: number;
+      }>("/api/subscription/preview", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    createOrder: (data?: {
+      couponCode?: string;
+      affiliateCode?: string;
+      applyCoins?: boolean;
+      interval?: string;
+    }) =>
+      request<{
+        orderId?: string;
         amount: number;
-        currency: string;
-        keyId: string;
-        name: string;
-        description: string;
-        prefill: { name: string; email: string };
-      }>("/api/subscription/create-order", { method: "POST" }),
+        currency?: string;
+        keyId?: string;
+        name?: string;
+        description?: string;
+        prefill?: { name: string; email: string };
+        listAmount?: number;
+        couponDiscount?: number;
+        coinsApplied?: number;
+        freeActivation?: boolean;
+        success?: boolean;
+        plan?: string;
+        subscriptionExpiresAt?: string;
+      }>("/api/subscription/create-order", {
+        method: "POST",
+        body: JSON.stringify(data ?? {}),
+      }),
     verify: (data: {
       orderId: string;
       paymentId: string;
@@ -603,6 +652,109 @@ export const api = {
         "/api/subscription/verify",
         { method: "POST", body: JSON.stringify(data) }
       ),
+    createSubscription: (data: {
+      interval: "MONTHLY" | "YEARLY";
+      couponCode?: string;
+      affiliateCode?: string;
+    }) =>
+      request<{
+        subscriptionId: string;
+        keyId: string;
+        name: string;
+        description: string;
+        prefill: { name: string; email: string };
+        interval: string;
+        amount: number;
+        currency: string;
+        recurring: boolean;
+      }>("/api/subscription/create-subscription", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    verifySubscription: (data: {
+      subscriptionId: string;
+      paymentId: string;
+      signature: string;
+    }) =>
+      request<{
+        success: boolean;
+        plan: string;
+        subscriptionExpiresAt: string;
+        recurring: boolean;
+      }>("/api/subscription/verify-subscription", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    cancelSubscription: () =>
+      request<{ ok: boolean; cancelAtPeriodEnd: boolean }>(
+        "/api/subscription/cancel-subscription",
+        { method: "POST" }
+      ),
+  },
+
+  affiliate: {
+    me: () =>
+      request<{
+        code: string;
+        coinBalance: number;
+        commissionPercent: number;
+        attributionDays: number;
+        totalEarnedCoins: number;
+        referralCount: number;
+        recent: {
+          id: string;
+          amountCoins: number;
+          createdAt: string;
+          referredName: string;
+        }[];
+      }>("/api/affiliate/me"),
+  },
+
+  adminCoupons: {
+    list: () =>
+      request<{
+        coupons: {
+          id: string;
+          code: string;
+          type: "PERCENT" | "FIXED";
+          value: number;
+          maxUses: number | null;
+          maxUsesPerUser: number;
+          usedCount: number;
+          validFrom: string | null;
+          validUntil: string | null;
+          active: boolean;
+          minAmount: number | null;
+          createdAt: string;
+        }[];
+      }>("/api/admin/coupons"),
+    create: (data: Record<string, unknown>) =>
+      request<{ coupon: { id: string } }>("/api/admin/coupons", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: Record<string, unknown>) =>
+      request<{ coupon: { id: string } }>(`/api/admin/coupons/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    deactivate: (id: string) =>
+      request<{ ok: boolean }>(`/api/admin/coupons/${id}`, { method: "DELETE" }),
+    affiliates: () =>
+      request<{
+        affiliates: {
+          code: string;
+          createdAt: string;
+          user: {
+            id: string;
+            name: string;
+            email: string;
+            coinBalance: number;
+          };
+          totalEarnedCoins: number;
+          referralCount: number;
+        }[];
+      }>("/api/admin/coupons/affiliates/summary"),
   },
 
   myContent: {

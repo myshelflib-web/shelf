@@ -5,12 +5,13 @@ export const shelfPremium = buildPost(
     slug: "shelf-premium-subscription",
     title: "Shelf Premium: Storage, Study AI Tokens, and Vector Search",
     description:
-      "Upgrade to Shelf Premium for 10 GB storage, 2M Study AI tokens per month, deeper library vector indexing, and longer chat threads. Pay via Razorpay.",
+      "Upgrade to Shelf Premium for 10 GB storage, 2M Study AI tokens per month, deeper library vector indexing, and longer chat threads. Coupons, affiliate coins, and UPI Autopay.",
     excerpt:
-      "Free Shelf is fully usable at 250 MB and 50k AI tokens monthly. Premium expands limits for heavy PDF libraries and daily Study AI workflows.",
+      "Free Shelf is fully usable at 250 MB and 50k AI tokens monthly. Premium expands limits for heavy PDF libraries and daily Study AI workflows — with coupons, referrals, and optional monthly/yearly UPI Autopay.",
     publishedAt: "2026-02-18",
-    tags: ["premium", "subscription", "pricing", "study ai"],
-    readingMinutes: 5,
+    updatedAt: "2026-08-26",
+    tags: ["premium", "subscription", "pricing", "study ai", "coupons", "affiliate"],
+    readingMinutes: 6,
   },
   [
     {
@@ -29,7 +30,13 @@ export const shelfPremium = buildPost(
     {
       heading: "How billing works",
       paragraphs: [
-        "Subscribe from /subscribe when signed in. Shelf creates a Razorpay order in INR; after payment verification your account flips to Premium with a subscription expiry date (default 365 days, configurable on the server). You receive a confirmation email when activation succeeds.",
+        "Subscribe from /subscribe when signed in. Choose a one-time Premium purchase, or monthly/yearly UPI Autopay (Razorpay mandate). After payment verification your account flips to Premium with a subscription expiry date. You can renew anytime to extend access, and you receive a confirmation email when activation succeeds.",
+      ],
+    },
+    {
+      heading: "Coupons and affiliate coins",
+      paragraphs: [
+        "Admins can create percent or fixed coupon codes with usage caps and validity windows. At checkout, enter a code to reduce the amount charged. Any signed-in user can share an affiliate link from Settings; when someone upgrades through that link, the referrer earns Shelf coins (default 10% of the amount paid). Coins apply as credit on one-time upgrades and renewals — no cash payouts.",
       ],
     },
     {

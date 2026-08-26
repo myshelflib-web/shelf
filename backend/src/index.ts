@@ -9,6 +9,11 @@ import progressRoutes from "./routes/progress.js";
 import adminRoutes from "./routes/admin.js";
 import internalRoutes from "./routes/internal.js";
 import subscriptionRoutes from "./routes/subscription.js";
+import subscriptionRecurringRoutes, {
+  handleSubscriptionWebhook,
+} from "./routes/subscriptionRecurring.js";
+import affiliateRoutes from "./routes/affiliate.js";
+import adminCouponsRoutes from "./routes/adminCoupons.js";
 import blogRoutes from "./routes/blog.js";
 import adminBlogRoutes from "./routes/adminBlog.js";
 import myContentRoutes from "./routes/myContent.js";
@@ -102,6 +107,22 @@ app.use((_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 });
+// Razorpay webhooks need the raw body for HMAC verification.
+app.post(
+  "/api/subscription/webhook",
+  express.raw({ type: "application/json" }),
+  (req, res, next) => {
+    (req as express.Request & { rawBody?: Buffer }).rawBody = req.body as Buffer;
+    try {
+      req.body = JSON.parse(
+        Buffer.isBuffer(req.body) ? req.body.toString("utf8") : String(req.body ?? "{}")
+      );
+    } catch {
+      req.body = {};
+    }
+    void handleSubscriptionWebhook(req, res).catch(next);
+  }
+);
 app.use(express.json({ limit: "10mb" }));
 app.use(requestContext);
 
@@ -126,6 +147,7 @@ app.use("/api/highlights", highlightRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/admin/blog", adminBlogRoutes);
+app.use("/api/admin/coupons", adminCouponsRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/my-content", myContentRoutes);
 app.use("/api/my-content", myContentPdfReplaceRoutes);
@@ -136,6 +158,8 @@ app.use("/api/study", studyRelevancyRoutes);
 app.use("/api/quiz", quizRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/subscription", subscriptionRoutes);
+app.use("/api/subscription", subscriptionRecurringRoutes);
+app.use("/api/affiliate", affiliateRoutes);
 app.use("/api/internal", internalRoutes);
 
 app.use(

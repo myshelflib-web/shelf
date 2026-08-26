@@ -24,6 +24,9 @@ export interface User {
   storageLimitBytes?: number;
   llmTokensUsed?: number;
   llmTokenLimit?: number;
+  vectorChunksUsed?: number;
+  vectorChunkLimit?: number;
+  coinBalance?: number;
 }
 
 export interface ArticleSummary {

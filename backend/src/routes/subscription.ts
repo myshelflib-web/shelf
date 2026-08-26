@@ -2,26 +2,32 @@ import { Router, Request, Response } from "express";
 import crypto from "crypto";
 import prisma from "../utils/prisma.js";
 import { authMiddleware } from "../middleware/auth.js";
-import {
-  sendEmailInBackground,
-  subscriptionThankYouEmail,
-} from "../services/email/index.js";
 import { isPremiumUser } from "../utils/paywall.js";
 import { logger } from "../utils/logger.js";
 import { metrics } from "../utils/metrics.js";
+import { getBillingPlans, resolvePlan } from "../services/billing/plans.js";
+import { findValidCoupon, CouponError } from "../services/billing/coupons.js";
+import { priceOrder, MIN_CHARGE_PAISE } from "../services/billing/pricing.js";
+import {
+  razorpayConfigured,
+  razorpayKeyId,
+  razorpayRequest,
+  RazorpayError,
+  type RazorpayOrder,
+} from "../services/billing/razorpay.js";
+import { activatePremiumFromPayment } from "../services/billing/activate.js";
 
 const router = Router();
-
-const PLAN_AMOUNT = parseInt(process.env.SUBSCRIPTION_AMOUNT_PAISE ?? "99900", 10);
-const PLAN_DAYS = parseInt(process.env.SUBSCRIPTION_DAYS ?? "365", 10);
 
 router.get("/status", authMiddleware, async (req: Request, res: Response) => {
   const user = await prisma.user.findUnique({
     where: { id: req.user!.userId },
     select: {
+      id: true,
       plan: true,
       role: true,
       subscriptionExpiresAt: true,
+      coinBalance: true,
     },
   });
 
@@ -30,12 +36,52 @@ router.get("/status", authMiddleware, async (req: Request, res: Response) => {
     return;
   }
 
+  const plans = getBillingPlans();
+  const recurring = await prisma.recurringSubscription.findFirst({
+    where: {
+      userId: user.id,
+      status: { in: ["CREATED", "AUTHENTICATED", "ACTIVE", "PAUSED"] },
+    },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      interval: true,
+      status: true,
+      amount: true,
+      currentPeriodEnd: true,
+      cancelAtPeriodEnd: true,
+      providerSubscriptionId: true,
+    },
+  });
+
   res.json({
     plan: user.plan,
     isPremium: isPremiumUser(user),
     subscriptionExpiresAt: user.subscriptionExpiresAt,
-    priceInr: PLAN_AMOUNT / 100,
-    planDays: PLAN_DAYS,
+    coinBalance: user.coinBalance,
+    priceInr: plans.ONCE.amountPaise / 100,
+    planDays: plans.ONCE.planDays,
+    plans: {
+      once: {
+        amountPaise: plans.ONCE.amountPaise,
+        priceInr: plans.ONCE.amountPaise / 100,
+        planDays: plans.ONCE.planDays,
+        label: plans.ONCE.label,
+      },
+      monthly: {
+        amountPaise: plans.MONTHLY.amountPaise,
+        priceInr: plans.MONTHLY.amountPaise / 100,
+        planDays: plans.MONTHLY.planDays,
+        label: plans.MONTHLY.label,
+      },
+      yearly: {
+        amountPaise: plans.YEARLY.amountPaise,
+        priceInr: plans.YEARLY.amountPaise / 100,
+        planDays: plans.YEARLY.planDays,
+        label: plans.YEARLY.label,
+      },
+    },
+    recurring,
     freeStorageMb: 250,
     premiumStorageGb: 10,
     freeLlmTokens: 50_000,
@@ -43,20 +89,95 @@ router.get("/status", authMiddleware, async (req: Request, res: Response) => {
   });
 });
 
-router.post("/create-order", authMiddleware, async (req: Request, res: Response) => {
-  const keyId = process.env.RAZORPAY_KEY_ID;
-  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+router.post("/preview", authMiddleware, async (req: Request, res: Response) => {
+  const interval = typeof req.body?.interval === "string" ? req.body.interval : "ONCE";
+  const couponCode =
+    typeof req.body?.couponCode === "string" ? req.body.couponCode : undefined;
+  const applyCoins = req.body?.applyCoins !== false;
+  const plan = resolvePlan(interval);
 
-  if (!keyId || !keySecret) {
+  const user = await prisma.user.findUnique({
+    where: { id: req.user!.userId },
+    select: { coinBalance: true },
+  });
+  if (!user) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  try {
+    let coupon = null;
+    let couponDiscount = 0;
+    if (couponCode?.trim()) {
+      const found = await findValidCoupon(
+        couponCode,
+        req.user!.userId,
+        plan.amountPaise
+      );
+      coupon = found.coupon;
+      couponDiscount = found.discount;
+    }
+    const priced = priceOrder({
+      listAmount: plan.amountPaise,
+      coupon,
+      coinBalance: user.coinBalance,
+      applyCoins,
+    });
+    res.json({
+      interval: plan.interval,
+      planDays: plan.planDays,
+      label: plan.label,
+      ...priced,
+      couponCode: coupon?.code ?? null,
+      couponDiscount,
+      coinBalance: user.coinBalance,
+    });
+  } catch (err) {
+    if (err instanceof CouponError) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
+    throw err;
+  }
+});
+
+router.post("/create-order", authMiddleware, async (req: Request, res: Response) => {
+  if (!razorpayConfigured()) {
     res.status(503).json({
       error: "Payments not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.",
     });
     return;
   }
 
+  const intervalRaw =
+    typeof req.body?.interval === "string" ? req.body.interval : "ONCE";
+  if (intervalRaw.toUpperCase() === "MONTHLY" || intervalRaw.toUpperCase() === "YEARLY") {
+    res.status(400).json({
+      error: "Use /api/subscription/create-subscription for monthly or yearly UPI Autopay.",
+    });
+    return;
+  }
+
+  const plan = resolvePlan("ONCE");
+  const couponCode =
+    typeof req.body?.couponCode === "string" ? req.body.couponCode : undefined;
+  const affiliateCode =
+    typeof req.body?.affiliateCode === "string"
+      ? req.body.affiliateCode.trim().toUpperCase() || null
+      : null;
+  const applyCoins = req.body?.applyCoins !== false;
+
   const user = await prisma.user.findUnique({
     where: { id: req.user!.userId },
-    select: { id: true, email: true, name: true, plan: true, subscriptionExpiresAt: true, role: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      plan: true,
+      subscriptionExpiresAt: true,
+      role: true,
+      coinBalance: true,
+    },
   });
 
   if (!user) {
@@ -64,67 +185,139 @@ router.post("/create-order", authMiddleware, async (req: Request, res: Response)
     return;
   }
 
-  if (isPremiumUser(user)) {
-    res.status(400).json({ error: "You already have an active premium subscription" });
-    return;
-  }
+  try {
+    let coupon = null;
+    if (couponCode?.trim()) {
+      const found = await findValidCoupon(
+        couponCode,
+        user.id,
+        plan.amountPaise
+      );
+      coupon = found.coupon;
+    }
 
-  const receipt = `shelf_${user.id.slice(0, 8)}_${Date.now()}`;
+    const priced = priceOrder({
+      listAmount: plan.amountPaise,
+      coupon,
+      coinBalance: user.coinBalance,
+      applyCoins,
+    });
 
-  const orderRes = await fetch("https://api.razorpay.com/v1/orders", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}`,
-    },
-    body: JSON.stringify({
-      amount: PLAN_AMOUNT,
-      currency: "INR",
-      receipt,
-      notes: { userId: user.id, plan: "PREMIUM" },
-    }),
-  });
+    // Fully covered by coupon and/or coins — activate without Razorpay.
+    if (priced.chargeAmount === 0) {
+      const payment = await prisma.payment.create({
+        data: {
+          userId: user.id,
+          providerOrderId: `credit_${user.id.slice(0, 8)}_${Date.now()}`,
+          amount: 0,
+          listAmount: priced.listAmount,
+          currency: "INR",
+          planDays: plan.planDays,
+          billingInterval: "ONCE",
+          couponId: coupon?.id,
+          affiliateCode,
+          coinsApplied: priced.coinsApplied,
+          status: "PENDING",
+        },
+      });
 
-  if (!orderRes.ok) {
-    const err = await orderRes.text();
-    metrics.inc("razorpay_orders_total", { ok: false });
-    (req.log ?? logger).error("razorpay.order.failed", { body: err });
-    res.status(502).json({ error: "Failed to create payment order" });
-    return;
-  }
+      const result = await activatePremiumFromPayment({
+        paymentId: payment.id,
+        providerPaymentId: `credit_${payment.id}`,
+      });
 
-  const order = (await orderRes.json()) as { id: string; amount: number; currency: string };
+      res.json({
+        freeActivation: true,
+        success: true,
+        plan: "PREMIUM",
+        subscriptionExpiresAt: result.expiresAt,
+        amount: 0,
+        coinsApplied: priced.coinsApplied,
+        couponDiscount: priced.couponDiscount,
+      });
+      return;
+    }
 
-  await prisma.payment.create({
-    data: {
+    if (priced.chargeAmount < MIN_CHARGE_PAISE) {
+      res.status(400).json({
+        error: "Payable amount is below the minimum charge. Adjust coins or coupon.",
+      });
+      return;
+    }
+
+    const receipt = `shelf_${user.id.slice(0, 8)}_${Date.now()}`;
+    let order: RazorpayOrder;
+    try {
+      order = await razorpayRequest<RazorpayOrder>("POST", "/orders", {
+        amount: priced.chargeAmount,
+        currency: "INR",
+        receipt,
+        notes: {
+          userId: user.id,
+          plan: "PREMIUM",
+          coupon: coupon?.code ?? "",
+          affiliate: affiliateCode ?? "",
+        },
+      });
+    } catch (err) {
+      metrics.inc("razorpay_orders_total", { ok: false });
+      (req.log ?? logger).error("razorpay.order.failed", {
+        body: err instanceof RazorpayError ? err.body : String(err),
+      });
+      res.status(502).json({ error: "Failed to create payment order" });
+      return;
+    }
+
+    await prisma.payment.create({
+      data: {
+        userId: user.id,
+        providerOrderId: order.id,
+        amount: order.amount,
+        listAmount: priced.listAmount,
+        currency: order.currency,
+        planDays: plan.planDays,
+        billingInterval: "ONCE",
+        couponId: coupon?.id,
+        affiliateCode,
+        coinsApplied: priced.coinsApplied,
+      },
+    });
+
+    metrics.inc("razorpay_orders_total", { ok: true });
+    (req.log ?? logger).info("razorpay.order.created", {
+      orderId: order.id,
       userId: user.id,
-      providerOrderId: order.id,
+      amount: order.amount,
+    });
+
+    res.json({
+      orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      planDays: PLAN_DAYS,
-    },
-  });
-
-  metrics.inc("razorpay_orders_total", { ok: true });
-  (req.log ?? logger).info("razorpay.order.created", {
-    orderId: order.id,
-    userId: user.id,
-    amount: order.amount,
-  });
-
-  res.json({
-    orderId: order.id,
-    amount: order.amount,
-    currency: order.currency,
-    keyId,
-    name: "Shelf Premium",
-    description: `${PLAN_DAYS}-day full access to all premium articles`,
-    prefill: { name: user.name, email: user.email },
-  });
+      keyId: razorpayKeyId(),
+      name: "Shelf Premium",
+      description: `${plan.planDays}-day Premium access`,
+      prefill: { name: user.name, email: user.email },
+      listAmount: priced.listAmount,
+      couponDiscount: priced.couponDiscount,
+      coinsApplied: priced.coinsApplied,
+      freeActivation: false,
+    });
+  } catch (err) {
+    if (err instanceof CouponError) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
+    throw err;
+  }
 });
 
 router.post("/verify", authMiddleware, async (req: Request, res: Response) => {
-  const { orderId, paymentId, signature } = req.body;
+  const { orderId, paymentId, signature } = req.body as {
+    orderId?: string;
+    paymentId?: string;
+    signature?: string;
+  };
   const keySecret = process.env.RAZORPAY_KEY_SECRET;
 
   if (!orderId || !paymentId || !signature || !keySecret) {
@@ -151,47 +344,16 @@ router.post("/verify", authMiddleware, async (req: Request, res: Response) => {
     return;
   }
 
-  if (payment.status === "COMPLETED") {
-    res.json({ success: true, message: "Already activated" });
-    return;
-  }
-
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + payment.planDays);
-
-  const [, updatedUser] = await prisma.$transaction([
-    prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        status: "COMPLETED",
-        providerPaymentId: paymentId,
-        completedAt: new Date(),
-      },
-    }),
-    prisma.user.update({
-      where: { id: payment.userId },
-      data: {
-        plan: "PREMIUM",
-        subscriptionExpiresAt: expiresAt,
-      },
-      select: { email: true, name: true },
-    }),
-  ]);
-
-  sendEmailInBackground({
-    to: updatedUser.email,
-    ...subscriptionThankYouEmail(
-      updatedUser.name,
-      expiresAt,
-      payment.planDays,
-      payment.amount
-    ),
+  const result = await activatePremiumFromPayment({
+    paymentId: payment.id,
+    providerPaymentId: paymentId,
   });
 
   res.json({
     success: true,
     plan: "PREMIUM",
-    subscriptionExpiresAt: expiresAt,
+    subscriptionExpiresAt: result.expiresAt,
+    alreadyActivated: result.alreadyActivated,
   });
 });
 

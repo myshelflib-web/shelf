@@ -8,6 +8,7 @@ import {
   Upload,
   FileText,
   BookOpen,
+  Ticket,
   ArrowLeft,
 } from "lucide-react";
 
@@ -16,6 +17,7 @@ const links = [
   { href: "/admin/upload", label: "Upload PDFs", icon: Upload },
   { href: "/admin/topics", label: "Manage Articles", icon: FileText },
   { href: "/admin/blog", label: "Blog", icon: BookOpen },
+  { href: "/admin/coupons", label: "Coupons", icon: Ticket },
 ];
 
 export function AdminSidebar() {

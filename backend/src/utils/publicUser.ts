@@ -20,6 +20,7 @@ const userSelect = {
   llmTokensUsed: true,
   llmTokensResetAt: true,
   vectorChunksUsed: true,
+  coinBalance: true,
   passwordHash: true,
 } as const;
 
@@ -38,6 +39,7 @@ type DbUser = {
   llmTokensUsed: number;
   llmTokensResetAt?: Date | string | null;
   vectorChunksUsed: number;
+  coinBalance?: number;
   passwordHash?: string | null;
 };
 
@@ -67,5 +69,6 @@ export function toPublicUser(user: DbUser) {
     llmTokenLimit: llmTokenLimit(quotaUser),
     vectorChunksUsed: usedVectorChunks(quotaUser),
     vectorChunkLimit: vectorChunkLimit(quotaUser),
+    coinBalance: user.coinBalance ?? 0,
   };
 }

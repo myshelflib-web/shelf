@@ -12,6 +12,7 @@ import { api } from "@/lib/api";
 import { STUDY_GOAL_GROUPS, STUDY_GOAL_LABELS, normalizeStudyGoal } from "@/lib/studyGoal";
 import { ReadingGoalPicker } from "@/components/dashboard/ReadingGoalPicker";
 import { getReadingGoalMinutes } from "@/lib/readingStats";
+import { AffiliateSettingsCard } from "@/components/settings/AffiliateSettingsCard";
 import { StudyGoal } from "@/types";
 
 function UsageMeter({
@@ -192,6 +193,10 @@ export default function SettingsPage() {
             {saving ? "Saving…" : "Save changes"}
           </button>
         </form>
+
+        <div className="mt-6">
+          <AffiliateSettingsCard />
+        </div>
       </main>
     </div>
   );
