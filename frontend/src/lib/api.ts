@@ -1,4 +1,5 @@
 import { clearAccountLocalState } from "@/lib/accountLocalState";
+import { toUserStudyAiError } from "@/lib/studyAiErrors";
 
 /** Production (Vercel): set NEXT_PUBLIC_API_URL to the Render backend, e.g. https://your-api.onrender.com */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -252,7 +253,9 @@ async function consumeStudySse(
         gotDone = true;
         handlers.onDone?.(payload);
       } else if (event === "error") {
-        streamError = String(payload.message ?? "Study AI failed");
+        streamError = toUserStudyAiError(
+          payload.message ?? "Study AI failed"
+        );
         handlers.onDone?.(payload);
       }
     }
@@ -295,13 +298,19 @@ async function postStudySse(
         await fallback();
         return;
       } catch (fallbackErr) {
-        throw fallbackErr instanceof Error
-          ? fallbackErr
-          : new Error(detail || `Study AI failed (HTTP ${res.status})`);
+        throw new Error(
+          toUserStudyAiError(
+            fallbackErr instanceof Error
+              ? fallbackErr
+              : detail || `Study AI failed (HTTP ${res.status})`
+          )
+        );
       }
     }
     throw new Error(
-      detail || `Study AI failed (HTTP ${res.status}). Check backend logs.`
+      toUserStudyAiError(
+        detail || `Study AI failed (HTTP ${res.status}). Check backend logs.`
+      )
     );
   }
 
@@ -987,6 +996,7 @@ export const api = {
         userTopicId?: string;
         mode?: "ask" | "summarize" | "notes" | "mindmap";
         question?: string;
+        prompt?: string;
         selection?: string;
         imageBase64?: string;
         persist?: boolean;
@@ -1065,7 +1075,7 @@ export const api = {
     sendChatMessage: (
       id: string,
       content: string,
-      opts?: { imageBase64?: string }
+      opts?: { imageBase64?: string; prompt?: string }
     ) =>
       request<{
         userMessage: import("@/types").ChatMessage;
@@ -1075,20 +1085,29 @@ export const api = {
         memoryLimit?: number;
       }>(`/api/study/chats/${id}/messages`, {
         method: "POST",
-        body: JSON.stringify({ content, imageBase64: opts?.imageBase64 }),
+        body: JSON.stringify({
+          content,
+          prompt: opts?.prompt,
+          imageBase64: opts?.imageBase64,
+        }),
       }),
     sendChatMessageStream: async (
       id: string,
       content: string,
       opts: {
         imageBase64?: string;
+        prompt?: string;
         signal?: AbortSignal;
         onStatus?: StudySseHandlers["onStatus"];
         onDelta?: StudySseHandlers["onDelta"];
         onDone?: StudySseHandlers["onDone"];
       } = {}
     ) => {
-      const body = { content, imageBase64: opts.imageBase64 };
+      const body = {
+        content,
+        prompt: opts.prompt,
+        imageBase64: opts.imageBase64,
+      };
       const handlers: StudySseHandlers & { signal?: AbortSignal } = {
         onStatus: opts.onStatus,
         onDelta: opts.onDelta,

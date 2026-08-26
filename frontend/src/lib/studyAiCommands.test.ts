@@ -4,6 +4,7 @@ import {
   isSlashMenuQuery,
   parseSlashInput,
   resolveStudyAiInput,
+  studyAiSendParts,
 } from "./studyAiCommands";
 
 describe("studyAiCommands", () => {
@@ -36,6 +37,32 @@ describe("studyAiCommands", () => {
     expect(quiz.kind).toBe("prompt");
     if (quiz.kind === "prompt") {
       expect(quiz.text.toLowerCase()).toContain("quiz");
+      expect(quiz.display).toBe("/quiz");
+    }
+  });
+
+  it("keeps bubble labels short for commands and chips", () => {
+    const fromSlash = studyAiSendParts("/outline", "library");
+    expect(fromSlash).toEqual({
+      kind: "send",
+      display: "/outline",
+      prompt: expect.stringContaining("Outline an exam answer"),
+    });
+    const fromChip = studyAiSendParts("/outline", "library", {
+      label: "Answer outline",
+    });
+    expect(fromChip.kind).toBe("send");
+    if (fromChip.kind === "send") {
+      expect(fromChip.display).toBe("Answer outline");
+      expect(fromChip.prompt).toContain("Outline an exam answer");
+    }
+    const expanded = resolveStudyAiInput("/flashcards", "library");
+    expect(expanded.kind).toBe("prompt");
+    if (expanded.kind !== "prompt") return;
+    const leaked = studyAiSendParts(expanded.text, "library");
+    expect(leaked.kind).toBe("send");
+    if (leaked.kind === "send") {
+      expect(leaked.display).toBe("/flashcards");
     }
   });
 });

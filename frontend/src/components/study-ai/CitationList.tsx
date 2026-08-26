@@ -18,32 +18,50 @@ export function CitationList({
         <span className="text-[9px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
           Sources used · {citations.length}
         </span>
-        {citations.map((c) => (
-          <Link
-            key={`${c.pageId}-${c.n}`}
-            href={c.href}
-            title={c.quote}
-            className="text-[9px] px-2 py-1 rounded-full border border-[var(--border)] bg-[var(--bg-primary)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition-colors"
-          >
-            {c.title}
-          </Link>
-        ))}
+        {citations.map((c) =>
+          c.href ? (
+            <Link
+              key={`${c.pageId}-${c.n}`}
+              href={c.href}
+              title={c.quote || c.title}
+              className="text-[9px] px-2 py-1 rounded-full border border-[var(--border)] bg-[var(--bg-primary)] text-[var(--accent)] hover:border-[var(--accent)] hover:bg-[var(--accent-subtle)] transition-colors"
+            >
+              [{c.n}] {c.title}
+            </Link>
+          ) : (
+            <span
+              key={`${c.pageId}-${c.n}`}
+              className="text-[9px] px-2 py-1 rounded-full border border-[var(--border)] text-[var(--text-muted)]"
+            >
+              [{c.n}] {c.title}
+            </span>
+          )
+        )}
       </div>
     );
   }
 
   return (
     <div className="mt-2 flex flex-wrap gap-1.5">
-      {citations.map((c) => (
-        <Link
-          key={`${c.pageId}-${c.n}`}
-          href={c.href}
-          title={c.quote}
-          className="text-[11px] px-2 py-0.5 rounded-md border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
-        >
-          [{c.n}] {c.title}
-        </Link>
-      ))}
+      {citations.map((c) =>
+        c.href ? (
+          <Link
+            key={`${c.pageId}-${c.n}`}
+            href={c.href}
+            title={c.quote || c.title}
+            className="text-[11px] px-2 py-0.5 rounded-md border border-[var(--border)] text-[var(--accent)] hover:bg-[var(--accent-subtle)]"
+          >
+            [{c.n}] {c.title}
+          </Link>
+        ) : (
+          <span
+            key={`${c.pageId}-${c.n}`}
+            className="text-[11px] px-2 py-0.5 rounded-md border border-[var(--border)] text-[var(--text-muted)]"
+          >
+            [{c.n}] {c.title}
+          </span>
+        )
+      )}
     </div>
   );
 }

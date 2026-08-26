@@ -6,7 +6,7 @@ import type { StudyAiQueuedPrompt } from "@/lib/studyAiQueue";
 import { readFileAsDataUrl } from "@/lib/studyAiWorkspaceUtils";
 import {
   isSlashMenuQuery,
-  resolveStudyAiInput,
+  studyAiSendParts,
   type StudyAiCommand,
 } from "@/lib/studyAiCommands";
 import { StudyAiCommandsModal } from "./StudyAiCommandsModal";
@@ -45,7 +45,7 @@ export function StudyAiComposer({
   onOpenAttach: (el: HTMLElement) => void;
   attachBtnRef: RefObject<HTMLButtonElement | null>;
   fileRef: RefObject<HTMLInputElement | null>;
-  onSend: (text: string, image?: string) => void;
+  onSend: (text: string, image?: string, opts?: { prompt?: string }) => void;
   onStop: () => void;
   onRemoveQueued: (id: string) => void;
   memoryLimit: number;
@@ -55,15 +55,20 @@ export function StudyAiComposer({
   const [commandSeed, setCommandSeed] = useState("/");
   const canSend = Boolean(input.trim() || attachImage);
 
-  const runResolved = (raw: string, image?: string) => {
-    const resolved = resolveStudyAiInput(raw, "library");
-    if (resolved.kind === "help") {
+  /** Bubble shows slash/chip label; model gets expanded prompt via opts.prompt. */
+  const runResolved = (
+    raw: string,
+    image?: string,
+    label?: string
+  ) => {
+    const parts = studyAiSendParts(raw, "library", { label });
+    if (parts.kind === "help") {
       setCommandSeed("/");
       setCommandsOpen(true);
       return;
     }
-    if (resolved.kind === "prompt" || resolved.kind === "plain") {
-      onSend(resolved.text, image);
+    if (parts.kind === "send") {
+      onSend(parts.display, image, { prompt: parts.prompt });
     }
   };
 
@@ -162,7 +167,7 @@ export function StudyAiComposer({
           <div className="mb-2">
             <StudyAiSuggestChips
               scope="library"
-              onPick={(item) => runResolved(item.insert)}
+              onPick={(item) => runResolved(item.insert, undefined, item.label)}
             />
           </div>
 

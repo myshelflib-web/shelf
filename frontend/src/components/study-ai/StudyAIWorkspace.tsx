@@ -11,7 +11,7 @@ import { StudyAiSidebar } from "@/components/study-ai/StudyAiSidebar";
 import { StudyAiMessageList } from "@/components/study-ai/StudyAiMessageList";
 import { StudyAiComposer } from "@/components/study-ai/StudyAiComposer";
 import { StudyAiSuggestChips } from "@/components/study-ai/StudyAiSuggestChips";
-import { resolveStudyAiInput } from "@/lib/studyAiCommands";
+import { studyAiSendParts } from "@/lib/studyAiCommands";
 import {
   StudyAiAttachMenu,
   StudyAiChatMenu,
@@ -156,9 +156,25 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
     if (!authLoading && !user) router.push("/login");
   }, [user, authLoading, router]);
 
+  const lastMessage = chat.messages[chat.messages.length - 1];
+  const lastContentLen = lastMessage?.content.length ?? 0;
+  const lastStreaming = Boolean(lastMessage?.streaming);
+
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [chat.messages, chat.loading, chat.statusEvents]);
+    const el = endRef.current;
+    if (!el) return;
+    // Smooth scroll on every token fights itself and looks like a blank flicker.
+    el.scrollIntoView({
+      behavior: chat.loading ? "auto" : "smooth",
+      block: "end",
+    });
+  }, [
+    chat.messages.length,
+    chat.loading,
+    chat.statusEvents.length,
+    lastContentLen,
+    lastStreaming,
+  ]);
 
   const exportChat = async () => {
     const transcript = chat.messages.filter(
@@ -306,15 +322,13 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
                       scope="library"
                       count={4}
                       onPick={(item) => {
-                        const resolved = resolveStudyAiInput(
-                          item.insert,
-                          "library"
-                        );
-                        if (
-                          resolved.kind === "prompt" ||
-                          resolved.kind === "plain"
-                        ) {
-                          void chat.send(resolved.text);
+                        const parts = studyAiSendParts(item.insert, "library", {
+                          label: item.label,
+                        });
+                        if (parts.kind === "send") {
+                          void chat.send(parts.display, undefined, {
+                            prompt: parts.prompt,
+                          });
                         }
                       }}
                     />
@@ -360,7 +374,7 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
             onOpenAttach={(el) => openPopover("attach", el)}
             attachBtnRef={attachBtnRef}
             fileRef={fileRef}
-            onSend={(text, image) => void chat.send(text, image)}
+            onSend={(text, image, opts) => void chat.send(text, image, opts)}
             onStop={chat.stop}
             onRemoveQueued={chat.removeQueued}
             memoryLimit={memoryLimit}

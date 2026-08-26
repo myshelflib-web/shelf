@@ -1,7 +1,11 @@
 import { ChatMessage, ChatThreadSummary, LibraryCitation } from "@/types";
 import { normalizeContextKind } from "@/lib/studyAiContextLabel";
 
-export type WorkspaceMessage = ChatMessage & { streaming?: boolean };
+export type WorkspaceMessage = ChatMessage & {
+  streaming?: boolean;
+  /** Stable React list key for a turn (survives tmp → server id swap). */
+  clientKey?: string;
+};
 
 export type PopoverKind = "attach" | "chat" | null;
 

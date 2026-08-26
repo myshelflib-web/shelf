@@ -44,7 +44,14 @@ export type ChatResult = {
   toolCalls?: ChatToolCall[];
 };
 
+export function isThoughtSignatureMessage(message: string): boolean {
+  return /thought_signature|function call is missing a thought|functioncall parts/i.test(
+    message
+  );
+}
+
 export function isToolsUnsupportedMessage(message: string): boolean {
+  if (isThoughtSignatureMessage(message)) return true;
   const m = message.toLowerCase();
   return (
     m.includes("tool") &&

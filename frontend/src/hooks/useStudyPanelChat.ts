@@ -7,6 +7,7 @@ import type { StreamStatusEvent } from "@/components/study-ai/StreamActivity";
 import type { StudyAiQueuedPrompt } from "@/lib/studyAiQueue";
 import { enqueuePrompt, takeNextPrompt } from "@/lib/studyAiQueue";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
+import { studyAiSendParts } from "@/lib/studyAiCommands";
 
 export type StudyPanelTurn = {
   id: string;
@@ -120,7 +121,7 @@ export function useStudyPanelChat({
       mode: "ask" | "summarize" | "notes" | "mindmap",
       q?: string,
       imageOverride?: string,
-      opts?: { skipHistoryImage?: boolean }
+      opts?: { skipHistoryImage?: boolean; prompt?: string }
     ) => {
       if (guestLocked) {
         onGuestLockedClick?.("Use Study AI");
@@ -154,10 +155,21 @@ export function useStudyPanelChat({
       setBusy(true);
       setError("");
       setStatusEvents([{ stage: "starting", detail: "Starting Study AI…" }]);
+
+      const parts =
+        mode === "ask" && text && !opts?.prompt
+          ? studyAiSendParts(text, "page")
+          : null;
+      const displayText =
+        parts?.kind === "send" ? parts.display : text;
+      const modelPrompt =
+        opts?.prompt?.trim() ||
+        (parts?.kind === "send" ? parts.prompt : undefined);
+
       const userTurn: StudyPanelTurn = {
         id: `u-${Date.now()}`,
         role: "user",
-        content: text || "Explain the attached image.",
+        content: displayText || "Explain the attached image.",
         imageBase64: opts?.skipHistoryImage ? undefined : userImage,
       };
       const assistantId = `a-${Date.now()}`;
@@ -183,7 +195,11 @@ export function useStudyPanelChat({
             articleId,
             userTopicId,
             mode,
-            question: mode === "ask" ? text || "Explain this." : undefined,
+            question:
+              mode === "ask"
+                ? displayText || "Explain this."
+                : undefined,
+            prompt: modelPrompt,
             selection: selection || undefined,
             imageBase64: userImage,
             history: historyForApi,

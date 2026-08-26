@@ -64,8 +64,11 @@ export function StudyPanel({
   });
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [panel.turns, panel.busy, panel.statusEvents]);
+    endRef.current?.scrollIntoView({
+      behavior: panel.busy ? "auto" : "smooth",
+      block: "end",
+    });
+  }, [panel.turns.length, panel.busy, panel.statusEvents.length]);
 
   const contextImage = (userImg?: string) => {
     if (userImg || imageBase64) {

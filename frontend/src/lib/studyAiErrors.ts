@@ -34,6 +34,11 @@ export function mapStudyAiErrorMessage(raw: string): string {
     return "Study AI hit a temporary glitch. Please try again.";
   }
 
+  const withoutTag = text.replace(/\s*\[thought_signature\]\s*/gi, " ").trim();
+  if (withoutTag !== text) {
+    return mapStudyAiErrorMessage(withoutTag);
+  }
+
   if (
     /abort(ed)?|aborterror|the operation was aborted|request was cancelled/i.test(
       lower

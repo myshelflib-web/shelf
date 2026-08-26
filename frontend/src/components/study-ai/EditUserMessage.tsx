@@ -99,9 +99,9 @@ export function EditUserMessage({
           }}
           disabled={disabled}
           aria-label="Edit message"
+          title="Edit"
         >
           <Pencil className="w-3 h-3" />
-          Edit
         </button>
         {actions}
       </div>

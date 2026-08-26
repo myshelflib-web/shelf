@@ -37,7 +37,11 @@ export type {
   ChatToolCall,
   ChatToolDef,
 } from "./llmTypes.js";
-export { isToolsUnsupportedMessage } from "./llmTypes.js";
+export {
+  isThoughtSignatureMessage,
+  isToolsUnsupportedMessage,
+} from "./llmTypes.js";
+import { isThoughtSignatureMessage } from "./llmTypes.js";
 
 function isTransientStatus(status: number): boolean {
   return status === 408 || status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
@@ -137,6 +141,18 @@ function throwForFailedStatus(
       providerMessage
         ? `Study AI model error: ${providerMessage}`
         : `Study AI model "${model}" was not found. Check LLM_MODEL on the backend.`
+    );
+  }
+  if (
+    isThoughtSignatureMessage(providerMessage) ||
+    isThoughtSignatureMessage(body)
+  ) {
+    // Keep a machine tag so the agent can retry without tools; UI sanitizer strips it.
+    throw Object.assign(
+      new Error(
+        "Study AI hit a temporary glitch. Please try again. [thought_signature]"
+      ),
+      { code: "thought_signature" as const }
     );
   }
   // Never leak raw provider JSON / Gemini internals to clients.

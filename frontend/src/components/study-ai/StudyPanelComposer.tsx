@@ -14,7 +14,7 @@ import type { useStudyPanelChat } from "@/hooks/useStudyPanelChat";
 import { readFileAsDataUrl } from "@/lib/studyAiWorkspaceUtils";
 import {
   isSlashMenuQuery,
-  resolveStudyAiInput,
+  studyAiSendParts,
   type StudyAiCommand,
 } from "@/lib/studyAiCommands";
 import { StudyAiCommandsModal } from "./StudyAiCommandsModal";
@@ -65,24 +65,29 @@ export function StudyPanelComposer({
   const runWithContext = (
     mode: "ask" | "summarize" | "notes" | "mindmap",
     q?: string,
-    userImg?: string
+    userImg?: string,
+    opts?: { prompt?: string }
   ) => {
     const ctx = contextImage(userImg);
-    void panel.run(mode, q, ctx.image, { skipHistoryImage: ctx.ephemeral });
+    void panel.run(mode, q, ctx.image, {
+      skipHistoryImage: ctx.ephemeral,
+      prompt: opts?.prompt,
+    });
   };
 
-  const runResolved = (raw: string, userImg?: string) => {
-    const resolved = resolveStudyAiInput(raw, "page");
-    if (resolved.kind === "help") {
+  /** Bubble shows slash/chip label; model gets expanded prompt. */
+  const runResolved = (raw: string, userImg?: string, label?: string) => {
+    const parts = studyAiSendParts(raw, "page", { label });
+    if (parts.kind === "help") {
       setCommandSeed("/");
       setCommandsOpen(true);
       return;
     }
-    if (resolved.kind === "mode") {
-      runWithContext(resolved.mode, undefined, userImg);
+    if (parts.kind === "mode") {
+      runWithContext(parts.mode, undefined, userImg);
       return;
     }
-    runWithContext("ask", resolved.text, userImg);
+    runWithContext("ask", parts.display, userImg, { prompt: parts.prompt });
   };
 
   const pickCommand = (cmd: StudyAiCommand) => {
@@ -129,7 +134,7 @@ export function StudyPanelComposer({
       {!guestLocked && (
         <StudyAiSuggestChips
           scope="page"
-          onPick={(item) => runResolved(item.insert)}
+          onPick={(item) => runResolved(item.insert, undefined, item.label)}
           disabled={panel.busy}
         />
       )}

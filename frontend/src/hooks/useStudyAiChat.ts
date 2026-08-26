@@ -18,6 +18,7 @@ import {
   type WorkspaceMessage,
 } from "@/lib/studyAiWorkspaceUtils";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
+import { studyAiSendParts } from "@/lib/studyAiCommands";
 
 export function useStudyAiChat({
   threadId,
@@ -98,9 +99,16 @@ export function useStudyAiChat({
               (m) =>
                 m.threadId === threadId ||
                 m.threadId === "pending" ||
-                m.id.startsWith("tmp-")
+                m.id.startsWith("tmp-") ||
+                Boolean(m.clientKey)
             );
             if (keepLocal) return prev;
+          }
+          // Prefer keeping in-flight / just-finished client keys when content matches.
+          if (
+            prev.some((m) => m.streaming || m.clientKey?.startsWith("tmp-"))
+          ) {
+            return prev;
           }
           return thread.messages;
         });
@@ -118,7 +126,11 @@ export function useStudyAiChat({
   }, []);
 
   const send = useCallback(
-    async (text: string, imageOverride?: string) => {
+    async (
+      text: string,
+      imageOverride?: string,
+      opts?: { prompt?: string }
+    ) => {
       const q = text.trim();
       const image = imageOverride;
       if (!q && !image) return;
@@ -139,7 +151,19 @@ export function useStudyAiChat({
       setStatusEvents([{ stage: "starting", detail: "Starting Study AI…" }]);
       setLiveCitations(undefined);
 
-      const userContent = q || "📷 [Image attached]";
+      const parts =
+        q && !opts?.prompt
+          ? studyAiSendParts(q, "library")
+          : null;
+      const userContent =
+        (parts?.kind === "send" ? parts.display : q) ||
+        "📷 [Image attached]";
+      const modelPrompt =
+        opts?.prompt?.trim() ||
+        (parts?.kind === "send" ? parts.prompt : "") ||
+        (q
+          ? q
+          : "Explain the attached image using my library when relevant.");
       const userTmpId = `tmp-u-${Date.now()}`;
       const assistantTmpId = `tmp-a-${Date.now()}`;
       const stamp = new Date().toISOString();
@@ -148,6 +172,7 @@ export function useStudyAiChat({
         ...prev,
         {
           id: userTmpId,
+          clientKey: userTmpId,
           threadId: activeIdRef.current ?? "pending",
           role: "user",
           content: userContent,
@@ -155,6 +180,7 @@ export function useStudyAiChat({
         },
         {
           id: assistantTmpId,
+          clientKey: assistantTmpId,
           threadId: activeIdRef.current ?? "pending",
           role: "assistant",
           content: "",
@@ -174,59 +200,72 @@ export function useStudyAiChat({
           refreshThreads();
         }
 
-        await api.study.sendChatMessageStream(chatId, q || "Explain this image", {
-          imageBase64: image,
-          signal: ac.signal,
-          onStatus: (_stage, detail, extra) => {
-            const line = detail || "Working…";
-            setStatusEvents((prev) => {
-              if (prev[prev.length - 1]?.detail === line) return prev;
-              return [...prev, { stage: _stage || "status", detail: line }];
-            });
-            const cites = asCitations(extra?.citations);
-            if (cites) setLiveCitations(cites);
-          },
-          onDelta: (piece) => {
-            setMessages((prev) =>
-              prev.map((m) =>
-                m.id === assistantTmpId
-                  ? { ...m, content: m.content + piece, streaming: true }
-                  : m
-              )
-            );
-          },
-          onDone: (meta) => {
-            if (typeof meta.threadId === "string") setActiveId(meta.threadId);
-            const userMsg = asChatMessage(meta.userMessage);
-            const assistantMsg = asChatMessage(meta.assistantMessage);
-            const nextTitle =
-              typeof meta.title === "string" ? meta.title : undefined;
-            if (!userMsg && !assistantMsg && !nextTitle) return;
-            const limit =
-              typeof meta.memoryLimit === "number"
-                ? meta.memoryLimit
-                : memoryLimit;
-            if (nextTitle) setTitle(nextTitle);
-            setMessages((prev) => {
-              const withoutTmp = prev.filter(
-                (m) => m.id !== userTmpId && m.id !== assistantTmpId
+        await api.study.sendChatMessageStream(
+          chatId,
+          userContent,
+          {
+            imageBase64: image,
+            prompt: modelPrompt,
+            signal: ac.signal,
+            onStatus: (_stage, detail, extra) => {
+              const line = detail || "Working…";
+              setStatusEvents((prev) => {
+                if (prev[prev.length - 1]?.detail === line) return prev;
+                return [...prev, { stage: _stage || "status", detail: line }];
+              });
+              const cites = asCitations(extra?.citations);
+              if (cites) setLiveCitations(cites);
+            },
+            onDelta: (piece) => {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantTmpId
+                    ? { ...m, content: m.content + piece, streaming: true }
+                    : m
+                )
               );
-              const streamed =
-                assistantMsg ??
-                prev.find((m) => m.id === assistantTmpId && m.content.trim());
-              const next = [
-                ...withoutTmp,
-                ...(userMsg ? [userMsg] : []),
-                ...(streamed
-                  ? [{ ...streamed, streaming: false } as WorkspaceMessage]
-                  : []),
-              ];
-              return next.length > limit
-                ? next.slice(next.length - limit)
-                : next;
-            });
-          },
-        });
+            },
+            onDone: (meta) => {
+              if (typeof meta.threadId === "string") setActiveId(meta.threadId);
+              const userMsg = asChatMessage(meta.userMessage);
+              const assistantMsg = asChatMessage(meta.assistantMessage);
+              const nextTitle =
+                typeof meta.title === "string" ? meta.title : undefined;
+              if (!userMsg && !assistantMsg && !nextTitle) return;
+              const limit =
+                typeof meta.memoryLimit === "number"
+                  ? meta.memoryLimit
+                  : memoryLimit;
+              if (nextTitle) setTitle(nextTitle);
+              setMessages((prev) => {
+                const next = prev.map((m) => {
+                  if (m.clientKey === userTmpId || m.id === userTmpId) {
+                    if (!userMsg) return m;
+                    return {
+                      ...userMsg,
+                      clientKey: m.clientKey ?? userTmpId,
+                      streaming: false,
+                    };
+                  }
+                  if (m.clientKey === assistantTmpId || m.id === assistantTmpId) {
+                    const base = assistantMsg ?? m;
+                    return {
+                      ...base,
+                      clientKey: m.clientKey ?? assistantTmpId,
+                      streaming: false,
+                      content: base.content || m.content,
+                      citations: assistantMsg?.citations ?? m.citations,
+                    };
+                  }
+                  return m;
+                });
+                return next.length > limit
+                  ? next.slice(next.length - limit)
+                  : next;
+              });
+            },
+          }
+        );
         refreshThreads();
       } catch (err) {
         if ((err as Error)?.name === "AbortError") {

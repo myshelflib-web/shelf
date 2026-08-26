@@ -14,9 +14,19 @@ export function extraContentFromUnknown(
   raw: unknown
 ): GoogleToolExtraContent | undefined {
   if (!raw || typeof raw !== "object") return undefined;
-  const google = (raw as { google?: { thought_signature?: unknown } }).google;
-  const sig = google?.thought_signature;
-  if (typeof sig !== "string" || !sig) return undefined;
+  const rec = raw as {
+    google?: { thought_signature?: unknown };
+    thought_signature?: unknown;
+  };
+  const nested = rec.google?.thought_signature;
+  const flat = rec.thought_signature;
+  const sig =
+    typeof nested === "string" && nested
+      ? nested
+      : typeof flat === "string" && flat
+        ? flat
+        : undefined;
+  if (!sig) return undefined;
   return { google: { thought_signature: sig } };
 }
 
@@ -33,7 +43,9 @@ export function readToolCalls(raw: unknown): ChatToolCall[] | undefined {
     };
     const name = rec.function?.name;
     if (!name) continue;
-    const extra = extraContentFromUnknown(rec.extra_content);
+    const extra =
+      extraContentFromUnknown(rec.extra_content) ??
+      extraContentFromUnknown(rec);
     const call: ChatToolCall = {
       id: rec.id || `call_${calls.length}`,
       type: "function",
@@ -95,16 +107,23 @@ export function finalizeStreamToolCalls(
   return calls.length ? ensureThoughtSignatures(calls) : [];
 }
 
-/** First function call in a Gemini 3 step must carry a thought_signature. */
+/** Every function call should carry a thought_signature when Gemini requires it. */
 export function ensureThoughtSignatures(calls: ChatToolCall[]): ChatToolCall[] {
   if (calls.length === 0) return calls;
-  const first = calls[0];
-  if (first.extra_content?.google?.thought_signature) return calls;
-  return [
-    {
-      ...first,
-      extra_content: { google: { thought_signature: SKIP_THOUGHT_SIGNATURE } },
-    },
-    ...calls.slice(1),
-  ];
+  return calls.map((call, i) => {
+    if (call.extra_content?.google?.thought_signature) return call;
+    // Parallel calls: Gemini only requires the first; still stamp all missing ones.
+    return {
+      ...call,
+      extra_content: {
+        google: {
+          thought_signature:
+            i === 0
+              ? SKIP_THOUGHT_SIGNATURE
+              : call.extra_content?.google?.thought_signature ||
+                SKIP_THOUGHT_SIGNATURE,
+        },
+      },
+    };
+  });
 }

@@ -38,7 +38,10 @@ export function StudyAiMessageList({
     <>
       {messages.map((m) =>
         m.role === "user" ? (
-          <div key={m.id} className="study-ai-msg group flex justify-end">
+          <div
+            key={m.clientKey ?? m.id}
+            className="study-ai-msg group flex justify-end"
+          >
             <div className="max-w-[72%]">
               {m.id.startsWith("tmp-") ? (
                 <div className="rounded-2xl rounded-br-md bg-[var(--accent)] text-white px-4 py-3 text-[13px] whitespace-pre-wrap leading-relaxed">
@@ -65,7 +68,7 @@ export function StudyAiMessageList({
           </div>
         ) : (
           <div
-            key={m.id}
+            key={m.clientKey ?? m.id}
             className="study-ai-msg grid grid-cols-[30px_minmax(0,1fr)] gap-3"
           >
             <div className="w-[30px] h-[30px] rounded-lg bg-[var(--accent-subtle)] flex items-center justify-center shrink-0">
@@ -82,7 +85,13 @@ export function StudyAiMessageList({
                 {m.streaming ? " · live" : ""}
               </p>
               {m.content ? (
-                <StudyAIContent content={m.content} streaming={m.streaming} />
+                <StudyAIContent
+                  content={m.content}
+                  streaming={m.streaming}
+                  citations={
+                    m.citations ?? (m.streaming ? liveCitations : undefined)
+                  }
+                />
               ) : (
                 <StreamActivity
                   events={statusEvents}

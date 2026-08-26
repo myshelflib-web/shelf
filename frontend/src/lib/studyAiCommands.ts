@@ -260,8 +260,27 @@ export function filterCommands(query: string): StudyAiCommand[] {
 export type ResolvedStudyAiInput =
   | { kind: "help" }
   | { kind: "mode"; mode: StudyAiPageMode }
-  | { kind: "prompt"; text: string }
+  | { kind: "prompt"; text: string; display: string }
   | { kind: "plain"; text: string };
+
+function slashDisplay(slash: string, args: string): string {
+  const a = args.trim();
+  return a ? `/${slash} ${a}` : `/${slash}`;
+}
+
+/** If `raw` is a known expanded command template, return its slash label. */
+export function slashLabelForExpandedPrompt(
+  raw: string,
+  scope: StudyAiCommandScope
+): string | null {
+  const text = raw.trim();
+  if (!text || text.startsWith("/")) return null;
+  for (const cmd of STUDY_AI_COMMANDS) {
+    if (cmd.slash === "help") continue;
+    if (cmd.prompt(scope, "") === text) return `/${cmd.slash}`;
+  }
+  return null;
+}
 
 export function resolveStudyAiInput(
   raw: string,
@@ -275,5 +294,60 @@ export function resolveStudyAiInput(
   if (cmd.pageMode && scope === "page" && !parsed.args) {
     return { kind: "mode", mode: cmd.pageMode };
   }
-  return { kind: "prompt", text: cmd.prompt(scope, parsed.args) };
+  return {
+    kind: "prompt",
+    text: cmd.prompt(scope, parsed.args),
+    display: slashDisplay(cmd.slash, parsed.args),
+  };
+}
+
+import { slashInsertForSuggestLabel } from "@/lib/studyAiSuggestions";
+
+/**
+ * What to show in the bubble vs what the model receives.
+ * Never returns an internal command template as `display`.
+ */
+export function studyAiSendParts(
+  raw: string,
+  scope: StudyAiCommandScope,
+  opts?: { label?: string }
+):
+  | { kind: "help" }
+  | { kind: "mode"; mode: StudyAiPageMode }
+  | { kind: "send"; display: string; prompt: string } {
+  const trimmed = raw.trim();
+  const label = opts?.label?.trim();
+
+  const fromChipLabel = !trimmed.startsWith("/")
+    ? slashInsertForSuggestLabel(trimmed)
+    : null;
+  if (fromChipLabel && !label) {
+    return studyAiSendParts(fromChipLabel, scope, { label: trimmed });
+  }
+
+  const resolved = resolveStudyAiInput(trimmed, scope);
+  if (resolved.kind === "help") return { kind: "help" };
+  if (resolved.kind === "mode") return { kind: "mode", mode: resolved.mode };
+  if (resolved.kind === "prompt") {
+    return {
+      kind: "send",
+      display: label || resolved.display,
+      prompt: resolved.text,
+    };
+  }
+  const collapsed = slashLabelForExpandedPrompt(trimmed, scope);
+  if (collapsed) {
+    const again = resolveStudyAiInput(collapsed, scope);
+    const prompt = again.kind === "prompt" ? again.text : trimmed;
+    return {
+      kind: "send",
+      display: label || collapsed,
+      prompt,
+    };
+  }
+  return {
+    kind: "send",
+    display: label || trimmed,
+    prompt: trimmed,
+  };
 }

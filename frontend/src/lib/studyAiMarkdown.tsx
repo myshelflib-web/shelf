@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useMemo, type ReactNode } from "react";
 import { MermaidBlock } from "@/components/study-ai/MermaidBlock";
 import {
   looksLikeTex,
@@ -6,6 +6,7 @@ import {
   renderMathHtml,
   splitInlineMath,
 } from "@/lib/studyAiMath";
+import type { LibraryCitation } from "@/types";
 
 function MathSpan({
   tex,
@@ -23,7 +24,10 @@ function MathSpan({
   );
 }
 
-function renderInline(text: string): ReactNode[] {
+function renderInline(
+  text: string,
+  citationHref?: Map<number, string>
+): ReactNode[] {
   const nodes: ReactNode[] = [];
   let key = 0;
 
@@ -37,7 +41,7 @@ function renderInline(text: string): ReactNode[] {
 
     const chunk = seg.value;
     const re =
-      /(\[([^\]]+)\]\((https?:\/\/[^)\s]+)\))|(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(_[^_]+_)/g;
+      /(\[([^\]]+)\]\((https?:\/\/[^)\s]+)\))|(`[^`]+`)|(\*\*[^*]+\*\*)|(\*[^*]+\*)|(_[^_]+_)|(\[(\d+)\])/g;
     let last = 0;
     let match: RegExpExecArray | null;
     while ((match = re.exec(chunk)) !== null) {
@@ -80,6 +84,23 @@ function renderInline(text: string): ReactNode[] {
             {raw.slice(1, -1)}
           </em>
         );
+      } else if (match[8] && match[9]) {
+        const n = Number(match[9]);
+        const href = citationHref?.get(n);
+        if (href) {
+          nodes.push(
+            <a
+              key={key++}
+              href={href}
+              className="text-[var(--accent)] font-medium underline underline-offset-2"
+              title={`Open source [${n}]`}
+            >
+              [{n}]
+            </a>
+          );
+        } else {
+          nodes.push(<Fragment key={key++}>{match[8]}</Fragment>);
+        }
       }
       last = match.index + match[0].length;
     }
@@ -285,10 +306,22 @@ function parseBlocks(content: string): Block[] {
 export function StudyAIContent({
   content,
   streaming = false,
+  citations,
 }: {
   content: string;
   streaming?: boolean;
+  citations?: LibraryCitation[] | null;
 }) {
+  const citationHref = useMemo(() => {
+    if (!citations?.length) return undefined;
+    const map = new Map<number, string>();
+    for (const c of citations) {
+      if (c.href && Number.isFinite(c.n)) map.set(c.n, c.href);
+    }
+    return map.size ? map : undefined;
+  }, [citations]);
+
+  const inline = (text: string) => renderInline(text, citationHref);
   const blocks = parseBlocks(normalizeStudyMarkdown(content));
   const last = blocks.length - 1;
 
@@ -298,16 +331,16 @@ export function StudyAIContent({
         const caret = streaming && i === last;
         switch (block.type) {
           case "h2":
-            return <h2 key={i}>{renderInline(block.text)}</h2>;
+            return <h2 key={i}>{inline(block.text)}</h2>;
           case "h3":
-            return <h3 key={i}>{renderInline(block.text)}</h3>;
+            return <h3 key={i}>{inline(block.text)}</h3>;
           case "h4":
-            return <h4 key={i}>{renderInline(block.text)}</h4>;
+            return <h4 key={i}>{inline(block.text)}</h4>;
           case "ul":
             return (
               <ul key={i}>
                 {block.items.map((item, j) => (
-                  <li key={j}>{renderInline(item)}</li>
+                  <li key={j}>{inline(item)}</li>
                 ))}
               </ul>
             );
@@ -315,7 +348,7 @@ export function StudyAIContent({
             return (
               <ol key={i}>
                 {block.items.map((item, j) => (
-                  <li key={j}>{renderInline(item)}</li>
+                  <li key={j}>{inline(item)}</li>
                 ))}
               </ol>
             );
@@ -326,7 +359,7 @@ export function StudyAIContent({
                   <thead>
                     <tr>
                       {block.headers.map((h, j) => (
-                        <th key={j}>{renderInline(h)}</th>
+                        <th key={j}>{inline(h)}</th>
                       ))}
                     </tr>
                   </thead>
@@ -334,7 +367,7 @@ export function StudyAIContent({
                     {block.rows.map((row, r) => (
                       <tr key={r}>
                         {row.map((cell, c) => (
-                          <td key={c}>{renderInline(cell)}</td>
+                          <td key={c}>{inline(cell)}</td>
                         ))}
                       </tr>
                     ))}
@@ -366,7 +399,7 @@ export function StudyAIContent({
           default:
             return (
               <p key={i}>
-                {renderInline(block.text)}
+                {inline(block.text)}
                 {caret ? (
                   <span className="study-ai-stream-caret" aria-hidden />
                 ) : null}

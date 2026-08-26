@@ -126,6 +126,14 @@ async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
 }
 
 function toolsUnsupported(err: unknown): boolean {
+  if (
+    err &&
+    typeof err === "object" &&
+    "code" in err &&
+    (err as { code?: string }).code === "thought_signature"
+  ) {
+    return true;
+  }
   return (
     err instanceof Error && isToolsUnsupportedMessage(err.message)
   );
@@ -200,6 +208,8 @@ export async function answerWithRag(opts: RagAskOpts): Promise<RagResult> {
     } catch (err) {
       if (useTools && toolsUnsupported(err)) {
         useTools = false;
+        // Drop any partial tool turn — Gemini rejects history without signatures.
+        messages = prepared.messages;
         continue;
       }
       throw err;
@@ -280,6 +290,8 @@ export async function* streamAnswerWithRag(
       if (opts.signal?.aborted || (err as Error)?.name === "AbortError") break;
       if (useTools && toolsUnsupported(err)) {
         useTools = false;
+        messages = prepared.messages;
+        answer = "";
         continue;
       }
       throw err;

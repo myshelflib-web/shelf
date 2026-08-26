@@ -31,7 +31,10 @@ router.use(authMiddleware);
 type AskBody = {
   articleId?: string;
   userTopicId?: string;
+  /** Shown in the chat bubble / history. */
   question?: string;
+  /** Optional expanded prompt for the model (slash commands). */
+  prompt?: string;
   selection?: string;
   mode?: string;
   imageBase64?: string;
@@ -110,6 +113,8 @@ router.post("/ask", async (req: Request, res: Response) => {
     const prepared = await preparePageAsk({
       userId,
       ...body,
+      question:
+        String(body.prompt ?? body.question ?? "").trim() || body.question,
     });
 
     let tokensUsed = prepared.user.llmTokensUsed;
@@ -208,7 +213,12 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
     send("status", { stage: "starting", detail: "Starting Study AI…" });
 
     const prepared = await preparePageAsk(
-      { userId, ...body },
+      {
+        userId,
+        ...body,
+        question:
+          String(body.prompt ?? body.question ?? "").trim() || body.question,
+      },
       (stage, detail) => send("status", { stage, detail })
     );
 

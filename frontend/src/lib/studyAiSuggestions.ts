@@ -37,6 +37,16 @@ const PAGE_POOL: StudyAiSuggestion[] = [
 
 export const STUDY_AI_SUGGEST_ROTATE_MS = 10_000;
 
+/** Map a chip label back to its slash insert (for edit/resubmit). */
+export function slashInsertForSuggestLabel(label: string): string | null {
+  const key = label.trim().toLowerCase();
+  if (!key) return null;
+  const hit = [...LIBRARY_POOL, ...PAGE_POOL].find(
+    (i) => i.label.toLowerCase() === key
+  );
+  return hit?.insert ?? null;
+}
+
 export function pickStudyAiSuggestions(
   scope: "library" | "page",
   opts: {

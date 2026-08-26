@@ -43,8 +43,13 @@ async function loadSyllabus(
 }
 
 router.post("/chats/:id/messages", async (req: Request, res: Response) => {
-  const body = req.body as { content?: string; imageBase64?: string };
+  const body = req.body as {
+    content?: string;
+    prompt?: string;
+    imageBase64?: string;
+  };
   const content = String(body.content ?? "").trim();
+  const prompt = String(body.prompt ?? content).trim();
   const imageBase64 = body.imageBase64;
   if (!content && !imageBase64?.startsWith("data:image/")) {
     res.status(400).json({ error: "content or image required" });
@@ -90,7 +95,7 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
     }
     assertLlmRoom(
       { ...user, llmTokensUsed: tokensUsed },
-      estimateTokens(content || "image") + 1200
+      estimateTokens(prompt || content || "image") + 1200
     );
 
     const displayContent =
@@ -119,7 +124,7 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
     const result = await answerWithRag({
       userId,
       query:
-        content ||
+        prompt ||
         "Explain the attached image using my library when relevant.",
       studyGoal: user.studyGoal ?? "GENERAL",
       history,
@@ -143,7 +148,7 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
 
     const nextTitle =
       thread.title === "New chat"
-        ? titleFromQuery(content || "Image question")
+        ? titleFromQuery(prompt || content || "Image question")
         : thread.title;
 
     await prisma.chatThread.update({
@@ -175,8 +180,13 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
 
 /** Cursor-style SSE: library search status + token deltas, then persisted messages. */
 router.post("/chats/:id/messages/stream", async (req: Request, res: Response) => {
-  const body = req.body as { content?: string; imageBase64?: string };
+  const body = req.body as {
+    content?: string;
+    prompt?: string;
+    imageBase64?: string;
+  };
   const content = String(body.content ?? "").trim();
+  const prompt = String(body.prompt ?? content).trim();
   const imageBase64 = body.imageBase64;
   if (!content && !imageBase64?.startsWith("data:image/")) {
     res.status(400).json({ error: "content or image required" });
@@ -229,7 +239,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
   const displayContent = content || (imageBase64 ? "📷 [Image attached]" : "");
   const nextTitle =
     thread.title === "New chat"
-      ? titleFromQuery(content || "Image question")
+      ? titleFromQuery(prompt || content || "Image question")
       : thread.title;
 
   let persistedUser = false;
@@ -246,7 +256,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
     }
     assertLlmRoom(
       { ...user, llmTokensUsed: tokensUsed },
-      estimateTokens(content || "image") + 1200
+      estimateTokens(prompt || content || "image") + 1200
     );
 
     const prior = await prisma.chatMessage.findMany({
@@ -278,7 +288,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
     for await (const ev of streamAnswerWithRag({
       userId,
       query:
-        content ||
+        prompt ||
         "Explain the attached image using my library when relevant.",
       studyGoal: user.studyGoal ?? "GENERAL",
       history,
