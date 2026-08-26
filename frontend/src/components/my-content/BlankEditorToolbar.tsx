@@ -12,6 +12,14 @@ import {
   MousePointerClick,
 } from "lucide-react";
 import { CANVAS_BACKGROUNDS } from "@/lib/blankCanvas";
+import {
+  EditorToolbarShell,
+  ToolBtn,
+  ToolChip,
+  ToolGroup,
+  ToolMuted,
+  ToolSep,
+} from "./EditorToolbarChrome";
 
 export type DrawTool = "pen" | "stroke-erase" | "object-erase";
 
@@ -108,123 +116,100 @@ export function BlankEditorToolbar({
   onCanvasBgChange,
 }: BlankEditorToolbarProps) {
   return (
-    <div className="flex flex-wrap items-center gap-1 px-3 py-2 border-b border-[var(--border)] bg-[var(--bg-elevated)] shrink-0">
-      <div className="flex items-center gap-0.5 mr-1 rounded-lg bg-[var(--bg-secondary)] p-0.5">
-        <button
-          type="button"
-          className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium ${
-            !drawMode
-              ? "bg-[var(--accent)] text-white shadow-sm"
-              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-          }`}
-          title="Type text"
-          aria-pressed={!drawMode}
+    <EditorToolbarShell>
+      <ToolGroup>
+        <ToolBtn
+          label="Type text"
+          active={!drawMode}
           onClick={() => onDrawModeChange(false)}
         >
-          <Type className="w-3.5 h-3.5" />
-          Type
-        </button>
-        <button
-          type="button"
-          className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium ${
-            drawMode
-              ? "bg-[var(--accent)] text-white shadow-sm"
-              : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-          }`}
-          title="Draw"
-          aria-pressed={drawMode}
+          <Type className="w-[17px] h-[17px]" />
+        </ToolBtn>
+        <ToolBtn
+          label="Draw"
+          active={drawMode}
           onClick={() => onDrawModeChange(true)}
         >
-          <PenLine className="w-3.5 h-3.5" />
-          Draw
-        </button>
-      </div>
+          <PenLine className="w-[17px] h-[17px]" />
+        </ToolBtn>
+      </ToolGroup>
 
-      <div className="w-px h-6 bg-[var(--border)] mx-1" />
+      <ToolSep />
 
       {!drawMode ? (
         <>
-          <select
-            className="h-8 max-w-[7.5rem] rounded-md border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1.5"
-            title="Font"
-            aria-label="Font family"
-            defaultValue=""
-            onMouseDown={(e) => e.stopPropagation()}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (!v) onCommand("removeFormat");
-              else onCommand("fontName", v);
-            }}
-          >
-            {FONTS.map((f) => (
-              <option key={f.id} value={f.value}>
-                {f.label}
-              </option>
-            ))}
-          </select>
+          <ToolGroup>
+            <select
+              className="h-[34px] max-w-[7.5rem] rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1.5"
+              title="Font"
+              aria-label="Font family"
+              defaultValue=""
+              onMouseDown={(e) => e.stopPropagation()}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (!v) onCommand("removeFormat");
+                else onCommand("fontName", v);
+              }}
+            >
+              {FONTS.map((f) => (
+                <option key={f.id} value={f.value}>
+                  {f.label}
+                </option>
+              ))}
+            </select>
+            <select
+              className="h-[34px] w-14 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1"
+              title="Font size"
+              aria-label="Font size"
+              defaultValue="14px"
+              onMouseDown={(e) => e.stopPropagation()}
+              onChange={(e) => onCommand("fontSizePx", e.target.value)}
+            >
+              {FONT_SIZES.map((s) => (
+                <option key={s.px} value={s.px}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </ToolGroup>
 
-          <select
-            className="h-8 w-14 rounded-md border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1"
-            title="Font size"
-            aria-label="Font size"
-            defaultValue="14px"
-            onMouseDown={(e) => e.stopPropagation()}
-            onChange={(e) => onCommand("fontSizePx", e.target.value)}
-          >
-            {FONT_SIZES.map((s) => (
-              <option key={s.px} value={s.px}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+          <ToolSep />
 
-          <div className="w-px h-6 bg-[var(--border)] mx-0.5" />
+          <ToolGroup>
+            <ToolBtn
+              label="Bold"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onCommand("bold")}
+            >
+              <Bold className="w-[17px] h-[17px]" />
+            </ToolBtn>
+            <ToolBtn
+              label="Italic"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onCommand("italic")}
+            >
+              <Italic className="w-[17px] h-[17px]" />
+            </ToolBtn>
+            <ToolBtn
+              label="Underline"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onCommand("underline")}
+            >
+              <Underline className="w-[17px] h-[17px]" />
+            </ToolBtn>
+            <ToolBtn
+              label="Strikethrough"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => onCommand("strikeThrough")}
+            >
+              <Strikethrough className="w-[17px] h-[17px]" />
+            </ToolBtn>
+          </ToolGroup>
 
-          <button
-            type="button"
-            className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)] font-bold"
-            title="Bold"
-            aria-label="Bold"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("bold")}
-          >
-            <Bold className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
-            title="Italic"
-            aria-label="Italic"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("italic")}
-          >
-            <Italic className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
-            title="Underline"
-            aria-label="Underline"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("underline")}
-          >
-            <Underline className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
-            title="Strikethrough"
-            aria-label="Strikethrough"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("strikeThrough")}
-          >
-            <Strikethrough className="w-4 h-4" />
-          </button>
+          <ToolSep />
 
-          <div className="w-px h-6 bg-[var(--border)] mx-0.5" />
-
-          <span className="flex items-center gap-1" title="Text color">
-            <span className="text-[10px] text-[var(--text-muted)] mr-0.5">A</span>
+          <ToolGroup>
+            <ToolMuted>A</ToolMuted>
             {TEXT_COLORS.map((c) => (
               <button
                 key={c.id}
@@ -244,20 +229,13 @@ export function BlankEditorToolbar({
                 }}
               />
             ))}
-          </span>
-
-          <div className="w-px h-6 bg-[var(--border)] mx-0.5" />
-
-          <span className="flex items-center gap-1" title="Highlight">
-            <Highlighter className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+            <Highlighter className="w-3.5 h-3.5 text-[var(--text-muted)] ml-1" />
             {HIGHLIGHT_COLORS.map((c) => (
               <button
                 key={c.id}
                 type="button"
                 className="w-3.5 h-3.5 rounded-sm border border-black/15 hover:scale-110 transition-transform"
-                style={{
-                  background: c.color || "transparent",
-                }}
+                style={{ background: c.color || "transparent" }}
                 title={c.label}
                 aria-label={`Highlight ${c.label}`}
                 onMouseDown={(e) => e.preventDefault()}
@@ -266,139 +244,94 @@ export function BlankEditorToolbar({
                 }
               />
             ))}
-          </span>
-
-          <p className="ml-2 text-[10px] text-[var(--text-muted)] hidden sm:block">
-            Click canvas to place a text box · select text to format
-          </p>
+          </ToolGroup>
         </>
       ) : (
         <>
-          <div className="flex items-center gap-0.5 rounded-lg bg-[var(--bg-secondary)] p-0.5 mr-1">
-            <button
-              type="button"
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium ${
-                drawTool === "pen"
-                  ? "bg-[var(--accent)] text-white shadow-sm"
-                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              }`}
-              title="Pen"
-              aria-pressed={drawTool === "pen"}
+          <ToolGroup>
+            <ToolBtn
+              label="Pen"
+              active={drawTool === "pen"}
               onClick={() => onDrawToolChange("pen")}
             >
-              <PenLine className="w-3.5 h-3.5" />
-              Pen
-            </button>
-            <button
-              type="button"
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium ${
-                drawTool === "stroke-erase"
-                  ? "bg-[var(--accent)] text-white shadow-sm"
-                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              }`}
-              title="Stroke eraser — drag over ink to remove whole strokes"
-              aria-pressed={drawTool === "stroke-erase"}
+              <PenLine className="w-[17px] h-[17px]" />
+            </ToolBtn>
+            <ToolBtn
+              label="Stroke eraser"
+              active={drawTool === "stroke-erase"}
               onClick={() => onDrawToolChange("stroke-erase")}
             >
-              <Eraser className="w-3.5 h-3.5" />
-              Stroke
-            </button>
-            <button
-              type="button"
-              className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium ${
-                drawTool === "object-erase"
-                  ? "bg-[var(--accent)] text-white shadow-sm"
-                  : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-              }`}
-              title="Object eraser — click a stroke or text box to delete it"
-              aria-pressed={drawTool === "object-erase"}
+              <Eraser className="w-[17px] h-[17px]" />
+            </ToolBtn>
+            <ToolBtn
+              label="Object eraser"
+              active={drawTool === "object-erase"}
               onClick={() => onDrawToolChange("object-erase")}
             >
-              <MousePointerClick className="w-3.5 h-3.5" />
-              Object
-            </button>
-          </div>
+              <MousePointerClick className="w-[17px] h-[17px]" />
+            </ToolBtn>
+          </ToolGroup>
 
           {drawTool === "pen" ? (
             <>
-              <span className="text-[10px] font-medium text-[var(--text-muted)] mr-1">
-                Size
-              </span>
-              {PEN_SIZES.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  className={`min-w-[1.6rem] h-7 px-1 rounded-md text-[10px] font-semibold ${
-                    Math.abs(penSize - s.size) < 0.01
-                      ? "bg-[var(--accent)] text-white"
-                      : "hover:bg-[var(--bg-secondary)] text-[var(--text-muted)]"
-                  }`}
-                  title={`Pen ${s.label}`}
-                  aria-label={`Pen size ${s.label}`}
-                  aria-pressed={Math.abs(penSize - s.size) < 0.01}
-                  onClick={() => onPenSizeChange(s.size)}
-                >
-                  {s.label}
-                </button>
-              ))}
-
-              <div className="w-px h-6 bg-[var(--border)] mx-1" />
-
-              <span className="text-[10px] font-medium text-[var(--text-muted)] mr-1">
-                Color
-              </span>
-              {PEN_COLORS.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`w-5 h-5 rounded-full border-2 hover:scale-110 transition-transform ${
-                    penColor === c.color
-                      ? "border-[var(--accent)] scale-110"
-                      : c.id === "white"
-                        ? "border-[var(--border)]"
-                        : "border-transparent"
-                  }`}
-                  style={{ background: c.color }}
-                  title={c.label}
-                  aria-label={`Pen ${c.label}`}
-                  aria-pressed={penColor === c.color}
-                  onClick={() => onPenColorChange(c.color)}
-                />
-              ))}
+              <ToolSep />
+              <ToolGroup>
+                <ToolMuted>Size</ToolMuted>
+                {PEN_SIZES.map((s) => (
+                  <ToolChip
+                    key={s.id}
+                    label={`Pen ${s.label}`}
+                    active={Math.abs(penSize - s.size) < 0.01}
+                    onClick={() => onPenSizeChange(s.size)}
+                  >
+                    {s.label}
+                  </ToolChip>
+                ))}
+                {PEN_COLORS.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={`w-5 h-5 rounded-full border-2 hover:scale-110 transition-transform ${
+                      penColor === c.color
+                        ? "border-[var(--accent)] scale-110"
+                        : c.id === "white"
+                          ? "border-[var(--border)]"
+                          : "border-transparent"
+                    }`}
+                    style={{ background: c.color }}
+                    title={c.label}
+                    aria-pressed={penColor === c.color}
+                    onClick={() => onPenColorChange(c.color)}
+                  />
+                ))}
+              </ToolGroup>
             </>
-          ) : (
-            <p className="ml-1 text-[10px] text-[var(--text-muted)] hidden sm:block">
-              {drawTool === "stroke-erase"
-                ? "Drag over ink to erase strokes"
-                : "Click a stroke or text box to delete it"}
-            </p>
-          )}
+          ) : null}
 
-          <div className="w-px h-6 bg-[var(--border)] mx-1" />
+          <ToolSep />
 
-          <span className="text-[10px] font-medium text-[var(--text-muted)] mr-1">
-            Bg
-          </span>
-          {CANVAS_BACKGROUNDS.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className={`w-5 h-5 rounded-md border-2 hover:scale-110 transition-transform ${
-                canvasBg === c.color
-                  ? "border-[var(--accent)] scale-110"
-                  : c.id === "white" || c.id === "paper" || c.id === "mist"
-                    ? "border-[var(--border)]"
-                    : "border-transparent"
-              }`}
-              style={{ background: c.color }}
-              title={`Background ${c.label}`}
-              aria-label={`Canvas background ${c.label}`}
-              aria-pressed={canvasBg === c.color}
-              onClick={() => onCanvasBgChange(c.color)}
-            />
-          ))}
+          <ToolGroup>
+            <ToolMuted>Bg</ToolMuted>
+            {CANVAS_BACKGROUNDS.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={`w-5 h-5 rounded-md border-2 hover:scale-110 transition-transform ${
+                  canvasBg === c.color
+                    ? "border-[var(--accent)] scale-110"
+                    : c.id === "white" || c.id === "paper" || c.id === "mist"
+                      ? "border-[var(--border)]"
+                      : "border-transparent"
+                }`}
+                style={{ background: c.color }}
+                title={`Background ${c.label}`}
+                aria-pressed={canvasBg === c.color}
+                onClick={() => onCanvasBgChange(c.color)}
+              />
+            ))}
+          </ToolGroup>
         </>
       )}
-    </div>
+    </EditorToolbarShell>
   );
 }

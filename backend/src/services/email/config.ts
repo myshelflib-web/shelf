@@ -15,19 +15,19 @@ export function getEmailLogoUrl(): string {
   return `${getAppUrl()}/icons/shelf-icon-2048.png`;
 }
 
-export function getSesFromEmail(): string | undefined {
-  return process.env.SES_FROM_EMAIL?.trim() || undefined;
+export function getResendApiKey(): string | undefined {
+  return process.env.RESEND_API_KEY?.trim() || undefined;
 }
 
-export function isSesConfigured(): boolean {
-  return Boolean(getSesFromEmail());
-}
-
-export function getSesRegion(): string {
+/** From address, e.g. `Shelf <noreply@yourdomain.com>`. */
+export function getEmailFrom(): string | undefined {
   return (
-    process.env.SES_REGION?.trim() ||
-    process.env.AWS_REGION?.trim() ||
-    process.env.S3_REGION?.trim() ||
-    "us-east-1"
+    process.env.EMAIL_FROM?.trim() ||
+    process.env.RESEND_FROM_EMAIL?.trim() ||
+    undefined
   );
+}
+
+export function isEmailConfigured(): boolean {
+  return Boolean(getResendApiKey() && getEmailFrom());
 }

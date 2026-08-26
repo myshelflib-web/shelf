@@ -1,6 +1,5 @@
-import { SendEmailCommand } from "@aws-sdk/client-ses";
-import { getSesFromEmail, isSesConfigured } from "./config.js";
-import { getSesClient } from "./sesClient.js";
+import { getEmailFrom, isEmailConfigured } from "./config.js";
+import { getResendClient } from "./resendClient.js";
 import { errorFields, logger } from "../../utils/logger.js";
 
 export type SendEmailInput = {
@@ -11,10 +10,10 @@ export type SendEmailInput = {
 };
 
 export async function sendEmail(input: SendEmailInput): Promise<void> {
-  const from = getSesFromEmail();
-  if (!from || !isSesConfigured()) {
+  const from = getEmailFrom();
+  if (!from || !isEmailConfigured()) {
     logger.warn("email.skipped", {
-      reason: "SES not configured",
+      reason: "Resend not configured",
       to: input.to,
       subject: input.subject,
     });
@@ -22,21 +21,18 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
   }
 
   try {
-    await getSesClient().send(
-      new SendEmailCommand({
-        Source: from,
-        Destination: { ToAddresses: [input.to] },
-        Message: {
-          Subject: { Data: input.subject, Charset: "UTF-8" },
-          Body: {
-            Html: { Data: input.html, Charset: "UTF-8" },
-            ...(input.text
-              ? { Text: { Data: input.text, Charset: "UTF-8" } }
-              : {}),
-          },
-        },
-      })
-    );
+    const { error } = await getResendClient().emails.send({
+      from,
+      to: input.to,
+      subject: input.subject,
+      html: input.html,
+      ...(input.text ? { text: input.text } : {}),
+    });
+
+    if (error) {
+      throw new Error(error.message || "Resend send failed");
+    }
+
     logger.info("email.sent", { to: input.to, subject: input.subject });
   } catch (err) {
     logger.error("email.failed", {

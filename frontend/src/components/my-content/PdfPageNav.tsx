@@ -5,6 +5,7 @@ import type { PDFDocumentProxy } from "pdfjs-dist";
 import { LayoutGrid, ChevronLeft, ChevronRight } from "lucide-react";
 import { withShortcut } from "@/lib/hotkeys";
 import { PdfPagePreviewModal } from "./PdfPagePreviewModal";
+import { ToolBtn, ToolMuted, ToolPill } from "./EditorToolbarChrome";
 
 export function PdfPageNav({
   currentPage,
@@ -32,7 +33,6 @@ export function PdfPageNav({
   const focusedRef = useRef(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
-  /** Keep the field in sync with scroll page — never while the user is typing. */
   useEffect(() => {
     if (focusedRef.current) return;
     const el = inputRef.current;
@@ -53,33 +53,33 @@ export function PdfPageNav({
 
   return (
     <div className={compact ? "shrink-0" : "min-w-0"}>
-        <div className="flex items-center gap-1 min-w-0">
-          <button
-            type="button"
-            disabled={!numPages || currentPage <= 1}
-            onClick={() => onGoToPage(currentPage - 1)}
-            className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] disabled:opacity-35 disabled:pointer-events-none shrink-0"
-            title={withShortcut(
-              numPages ? `Previous page (${currentPage - 1} of ${numPages})` : "Previous page",
-              "left"
-            )}
-            aria-label="Previous page"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <form
-            className="flex items-center gap-1 min-w-0"
-            onSubmit={(e) => {
-              e.preventDefault();
-              focusedRef.current = false;
-              commit(inputRef.current?.value ?? "");
-              inputRef.current?.blur();
-            }}
-          >
-            <label className="sr-only" htmlFor={inputId}>
-              Go to page
-            </label>
-            <span className="text-sm text-[var(--text-muted)] shrink-0">Page</span>
+      <div className="flex items-center gap-1 min-w-0">
+        <ToolBtn
+          label={withShortcut(
+            numPages
+              ? `Previous page (${currentPage - 1} of ${numPages})`
+              : "Previous page",
+            "left"
+          )}
+          disabled={!numPages || currentPage <= 1}
+          onClick={() => onGoToPage(currentPage - 1)}
+        >
+          <ChevronLeft className="w-[17px] h-[17px]" />
+        </ToolBtn>
+        <form
+          className="flex items-center gap-1 min-w-0"
+          onSubmit={(e) => {
+            e.preventDefault();
+            focusedRef.current = false;
+            commit(inputRef.current?.value ?? "");
+            inputRef.current?.blur();
+          }}
+        >
+          <label className="sr-only" htmlFor={inputId}>
+            Go to page
+          </label>
+          <ToolMuted>Page</ToolMuted>
+          <ToolPill className="!p-0 overflow-hidden">
             <input
               ref={inputRef}
               id={inputId}
@@ -97,7 +97,6 @@ export function PdfPageNav({
                 commit(e.currentTarget.value);
               }}
               onKeyDown={(e) => {
-                // Stop reader shortcuts (j/k/s/…) from eating keystrokes.
                 e.stopPropagation();
                 if (e.key === "Escape") {
                   focusedRef.current = false;
@@ -105,60 +104,55 @@ export function PdfPageNav({
                   e.currentTarget.blur();
                 }
               }}
-              className="w-12 sm:w-14 px-1.5 py-0.5 text-sm font-medium tabular-nums tracking-tight text-center rounded-md bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] disabled:opacity-50"
+              className="h-[34px] w-[52px] bg-transparent text-center text-[12px] font-medium tabular-nums text-[var(--text-primary)] outline-none disabled:opacity-50"
               aria-label="Go to page number"
               title="Go to page"
             />
-            <span className="text-sm text-[var(--text-muted)] tabular-nums shrink-0">
-              / {numPages || "—"}
-            </span>
-          </form>
-          <button
-            type="button"
-            disabled={!pdfDoc || !numPages}
-            onClick={() => setPreviewOpen(true)}
-            className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] disabled:opacity-40 disabled:pointer-events-none shrink-0"
-            title="Page previews"
-            aria-label="Open page previews"
-          >
-            <LayoutGrid className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            disabled={!numPages || currentPage >= numPages}
-            onClick={() => onGoToPage(currentPage + 1)}
-            className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] disabled:opacity-35 disabled:pointer-events-none shrink-0"
-            title={withShortcut(
-              numPages ? `Next page (${currentPage + 1} of ${numPages})` : "Next page",
-              "right"
-            )}
-            aria-label="Next page"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-        {!compact && modeHint ? (
+          </ToolPill>
+          <ToolMuted>/ {numPages || "—"}</ToolMuted>
+        </form>
+        <ToolBtn
+          label={withShortcut(
+            numPages
+              ? `Next page (${currentPage + 1} of ${numPages})`
+              : "Next page",
+            "right"
+          )}
+          disabled={!numPages || currentPage >= numPages}
+          onClick={() => onGoToPage(currentPage + 1)}
+        >
+          <ChevronRight className="w-[17px] h-[17px]" />
+        </ToolBtn>
+        <ToolBtn
+          label="Page thumbnails"
+          disabled={!pdfDoc || !numPages}
+          onClick={() => setPreviewOpen(true)}
+        >
+          <LayoutGrid className="w-[17px] h-[17px]" />
+        </ToolBtn>
+      </div>
+      {!compact && modeHint ? (
         <p className="text-[11px] text-[var(--text-muted)] truncate mt-0.5">
           {modeHint}
         </p>
-        ) : null}
-        {previewOpen && pdfDoc && numPages > 0 && (
-          <PdfPagePreviewModal
-            pdfDoc={pdfDoc}
-            numPages={numPages}
-            currentPage={currentPage}
-            canDeletePages={canDeletePages}
-            deleting={deletingPages}
-            onGoToPage={onGoToPage}
-            onDeletePages={async (pages) => {
-              await onDeletePages?.(pages);
-              setPreviewOpen(false);
-            }}
-            onClose={() => {
-              if (!deletingPages) setPreviewOpen(false);
-            }}
-          />
-        )}
+      ) : null}
+      {previewOpen && pdfDoc && numPages > 0 && (
+        <PdfPagePreviewModal
+          pdfDoc={pdfDoc}
+          numPages={numPages}
+          currentPage={currentPage}
+          canDeletePages={canDeletePages}
+          deleting={deletingPages}
+          onGoToPage={onGoToPage}
+          onDeletePages={async (pages) => {
+            await onDeletePages?.(pages);
+            setPreviewOpen(false);
+          }}
+          onClose={() => {
+            if (!deletingPages) setPreviewOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

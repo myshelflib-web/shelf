@@ -7,7 +7,7 @@ import {
   signupOtpEmail,
 } from "./templates.js";
 import { sendEmail } from "./sendEmail.js";
-import { isSesConfigured } from "./config.js";
+import { isEmailConfigured } from "./config.js";
 
 const OTP_LENGTH = 6;
 const OTP_TTL_MS = 10 * 60 * 1000;
@@ -88,7 +88,7 @@ export async function createAndSendOtp(opts: {
       ? signupOtpEmail(opts.name, code, email)
       : passwordResetOtpEmail(opts.name, code, email);
 
-  if (!isSesConfigured()) {
+  if (!isEmailConfigured()) {
     logger.info("email.otp.dev", { email, purpose: opts.purpose, code });
     return;
   }

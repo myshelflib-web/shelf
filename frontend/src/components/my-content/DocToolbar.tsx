@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlignLeft,
   Bold,
   Highlighter,
   Italic,
@@ -9,6 +10,12 @@ import {
   Underline,
   Undo2,
 } from "lucide-react";
+import {
+  EditorToolbarShell,
+  ToolBtn,
+  ToolGroup,
+  ToolSep,
+} from "./EditorToolbarChrome";
 
 const FONTS = [
   { id: "default", label: "Default", value: "" },
@@ -46,173 +53,164 @@ interface DocToolbarProps {
   onCommand: (cmd: string, value?: string) => void;
 }
 
-function ToolSep() {
-  return <div className="w-px h-6 bg-[var(--border)] mx-1 shrink-0" />;
-}
-
 export function DocToolbar({ onCommand }: DocToolbarProps) {
   return (
-    <div className="shrink-0 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
-      <div className="flex items-center justify-center gap-0.5 px-3 py-2 overflow-x-auto scrollbar-none">
-        <div className="flex items-center gap-0.5 shrink-0">
-          <button
-            type="button"
-            className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
-            title="Undo (⌘Z)"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("undo")}
-          >
-            <Undo2 className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
-            title="Redo (⌘⇧Z)"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("redo")}
-          >
-            <Redo2 className="w-4 h-4" />
-          </button>
-        </div>
+    <EditorToolbarShell>
+      <ToolGroup>
+        <ToolBtn
+          label="Undo (⌘Z)"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onCommand("undo")}
+        >
+          <Undo2 className="w-[17px] h-[17px]" />
+        </ToolBtn>
+        <ToolBtn
+          label="Redo (⌘⇧Z)"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onCommand("redo")}
+        >
+          <Redo2 className="w-[17px] h-[17px]" />
+        </ToolBtn>
+      </ToolGroup>
 
-        <ToolSep />
+      <ToolSep />
 
-        <div className="flex items-center gap-0.5 shrink-0">
-          <button
-            type="button"
-            className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
-            title="Bold"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("bold")}
-          >
-            <Bold className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
-            title="Italic"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("italic")}
-          >
-            <Italic className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
-            title="Underline"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("underline")}
-          >
-            <Underline className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
-            title="Strikethrough"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("strikeThrough")}
-          >
-            <Strikethrough className="w-4 h-4" />
-          </button>
-        </div>
+      <ToolGroup>
+        <ToolBtn
+          label="Bold"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onCommand("bold")}
+        >
+          <Bold className="w-[17px] h-[17px]" />
+        </ToolBtn>
+        <ToolBtn
+          label="Italic"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onCommand("italic")}
+        >
+          <Italic className="w-[17px] h-[17px]" />
+        </ToolBtn>
+        <ToolBtn
+          label="Underline"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onCommand("underline")}
+        >
+          <Underline className="w-[17px] h-[17px]" />
+        </ToolBtn>
+        <ToolBtn
+          label="Strikethrough"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onCommand("strikeThrough")}
+        >
+          <Strikethrough className="w-[17px] h-[17px]" />
+        </ToolBtn>
+        <ToolBtn
+          label="Align left"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onCommand("justifyLeft")}
+        >
+          <AlignLeft className="w-[17px] h-[17px]" />
+        </ToolBtn>
+      </ToolGroup>
 
-        <ToolSep />
+      <ToolSep />
 
-        <div className="flex items-center gap-1 shrink-0">
-          <select
-            className="h-7 px-1.5 rounded-md text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
-            defaultValue=""
-            onChange={(e) => onCommand("fontName", e.target.value)}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            {FONTS.map((f) => (
-              <option key={f.id} value={f.value}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-          <select
-            className="h-7 px-1.5 rounded-md text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
-            defaultValue="16px"
-            onChange={(e) => onCommand("fontSizePx", e.target.value)}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            {FONT_SIZES.map((s) => (
-              <option key={s.px} value={s.px}>
-                {s.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <ToolGroup>
+        <select
+          className="h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+          defaultValue=""
+          onChange={(e) => onCommand("fontName", e.target.value)}
+          onMouseDown={(e) => e.stopPropagation()}
+          aria-label="Font"
+        >
+          {FONTS.map((f) => (
+            <option key={f.id} value={f.value}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+        <select
+          className="h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+          defaultValue="16px"
+          onChange={(e) => onCommand("fontSizePx", e.target.value)}
+          onMouseDown={(e) => e.stopPropagation()}
+          aria-label="Font size"
+        >
+          {FONT_SIZES.map((s) => (
+            <option key={s.px} value={s.px}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+      </ToolGroup>
 
-        <ToolSep />
+      <ToolSep />
 
-        <div className="flex items-center gap-0.5 shrink-0">
+      <ToolGroup>
+        <ToolBtn
+          label="Heading 1"
+          className="!min-w-[34px] px-2 text-[11px] font-semibold"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onCommand("formatBlock", "h1")}
+        >
+          H1
+        </ToolBtn>
+        <ToolBtn
+          label="Heading 2"
+          className="!min-w-[34px] px-2 text-[11px] font-semibold"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onCommand("formatBlock", "h2")}
+        >
+          H2
+        </ToolBtn>
+        <ToolBtn
+          label="Bullet list"
+          className="!min-w-[34px] px-2 text-[11px] font-semibold"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onCommand("insertUnorderedList")}
+        >
+          • List
+        </ToolBtn>
+        <ToolBtn
+          label="Numbered list"
+          className="!min-w-[34px] px-2 text-[11px] font-semibold"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onCommand("insertOrderedList")}
+        >
+          1.
+        </ToolBtn>
+      </ToolGroup>
+
+      <ToolSep />
+
+      <ToolGroup>
+        {TEXT_COLORS.map((c) => (
           <button
+            key={c.id}
             type="button"
-            className="px-2 py-1 rounded-md text-[11px] hover:bg-[var(--bg-secondary)] text-[var(--text-muted)]"
+            className="w-5 h-5 rounded-full border border-black/15"
+            style={{ background: c.color || "var(--text-primary)" }}
+            title={`Text ${c.label}`}
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("formatBlock", "h1")}
-          >
-            H1
-          </button>
-          <button
-            type="button"
-            className="px-2 py-1 rounded-md text-[11px] hover:bg-[var(--bg-secondary)] text-[var(--text-muted)]"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("formatBlock", "h2")}
-          >
-            H2
-          </button>
-          <button
-            type="button"
-            className="px-2 py-1 rounded-md text-[11px] hover:bg-[var(--bg-secondary)] text-[var(--text-muted)]"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("insertUnorderedList")}
-          >
-            • List
-          </button>
-          <button
-            type="button"
-            className="px-2 py-1 rounded-md text-[11px] hover:bg-[var(--bg-secondary)] text-[var(--text-muted)]"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("insertOrderedList")}
-          >
-            1. List
-          </button>
-        </div>
-
-        <ToolSep />
-
-        <div className="flex items-center gap-1 shrink-0">
-          {TEXT_COLORS.map((c) => (
+            onClick={() => onCommand("foreColor", c.color || "")}
+          />
+        ))}
+        <span className="flex items-center gap-1 ml-1" title="Highlight">
+          <Highlighter className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+          {HIGHLIGHT_COLORS.map((c) => (
             <button
               key={c.id}
               type="button"
-              className="w-4 h-4 rounded-full border border-black/15"
-              style={{ background: c.color || "var(--text-primary)" }}
-              title={`Text ${c.label}`}
+              className="w-3.5 h-3.5 rounded-sm border border-black/15"
+              style={{ background: c.color || "transparent" }}
+              title={c.label}
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => onCommand("foreColor", c.color || "")}
+              onClick={() => onCommand("hiliteColor", c.color || "transparent")}
             />
           ))}
-          <span className="flex items-center gap-1 ml-1" title="Highlight">
-            <Highlighter className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-            {HIGHLIGHT_COLORS.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className="w-3.5 h-3.5 rounded-sm border border-black/15"
-                style={{ background: c.color || "transparent" }}
-                title={c.label}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => onCommand("hiliteColor", c.color || "transparent")}
-              />
-            ))}
-          </span>
-        </div>
-      </div>
-    </div>
+        </span>
+      </ToolGroup>
+    </EditorToolbarShell>
   );
 }
 

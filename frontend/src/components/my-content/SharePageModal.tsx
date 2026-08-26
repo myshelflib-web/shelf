@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Link2, Lock, Search, Share2, X } from "lucide-react";
+import { Search, Share2, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { avatarSrc } from "@/lib/avatar";
+import { ShareGeneralAccess } from "@/components/my-content/ShareGeneralAccess";
 
 export type ShareRole = "view" | "edit";
 
@@ -112,6 +113,19 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
     return () => window.clearTimeout(t);
   }, [open, query]);
 
+  const copyUrl = useCallback(async (path: string) => {
+    const url = `${window.location.origin}${path}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+      return true;
+    } catch {
+      setError("Could not copy link — select and copy it manually");
+      return false;
+    }
+  }, []);
+
   if (!open) return null;
 
   const addPerson = (email: string, from?: LookupUser) => {
@@ -170,6 +184,11 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
       setGeneralAccess(data.generalAccess);
       setLinkPath(data.linkPath);
       setDirty(false);
+      // Keep modal open when enabling a link so the URL is visible to copy.
+      if (data.generalAccess === "link" && data.linkPath) {
+        await copyUrl(data.linkPath);
+        return;
+      }
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save");
@@ -180,14 +199,7 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
 
   const copyLink = async () => {
     if (!linkPath) return;
-    const url = `${window.location.origin}${linkPath}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1200);
-    } catch {
-      setError("Could not copy link");
-    }
+    await copyUrl(linkPath);
   };
 
   return (
@@ -405,57 +417,16 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
 
           <div className="h-px bg-[var(--border)]" />
 
-          <div>
-            <p className="text-[10px] uppercase tracking-wide font-semibold text-[var(--text-muted)] mb-2">
-              General access
-            </p>
-            <div className="flex items-center gap-2.5">
-              <span className="w-9 h-9 rounded-lg bg-[var(--bg-secondary)] flex items-center justify-center text-[var(--text-muted)] shrink-0">
-                {generalAccess === "link" ? (
-                  <Link2 className="w-4 h-4" />
-                ) : (
-                  <Lock className="w-4 h-4" />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  {generalAccess === "link" ? "Anyone with link" : "Restricted"}
-                </p>
-                <p className="text-[11px] text-[var(--text-muted)]">
-                  {generalAccess === "link"
-                    ? "Signed-in users with the link can view."
-                    : "Only people added above can open this."}
-                </p>
-              </div>
-              <select
-                className="h-8 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-secondary)] px-2 max-w-[11rem]"
-                value={generalAccess}
-                onChange={(e) => {
-                  setGeneralAccess(e.target.value as "restricted" | "link");
-                  setDirty(true);
-                }}
-              >
-                <option value="restricted">Restricted</option>
-                <option value="link">Anyone with link · Can view</option>
-              </select>
-            </div>
-            {generalAccess === "link" && linkPath && (
-              <div className="mt-3 flex items-center gap-2">
-                <div className="flex-1 min-w-0 h-9 px-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[11px] text-[var(--text-muted)] flex items-center overflow-hidden text-ellipsis whitespace-nowrap">
-                  {typeof window !== "undefined"
-                    ? `${window.location.origin}${linkPath}`
-                    : linkPath}
-                </div>
-                <button
-                  type="button"
-                  className="shrink-0 h-9 px-3 rounded-lg border border-[var(--border)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
-                  onClick={() => void copyLink()}
-                >
-                  {copied ? "Copied" : "Copy link"}
-                </button>
-              </div>
-            )}
-          </div>
+          <ShareGeneralAccess
+            generalAccess={generalAccess}
+            linkPath={linkPath}
+            copied={copied}
+            onGeneralAccessChange={(value) => {
+              setGeneralAccess(value);
+              setDirty(true);
+            }}
+            onCopyLink={() => void copyLink()}
+          />
         </div>
 
         <div className="flex items-center gap-2 px-5 py-3.5 border-t border-[var(--border)]">
@@ -475,15 +446,23 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
             className="h-8 px-3 rounded-lg border border-[var(--border)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
             onClick={onClose}
           >
-            Cancel
+            {linkPath && generalAccess === "link" && !dirty ? "Done" : "Cancel"}
           </button>
           <button
             type="button"
             className="h-8 px-3 rounded-lg bg-[var(--accent)] text-white text-xs font-semibold disabled:opacity-50"
-            disabled={saving || loading}
+            disabled={
+              saving ||
+              loading ||
+              (!dirty && !(generalAccess === "link" && !linkPath))
+            }
             onClick={() => void save()}
           >
-            {saving ? "Saving…" : "Save"}
+            {saving
+              ? "Saving…"
+              : generalAccess === "link" && !linkPath
+                ? "Save & create link"
+                : "Save"}
           </button>
         </div>
       </div>

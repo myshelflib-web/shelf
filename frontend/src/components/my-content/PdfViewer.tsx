@@ -12,8 +12,8 @@ import { canvasToJpegDataUrl } from "@/lib/pdfPageImage";
 import { UserContentHighlight } from "@/types";
 import { HighlightToolbar } from "../HighlightToolbar";
 import { HighlightNoteModal } from "../HighlightNoteModal";
-import { Columns2, Crop, Download, Eraser, File, Highlighter, Loader2, Moon, MousePointer2, MousePointerClick, PenLine, Settings2, Sun, Undo2, ZoomIn, ZoomOut } from "lucide-react";
-import { DEFAULT_PEN_WIDTH, DEFAULT_INK_WIDTH, INK_WIDTHS, PEN_WIDTHS, penCursorPx, penHitWidthPx, penStrokeWidthPx, straightenStroke } from "@/lib/straightenStroke";
+import { Loader2 } from "lucide-react";
+import { DEFAULT_PEN_WIDTH, DEFAULT_INK_WIDTH, penCursorPx, penHitWidthPx, penStrokeWidthPx, straightenStroke } from "@/lib/straightenStroke";
 import { polylineHitsPoint, rectHitsPoint } from "@/lib/eraseHit";
 import {
   fitPdfSheetScale,
@@ -26,7 +26,7 @@ import {
 } from "@/lib/pdfLayout";
 import { PenSettingsPanel } from "./PenSettingsPanel";
 import { PEN_COLORS } from "./BlankEditorToolbar";
-import { PdfPageNav } from "./PdfPageNav";
+import { PdfToolbar } from "./PdfToolbar";
 import { usePdfReadProgressSync } from "./PdfReadProgress";
 import { useInkGestures } from "./useInkGestures";
 import { useWindowPenStroke } from "./useWindowPenStroke";
@@ -50,7 +50,6 @@ import {
   undoLibraryPdfPageDelete,
 } from "@/lib/deleteLibraryPdfPages";
 import { clearPdfDeleteUndos, countPdfDeleteUndos } from "@/lib/pdfDeleteUndo";
-import { withShortcut } from "@/lib/hotkeys";
 import { useInkSurface } from "@/hooks/useInkSurface";
 import { PenCursor, usePenCursor } from "./PenCursor";
 import {
@@ -1588,313 +1587,42 @@ export function PdfViewer({
       data-shelf-hotkeys={mode === "text" ? undefined : "off"}
       className={`flex-1 flex flex-col overflow-hidden bg-[var(--bg-secondary)] [:fullscreen]:bg-[var(--bg-primary)]${darkPdf ? " pdf-viewer-dark" : ""}`}
     >
-      <div className="shrink-0 border-b border-[var(--border)] bg-[var(--bg-primary)]">
-        <div className="flex items-center justify-center gap-0.5 px-4 py-2 overflow-x-auto scrollbar-none">
-          <PdfPageNav
-            compact
-            currentPage={currentPage}
-            numPages={numPages}
-            pdfDoc={pdfDoc}
-            canDeletePages={canDeletePages}
-            deletingPages={deletingPages}
-            onGoToPage={scrollToPdfPage}
-            onDeletePages={handleDeletePages}
-          />
-          <div className="w-px h-5 bg-[var(--border)] mx-1 shrink-0" />
-          <div className="flex items-center gap-0.5 shrink-0">
-          <button
-            type="button"
-            className="p-2 rounded-lg hover:bg-[var(--bg-secondary)]"
-            title="Download PDF"
-            aria-label="Download PDF"
-            onClick={() => void downloadPdf()}
-          >
-            <Download className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className={`p-2 rounded-lg ${mode === "text" ? "bg-[var(--accent-light)] text-[var(--accent)]" : "hover:bg-[var(--bg-secondary)]"}`}
-            onClick={() => {
-              setMode("text");
-              setPenSettingsOpen(false);
-              penCursor.hide();
-            }}
-            title={
-              guestLocked
-                ? "Sign in to highlight or ask Study AI"
-                : "Select text to highlight or ask Study AI"
-            }
-            aria-label="Select text"
-          >
-            <MousePointer2 className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className={`p-2 rounded-lg ${mode === "pen" ? "bg-[var(--accent-light)] text-[var(--accent)]" : "hover:bg-[var(--bg-secondary)]"} ${lockedTool}`}
-            onClick={() => {
-              if (blocked("Highlight and annotate")) return;
-              setMode("pen");
-              setPenSettingsOpen(true);
-            }}
-            title={
-              guestLocked
-                ? "Sign in to highlight with pen"
-                : "Draw highlighter strokes on the page"
-            }
-            aria-label="Highlighter"
-            aria-disabled={guestLocked}
-          >
-            <Highlighter className="w-4 h-4" />
-          </button>
-          {mode === "pen" && (
-            <>
-              <div className="flex items-center gap-0.5 ml-0.5">
-                {PEN_WIDTHS.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={`min-w-[1.5rem] h-7 px-1 rounded-md text-[10px] font-semibold tabular-nums ${
-                      Math.abs(penWidth - s.width) < 0.00015
-                        ? "bg-[var(--accent)] text-white"
-                        : "hover:bg-[var(--bg-secondary)] text-[var(--text-muted)]"
-                    }`}
-                    title={s.title}
-                    aria-label={s.title}
-                    onClick={() => setPenWidth(s.width)}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-              <button
-                ref={penSettingsBtnRef}
-                type="button"
-                className={`p-2 rounded-lg ${penSettingsOpen ? "bg-[var(--accent-light)] text-[var(--accent)]" : "hover:bg-[var(--bg-secondary)]"}`}
-                onClick={() => setPenSettingsOpen((v) => !v)}
-                title="Thickness and opacity"
-                aria-label="Highlighter settings"
-                aria-pressed={penSettingsOpen}
-              >
-            <Settings2 className="w-4 h-4" />
-          </button>
-            </>
-          )}
-          <button
-            type="button"
-            className={`p-2 rounded-lg ${mode === "ink" ? "bg-[var(--accent-light)] text-[var(--accent)]" : "hover:bg-[var(--bg-secondary)]"} ${lockedTool}`}
-            onClick={() => {
-              if (blocked("Highlight and annotate")) return;
-              setMode("ink");
-              setPenSettingsOpen(false);
-            }}
-            title={
-              guestLocked
-                ? "Sign in to write on the page"
-                : "Pen — underline or write on the page"
-            }
-            aria-label="Pen"
-            aria-disabled={guestLocked}
-          >
-            <PenLine className="w-4 h-4" />
-          </button>
-          {mode === "ink" && (
-            <>
-              <div className="flex items-center gap-0.5 ml-0.5">
-                {INK_WIDTHS.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={`min-w-[1.5rem] h-7 px-1 rounded-md text-[10px] font-semibold tabular-nums ${
-                      Math.abs(inkWidth - s.width) < 0.00015
-                        ? "bg-[var(--accent)] text-white"
-                        : "hover:bg-[var(--bg-secondary)] text-[var(--text-muted)]"
-                    }`}
-                    title={s.title}
-                    aria-label={`Pen ${s.title}`}
-                    onClick={() => setInkWidth(s.width)}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-              {PEN_COLORS.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  className={`w-4 h-4 rounded-full border-2 hover:scale-110 transition-transform ${
-                    inkColor === c.color
-                      ? "border-[var(--accent)] scale-110"
-                      : c.id === "white"
-                        ? "border-[var(--border)]"
-                        : "border-transparent"
-                  }`}
-                  style={{ background: c.color }}
-                  title={c.label}
-                  aria-label={`Pen ${c.label}`}
-                  aria-pressed={inkColor === c.color}
-                  onClick={() => setInkColor(c.color)}
-                />
-              ))}
-            </>
-          )}
-          <button
-            type="button"
-            className={`p-2 rounded-lg ${mode === "erase" ? "bg-[var(--accent-light)] text-[var(--accent)]" : "hover:bg-[var(--bg-secondary)]"} ${lockedTool}`}
-            onClick={() => {
-              if (blocked("Highlight and annotate")) return;
-              setMode("erase");
-              setPenSettingsOpen(false);
-              penCursor.hide();
-            }}
-            title={
-              guestLocked
-                ? "Sign in to erase highlights"
-                : "Eraser"
-            }
-            aria-label="Eraser"
-            aria-disabled={guestLocked}
-          >
-            <Eraser className="w-4 h-4" />
-          </button>
-          {mode === "erase" && (
-            <div className="flex items-center gap-0.5 ml-0.5">
-              <button
-                type="button"
-                className={`inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-[10px] font-semibold ${
-                  eraseKind === "stroke"
-                    ? "bg-[var(--accent)] text-white"
-                    : "hover:bg-[var(--bg-secondary)] text-[var(--text-muted)]"
-                }`}
-                title="Stroke eraser — drag over ink"
-                aria-pressed={eraseKind === "stroke"}
-                onClick={() => setEraseKind("stroke")}
-              >
-                <Eraser className="w-3 h-3" />
-                Stroke
-              </button>
-              <button
-                type="button"
-                className={`inline-flex items-center gap-1 h-7 px-1.5 rounded-md text-[10px] font-semibold ${
-                  eraseKind === "object"
-                    ? "bg-[var(--accent)] text-white"
-                    : "hover:bg-[var(--bg-secondary)] text-[var(--text-muted)]"
-                }`}
-                title="Object eraser — click a mark to delete it"
-                aria-pressed={eraseKind === "object"}
-                onClick={() => setEraseKind("object")}
-              >
-                <MousePointerClick className="w-3 h-3" />
-                Object
-              </button>
-            </div>
-          )}
-          {onClip && (
-            <button
-              type="button"
-              className={`p-2 rounded-lg ${mode === "clip" ? "bg-[var(--accent-light)] text-[var(--accent)]" : "hover:bg-[var(--bg-secondary)]"} ${lockedTool}`}
-              onClick={() => {
-                if (blocked("Save clips")) return;
-                setPenSettingsOpen(false);
-                penCursor.hide();
-                setMode((m) => (m === "clip" ? "text" : "clip"));
-              }}
-              title={
-                guestLocked
-                  ? "Sign in to clip regions"
-                  : "Clip a region of the page as an image"
-              }
-              aria-label="Clip region"
-              aria-disabled={guestLocked}
-            >
-              <Crop className="w-4 h-4" />
-            </button>
-          )}
-          <div className="w-px h-5 bg-[var(--border)] mx-1" />
-          <button
-            type="button"
-            className={`p-2 rounded-lg hover:bg-[var(--bg-secondary)] ${lockedTool} disabled:opacity-35 disabled:pointer-events-none`}
-            disabled={!canUndoMark || guestLocked}
-            onClick={() => {
-              if (blocked("Highlight and annotate")) return;
-              void undoMark();
-            }}
-            title={
-              guestLocked
-                ? "Sign in to undo marks"
-                : withShortcut("Undo last mark", "mod+z")
-            }
-            aria-label="Undo last mark"
-          >
-            <Undo2 className="w-4 h-4" />
-          </button>
-          <div className="w-px h-5 bg-[var(--border)] mx-1" />
-          <button
-            type="button"
-            className={`p-2 rounded-lg ${pageLayout === "single" ? "bg-[var(--accent-light)] text-[var(--accent)]" : "hover:bg-[var(--bg-secondary)]"}`}
-            onClick={() => setSheetLayout("single")}
-            title="A4 sheet — one page"
-            aria-label="One page A4 sheet"
-            aria-pressed={pageLayout === "single"}
-          >
-            <File className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            className={`p-2 rounded-lg ${pageLayout === "spread" ? "bg-[var(--accent-light)] text-[var(--accent)]" : "hover:bg-[var(--bg-secondary)]"}`}
-            onClick={() => setSheetLayout("spread")}
-            title="A4 sheets — two pages side by side"
-            aria-label="Two page A4 spread"
-            aria-pressed={pageLayout === "spread"}
-          >
-            <Columns2 className="w-4 h-4" />
-          </button>
-          <div className="w-px h-5 bg-[var(--border)] mx-1" />
-          <button
-            type="button"
-            className="p-2 rounded-lg hover:bg-[var(--bg-secondary)]"
-            onClick={() => zoomBy(-0.15)}
-            title={withShortcut("Zoom out", "-")}
-            aria-label="Zoom out"
-          >
-            <ZoomOut className="w-4 h-4" />
-          </button>
-          <span
-            className="text-xs w-10 text-center tabular-nums text-[var(--text-secondary)]"
-            title={`Zoom ${Math.round(scale * 100)}% · pinch or Ctrl+scroll`}
-          >
-            {Math.round(scale * 100)}%
-          </span>
-          <button
-            type="button"
-            className="p-2 rounded-lg hover:bg-[var(--bg-secondary)]"
-            onClick={() => zoomBy(0.15)}
-            title={withShortcut("Zoom in", "=")}
-            aria-label="Zoom in"
-          >
-            <ZoomIn className="w-4 h-4" />
-          </button>
-          <div className="w-px h-5 bg-[var(--border)] mx-1" />
-          <button
-            type="button"
-            className={`p-2 rounded-lg ${darkPdf ? "bg-[var(--accent-light)] text-[var(--accent)]" : "hover:bg-[var(--bg-secondary)]"}`}
-            onClick={toggleDarkPdf}
-            title={
-              darkPdf
-                ? withShortcut("Switch to light PDF pages", "m")
-                : withShortcut("Night mode — darken white PDF pages", "m")
-            }
-            aria-label={darkPdf ? "Disable PDF night mode" : "Enable PDF night mode"}
-            aria-pressed={darkPdf}
-          >
-            {darkPdf ? (
-              <Sun className="w-4 h-4" />
-            ) : (
-              <Moon className="w-4 h-4" />
-            )}
-          </button>
-        </div>
-        </div>
-      </div>
+      <PdfToolbar
+        currentPage={currentPage}
+        numPages={numPages}
+        pdfDoc={pdfDoc}
+        canDeletePages={canDeletePages}
+        deletingPages={deletingPages}
+        onGoToPage={scrollToPdfPage}
+        onDeletePages={handleDeletePages}
+        mode={mode}
+        setMode={setMode}
+        guestLocked={guestLocked}
+        lockedTool={lockedTool}
+        blocked={blocked}
+        penCursorHide={penCursor.hide}
+        downloadPdf={downloadPdf}
+        penWidth={penWidth}
+        setPenWidth={setPenWidth}
+        penSettingsOpen={penSettingsOpen}
+        setPenSettingsOpen={setPenSettingsOpen}
+        penSettingsBtnRef={penSettingsBtnRef}
+        inkWidth={inkWidth}
+        setInkWidth={setInkWidth}
+        inkColor={inkColor}
+        setInkColor={setInkColor}
+        eraseKind={eraseKind}
+        setEraseKind={setEraseKind}
+        showClip={Boolean(onClip)}
+        canUndoMark={canUndoMark}
+        undoMark={undoMark}
+        pageLayout={pageLayout}
+        setSheetLayout={setSheetLayout}
+        scale={scale}
+        zoomBy={zoomBy}
+        darkPdf={darkPdf}
+        toggleDarkPdf={toggleDarkPdf}
+      />
 
       <div className="relative flex-1 flex flex-col min-h-0">
         {mode === "pen" && penSettingsOpen && (
