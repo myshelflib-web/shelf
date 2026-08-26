@@ -15,8 +15,10 @@ import { crossDeviceSync } from "./posts/cross-device-sync";
 import { keyboardShortcuts } from "./posts/keyboard-shortcuts";
 import { spotifyFocus } from "./posts/spotify-focus";
 import { pwaOffline } from "./posts/pwa-offline";
+import { EXTRA_BLOG_POSTS } from "./posts/extra";
 
 const ALL_POSTS: BlogPost[] = [
+  ...EXTRA_BLOG_POSTS,
   pwaOffline,
   spotifyFocus,
   keyboardShortcuts,

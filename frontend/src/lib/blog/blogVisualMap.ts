@@ -17,6 +17,21 @@ export const POST_HERO_VISUAL: Record<string, BlogVisualId> = {
   "keyboard-shortcuts-command-search": "keyboard",
   "spotify-focus-audio-while-reading": "spotify",
   "pwa-offline-study-app": "pwa",
+  "getting-started-with-shelf": "upload",
+  "how-to-upload-organize-pdfs": "upload",
+  "college-students-lecture-notes": "library",
+  "law-students-case-law-library": "reader",
+  "medical-and-science-pdf-workflow": "reader",
+  "research-papers-literature-notes": "study-ai",
+  "professionals-work-documents": "dashboard",
+  "teachers-lesson-materials": "calendar",
+  "privacy-private-study-library": "library",
+  "shelf-vs-generic-chatbots": "study-ai",
+  "dark-mode-focused-reading": "reader",
+  "pin-collections-continue-reading": "dashboard",
+  "language-learning-with-pdfs": "notebook",
+  "nonfiction-book-notes": "library",
+  "search-your-entire-library": "keyboard",
 };
 
 /** Visual mockup per section index (cycles if fewer entries than sections). */
@@ -37,6 +52,21 @@ export const POST_SECTION_VISUALS: Record<string, BlogVisualId[]> = {
   "keyboard-shortcuts-command-search": ["keyboard", "library", "study-ai"],
   "spotify-focus-audio-while-reading": ["spotify", "reader"],
   "pwa-offline-study-app": ["pwa", "library", "sync"],
+  "getting-started-with-shelf": ["upload", "library", "study-ai", "calendar"],
+  "how-to-upload-organize-pdfs": ["upload", "library", "dashboard"],
+  "college-students-lecture-notes": ["library", "reader", "calendar"],
+  "law-students-case-law-library": ["reader", "split-view", "study-ai"],
+  "medical-and-science-pdf-workflow": ["reader", "notebook", "study-ai"],
+  "research-papers-literature-notes": ["study-ai", "split-view", "library"],
+  "professionals-work-documents": ["dashboard", "reader", "calendar"],
+  "teachers-lesson-materials": ["calendar", "library", "notebook"],
+  "privacy-private-study-library": ["library", "sync", "dashboard"],
+  "shelf-vs-generic-chatbots": ["study-ai", "reader", "library"],
+  "dark-mode-focused-reading": ["reader", "spotify", "pwa"],
+  "pin-collections-continue-reading": ["dashboard", "library", "sync"],
+  "language-learning-with-pdfs": ["notebook", "reader", "calendar"],
+  "nonfiction-book-notes": ["library", "reader", "study-ai"],
+  "search-your-entire-library": ["keyboard", "library", "study-ai"],
 };
 
 export function heroVisualForSlug(slug: string): BlogVisualId | undefined {

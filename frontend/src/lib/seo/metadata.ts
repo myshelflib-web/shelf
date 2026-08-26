@@ -79,7 +79,7 @@ export function rootLayoutMetadata(): Metadata {
       template: "%s · Shelf",
     },
     description:
-      "Free UPSC syllabus & exam study material plus a personal PDF library. Highlights, Study AI on your notes, and a revision planner for serious prep.",
+      "Personal PDF study library with highlights, Study AI on your notes, a revision planner, and optional free curriculum — for any subject or goal.",
     keywords: DEFAULT_KEYWORDS,
     applicationName: "Shelf",
     authors: [{ name: "Shelf", url: siteUrl }],
@@ -93,7 +93,7 @@ export function rootLayoutMetadata(): Metadata {
           url: OG_IMAGE,
           width: 2048,
           height: 2048,
-          alt: "Shelf — personal study library for UPSC & competitive exams",
+          alt: "Shelf — personal study library for PDFs, highlights, and Study AI",
         },
       ],
     },

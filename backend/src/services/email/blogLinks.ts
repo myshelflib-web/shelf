@@ -18,6 +18,11 @@ function escapeHtml(value: string): string {
 /** Getting-started guides for new accounts. */
 export const WELCOME_BLOG_LINKS: BlogLink[] = [
   {
+    slug: "getting-started-with-shelf",
+    label: "Getting started with Shelf",
+    blurb: "First uploads, library structure, and Study AI",
+  },
+  {
     slug: "personal-study-library-collections",
     label: "Build your study library",
     blurb: "Collections, topics, and organizing PDFs",
@@ -31,11 +36,6 @@ export const WELCOME_BLOG_LINKS: BlogLink[] = [
     slug: "study-ai-ask-from-your-pdfs",
     label: "Ask Study AI from your material",
     blurb: "Questions grounded in what you uploaded",
-  },
-  {
-    slug: "planner-tasks-events-calendar",
-    label: "Plan tasks on your calendar",
-    blurb: "Schedule revision linked to your pages",
   },
 ];
 

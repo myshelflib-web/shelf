@@ -10,7 +10,7 @@ export function SiteJsonLd() {
     url: siteUrl,
     logo: `${siteUrl}/icons/shelf-icon-2048.png`,
     description:
-      "Personal study library for UPSC, IAS, and competitive exam preparation with PDF highlights and Study AI.",
+      "Personal study library with PDF highlights, Study AI, and a planner — for students, professionals, researchers, and lifelong learners.",
   };
 
   const website = {
@@ -19,7 +19,7 @@ export function SiteJsonLd() {
     name: "Shelf",
     url: siteUrl,
     description:
-      "Free UPSC syllabus and NCERT study material. Upload PDFs, highlight, ask Study AI, and plan revision.",
+      "Upload PDFs, highlight as you read, ask Study AI from your material, and plan work on one calendar. Optional free curriculum packs included.",
     inLanguage: "en-IN",
     publisher: {
       "@type": "Organization",
@@ -39,14 +39,15 @@ export function SiteJsonLd() {
       priceCurrency: "INR",
     },
     description:
-      "Personal study library app: PDF reader with highlights, AI study assistant from your notes, planner and free UPSC curriculum.",
+      "Personal study library app: PDF reader with highlights, AI study assistant grounded in your notes, study planner, and optional free curriculum.",
     url: siteUrl,
     featureList: [
       "PDF highlights and annotations",
       "Study AI from uploaded PDFs",
-      "UPSC syllabus and NCERT curriculum",
+      "Personal collections and topics",
       "Study planner and calendar",
       "Cross-device reading sync",
+      "Optional free curriculum library",
     ],
   };
 

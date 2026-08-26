@@ -41,20 +41,20 @@ export function HomePageClient() {
             <div className="text-center max-w-3xl mx-auto">
               <h1 className="text-3xl sm:text-4xl md:text-[3.25rem] font-bold mb-5 tracking-tight">
                 <span className="block leading-[1.2] sm:leading-[1.15]">
-                  Personal study library for
+                  Your personal study library
                 </span>
                 <span className="block mt-2 sm:mt-3 leading-[1.2] text-[var(--accent)]">
-                  UPSC, IAS &amp; your PDF notes
+                  for any material you own
                 </span>
               </h1>
               <p className="text-base sm:text-lg text-[var(--text-secondary)] mb-8 leading-relaxed">
-                Upload coaching PDFs and NCERT notes. Highlight as you read, ask
-                Study AI from your material, and plan revision on one study
-                planner calendar.
+                Upload PDFs and notes, highlight as you read, ask Study AI from
+                your files, and plan work on one calm calendar — for college,
+                exams, research, or professional reading.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Link href="/learn" className="btn-primary">
-                  Free UPSC syllabus &amp; NCERT
+                  Browse free library
                   <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link href="/login" className="btn-secondary">
@@ -79,12 +79,12 @@ export function HomePageClient() {
             <RevealOnScroll>
               <Sparkles className="w-6 h-6 text-[var(--accent)] mx-auto mb-4 greeting-sparkle" />
               <h2 className="text-2xl sm:text-3xl font-semibold mb-3">
-                Built for competitive exam prep
+                Built for focused reading and study
               </h2>
               <p className="text-[var(--text-secondary)] mb-8 max-w-xl mx-auto leading-relaxed">
-                Free UPSC syllabus and NCERT curriculum for everyone. Sign in
-                for your own PDF library, highlights, and AI study assistant on
-                your notes.
+                Free curriculum packs are open to everyone. Sign in for your
+                own PDF library, highlights, planner, and Study AI grounded in
+                what you uploaded.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Link href="/learn" className="btn-secondary">
@@ -92,7 +92,7 @@ export function HomePageClient() {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link href="/login" className="btn-primary">
-                  Start UPSC prep free
+                  Start free
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>

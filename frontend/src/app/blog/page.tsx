@@ -11,7 +11,7 @@ import { buildPageMetadata } from "@/lib/seo/metadata";
 import { ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Blog — UPSC prep guides & PDF study library tips",
+  title: "Blog — Study library guides for every kind of reader",
   description: BLOG_INDEX_DESCRIPTION,
   path: "/blog",
 });
@@ -31,13 +31,12 @@ export default async function BlogIndexPage() {
               Shelf Blog
             </p>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 tracking-tight leading-tight max-w-3xl">
-              Everything Shelf can do —{" "}
-              <span className="text-[var(--accent)]">explained in detail</span>
+              Long guides to everything Shelf can do
             </h1>
             <p className="text-base sm:text-lg text-[var(--text-secondary)] leading-relaxed max-w-2xl">
-              Feature guides for building a personal study library: upload PDFs,
-              highlight as you read, ask Study AI from your material, and plan
-              revision on one calm workspace.
+              Feature deep-dives and workflows for students, professionals,
+              researchers, and lifelong learners — PDF libraries, highlights,
+              Study AI, planner, and more.
             </p>
           </RevealOnScroll>
         </section>

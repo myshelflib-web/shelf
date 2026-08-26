@@ -1,6 +1,16 @@
 /**
- * Upload static blog catalog + illustrations to S3 and upsert Postgres rows.
- * Run from repo root: npm run blog:seed --prefix backend
+ * Upload blog catalog + illustrations to S3 and upsert Postgres rows.
+ *
+ * Enriches short feature posts with long-form sections before upload so
+ * /api/blog serves complete articles.
+ *
+ * From repo root (with backend .env: DATABASE_URL + S3 credentials):
+ *
+ *   npm run blog:seed --prefix backend
+ *
+ * Or from backend/:
+ *
+ *   npm run blog:seed
  */
 import "dotenv/config";
 import path from "path";
@@ -21,9 +31,9 @@ import {
 import type { BlogPostContent } from "../src/services/blog/types.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const registryUrl = pathToFileURL(
-  path.resolve(__dirname, "../../frontend/src/lib/blog/registry.ts")
-).href;
+const frontendBlog = path.resolve(__dirname, "../../frontend/src/lib/blog");
+const registryUrl = pathToFileURL(path.join(frontendBlog, "registry.ts")).href;
+const enrichUrl = pathToFileURL(path.join(frontendBlog, "enrichBlogPost.ts")).href;
 
 type SeedPost = {
   slug: string;
@@ -40,10 +50,22 @@ async function main() {
   const { BLOG_POSTS } = (await import(registryUrl)) as {
     BLOG_POSTS: SeedPost[];
   };
+  const { enrichBlogPosts } = (await import(enrichUrl)) as {
+    enrichBlogPosts: (posts: SeedPost[]) => SeedPost[];
+  };
 
-  console.log(`Seeding ${BLOG_POSTS.length} blog posts to S3 + database…`);
+  const posts = enrichBlogPosts(BLOG_POSTS);
+  console.log(
+    `Seeding ${posts.length} blog posts (long-form) to S3 + database…`
+  );
 
-  for (const post of BLOG_POSTS) {
+  if (posts.length < 30) {
+    throw new Error(
+      `Expected at least 30 posts, got ${posts.length}. Check the frontend registry.`
+    );
+  }
+
+  for (const post of posts) {
     const heroKey = blogHeroKey(post.slug);
     await uploadBlogAsset(
       heroKey,
@@ -92,10 +114,12 @@ async function main() {
       },
     });
 
-    console.log(`  ✓ ${post.slug}`);
+    console.log(
+      `  ✓ ${post.slug} (${post.sections.length} sections, ~${post.readingMinutes} min)`
+    );
   }
 
-  console.log("Done.");
+  console.log(`Done. ${posts.length} posts published.`);
 }
 
 main()

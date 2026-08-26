@@ -1,22 +1,8 @@
 /**
- * Target keywords from ASO/web research (India exam prep + AI PDF study tools).
- * Tier 1 = highest search intent/volume for Shelf's market; tier 2 = product-fit long-tail.
+ * SEO keywords for Shelf — multi-audience personal study library.
+ * Exam prep is one audience among many (students, professionals, researchers).
  */
 export const SEO_KEYWORDS = {
-  /** UPSC / IAS / civil services — highest volume in India exam prep */
-  examPrep: [
-    "UPSC preparation",
-    "IAS preparation",
-    "UPSC syllabus",
-    "UPSC study material",
-    "UPSC previous year papers",
-    "free UPSC notes",
-    "civil services exam preparation",
-    "NCERT notes for UPSC",
-    "UPSC prelims preparation",
-    "UPSC mains preparation",
-  ],
-  /** Product category — AI PDF & personal library (global + India long-tail) */
   product: [
     "personal study library",
     "PDF reader with highlights",
@@ -24,49 +10,60 @@ export const SEO_KEYWORDS = {
     "chat with PDF",
     "PDF annotation app",
     "study planner app",
-    "revision calendar for students",
-    "mind map from PDF",
     "organize PDF notes",
     "AI notes from PDF",
+    "mind map from PDF",
+    "digital notebook for students",
   ],
-  /** India-specific long-tail — lower competition, high conversion */
+  audiences: [
+    "college study notes app",
+    "law student PDF library",
+    "medical student notes",
+    "research paper reader",
+    "exam preparation app",
+    "UPSC study material",
+    "NEET JEE notes organizer",
+    "professional PDF workspace",
+    "teacher lesson materials",
+    "language learning PDF notes",
+  ],
   longTail: [
-    "AI study app for Indian students",
-    "UPSC PDF reader with highlights",
-    "organize coaching PDFs for UPSC",
+    "organize coaching PDFs",
     "study AI from your own notes",
-    "exam preparation app India",
-    "NEET study planner",
-    "JEE preparation notes app",
     "offline PDF study app",
+    "split screen PDF reader",
+    "revision calendar for students",
+    "private PDF library",
+    "highlight and ask AI on PDF",
+    "cross device reading progress",
   ],
 } as const;
 
-/** Default meta keywords (keep ≤20 for crawler focus). */
+/** Default meta keywords (≤20, product-first). */
 export const DEFAULT_KEYWORDS: string[] = [
   "personal study library",
-  "UPSC preparation",
-  "PDF reader highlights",
+  "PDF reader with highlights",
   "Study AI",
-  "IAS preparation",
-  "UPSC syllabus",
-  "NCERT notes",
-  "study planner app",
-  "AI PDF notes",
-  "exam preparation India",
-  "organize PDF notes",
-  "revision calendar",
-  "free study library",
+  "AI study assistant",
   "PDF annotation",
+  "organize PDF notes",
+  "study planner app",
+  "chat with PDF",
+  "digital notebook",
   "mind map from PDF",
+  "exam preparation",
+  "revision calendar",
+  "offline PDF reader",
+  "college notes app",
+  "private study workspace",
 ];
 
 /** Per-blog-slug extra SEO tags merged at read time. */
 export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
   "personal-study-library-collections": [
     "organize PDF notes",
-    "UPSC notes organization",
     "study library app",
+    "digital filing system students",
   ],
   "pdf-reader-highlights-annotations": [
     "PDF reader with highlights",
@@ -80,8 +77,8 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
   ],
   "study-ai-library-wide-chat": [
     "AI library search",
-    "RAG study assistant",
     "PDF question answering",
+    "cross document AI chat",
   ],
   "study-ai-summaries-mind-maps": [
     "mind map from PDF",
@@ -89,19 +86,19 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "PDF to mind map",
   ],
   "goal-aware-study-ai": [
-    "UPSC AI assistant",
-    "IAS study AI",
-    "NEET PG preparation AI",
+    "study goal settings",
+    "exam-aware AI tutor",
+    "personalized study AI",
   ],
   "planner-tasks-events-calendar": [
     "study planner app",
     "revision calendar",
-    "exam study schedule",
+    "study schedule app",
   ],
   "study-dashboard-streak-achievements": [
     "study streak app",
     "reading tracker students",
-    "exam prep dashboard",
+    "study habit dashboard",
   ],
   "reader-workspace-tabs-split-view": [
     "split screen PDF reader",
@@ -111,18 +108,17 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
   "sketch-notebook-and-doc-pages": [
     "digital notebook for students",
     "sketch notes app",
-    "essay writing study app",
+    "typed notes beside PDF",
   ],
   "free-exam-curriculum-learn": [
-    "free UPSC syllabus",
-    "UPSC study material free",
-    "NCERT PDF online",
-    "free IAS notes",
+    "free study curriculum",
+    "open syllabus library",
+    "NCERT and exam packs",
   ],
   "shelf-premium-subscription": [
     "study app premium",
     "AI study subscription",
-    "UPSC prep tools",
+    "PDF library storage",
   ],
   "cross-device-reading-progress": [
     "sync PDF reading progress",
@@ -131,7 +127,6 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
   "keyboard-shortcuts-command-search": [
     "study app shortcuts",
     "command palette search",
-    "PDF reader keyboard shortcuts",
   ],
   "spotify-focus-audio-while-reading": [
     "focus music while studying",
@@ -140,18 +135,77 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
   "pwa-offline-study-app": [
     "offline PDF reader app",
     "PWA study app",
-    "install study app home screen",
+  ],
+  "getting-started-with-shelf": [
+    "how to use Shelf",
+    "getting started study library",
+  ],
+  "how-to-upload-organize-pdfs": [
+    "upload PDF study notes",
+    "organize PDF folders",
+  ],
+  "college-students-lecture-notes": [
+    "college lecture notes app",
+    "university PDF organizer",
+  ],
+  "law-students-case-law-library": [
+    "law student case briefs",
+    "legal PDF annotation",
+  ],
+  "medical-and-science-pdf-workflow": [
+    "medical student notes app",
+    "science journal PDF reader",
+  ],
+  "research-papers-literature-notes": [
+    "research paper highlighter",
+    "literature review PDF tool",
+  ],
+  "professionals-work-documents": [
+    "professional PDF workspace",
+    "annotate work documents",
+  ],
+  "teachers-lesson-materials": [
+    "teacher lesson plan PDFs",
+    "educators study library",
+  ],
+  "privacy-private-study-library": [
+    "private PDF library",
+    "secure study notes app",
+  ],
+  "shelf-vs-generic-chatbots": [
+    "AI grounded in your notes",
+    "chat with your PDFs vs ChatGPT",
+  ],
+  "dark-mode-focused-reading": [
+    "dark mode PDF reader",
+    "focus reading app",
+  ],
+  "pin-collections-continue-reading": [
+    "pin study collections",
+    "continue reading PDF",
+  ],
+  "language-learning-with-pdfs": [
+    "language learning PDF notes",
+    "annotate textbooks foreign language",
+  ],
+  "nonfiction-book-notes": [
+    "book notes PDF app",
+    "nonfiction reading highlights",
+  ],
+  "search-your-entire-library": [
+    "search PDF library",
+    "find notes across collections",
   ],
 };
 
 export const HOME_TITLE =
-  "Shelf — Personal Study Library | PDF Highlights, Study AI & UPSC Prep";
+  "Shelf — Personal Study Library | PDF Highlights, Study AI & Planner";
 
 export const HOME_DESCRIPTION =
-  "Free UPSC syllabus & NCERT study material. Build a personal library: upload PDFs, highlight notes, ask Study AI from your material, and plan revision on one calendar — for IAS, UPSC, NEET & JEE prep.";
+  "Build a private study library for any goal: upload PDFs, highlight as you read, ask Study AI from your material, and plan work on one calendar. Free curriculum packs available — used by students, professionals, and lifelong learners.";
 
 export const LEARN_DESCRIPTION =
-  "Free UPSC syllabus, NCERT notes, Constitution, Economic Survey & previous year papers. Browse exam curriculum online — no sign-up required.";
+  "Browse free curriculum packs — syllabus articles, textbooks, and topic guides. Open without signing up; sign in to keep a parallel private library of your own PDFs and notes.";
 
 export const BLOG_INDEX_DESCRIPTION =
-  "Guides for UPSC & competitive exam prep: organize PDF notes, PDF highlights, Study AI on your material, study planner & revision calendar workflows on Shelf.";
+  "Long-form guides to Shelf: personal PDF libraries, highlights, Study AI, planner, reader workspace, and workflows for students, researchers, and professionals.";
