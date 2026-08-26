@@ -23,6 +23,7 @@ import {
   MessageSquareText,
   Search,
   Keyboard,
+  Shield,
 } from "lucide-react";
 import { StreakPopover } from "@/components/StreakPopover";
 import { ProfileMenu } from "@/components/ProfileMenu";
@@ -162,7 +163,11 @@ export function Header() {
               </>
             )}
             {user?.role === "ADMIN" && (
-              <NavLink href="/admin" className="hidden lg:inline">
+              <NavLink
+                href="/admin"
+                className="hidden lg:inline-flex items-center gap-1.5"
+              >
+                <Shield className="w-3.5 h-3.5" />
                 Admin
               </NavLink>
             )}
