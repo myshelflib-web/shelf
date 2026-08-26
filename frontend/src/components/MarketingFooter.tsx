@@ -19,6 +19,9 @@ export function MarketingFooter() {
           <Link href="/learn" className="nav-link">
             Learn
           </Link>
+          <Link href="/quiz" className="nav-link">
+            Quiz
+          </Link>
           <Link href="/about" className="nav-link">
             About
           </Link>

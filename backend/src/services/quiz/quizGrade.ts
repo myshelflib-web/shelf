@@ -6,10 +6,10 @@ import { getObjectBuffer } from "../s3.js";
 import { logger, errorFields } from "../../utils/logger.js";
 import {
   assertLlmRoom,
-  estimateTokens,
   shouldResetLlmWindow,
 } from "../../utils/quotas.js";
 import { parseGradeJson } from "./quizParse.js";
+import { billedQuizTokens } from "./quizTokens.js";
 import { gradeWrittenSystemPrompt } from "./quizPrompt.js";
 
 function mcqScore(q: QuizQuestion): { score: number; feedback: string } {
@@ -47,12 +47,8 @@ async function gradeOpenAnswer(
     return { score: 0, feedback: "No answer was submitted.", tokens: 0 };
   }
 
-  const parts: ChatContentPart[] = [
-    {
-      type: "text",
-      text: `Question (${q.marks} marks):\n${q.prompt}\n\nMarking scheme:\n${q.modelAnswer || q.explanation || "(none)"}\n\nTyped answer:\n${text || "(none)"}`,
-    },
-  ];
+  const gradePrompt = `Question (${q.marks} marks):\n${q.prompt}\n\nMarking scheme:\n${q.modelAnswer || q.explanation || "(none)"}\n\nTyped answer:\n${text || "(none)"}`;
+  const parts: ChatContentPart[] = [{ type: "text", text: gradePrompt }];
   if (q.userImageKey) {
     const url = await imageDataUrl(q.userImageKey, q.userImageMime);
     if (url) parts.push({ type: "image_url", image_url: { url } });
@@ -69,7 +65,10 @@ async function gradeOpenAnswer(
   return {
     score: parsed.score,
     feedback: parsed.feedback,
-    tokens: result.tokens || estimateTokens(result.text),
+    tokens: billedQuizTokens(
+      result,
+      `${gradeWrittenSystemPrompt(goal)}\n${gradePrompt}`
+    ),
   };
 }
 

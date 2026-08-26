@@ -9,11 +9,14 @@ import {
 } from "../../utils/quotas.js";
 import { packQuizContext } from "./quizContext.js";
 import { parseGeneratedQuiz } from "./quizParse.js";
+import { userFacingQuizParseError } from "./quizJsonRepair.js";
 import {
   quizJsonSchemaInstruction,
   quizSystemPrompt,
 } from "./quizPrompt.js";
+import { billedQuizTokens } from "./quizTokens.js";
 import type { DraftQuestion } from "./quizLimits.js";
+import type { ChatMessage, ChatResult } from "../llmTypes.js";
 
 const generating = new Set<string>();
 
@@ -25,7 +28,7 @@ async function chargeTokens(userId: string, tokens: number): Promise<void> {
   });
 }
 
-async function prepareUser(userId: string) {
+export async function prepareQuizUser(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
@@ -59,30 +62,66 @@ function splitDrafts(questions: DraftQuestion[], mcqCount: number, writtenCount:
   return [...mcq, ...written];
 }
 
+function promptText(messages: ChatMessage[]): string {
+  return messages
+    .map((m) => (typeof m.content === "string" ? m.content : ""))
+    .join("\n");
+}
+
+type QuizBill = {
+  assertRoom: (prompt: string) => void;
+  charge: (prompt: string, result: ChatResult) => Promise<void>;
+};
+
 async function callQuizModel(input: {
   system: string;
   excerpt: string;
   instruction: string;
   avoid?: string;
-}): Promise<{ questions: DraftQuestion[]; title: string; tokens: number }> {
+  bill: QuizBill;
+}): Promise<{ questions: DraftQuestion[]; title: string }> {
   const avoid = input.avoid
     ? `\nDo not repeat these stems or topics:\n${input.avoid}`
     : "";
   const material = input.excerpt.trim()
     ? input.excerpt
     : "(Little source text. Write Standard / Practice items strictly from the track syllabus. Mark gaps honestly in sourceTag Practice.)";
-  const result = await completeChat(
-    [
+
+  const firstMessages: ChatMessage[] = [
+    { role: "system", content: input.system },
+    {
+      role: "user",
+      content: `${input.instruction}${avoid}\n\nSource material:\n${material}`,
+    },
+  ];
+  const firstPrompt = promptText(firstMessages);
+  input.bill.assertRoom(firstPrompt);
+  const result = await completeChat(firstMessages, {
+    maxTokens: 4096,
+    temperature: 0.45,
+  });
+  await input.bill.charge(firstPrompt, result);
+  try {
+    return parseGeneratedQuiz(result.text);
+  } catch (first) {
+    const retryMessages: ChatMessage[] = [
       { role: "system", content: input.system },
       {
         role: "user",
-        content: `${input.instruction}${avoid}\n\nSource material:\n${material}`,
+        content: `${input.instruction}\n\nYour previous JSON was invalid (${
+          first instanceof Error ? first.message.slice(0, 120) : "parse error"
+        }). Reply with ONE valid JSON object only — double-quoted keys, no trailing commas, escape backslashes in LaTeX.\n\nSource material:\n${material}`,
       },
-    ],
-    { maxTokens: 4096, temperature: 0.45 }
-  );
-  const parsed = parseGeneratedQuiz(result.text);
-  return { ...parsed, tokens: result.tokens || estimateTokens(result.text) };
+    ];
+    const retryPrompt = promptText(retryMessages);
+    input.bill.assertRoom(retryPrompt);
+    const retry = await completeChat(retryMessages, {
+      maxTokens: 4096,
+      temperature: 0.15,
+    });
+    await input.bill.charge(retryPrompt, retry);
+    return parseGeneratedQuiz(retry.text);
+  }
 }
 
 export async function generateQuizPaper(quizId: string): Promise<void> {
@@ -94,7 +133,19 @@ export async function generateQuizPaper(quizId: string): Promise<void> {
       return;
     }
 
-    const user = await prepareUser(quiz.userId);
+    const user = await prepareQuizUser(quiz.userId);
+    let used = user.llmTokensUsed;
+    const bill: QuizBill = {
+      assertRoom: (prompt) => {
+        assertLlmRoom({ ...user, llmTokensUsed: used }, estimateTokens(prompt));
+      },
+      charge: async (prompt, result) => {
+        const n = billedQuizTokens(result, prompt);
+        await chargeTokens(quiz.userId, n);
+        used += n;
+      },
+    };
+
     const packed = await packQuizContext({
       userId: quiz.userId,
       sourceKind: quiz.sourceKind,
@@ -116,7 +167,6 @@ export async function generateQuizPaper(quizId: string): Promise<void> {
       focusTopic: quiz.focusTopic,
     });
 
-    let tokens = 0;
     let title = quiz.title;
     let drafts: DraftQuestion[] = [];
 
@@ -125,8 +175,8 @@ export async function generateQuizPaper(quizId: string): Promise<void> {
         system,
         excerpt: packed.excerpt,
         instruction: quizJsonSchemaInstruction(quiz.mcqCount, 0),
+        bill,
       });
-      tokens += mcq.tokens;
       title = mcq.title || title;
       drafts.push(...mcq.questions.filter((q) => q.type === "MCQ"));
     }
@@ -141,8 +191,8 @@ export async function generateQuizPaper(quizId: string): Promise<void> {
         excerpt: packed.excerpt,
         instruction: quizJsonSchemaInstruction(0, quiz.writtenCount),
         avoid,
+        bill,
       });
-      tokens += written.tokens;
       if (!quiz.mcqCount) title = written.title || title;
       drafts.push(
         ...written.questions.filter(
@@ -155,8 +205,6 @@ export async function generateQuizPaper(quizId: string): Promise<void> {
     if (drafts.length === 0) {
       throw new Error("The model returned no questions. Try a different source.");
     }
-
-    await chargeTokens(quiz.userId, tokens);
 
     await prisma.$transaction(async (tx) => {
       await tx.quizQuestion.deleteMany({ where: { quizId } });
@@ -188,8 +236,7 @@ export async function generateQuizPaper(quizId: string): Promise<void> {
     });
   } catch (err) {
     logger.error("quiz.generate.failed", { quizId, ...errorFields(err) });
-    const message =
-      err instanceof Error ? err.message : "Could not generate this quiz.";
+    const message = userFacingQuizParseError(err);
     await prisma.quiz
       .update({
         where: { id: quizId },

@@ -22,7 +22,7 @@ export function QuizWorkspace({
   launch?: QuizLaunch;
 }) {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, refreshUser } = useAuth();
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [history, setHistory] = useState<QuizSummary[]>([]);
   const [error, setError] = useState("");
@@ -40,18 +40,32 @@ export function QuizWorkspace({
       .catch(() => {});
   }, [user, quizId]);
 
+  const applyQuiz = useCallback(
+    (next: Quiz) => {
+      setQuiz(next);
+      if (
+        next.status === "READY" ||
+        next.status === "FAILED" ||
+        next.status === "GRADED"
+      ) {
+        void refreshUser();
+      }
+    },
+    [refreshUser]
+  );
+
   const load = useCallback(() => {
     if (!quizId) return;
     void quizApi
       .get(quizId)
       .then(({ quiz: next }) => {
-        setQuiz(next);
+        applyQuiz(next);
         setError("");
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Quiz not found");
       });
-  }, [quizId]);
+  }, [quizId, applyQuiz]);
 
   useEffect(() => {
     load();
@@ -117,7 +131,7 @@ export function QuizWorkspace({
                   setRetrying(true);
                   void quizApi
                     .retry(quiz.id)
-                    .then(({ quiz: next }) => setQuiz(next))
+                    .then(({ quiz: next }) => applyQuiz(next))
                     .catch((err) =>
                       setError(err instanceof Error ? err.message : "Retry failed")
                     )
@@ -134,9 +148,9 @@ export function QuizWorkspace({
           </div>
         ) : quiz ? (
           graded ? (
-            <QuizResults quiz={quiz} onQuiz={setQuiz} />
+            <QuizResults quiz={quiz} onQuiz={applyQuiz} />
           ) : (
-            <QuizTake quiz={quiz} onQuiz={setQuiz} />
+            <QuizTake quiz={quiz} onQuiz={applyQuiz} />
           )
         ) : (
           <div className="flex-1 flex items-center justify-center">

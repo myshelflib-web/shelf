@@ -1,4 +1,8 @@
 import type { DraftMcqOption, DraftQuestion, QuizQuestionType } from "./quizLimits.js";
+import {
+  closeTruncatedJson,
+  repairQuizJson,
+} from "./quizJsonRepair.js";
 
 const OPTION_IDS = ["A", "B", "C", "D"] as const;
 
@@ -19,16 +23,25 @@ export function extractJsonObject(text: string): unknown {
   const body = stripFences(text);
   const start = body.indexOf("{");
   const end = body.lastIndexOf("}");
-  if (start < 0 || end <= start) {
+  const slice =
+    start >= 0 && end > start ? body.slice(start, end + 1) : body.slice(Math.max(0, start));
+  if (!slice.trim()) {
     throw new Error("Quiz model did not return JSON.");
   }
-  const slice = body.slice(start, end + 1);
-  try {
-    return JSON.parse(slice) as unknown;
-  } catch {
-    const repaired = slice.replace(/,\s*([}\]])/g, "$1").replace(/[^\t\n\r\x20-\uFFFF]/g, "");
-    return JSON.parse(repaired) as unknown;
+  const attempts = [
+    slice,
+    repairQuizJson(slice),
+    repairQuizJson(closeTruncatedJson(slice)),
+  ];
+  let last: unknown;
+  for (const candidate of attempts) {
+    try {
+      return JSON.parse(candidate) as unknown;
+    } catch (err) {
+      last = err;
+    }
   }
+  throw last instanceof Error ? last : new Error("Quiz model did not return JSON.");
 }
 
 function asOptions(raw: unknown): DraftMcqOption[] | null {

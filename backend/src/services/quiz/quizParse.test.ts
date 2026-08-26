@@ -6,6 +6,8 @@ import {
   parseTimeLimitSec,
 } from "./quizLimits.js";
 import { extractJsonObject, parseGeneratedQuiz, parseGradeJson } from "./quizParse.js";
+import { billedQuizTokens } from "./quizTokens.js";
+import { estimateTokens } from "../../utils/quotas.js";
 
 describe("quizLimits", () => {
   it("clamps empty counts to a default MCQ paper", () => {
@@ -70,5 +72,19 @@ describe("quizParse", () => {
       score: 0.6,
       feedback: "Missed tenure.",
     });
+  });
+});
+
+describe("billedQuizTokens", () => {
+  it("uses provider total when it includes the prompt", () => {
+    expect(billedQuizTokens({ text: "abcd", tokens: 4000 }, "x".repeat(100))).toBe(
+      4000
+    );
+  });
+
+  it("adds a prompt estimate when usage looks like output-only", () => {
+    const prompt = "source excerpt ".repeat(80);
+    const billed = billedQuizTokens({ text: "short", tokens: 3 }, prompt);
+    expect(billed).toBeGreaterThan(estimateTokens(prompt));
   });
 });

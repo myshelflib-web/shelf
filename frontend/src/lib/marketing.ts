@@ -5,6 +5,7 @@ import {
   FileUp,
   Highlighter,
   LayoutDashboard,
+  ListChecks,
   Map,
   MessageSquareText,
   Target,
@@ -41,6 +42,11 @@ export const MARKETING_FEATURES: MarketingFeature[] = [
     icon: Target,
     title: "Goal-aware Study AI",
     body: "Pick a study track so answers stay relevant to what you are working toward.",
+  },
+  {
+    icon: ListChecks,
+    title: "Exam-style quiz",
+    body: "Sit MCQs, written answers, and photos of working from a page, upload, or PYQ-style bank.",
   },
   {
     icon: LayoutDashboard,

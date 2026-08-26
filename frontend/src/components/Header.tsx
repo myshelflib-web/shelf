@@ -164,6 +164,7 @@ export function Header() {
                   Library
                 </NavLink>
                 <NavLink href="/blog">Blog</NavLink>
+                <NavLink href="/quiz">Quiz</NavLink>
                 <NavLink href="/about">About</NavLink>
               </>
             )}

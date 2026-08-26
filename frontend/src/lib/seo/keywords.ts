@@ -221,3 +221,22 @@ export const LEARN_DESCRIPTION =
 
 export const BLOG_INDEX_DESCRIPTION =
   "Long-form guides to Shelf: personal PDF libraries, highlights, Study AI, planner, reader workspace, and workflows for students, researchers, and professionals.";
+
+export const QUIZ_TITLE =
+  "Exam-Style Quiz from Your Notes — MCQ, Written & PYQ Practice | Shelf";
+
+export const QUIZ_DESCRIPTION =
+  "Sit exam-style MCQs, written answers, and photo working from your Shelf library, uploads, or PYQ-style banks. Timed papers mapped to your study goal.";
+
+export const QUIZ_KEYWORDS = [
+  "exam quiz app",
+  "MCQ from PDF",
+  "PYQ practice quiz",
+  "written answer quiz",
+  "exam-style quiz from notes",
+  "syllabus mapped quiz",
+  "UPSC MCQ practice",
+  "GATE numerical quiz",
+  "study quiz from PDFs",
+  "photo of working quiz",
+];

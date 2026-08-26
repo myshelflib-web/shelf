@@ -19,8 +19,10 @@ export default function robots(): MetadataRoute.Robots {
           "/contact",
           "/subscribe",
           "/login",
+          "/quiz",
         ],
         disallow: [
+          "/quiz/",
           "/admin",
           "/admin/",
           "/my-content",

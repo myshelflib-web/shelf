@@ -61,6 +61,11 @@ export function SiteJsonLd() {
       },
       {
         "@type": "WebPage",
+        name: "Exam-style quiz",
+        url: `${siteUrl}/quiz`,
+      },
+      {
+        "@type": "WebPage",
         name: "Sign in",
         url: `${siteUrl}/login`,
       },
@@ -87,6 +92,7 @@ export function SiteJsonLd() {
       "Personal collections and topics",
       "Study planner and calendar",
       "Cross-device reading sync",
+      "Exam-style quiz from your notes",
       "Optional free curriculum library",
     ],
   };

@@ -81,7 +81,9 @@ Rules:
 - Emit exactly ${writtenCount} objects with type WRITTEN or IMAGE (no options; modelAnswer required). Prefer IMAGE when a diagram or handwritten working is the natural answer.
 - Order MCQs first, then written/image.
 - marks: MCQ 1 (or 2 if GATE 2-mark style). Written 5–15 matching the track.
-- prompt must be self-contained.`;
+- prompt must be self-contained.
+- Strict JSON: every key and string in double quotes. No trailing commas. No comments. No markdown fence.
+- For LaTeX, escape backslashes (write \\\\frac not \\frac).`;
 }
 
 export function gradeWrittenSystemPrompt(goal: StudyGoal): string {

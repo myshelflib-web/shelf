@@ -17,7 +17,7 @@ import {
   parseSourceKind,
   parseTimeLimitSec,
 } from "../services/quiz/quizLimits.js";
-import { generateQuizPaper, scheduleQuizGeneration } from "../services/quiz/quizGenerate.js";
+import { generateQuizPaper, prepareQuizUser, scheduleQuizGeneration } from "../services/quiz/quizGenerate.js";
 import { gradeQuiz } from "../services/quiz/quizGrade.js";
 import {
   shouldReveal,
@@ -135,6 +135,16 @@ router.post("/", upload.single("file"), async (req: Request, res: Response) => {
     return;
   }
 
+  try {
+    await prepareQuizUser(userId);
+  } catch (err) {
+    if (err instanceof QuotaError) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
+    throw err;
+  }
+
   const quiz = await prisma.quiz.create({
     data: {
       userId,
@@ -178,6 +188,15 @@ router.post("/:id/retry", async (req: Request, res: Response) => {
   if (quiz.status !== "FAILED" && quiz.status !== "GENERATING") {
     res.status(400).json({ error: "Only a failed quiz can be regenerated." });
     return;
+  }
+  try {
+    await prepareQuizUser(req.user!.userId);
+  } catch (err) {
+    if (err instanceof QuotaError) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
+    throw err;
   }
   await prisma.quiz.update({
     where: { id: quiz.id },
