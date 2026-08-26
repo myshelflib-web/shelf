@@ -136,6 +136,11 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "sync PDF reading progress",
     "cross device study app",
   ],
+  "share-study-documents": [
+    "share PDF with classmates",
+    "collaborative study documents",
+    "shared with me study library",
+  ],
   "keyboard-shortcuts-command-search": [
     "study app shortcuts",
     "command palette search",

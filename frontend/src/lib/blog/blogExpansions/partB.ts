@@ -346,4 +346,48 @@ export const BLOG_EXPANSIONS_B: Record<string, BlogSection[]> = {
       ],
     },
   ],
+  "share-study-documents": [
+    {
+      heading: "View vs edit roles",
+      paragraphs: [
+        "Can view is for classmates who only need to read the PDF or notebook — they open Shared with me, scroll, and zoom without changing your file. Can edit lets collaborators add their own highlights and ink on the shared original while delete, rename, and replace stay owner-only.",
+        "Change a role later from the same Share dialog: update the person, Save, and their next open picks up the new permission. Revoke by removing them from the people list when a group project ends.",
+      ],
+    },
+    {
+      heading: "Pending invites and Shelf accounts",
+      paragraphs: [
+        "Invite by email even if they have not signed up yet. Pending rows wait until that address creates a Shelf account; once they do, the share unlocks under Shared with me without you re-sending.",
+        "Lookup suggests existing Shelf users as you type so you can pick the right classmate instead of guessing emails. Owner identity stays visible on the shared banner so recipients know who granted access.",
+      ],
+    },
+    {
+      heading: "Anyone with link · Can view",
+      paragraphs: [
+        "Restricted is the default: only people you added open the page. Switch General access to Anyone with link · Can view when you want a signed-in Shelf URL you can paste into a group chat — Save & create link keeps the modal open so you can copy before closing.",
+        "Link recipients land on /my-content/shared/... with view-only chrome. Named editors still use their stronger role; the link never upgrades anonymous or unsigned traffic into your private library tree.",
+      ],
+    },
+    {
+      heading: "Save a copy vs hide",
+      paragraphs: [
+        "Save a copy duplicates the page into your own collections so you can annotate freely after the owner revokes access or the project ends. The copy is independent — later edits on the original do not merge back.",
+        "Hide removes the Shared with me row without deleting copies you already saved. Access removed badges appear when the owner revokes; hide clears the stale invite from your sidebar.",
+      ],
+    },
+    {
+      heading: "What stays private",
+      paragraphs: [
+        "Sharing is page-scoped. Collections, topics, and sibling files stay private even when one PDF inside a topic is shared. Curriculum on /learn remains a separate published path — personal shares never expose your whole explorer.",
+        "Study AI, planner tasks, and other private account data do not ride along with a share. Recipients only see the document and the annotations allowed by their role.",
+      ],
+    },
+    {
+      heading: "Study group workflows",
+      paragraphs: [
+        "Seminar: share one judgment PDF as Can view with the cohort and keep your personal outline private. Group project: grant Can edit on a shared sketch notebook, then Save a copy of the final version into each member's library.",
+        "Exam buddies: use Anyone with link for a weekly reading pack, revoke when the week ends, and pin your own saved copies under the subject collection for revision.",
+      ],
+    },
+  ],
 };
