@@ -1,22 +1,6 @@
 import { StudyGoal } from "@prisma/client";
 import { studyGoalLabel } from "../studyGoal.js";
-
-const GOAL_TUNING: Record<StudyGoal, string> = {
-  GENERAL:
-    "Be a clear tutor. Prefer structured explanations, definitions, and short recap bullets.",
-  UPSC:
-    "Tune answers for the UPSC Civil Services exam (Prelims + Mains). Distinguish static vs current affairs, flag GS paper relevance, and suggest answer-writing structure when useful.",
-  STATE_PCS:
-    "Tune for State PCS exams: emphasize state-specific polity/economy/history when material allows, and keep Prelims + Mains framing clear.",
-  JUDICIARY:
-    "Tune for judiciary exams: statutes, landmark cases, procedural clarity, and precise legal language.",
-  CA:
-    "Tune for CA Inter/Final: standards, concepts, working notes, and exam-style stepwise solutions.",
-  NEET_PG:
-    "Tune for NEET PG / INI-CET: high-yield clinical facts, differentials, and concise exam-oriented recall.",
-  GATE:
-    "Tune for GATE: core engineering/CS concepts, formulas, typical traps, and stepwise problem approach.",
-};
+import { EXAM_GROUNDING, GOAL_TUNING } from "./goalTuning.js";
 
 /** Shared formatting contract for every Study AI answer. */
 export const STRUCTURED_RESPONSE_RULES = `Always structure the reply in clear Markdown:
@@ -37,7 +21,7 @@ Tools:
 - list_library: browse collections and page titles when the learner asks what they have.
 - lookup_collection: pages inside one named collection.
 - lookup_recent_pages / lookup_starred / lookup_highlights: recents, stars, and quotes they marked.
-- lookup_relevancy: saved syllabus / exam outline docs.
+- lookup_relevancy: saved syllabus / exam outline docs — use when the question should follow official headings or PYQ coverage.
 - lookup_planner: upcoming tasks and events on their planner.
 - current_time: UTC date before answering "today/tomorrow" planner questions.
 - web_search: Google (and other public sources) only when the library does not cover the question.
@@ -72,6 +56,7 @@ export function studySystemPrompt(
   return `You are Shelf Study AI, a personal tutor for this learner's own library.
 Study track: ${label}.
 ${GOAL_TUNING[goal]}
+${EXAM_GROUNDING}
 ${scopeLine}${syllabusBlock}
 ${toolBlock}
 Grounding:
@@ -95,8 +80,10 @@ export function pageAskSystemPrompt(
   return `You are Shelf Study AI, a personal tutor inside this learner's library.
 ${who}
 ${GOAL_TUNING[goal]}
+${EXAM_GROUNDING}
 Always tune tone, examples, and depth to this persona/track.
 When a highlight is present, answer that focus first, but use the rest of the file passages and related library notes for context — do not ignore them.
+When a PDF page image is attached, treat it as the document — scanned and image-only files often have no extractable text. Read diagrams, handwriting, and printed text from the image. Do not claim the file only contains a short title. Do not ask the learner to open another file if the image or retrieved passages answer the question.
 Use only the provided material (and any attached image). If the answer is not in the material, say so.
 Do not invent citations. Prefer concise answers to limit token use.
 ${STRUCTURED_RESPONSE_RULES}`;

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { diversifyExcerpts, reciprocalRankFusion } from "./ragFusion.js";
+import {
+  diversifyExcerpts,
+  mergeUniqueTexts,
+  reciprocalRankFusion,
+  spreadSample,
+} from "./ragFusion.js";
 
 function ex(
   pageId: string,
@@ -46,5 +51,26 @@ describe("diversifyExcerpts", () => {
     const out = diversifyExcerpts(list, 3, 2);
     expect(out.filter((e) => e.pageId === "p1")).toHaveLength(2);
     expect(out.some((e) => e.pageId === "p2")).toBe(true);
+  });
+});
+
+describe("spreadSample", () => {
+  it("keeps ends and middle of a long list", () => {
+    const items = Array.from({ length: 10 }, (_, i) => i);
+    expect(spreadSample(items, 3)).toEqual([0, 5, 9]);
+    expect(spreadSample(items, 20)).toEqual(items);
+  });
+});
+
+describe("mergeUniqueTexts", () => {
+  it("prefers question hits then fills from the rest of the file", () => {
+    const out = mergeUniqueTexts(
+      ["alpha passage"],
+      ["alpha passage", "omega tail", "mid chapter"],
+      3
+    );
+    expect(out[0]).toBe("alpha passage");
+    expect(out).toContain("omega tail");
+    expect(out).toHaveLength(3);
   });
 });

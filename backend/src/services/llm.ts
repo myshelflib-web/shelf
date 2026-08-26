@@ -22,6 +22,12 @@ import type {
   ChatResult,
   ChatToolCall,
 } from "./llmTypes.js";
+import {
+  finalizeStreamToolCalls,
+  mergeToolCallDelta,
+  readToolCalls,
+  type ToolCallAcc,
+} from "./llmToolCalls.js";
 
 export type {
   ChatContentPart,
@@ -295,35 +301,6 @@ async function openChatWithFallbacks(
   throw new Error("Study AI request failed. Try again in a moment.");
 }
 
-function readToolCalls(
-  raw: unknown
-): ChatToolCall[] | undefined {
-  if (!Array.isArray(raw) || raw.length === 0) return undefined;
-  const calls: ChatToolCall[] = [];
-  for (const row of raw) {
-    if (!row || typeof row !== "object") continue;
-    const rec = row as {
-      id?: string;
-      type?: string;
-      function?: { name?: string; arguments?: string };
-    };
-    const name = rec.function?.name;
-    if (!name) continue;
-    calls.push({
-      id: rec.id || `call_${calls.length}`,
-      type: "function",
-      function: {
-        name,
-        arguments:
-          typeof rec.function?.arguments === "string"
-            ? rec.function.arguments
-            : "{}",
-      },
-    });
-  }
-  return calls.length ? calls : undefined;
-}
-
 export async function completeChat(
   messages: ChatMessage[],
   opts?: Omit<ChatRequestOpts, "stream">
@@ -363,12 +340,6 @@ export type StreamChatEvent =
   | { type: "tool_calls"; calls: ChatToolCall[] }
   | { type: "done"; tokens: number; model: string };
 
-type ToolCallAcc = {
-  id: string;
-  name: string;
-  arguments: string;
-};
-
 /** OpenAI-compatible SSE token stream with model fallbacks + transient retries. */
 export async function* streamChat(
   messages: ChatMessage[],
@@ -387,26 +358,6 @@ export async function* streamChat(
   let buffer = "";
   let full = "";
   const acc = new Map<number, ToolCallAcc>();
-
-  const absorbToolDelta = (raw: unknown) => {
-    if (!Array.isArray(raw)) return;
-    for (const row of raw) {
-      if (!row || typeof row !== "object") continue;
-      const rec = row as {
-        index?: number;
-        id?: string;
-        function?: { name?: string; arguments?: string };
-      };
-      const index = typeof rec.index === "number" ? rec.index : acc.size;
-      const prev = acc.get(index) ?? { id: "", name: "", arguments: "" };
-      if (rec.id) prev.id = rec.id;
-      if (rec.function?.name) prev.name += rec.function.name;
-      if (typeof rec.function?.arguments === "string") {
-        prev.arguments += rec.function.arguments;
-      }
-      acc.set(index, prev);
-    }
-  };
 
   try {
     while (true) {
@@ -429,7 +380,7 @@ export async function* streamChat(
             }>;
           };
           const delta = parsed.choices?.[0]?.delta;
-          if (delta?.tool_calls) absorbToolDelta(delta.tool_calls);
+          if (delta?.tool_calls) mergeToolCallDelta(acc, delta.tool_calls);
           const piece = delta?.content;
           if (piece) {
             full += piece;
@@ -454,14 +405,7 @@ export async function* streamChat(
     }
   }
 
-  const calls: ChatToolCall[] = [...acc.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([, row], i) => ({
-      id: row.id || `call_${i}`,
-      type: "function" as const,
-      function: { name: row.name, arguments: row.arguments || "{}" },
-    }))
-    .filter((c) => c.function.name);
+  const calls = finalizeStreamToolCalls(acc);
 
   if (calls.length) {
     yield { type: "tool_calls", calls };

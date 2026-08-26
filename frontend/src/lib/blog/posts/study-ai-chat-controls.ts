@@ -5,7 +5,7 @@ export const studyAiChatControls = buildPost(
     slug: "study-ai-stop-queue-diagrams",
     title: "Stop, Queue, Delete, and Preview Diagrams in Study AI",
     description:
-      "Study AI now lets you stop a reply, queue the next question, delete turns, preview Mermaid diagrams, and look up your library, planner, Google, or the web.",
+      "Study AI now lets you stop a reply, queue the next question, run slash commands, preview Mermaid diagrams, and look up your library, planner, Google, or the web.",
     excerpt:
       "Chat like a modern tutor: stop generation, queue follow-ups, delete a bad turn, open mermaid diagrams full-screen, and let Study AI search your library, highlights, planner, or Google.",
     publishedAt: "2026-08-26",
@@ -36,7 +36,7 @@ export const studyAiChatControls = buildPost(
       heading: "Tools and better retrieval",
       paragraphs: [
         "Library-wide Study AI can search your collections, open a page, list recents and starred files, read highlights and syllabus docs, check the planner, search Google, and fetch a public page when your notes do not cover the question. Answers still prefer your files and cite them as [1], [2].",
-        "Retrieval now fuses vector search with keywords, spreads excerpts across pages, and rewrites short follow-ups like “explain this” using the previous question so the next search is not lost.",
+        "Type / in the composer — or tap the / button — for a command palette: quiz, mind map, PYQ drill, flashcards, notes, plan, and more. Suggestion chips above the box rotate the way greetings do, so the chat stays easy to start. Retrieval now fuses vector search with keywords, spreads excerpts across pages, and rewrites short follow-ups like “explain this” using the previous question so the next search is not lost.",
       ],
     },
   ]

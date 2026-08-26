@@ -34,6 +34,14 @@ export async function searchVectors(
   return store().searchVectors(vector, userId, limit, opts);
 }
 
+export async function listVectorsForPage(
+  userId: string,
+  pageId: string,
+  limit?: number
+): Promise<ReturnType<typeof qdrant.listVectorsForPage>> {
+  return store().listVectorsForPage(userId, pageId, limit);
+}
+
 export async function deleteVectorsForPage(pageId: string): Promise<void> {
   return store().deleteVectorsForPage(pageId);
 }

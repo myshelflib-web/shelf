@@ -9,6 +9,7 @@ export const studyAiSummaries = buildPost(
     excerpt:
       "Ask Study AI to summarize a page, extract revision bullets, or render a mind map. Outputs are structured Markdown you can read, copy, or save.",
     publishedAt: "2026-01-28",
+    updatedAt: "2026-08-26",
     tags: ["study ai", "summaries", "mind maps", "revision"],
     readingMinutes: 5,
   },
@@ -28,7 +29,7 @@ export const studyAiSummaries = buildPost(
     {
       heading: "Workflow tips",
       paragraphs: [
-        "Start from the reader if you already know the page; use library-scoped chat if the answer should pull from multiple files in a collection. Combine with highlights — select a dense paragraph, ask for a simpler explanation, then highlight the summary-worthy lines yourself.",
+        "Start from the reader if you already know the page; use library-scoped chat if the answer should pull from multiple files in a collection. Combine with highlights — select a dense paragraph, ask for a simpler explanation, then highlight the summary-worthy lines yourself. For scanned files, stay on the page so Study AI can see the current sheet and still pull indexed text from the rest of the PDF.",
       ],
       bullets: [
         "Summarize this page for revision tomorrow",

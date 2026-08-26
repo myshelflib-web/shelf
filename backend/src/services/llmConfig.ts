@@ -245,13 +245,24 @@ export function embeddingModel(): string {
 
 export function parseProviderError(body: string): string {
   try {
-    const parsed = JSON.parse(body) as {
-      error?: { message?: string };
-    };
-    return parsed.error?.message?.trim() ?? "";
+    const parsed = JSON.parse(body) as unknown;
+    return providerErrorMessage(parsed);
   } catch {
     return body.slice(0, 200).trim();
   }
+}
+
+function providerErrorMessage(parsed: unknown): string {
+  if (Array.isArray(parsed)) {
+    for (const row of parsed) {
+      const msg = providerErrorMessage(row);
+      if (msg) return msg;
+    }
+    return "";
+  }
+  if (!parsed || typeof parsed !== "object") return "";
+  const rec = parsed as { error?: { message?: string }; message?: string };
+  return rec.error?.message?.trim() || rec.message?.trim() || "";
 }
 
 /** Non-secret snapshot for startup / debug logs. */

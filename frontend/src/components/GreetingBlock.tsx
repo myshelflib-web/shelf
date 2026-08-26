@@ -20,7 +20,7 @@ function GreetingDots({ large = false }: { large?: boolean }) {
 
 interface GreetingBlockProps {
   name: string;
-  size?: "md" | "lg" | "hero";
+  size?: "sm" | "md" | "lg" | "hero";
   align?: "left" | "center";
   className?: string;
   showAccent?: boolean;
@@ -71,7 +71,9 @@ export function GreetingBlock({
       ? "greeting-shine greeting-hero text-4xl sm:text-5xl tracking-tight leading-tight"
       : size === "lg"
         ? "text-2xl sm:text-3xl tracking-tight leading-tight"
-        : "text-xl sm:text-2xl tracking-tight leading-tight";
+        : size === "sm"
+          ? "text-[13px] sm:text-sm tracking-tight leading-snug"
+          : "text-xl sm:text-2xl tracking-tight leading-tight";
 
   return (
     <div

@@ -252,6 +252,22 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
       tokens,
     });
 
+    if (!answer.trim()) {
+      const threadId = await persistAskTurn({
+        userId,
+        body,
+        question: askTurnLabel(body, prepared.resolvedMode),
+        answer: "Study AI could not finish this reply.",
+      });
+      send("error", {
+        message: "Study AI returned an empty response.",
+        status: 503,
+        threadId,
+      });
+      res.end();
+      return;
+    }
+
     const threadId = await persistAskTurn({
       userId,
       body,
@@ -282,9 +298,17 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
         articleId: body.articleId ?? null,
       });
     }
+    const message = err instanceof Error ? err.message : "Study AI failed";
+    const threadId = await persistAskTurn({
+      userId,
+      body,
+      question: askTurnLabel(body, String(body.mode ?? "ask")),
+      answer: `Study AI could not finish this reply.\n\n${message}`,
+    });
     send("error", {
-      message: err instanceof Error ? err.message : "Study AI failed",
+      message,
       status,
+      threadId,
     });
     res.end();
   }

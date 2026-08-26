@@ -159,3 +159,14 @@ export function joinPackedContext(packed: PackedPageAskContext): string {
     .filter(Boolean)
     .join("\n\n");
 }
+
+/** Title-only / scanned PDFs — not enough text to tutor from. */
+export function isThinPageText(title: string, body: string): boolean {
+  const t = title.trim().toLowerCase();
+  const b = body.replace(/\s+/g, " ").trim();
+  if (!b) return true;
+  if (b.length < 80) return true;
+  if (t && b.toLowerCase() === t) return true;
+  if (t && b.toLowerCase().startsWith(t) && b.length < t.length + 40) return true;
+  return false;
+}

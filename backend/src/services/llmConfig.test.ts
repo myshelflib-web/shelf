@@ -13,6 +13,7 @@ import {
   clearWorkingChatModel,
   isModelUnavailableError,
   rememberWorkingChatModel,
+  parseProviderError,
   resolveGeminiChatModel,
   resolveGeminiEmbeddingModel,
   sanitizeSecret,
@@ -173,5 +174,18 @@ describe("llmConfig", () => {
   it("strips quotes from secrets", () => {
     expect(sanitizeSecret('"AQ.abc"')).toBe("AQ.abc");
     expect(sanitizeSecret("  AQ.abc  ")).toBe("AQ.abc");
+  });
+
+  it("parses Gemini array-wrapped provider errors", () => {
+    const body = JSON.stringify([
+      {
+        error: {
+          code: 400,
+          message:
+            "Function call is missing a thought_signature in functionCall parts.",
+        },
+      },
+    ]);
+    expect(parseProviderError(body)).toContain("thought_signature");
   });
 });

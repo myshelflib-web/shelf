@@ -198,6 +198,7 @@ export type DocumentPaneHandlers = {
   pdfToggleNight: () => void;
   pdfNextPage: () => void;
   pdfPrevPage: () => void;
+  capturePdfPage: () => string;
 };
 
 interface DocumentPaneProps {
@@ -850,6 +851,7 @@ export function DocumentPane({
       pdfToggleNight: () => pdfCommandsRef.current?.toggleNight(),
       pdfNextPage: () => pdfCommandsRef.current?.nextPage(),
       pdfPrevPage: () => pdfCommandsRef.current?.prevPage(),
+      capturePdfPage: () => pdfCommandsRef.current?.captureVisiblePage() ?? "",
     });
   }, [
     focused,
@@ -1293,6 +1295,9 @@ export function DocumentPane({
                     userTopicId={pageData.id}
                     selection={fsSelection}
                     imageBase64={fsImage}
+                    getPageImage={() =>
+                      pdfCommandsRef.current?.captureVisiblePage() ?? ""
+                    }
                     onClearSelection={() => {
                       setFsSelection(null);
                       setFsImage(undefined);

@@ -9,6 +9,7 @@ import { pageAskSystemPrompt } from "./goalPrompt.js";
 import {
   joinPackedContext,
   packPageAskContext,
+  isThinPageText,
 } from "../utils/pageAskContext.js";
 import { rewriteSearchQuery } from "../utils/queryRewrite.js";
 import { chatHistoryWindow } from "../utils/quotas.js";
@@ -66,11 +67,11 @@ function promptForMode(
 
   const scopeNote = hasSelection
     ? "Highlight is the primary focus. Still use the file passages and related library notes for full-document and persona context."
-    : "No highlight — answer from the full file content and retrieved library passages.";
+    : "No highlight — answer from the full file. Retrieved passages cover the whole PDF when text was indexed. If a page image is attached, that is the page the learner is viewing (use it for scanned / image-only files).";
 
   const material = packedMaterial.trim()
     ? packedMaterial.trim()
-    : "(No text excerpts available.)";
+    : "(No extractable text — use the attached PDF page image as the document.)";
 
   if (mode === "summarize") {
     return {
@@ -145,7 +146,9 @@ export async function preparePageAsk(
     throw new PageAskPrepareError(400, "articleId or userTopicId required");
   }
   if (resolvedMode === "ask" && !String(input.question ?? "").trim()) {
-    throw new PageAskPrepareError(400, "question required");
+    if (!input.imageBase64?.startsWith("data:image/")) {
+      throw new PageAskPrepareError(400, "question required");
+    }
   }
 
   onStatus?.("loading_page", "Reading this file…");
@@ -196,8 +199,8 @@ export async function preparePageAsk(
     }
   }
 
-  const fullFileText =
-    pageBody && pageBody !== title ? pageBody : pageBody || "";
+  const fullFileText = isThinPageText(title, pageBody) ? "" : pageBody.trim();
+  const thinText = isThinPageText(title, pageBody);
 
   const rewrittenQuestion = rewriteSearchQuery(
     String(input.question ?? "").trim(),
@@ -213,6 +216,7 @@ export async function preparePageAsk(
     input.selection?.trim() ?? "",
     resolvedMode !== "ask" ? `${resolvedMode} ${title}` : "",
     title,
+    thinText ? "" : fullFileText.slice(0, 400),
   ]
     .filter(Boolean)
     .join("\n")
@@ -229,7 +233,7 @@ export async function preparePageAsk(
   const forceVectors = process.env.PAGE_ASK_ALWAYS_VECTORS === "true";
   const needVectors =
     Boolean(pageIdForVectors) &&
-    (forceVectors || (!hasSelection && fullFileText.length < 3_500));
+    (forceVectors || !hasSelection || thinText || fullFileText.length < 8_000);
 
   if (needVectors && pageIdForVectors) {
     onStatus?.("retrieving", "Searching your notes…");
@@ -241,6 +245,10 @@ export async function preparePageAsk(
         {
           hasSelection,
           includeRelated: process.env.PAGE_ASK_RELATED === "true",
+          coverWholePage: !hasSelection,
+          questionFocused:
+            resolvedMode === "ask" &&
+            Boolean(String(input.question ?? "").trim()),
         }
       );
       pageChunks = retrieved.pageChunks;
@@ -266,7 +274,7 @@ export async function preparePageAsk(
   if (!packedMaterial && !input.imageBase64) {
     throw new PageAskPrepareError(
       400,
-      "This file has no readable text yet. Wait for processing to finish, or select a region / attach an image."
+      "This file has no readable text yet. Wait for processing to finish, or stay on a PDF page so Study AI can use the page image."
     );
   }
 

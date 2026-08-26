@@ -64,7 +64,11 @@ export function useStudyAiChat({
 
   useEffect(() => {
     if (!userId || !threadId) {
-      if (!streamingRef.current && !hasStudyAiPending(STUDY_AI_NEW_THREAD)) {
+      if (
+        !streamingRef.current &&
+        !hasStudyAiPending(STUDY_AI_NEW_THREAD) &&
+        !activeIdRef.current
+      ) {
         setMessages([]);
         setTitle("Study AI");
         setActiveId(undefined);
@@ -73,14 +77,32 @@ export function useStudyAiChat({
       }
       return;
     }
+    const switching = Boolean(
+      activeIdRef.current && activeIdRef.current !== threadId
+    );
     setActiveId(threadId);
-    setMessages([]);
-    setThreadLoading(true);
+    if (!streamingRef.current && switching) {
+      setMessages([]);
+    }
+    if (!streamingRef.current) {
+      setThreadLoading(true);
+    }
     api.study
       .getChat(threadId)
       .then(({ thread }) => {
         if (streamingRef.current) return;
-        setMessages(thread.messages);
+        setMessages((prev) => {
+          if (thread.messages.length === 0 && prev.length > 0) {
+            const keepLocal = prev.some(
+              (m) =>
+                m.threadId === threadId ||
+                m.threadId === "pending" ||
+                m.id.startsWith("tmp-")
+            );
+            if (keepLocal) return prev;
+          }
+          return thread.messages;
+        });
         setTitle(thread.title);
         setThreadMeta(thread);
       })
@@ -173,10 +195,12 @@ export function useStudyAiChat({
             );
           },
           onDone: (meta) => {
+            if (typeof meta.threadId === "string") setActiveId(meta.threadId);
             const userMsg = asChatMessage(meta.userMessage);
             const assistantMsg = asChatMessage(meta.assistantMessage);
             const nextTitle =
               typeof meta.title === "string" ? meta.title : undefined;
+            if (!userMsg && !assistantMsg && !nextTitle) return;
             const limit =
               typeof meta.memoryLimit === "number"
                 ? meta.memoryLimit
@@ -216,17 +240,20 @@ export function useStudyAiChat({
           });
         } else {
           setError(err instanceof Error ? err.message : "Study AI failed");
-          setMessages((prev) => {
-            const assistant = prev.find((m) => m.id === assistantTmpId);
-            if (!assistant?.content.trim()) {
-              return prev.filter(
-                (m) => m.id !== userTmpId && m.id !== assistantTmpId
-              );
-            }
-            return prev.map((m) =>
-              m.id === assistantTmpId ? { ...m, streaming: false } : m
-            );
-          });
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantTmpId
+                ? {
+                    ...m,
+                    streaming: false,
+                    content:
+                      m.content.trim() ||
+                      "Study AI could not finish this reply.",
+                  }
+                : m
+            )
+          );
+          refreshThreads();
         }
       } finally {
         if (abortRef.current === ac) {

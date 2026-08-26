@@ -144,6 +144,44 @@ export async function searchVectors(
     .map((r) => ({ score: r.score ?? 0, payload: r.payload as VectorPayload }));
 }
 
+/** All chunks for one page (no embedding). Used to cover a whole PDF. */
+export async function listVectorsForPage(
+  userId: string,
+  pageId: string,
+  limit = 48
+): Promise<VectorHit[]> {
+  if (!isVectorConfigured()) return [];
+  await ensurePayloadIndexes().catch(() => undefined);
+  const res = await qdrant(`/collections/${collection()}/points/scroll`, {
+    method: "POST",
+    body: JSON.stringify({
+      limit,
+      with_payload: true,
+      with_vector: false,
+      filter: {
+        must: [
+          { key: "userId", match: { value: userId } },
+          { key: "pageId", match: { value: pageId } },
+        ],
+      },
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    logger.error("vector.scroll_failed", { status: res.status, body: body.slice(0, 300) });
+    return [];
+  }
+  const data = (await res.json()) as {
+    result?: { points?: Array<{ payload?: VectorPayload }> };
+  };
+  return (data.result?.points ?? [])
+    .filter((p) => p.payload?.text && p.payload.userId === userId)
+    .sort(
+      (a, b) => (a.payload?.chunkIndex ?? 0) - (b.payload?.chunkIndex ?? 0)
+    )
+    .map((p) => ({ score: 1, payload: p.payload as VectorPayload }));
+}
+
 export async function deleteVectorsForPage(pageId: string): Promise<void> {
   if (!isVectorConfigured()) return;
   await ensurePayloadIndexes().catch(() => undefined);

@@ -3,6 +3,7 @@ import {
   PAGE_ASK_CONTEXT_BUDGET,
   joinPackedContext,
   packPageAskContext,
+  isThinPageText,
 } from "./pageAskContext.js";
 
 describe("packPageAskContext", () => {
@@ -52,5 +53,20 @@ describe("packPageAskContext", () => {
     });
     expect(packed.fileBlock.length).toBeGreaterThan(1000);
     expect(packed.charsUsed).toBeLessThanOrEqual(PAGE_ASK_CONTEXT_BUDGET);
+  });
+
+  it("treats title-only bodies as thin scanned files", () => {
+    expect(isThinPageText("My Page", "My Page")).toBe(true);
+    expect(isThinPageText("My Page", "")).toBe(true);
+    expect(isThinPageText("My Page", "Hello ".repeat(40))).toBe(false);
+  });
+
+  it("does not pack a title-only body as if it were the document", () => {
+    const packed = packPageAskContext({
+      fullFileText: isThinPageText("My Page", "My Page") ? "" : "My Page",
+      pageChunks: [],
+      related: [],
+    });
+    expect(joinPackedContext(packed)).toBe("");
   });
 });

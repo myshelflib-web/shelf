@@ -8,6 +8,7 @@ import {
   deleteHighlight,
   updateHighlight,
 } from "@/lib/offline/highlights";
+import { canvasToJpegDataUrl } from "@/lib/pdfPageImage";
 import { UserContentHighlight } from "@/types";
 import { HighlightToolbar } from "../HighlightToolbar";
 import { HighlightNoteModal } from "../HighlightNoteModal";
@@ -81,6 +82,8 @@ export type PdfViewerCommands = {
   toggleNight: () => void;
   nextPage: () => void;
   prevPage: () => void;
+  /** JPEG of the on-screen PDF page for Study AI when the file has no text. */
+  captureVisiblePage: () => string;
 };
 
 interface PdfViewerProps {
@@ -814,6 +817,10 @@ export function PdfViewer({
           return;
         }
         scrollToPdfPage(cur - 1);
+      },
+      captureVisiblePage: () => {
+        const canvas = canvasRefs.current.get(currentPageRef.current);
+        return canvas ? canvasToJpegDataUrl(canvas) : "";
       },
     };
     return () => {

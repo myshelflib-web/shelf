@@ -62,3 +62,35 @@ export function diversifyExcerpts(
   }
   return picked.slice(0, limit);
 }
+
+/** Evenly sample across a long PDF instead of taking only the first N chunks. */
+export function spreadSample<T>(items: T[], limit: number): T[] {
+  if (limit <= 0 || items.length === 0) return [];
+  if (items.length <= limit) return items;
+  const out: T[] = [];
+  const seen = new Set<number>();
+  for (let i = 0; i < limit; i++) {
+    const idx = Math.round((i * (items.length - 1)) / Math.max(1, limit - 1));
+    if (seen.has(idx)) continue;
+    seen.add(idx);
+    out.push(items[idx]);
+  }
+  return out;
+}
+
+export function mergeUniqueTexts(
+  preferred: string[],
+  fill: string[],
+  limit: number
+): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of [...preferred, ...fill]) {
+    const key = raw.replace(/\s+/g, " ").trim().slice(0, 96);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(raw);
+    if (out.length >= limit) break;
+  }
+  return out;
+}

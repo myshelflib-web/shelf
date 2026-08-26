@@ -9,6 +9,7 @@ export const studyAiPageAsk = buildPost(
     excerpt:
       "Highlight a paragraph or open Ask AI on the whole page. Answers cite your material and save as threads you can continue in the full Study AI workspace.",
     publishedAt: "2026-01-22",
+    updatedAt: "2026-08-26",
     tags: ["study ai", "pdf", "highlights", "rag"],
     readingMinutes: 6,
   },
@@ -23,14 +24,14 @@ export const studyAiPageAsk = buildPost(
     {
       heading: "Selection-aware questions",
       paragraphs: [
-        "Select text before asking to narrow context to that passage — ideal for dense judgments, formulae, or definitions. With nothing selected, Study AI uses broader page context plus retrieved library excerpts.",
-        "Use ⌘L (Ctrl+L on Windows) from the reader to ask with the current selection, Cursor-style.",
+        "Select text before asking to narrow context to that passage — ideal for dense judgments, formulae, or definitions. With nothing selected, Study AI uses the whole file: retrieved chunks spread across that PDF, plus the page you are looking at.",
+        "Scanned or image-only PDFs often have no copyable text. Study AI then sends a snapshot of the visible PDF page and still searches any indexed text from the rest of the file. Use ⌘L (Ctrl+L on Windows) from the reader to ask with the current selection, Cursor-style.",
       ],
     },
     {
       heading: "Saved page threads",
       paragraphs: [
-        "Each document can keep one saved page-scoped thread. Reopen the PDF and your prior Q&A restores in the reader panel. Jump to /study-ai/[id] to continue the same conversation with full history, images, and library scope controls.",
+        "Each document can keep one saved page-scoped thread. Reopen the PDF and your prior Q&A restores in the reader panel. If a reply fails, the question stays in the thread instead of the chat vanishing. Jump to /study-ai/[id] to continue the same conversation with full history, images, and library scope controls.",
       ],
     },
     {

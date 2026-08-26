@@ -4,12 +4,19 @@ import { getFromS3 } from "./s3.js";
 import { htmlToPlainText, truncateText } from "../utils/htmlText.js";
 import { logger, errorFields } from "../utils/logger.js";
 import { embedTexts } from "./embeddings.js";
-import { isVectorConfigured, searchVectors } from "./vectorStore.js";
+import {
+  isVectorConfigured,
+  listVectorsForPage,
+  searchVectors,
+} from "./vectorStore.js";
 import {
   diversifyExcerpts,
+  mergeUniqueTexts,
   reciprocalRankFusion,
+  spreadSample,
   type RankedExcerpt,
 } from "../utils/ragFusion.js";
+import { isThinPageText } from "../utils/pageAskContext.js";
 
 export type Excerpt = RankedExcerpt;
 
@@ -181,33 +188,64 @@ export async function retrieveLibrary(
  * Free-tier default skips cross-library search (relatedLimit=0) to avoid an extra
  * Qdrant round-trip; set includeRelated for richer answers.
  */
+function usefulChunkText(text: string, title: string): boolean {
+  const t = text.trim();
+  return Boolean(t) && !isThinPageText(title, t);
+}
+
 export async function retrievePageAskContext(
   userId: string,
   pageId: string,
   query: string,
-  opts?: { hasSelection?: boolean; includeRelated?: boolean }
-): Promise<{ pageChunks: string[]; relatedExcerpts: Excerpt[] }> {
-  if (!query.trim()) {
-    return { pageChunks: [], relatedExcerpts: [] };
+  opts?: {
+    hasSelection?: boolean;
+    includeRelated?: boolean;
+    /** No highlight: take more in-page chunks even with a weak query (summarize / whole PDF). */
+    coverWholePage?: boolean;
+    /** True when the learner asked a real question (not summarize / notes). */
+    questionFocused?: boolean;
   }
-
+): Promise<{ pageChunks: string[]; relatedExcerpts: Excerpt[] }> {
   const hasSelection = Boolean(opts?.hasSelection);
   const includeRelated = Boolean(opts?.includeRelated);
-  const pageHitLimit = hasSelection ? 6 : 8;
+  const coverWholePage = Boolean(opts?.coverWholePage);
+  const questionFocused = Boolean(opts?.questionFocused);
+  const pageHitLimit = hasSelection ? 6 : coverWholePage ? 14 : 8;
   const relatedLimit = includeRelated ? (hasSelection ? 1 : 2) : 0;
 
+  const listed =
+    coverWholePage && isVectorConfigured()
+      ? await listVectorsForPage(userId, pageId, 48).catch(() => [])
+      : [];
+  const listedTexts = listed
+    .slice()
+    .sort((a, b) => (a.payload.chunkIndex ?? 0) - (b.payload.chunkIndex ?? 0))
+    .filter((h) => usefulChunkText(h.payload.text, h.payload.title))
+    .map((h) => h.payload.text);
+  const spread = spreadSample(listedTexts, pageHitLimit);
+
   if (!isVectorConfigured()) {
+    if (!query.trim()) {
+      return { pageChunks: spread, relatedExcerpts: [] };
+    }
     const keywords = await keywordExcerpts(userId, query);
     return {
-      pageChunks: keywords
-        .filter((e) => e.pageId === pageId)
-        .flatMap((e) => e.text.split(/\n{2,}/))
-        .filter(Boolean)
-        .slice(0, pageHitLimit),
+      pageChunks: mergeUniqueTexts(
+        keywords
+          .filter((e) => e.pageId === pageId)
+          .flatMap((e) => e.text.split(/\n{2,}/))
+          .filter(Boolean),
+        spread,
+        pageHitLimit
+      ),
       relatedExcerpts: relatedLimit
         ? keywords.filter((e) => e.pageId !== pageId).slice(0, relatedLimit)
         : [],
     };
+  }
+
+  if (!query.trim() || (coverWholePage && !questionFocused && !hasSelection)) {
+    return { pageChunks: spread, relatedExcerpts: [] };
   }
 
   try {
@@ -216,12 +254,14 @@ export async function retrievePageAskContext(
       pageId,
     });
 
-    const scoreFloor = MIN_VECTOR_SCORE * (hasSelection ? 0.75 : 0.85);
-    const pageChunks = pageHits
+    const scoreFloor = coverWholePage
+      ? 0.04
+      : MIN_VECTOR_SCORE * (hasSelection ? 0.75 : 0.85);
+    const similar = pageHits
       .filter((h) => h.score >= scoreFloor)
       .sort((a, b) => b.score - a.score)
-      .map((h) => h.payload.text)
-      .filter(Boolean);
+      .filter((h) => usefulChunkText(h.payload.text, h.payload.title))
+      .map((h) => h.payload.text);
 
     let relatedExcerpts: Excerpt[] = [];
     if (relatedLimit > 0) {
@@ -233,9 +273,12 @@ export async function retrievePageAskContext(
       );
     }
 
-    return { pageChunks, relatedExcerpts };
+    return {
+      pageChunks: mergeUniqueTexts(similar, spread, pageHitLimit),
+      relatedExcerpts,
+    };
   } catch (err) {
     logger.error("rag.page_ask_retrieve_failed", errorFields(err));
-    return { pageChunks: [], relatedExcerpts: [] };
+    return { pageChunks: spread, relatedExcerpts: [] };
   }
 }

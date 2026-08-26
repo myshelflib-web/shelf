@@ -2,10 +2,16 @@ export type ChatContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
 
+/** Gemini OpenAI-compat: echo extra_content.google.thought_signature on tool rounds. */
+export type GoogleToolExtraContent = {
+  google?: { thought_signature?: string };
+};
+
 export type ChatToolCall = {
   id: string;
   type: "function";
   function: { name: string; arguments: string };
+  extra_content?: GoogleToolExtraContent;
 };
 
 export type ChatToolDef = {

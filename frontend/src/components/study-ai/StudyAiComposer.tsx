@@ -1,9 +1,16 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useState, type RefObject } from "react";
 import { ArrowUp, Library, Paperclip, Square, X } from "lucide-react";
 import type { StudyAiQueuedPrompt } from "@/lib/studyAiQueue";
 import { readFileAsDataUrl } from "@/lib/studyAiWorkspaceUtils";
+import {
+  isSlashMenuQuery,
+  resolveStudyAiInput,
+  type StudyAiCommand,
+} from "@/lib/studyAiCommands";
+import { StudyAiCommandsModal } from "./StudyAiCommandsModal";
+import { StudyAiSuggestChips } from "./StudyAiSuggestChips";
 
 export function StudyAiComposer({
   input,
@@ -44,7 +51,33 @@ export function StudyAiComposer({
   memoryLimit: number;
   planLabel: string;
 }) {
+  const [commandsOpen, setCommandsOpen] = useState(false);
+  const [commandSeed, setCommandSeed] = useState("/");
   const canSend = Boolean(input.trim() || attachImage);
+
+  const runResolved = (raw: string, image?: string) => {
+    const resolved = resolveStudyAiInput(raw, "library");
+    if (resolved.kind === "help") {
+      setCommandSeed("/");
+      setCommandsOpen(true);
+      return;
+    }
+    if (resolved.kind === "prompt" || resolved.kind === "plain") {
+      onSend(resolved.text, image);
+    }
+  };
+
+  const pickCommand = (cmd: StudyAiCommand) => {
+    setCommandsOpen(false);
+    onInput("");
+    if (cmd.slash === "help") return;
+    runResolved(`/${cmd.slash}`);
+  };
+
+  const closeCommands = () => {
+    setCommandsOpen(false);
+    if (isSlashMenuQuery(input)) onInput("");
+  };
 
   return (
     <div className="study-ai-composer-shell shrink-0 border-t border-[var(--border-subtle)] px-4 sm:px-7 pb-4 pt-3">
@@ -57,7 +90,7 @@ export function StudyAiComposer({
             const image = attachImage;
             onInput("");
             onAttachImage(undefined);
-            onSend(text, image);
+            runResolved(text, image);
           }}
         >
           {contextChips.length > 0 && (
@@ -126,6 +159,13 @@ export function StudyAiComposer({
             </div>
           )}
 
+          <div className="mb-2">
+            <StudyAiSuggestChips
+              scope="library"
+              onPick={(item) => runResolved(item.insert)}
+            />
+          </div>
+
           <div className="flex items-center gap-2 h-14 rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] pl-3 pr-2.5 shadow-[0_6px_22px_rgba(var(--shadow-color)/0.05)] transition-shadow focus-within:border-[var(--accent)] focus-within:shadow-[0_0_0_3px_var(--ring)]">
             <input
               ref={fileRef}
@@ -171,9 +211,28 @@ export function StudyAiComposer({
                 <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
               )}
             </button>
+            <button
+              type="button"
+              aria-label="Commands"
+              title="Commands"
+              onClick={() => {
+                setCommandSeed("/");
+                setCommandsOpen(true);
+              }}
+              className="no-focus-ring w-9 h-9 shrink-0 rounded-[9px] border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-muted)] flex items-center justify-center hover:border-[var(--accent)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)] transition-colors"
+            >
+              <span className="text-[13px] font-semibold leading-none">/</span>
+            </button>
             <input
               value={input}
-              onChange={(e) => onInput(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                onInput(v);
+                if (isSlashMenuQuery(v) && !commandsOpen) {
+                  setCommandSeed(v);
+                  setCommandsOpen(true);
+                }
+              }}
               placeholder={
                 loading ? "Queue another message…" : "Message Study AI…"
               }
@@ -199,8 +258,7 @@ export function StudyAiComposer({
             </button>
           </div>
           <p className="text-center text-[9px] text-[var(--text-muted)] mt-2 leading-snug">
-            Attach material only when you want Study AI to focus on something
-            specific.
+            Type / for commands
             <span className="mx-1.5 opacity-35">·</span>
             Memory last {memoryLimit}
             <span className="mx-1.5 opacity-35">·</span>
@@ -208,6 +266,12 @@ export function StudyAiComposer({
           </p>
         </form>
       </div>
+      <StudyAiCommandsModal
+        open={commandsOpen}
+        initialQuery={commandSeed}
+        onPick={pickCommand}
+        onClose={closeCommands}
+      />
     </div>
   );
 }

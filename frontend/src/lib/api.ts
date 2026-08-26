@@ -253,6 +253,7 @@ async function consumeStudySse(
         handlers.onDone?.(payload);
       } else if (event === "error") {
         streamError = String(payload.message ?? "Study AI failed");
+        handlers.onDone?.(payload);
       }
     }
   }

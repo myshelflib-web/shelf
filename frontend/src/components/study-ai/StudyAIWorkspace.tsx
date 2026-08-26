@@ -8,6 +8,8 @@ import { StudySourcesModal } from "@/components/study-ai/StudySourcesModal";
 import { StudyAiSidebar } from "@/components/study-ai/StudyAiSidebar";
 import { StudyAiMessageList } from "@/components/study-ai/StudyAiMessageList";
 import { StudyAiComposer } from "@/components/study-ai/StudyAiComposer";
+import { StudyAiSuggestChips } from "@/components/study-ai/StudyAiSuggestChips";
+import { resolveStudyAiInput } from "@/lib/studyAiCommands";
 import {
   StudyAiAttachMenu,
   StudyAiChatMenu,
@@ -28,13 +30,6 @@ import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { GreetingBlock } from "@/components/GreetingBlock";
 import { LivelyLine } from "@/components/LivelyLine";
 import { ShelfLogo } from "@/components/ShelfLogo";
-
-const SUGGESTIONS = [
-  "Summarize what I studied this week",
-  "Quiz me on my latest notes",
-  "Key terms I should revise",
-  "Make a revision plan from my collections",
-];
 
 export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const router = useRouter();
@@ -237,9 +232,14 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
             <div className="shrink-0 h-[58px] border-b border-[var(--border)] bg-[var(--bg-primary)]/95 flex items-center px-5 sm:px-6 gap-2.5">
               <div className="min-w-0">
                 <div className="text-[13px] font-bold truncate">{chat.title}</div>
-                <div className="text-[9.5px] text-[var(--text-muted)] mt-0.5">
-                  Conversation
-                </div>
+                <GreetingBlock
+                  name={user.name}
+                  size="sm"
+                  align="left"
+                  showAccent={false}
+                  showSubtitle={false}
+                  className="mt-0.5 min-w-0 overflow-hidden [&_p]:truncate"
+                />
               </div>
               <div className="ml-auto flex items-center gap-1.5">
                 <button
@@ -299,16 +299,22 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
                     className="mt-5 text-sm text-[var(--text-muted)] max-w-lg px-4 text-center leading-snug"
                   />
                   <div className="relative mt-8 flex flex-wrap justify-center gap-2 max-w-sm">
-                    {SUGGESTIONS.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => void chat.send(s)}
-                        className="study-ai-chip text-left text-[13px] px-3 py-1.5 rounded-full border border-[var(--border)] text-[var(--text-secondary)] hover:bg-[var(--accent-subtle)] hover:border-[var(--accent)] hover:text-[var(--text-primary)]"
-                      >
-                        {s}
-                      </button>
-                    ))}
+                    <StudyAiSuggestChips
+                      scope="library"
+                      count={4}
+                      onPick={(item) => {
+                        const resolved = resolveStudyAiInput(
+                          item.insert,
+                          "library"
+                        );
+                        if (
+                          resolved.kind === "prompt" ||
+                          resolved.kind === "plain"
+                        ) {
+                          void chat.send(resolved.text);
+                        }
+                      }}
+                    />
                   </div>
                 </div>
               )}

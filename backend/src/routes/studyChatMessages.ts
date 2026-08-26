@@ -231,6 +231,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
       ? titleFromQuery(content || "Image question")
       : thread.title;
 
+  let persistedUser = false;
   try {
     send("status", { stage: "starting", detail: "Starting Study AI…" });
 
@@ -263,6 +264,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
     const userMsg = await prisma.chatMessage.create({
       data: { threadId: thread.id, role: "user", content: displayContent },
     });
+    persistedUser = true;
 
     const scope = await resolveContextPageIds(userId, thread);
     const syllabusText = await loadSyllabus(userId, thread.relevancyDocId);
@@ -309,7 +311,26 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
     }
 
     if (!answer.trim() && !clientGone) {
-      send("error", { message: "Study AI returned an empty response.", status: 503 });
+      const stub = "Study AI could not finish this reply.";
+      const assistantMsg = await prisma.chatMessage.create({
+        data: {
+          threadId: thread.id,
+          role: "assistant",
+          content: stub,
+        },
+      });
+      await prisma.chatThread.update({
+        where: { id: thread.id },
+        data: { title: nextTitle, updatedAt: new Date() },
+      });
+      send("error", {
+        message: "Study AI returned an empty response.",
+        status: 503,
+        threadId: thread.id,
+        userMessage: userMsg,
+        assistantMessage: assistantMsg,
+        title: nextTitle,
+      });
       res.end();
       return;
     }
@@ -349,9 +370,22 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
     res.end();
   } catch (err) {
     const status = err instanceof QuotaError ? err.status : 503;
+    const message = err instanceof Error ? err.message : "Study AI failed";
+    if (persistedUser) {
+      await prisma.chatMessage
+        .create({
+          data: {
+            threadId: thread.id,
+            role: "assistant",
+            content: `Study AI could not finish this reply.\n\n${message}`,
+          },
+        })
+        .catch(() => undefined);
+    }
     send("error", {
-      message: err instanceof Error ? err.message : "Study AI failed",
+      message,
       status,
+      threadId: thread.id,
     });
     res.end();
   }

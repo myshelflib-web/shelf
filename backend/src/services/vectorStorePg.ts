@@ -178,6 +178,50 @@ export async function searchVectors(
     }));
 }
 
+export async function listVectorsForPage(
+  userId: string,
+  pageId: string,
+  limit = 48
+): Promise<VectorHit[]> {
+  if (!isVectorConfigured()) return [];
+  await ensurePgVectorSchema();
+  try {
+    const rows = await prisma.$queryRawUnsafe<PgVectorRow[]>(
+      `SELECT
+        "userId", "pageId", "title", "notebook", "topic", "href", "text", "chunkIndex",
+        1::float AS score
+      FROM "LibraryVectorChunk"
+      WHERE "userId" = $1 AND "pageId" = $2
+      ORDER BY "chunkIndex" ASC
+      LIMIT $3`,
+      userId,
+      pageId,
+      limit
+    );
+    return rows
+      .filter((row) => row.text && row.userId === userId)
+      .map((row) => ({
+        score: 1,
+        payload: {
+          userId: row.userId,
+          pageId: row.pageId,
+          title: row.title,
+          notebook: row.notebook,
+          topic: row.topic,
+          href: row.href,
+          text: row.text,
+          chunkIndex: row.chunkIndex,
+        },
+      }));
+  } catch (err) {
+    logger.error("vector.list_failed", {
+      provider: "pgvector",
+      message: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
+}
+
 export async function deleteVectorsForPage(pageId: string): Promise<void> {
   if (!isVectorConfigured()) return;
   await ensurePgVectorSchema();

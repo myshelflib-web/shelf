@@ -59,16 +59,18 @@ export function useStudyPanelChat({
 
   useEffect(() => {
     abortRef.current?.abort();
-    setTurns([]);
-    setError("");
-    setBusy(false);
-    busyRef.current = false;
-    setStatusEvents([]);
-    setQuestion("");
-    setAttachImage(undefined);
-    setThreadId(null);
-    queueRef.current = [];
-    setQueue([]);
+    if (!userId) {
+      setTurns([]);
+      setError("");
+      setBusy(false);
+      busyRef.current = false;
+      setStatusEvents([]);
+      setQuestion("");
+      setAttachImage(undefined);
+      setThreadId(null);
+      queueRef.current = [];
+      setQueue([]);
+    }
   }, [userId]);
 
   useEffect(() => {
@@ -86,6 +88,7 @@ export function useStudyPanelChat({
         const { thread } = await api.study.getChat(saved.id);
         if (cancelled) return;
         setThreadId(thread.id);
+        if (busyRef.current || turnsRef.current.length > 0) return;
         setTurns(
           thread.messages
             .filter((m) => m.role === "user" || m.role === "assistant")
@@ -115,7 +118,8 @@ export function useStudyPanelChat({
     async (
       mode: "ask" | "summarize" | "notes" | "mindmap",
       q?: string,
-      imageOverride?: string
+      imageOverride?: string,
+      opts?: { skipHistoryImage?: boolean }
     ) => {
       if (guestLocked) {
         onGuestLockedClick?.("Use Study AI");
@@ -153,7 +157,7 @@ export function useStudyPanelChat({
         id: `u-${Date.now()}`,
         role: "user",
         content: text || "Explain the attached image.",
-        imageBase64: userImage,
+        imageBase64: opts?.skipHistoryImage ? undefined : userImage,
       };
       const assistantId = `a-${Date.now()}`;
       const historyForApi = turnsRef.current.map((t) => ({
@@ -178,7 +182,7 @@ export function useStudyPanelChat({
             articleId,
             userTopicId,
             mode,
-            question: mode === "ask" ? text : undefined,
+            question: mode === "ask" ? text || "Explain this." : undefined,
             selection: selection || undefined,
             imageBase64: userImage,
             history: historyForApi,
@@ -218,14 +222,6 @@ export function useStudyPanelChat({
           const next = prev.map((t) =>
             t.id === assistantId ? { ...t, streaming: false } : t
           );
-          const empty = next.find(
-            (t) => t.id === assistantId && !t.content.trim()
-          );
-          if (empty) {
-            return next.filter(
-              (t) => t.id !== assistantId && t.id !== userTurn.id
-            );
-          }
           return trimMemory(next);
         });
       } catch (err) {
@@ -242,7 +238,17 @@ export function useStudyPanelChat({
         } else {
           setError(err instanceof Error ? err.message : "Study AI failed");
           setTurns((prev) =>
-            prev.filter((t) => t.id !== userTurn.id && t.id !== assistantId)
+            prev.map((t) =>
+              t.id === assistantId
+                ? {
+                    ...t,
+                    streaming: false,
+                    content:
+                      t.content.trim() ||
+                      "Study AI could not finish this reply.",
+                  }
+                : t
+            )
           );
         }
       } finally {

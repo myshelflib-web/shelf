@@ -667,6 +667,7 @@ export function ReaderWorkspace({
             userTopicId={studyPageId}
             selection={askSelection}
             imageBase64={askImage}
+            getPageImage={() => focusedHandlers?.capturePdfPage() ?? ""}
             onClearSelection={() => {
               setAskSelection(null);
               setAskImage(undefined);
