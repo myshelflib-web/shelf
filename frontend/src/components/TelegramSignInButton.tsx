@@ -2,8 +2,12 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import { isDevEnvironment, toUserFacingError } from "@/lib/userFacingError";
+import {
+  isTelegramLoginHostAllowed,
+  readTelegramWidgetError,
+} from "@/lib/telegramLoginWidget";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type TelegramAuthUser = {
   id: number;
@@ -17,6 +21,8 @@ export type TelegramAuthUser = {
 
 interface TelegramSignInButtonProps {
   onError?: (message: string) => void;
+  /** Fires when the widget is hidden (misconfigured domain, load error, etc.). */
+  onAvailabilityChange?: (available: boolean) => void;
   redirectTo?: string;
 }
 
@@ -47,21 +53,45 @@ function botUsername(): string | null {
 }
 
 export function isTelegramSignInConfigured(): boolean {
-  return Boolean(botUsername());
+  if (!botUsername()) return false;
+  if (typeof window !== "undefined" && !isTelegramLoginHostAllowed()) {
+    return false;
+  }
+  return true;
 }
 
 export function TelegramSignInButton({
   onError,
+  onAvailabilityChange,
   redirectTo = "/my-content",
 }: TelegramSignInButtonProps) {
   const { loginWithTelegram } = useAuth();
   const router = useRouter();
   const hostRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
+  const [widgetError, setWidgetError] = useState(false);
   const username = botUsername();
+
+  const markUnavailable = useCallback(() => {
+    setWidgetError(true);
+    if (!isDevEnvironment()) {
+      onAvailabilityChange?.(false);
+    }
+  }, [onAvailabilityChange]);
+
+  useEffect(() => {
+    onAvailabilityChange?.(Boolean(username) && isTelegramLoginHostAllowed());
+  }, [onAvailabilityChange, username]);
 
   useEffect(() => {
     if (!username || !hostRef.current) return;
+    if (!isTelegramLoginHostAllowed()) {
+      markUnavailable();
+      return;
+    }
+
+    setWidgetError(false);
+    onAvailabilityChange?.(true);
 
     window.onShelfTelegramAuth = async (user) => {
       setLoading(true);
@@ -90,35 +120,76 @@ export function TelegramSignInButton({
     script.setAttribute("data-radius", "8");
     script.setAttribute("data-onauth", "onShelfTelegramAuth(user)");
     script.setAttribute("data-request-access", "write");
+
+    const inspect = () => {
+      const err = readTelegramWidgetError(host);
+      if (err) {
+        markUnavailable();
+        if (isDevEnvironment()) {
+          onError?.(
+            "Telegram Login Widget: register this site with BotFather (/setdomain)."
+          );
+        }
+      }
+    };
+
+    script.addEventListener("load", () => window.setTimeout(inspect, 80));
     host.appendChild(script);
 
+    const observer = new MutationObserver(inspect);
+    observer.observe(host, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+    const timer = window.setTimeout(inspect, 1200);
+
     return () => {
+      window.clearTimeout(timer);
+      observer.disconnect();
       delete window.onShelfTelegramAuth;
       host.innerHTML = "";
     };
-  }, [username, loginWithTelegram, onError, redirectTo, router]);
+  }, [
+    username,
+    loginWithTelegram,
+    markUnavailable,
+    onAvailabilityChange,
+    onError,
+    redirectTo,
+    router,
+  ]);
 
-  if (!username) {
+  if (!username || widgetError || !isTelegramLoginHostAllowed()) {
     if (!isDevEnvironment()) return null;
+    if (!username) {
+      return (
+        <div className="space-y-2">
+          <button
+            type="button"
+            disabled
+            className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] text-[var(--text-muted)] cursor-not-allowed"
+          >
+            <TelegramIcon />
+            <span className="text-sm font-medium">Continue with Telegram</span>
+          </button>
+          <p className="text-xs text-center text-[var(--text-muted)]">
+            Set{" "}
+            <code className="text-[var(--accent)]">
+              NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
+            </code>{" "}
+            (and backend{" "}
+            <code className="text-[var(--accent)]">TELEGRAM_BOT_TOKEN</code>)
+          </p>
+        </div>
+      );
+    }
     return (
-      <div className="space-y-2">
-        <button
-          type="button"
-          disabled
-          className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-lg border border-[var(--border)] bg-[var(--bg-primary)] text-[var(--text-muted)] cursor-not-allowed"
-        >
-          <TelegramIcon />
-          <span className="text-sm font-medium">Continue with Telegram</span>
-        </button>
-        <p className="text-xs text-center text-[var(--text-muted)]">
-          Set{" "}
-          <code className="text-[var(--accent)]">
-            NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
-          </code>{" "}
-          (and backend{" "}
-          <code className="text-[var(--accent)]">TELEGRAM_BOT_TOKEN</code>)
-        </p>
-      </div>
+      <p className="text-xs text-center text-[var(--text-muted)]">
+        Telegram Login Widget: register{" "}
+        <code className="text-[var(--accent)]">{window.location.hostname}</code>{" "}
+        with BotFather (<code>/setdomain</code>).
+      </p>
     );
   }
 
@@ -129,7 +200,11 @@ export function TelegramSignInButton({
           Signing in with Telegram...
         </div>
       ) : (
-        <div ref={hostRef} className="flex justify-center w-full min-h-[40px]" />
+        <div
+          ref={hostRef}
+          className="flex justify-center w-full min-h-[40px] overflow-hidden"
+          aria-hidden={widgetError}
+        />
       )}
     </div>
   );

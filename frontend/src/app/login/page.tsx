@@ -32,6 +32,9 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [telegramVisible, setTelegramVisible] = useState(
+    () => isTelegramSignInConfigured() || isDevEnvironment()
+  );
 
   if (authLoading) {
     return <ThinkingIndicator label="Loading" />;
@@ -98,7 +101,8 @@ function LoginForm() {
   const showGoogleSignIn =
     isGoogleSignInConfigured() || isDevEnvironment();
   const showTelegramSignIn =
-    isTelegramSignInConfigured() || isDevEnvironment();
+    (isTelegramSignInConfigured() || isDevEnvironment()) &&
+    (isDevEnvironment() || telegramVisible);
   const showSocialSignIn = showGoogleSignIn || showTelegramSignIn;
 
   return (
@@ -240,7 +244,11 @@ function LoginForm() {
               <GoogleSignInButton onError={setError} redirectTo={nextPath} />
             ) : null}
             {showTelegramSignIn ? (
-              <TelegramSignInButton onError={setError} redirectTo={nextPath} />
+              <TelegramSignInButton
+                onError={setError}
+                onAvailabilityChange={setTelegramVisible}
+                redirectTo={nextPath}
+              />
             ) : null}
           </>
         ) : null}

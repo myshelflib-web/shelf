@@ -18,7 +18,9 @@ export function toUserFacingError(
   if (isDevEnvironment()) return message;
   const text = message.replace(/\s+/g, " ").trim();
   if (!text) return fallback;
-  if (!looksLikeDevError(text)) return text;
+  if (!looksLikeDevError(text) && !/bot domain invalid|username invalid|bot id invalid/i.test(text)) {
+    return text;
+  }
 
   const lower = text.toLowerCase();
   if (/telegram/.test(lower)) {
