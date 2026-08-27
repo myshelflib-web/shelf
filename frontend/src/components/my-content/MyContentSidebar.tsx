@@ -2,11 +2,8 @@
 
 import { NotebookSort, UserSubject, UserPageSummary } from "@/types";
 import {
-  getNotebookPages,
-  getTopicGroups,
   insertPageInTree,
   insertTopicInTree,
-  pageHref,
   syncPageInTree,
   syncRootPages,
 } from "@/lib/myContentTree";
@@ -15,27 +12,30 @@ import {
   ChevronLeft,
   ChevronRight,
   FolderOpen,
-  CheckCircle2,
   Check,
-  Star,
-  BookOpen,
   Trash2,
-  CalendarDays,
-  FileText,
-  Pencil,
   FilePlus,
   FolderPlus,
   RefreshCw,
   FoldVertical,
   Search,
   ArrowDownWideNarrow,
-  Share2,
+  CheckSquare,
+  XSquare,
 } from "lucide-react";
 import { SharedWithMeSection } from "@/components/my-content/SharedWithMeSection";
 import { SharePageModal } from "@/components/my-content/SharePageModal";
-import { FolderMark } from "@/components/FolderMark";
-import { folderTone } from "@/lib/folderTone";
-import { ExplorerSidebarSkeleton } from "@/components/dashboard/DashboardSkeletons";
+import { MyContentExplorerTree } from "@/components/my-content/MyContentExplorerTree";
+import { BulkDeleteModal } from "@/components/my-content/BulkDeleteModal";
+import {
+  buildBulkDeletePayload,
+  buildSelectionLabels,
+  type ExplorerSelectionKey,
+} from "@/lib/explorerSelection";
+import { applyBulkDeleteToTree } from "@/lib/explorerBulkDeleteTree";
+import {
+  patchSubjectsOrder,
+} from "@/lib/libraryReorder";
 import { useAddContent } from "@/components/my-content/MyContentAddProvider";
 import { listSubjects } from "@/lib/offline/library";
 import { api } from "@/lib/api";
@@ -47,8 +47,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   PersonalPageReaderScope,
-  SHELF_PAGE_MIME,
-  ShelfPageDragPayload,
   scopeFromHref,
 } from "@/components/my-content/reader/types";
 import { NotebookEditModal } from "@/components/my-content/NotebookEditModal";
@@ -61,26 +59,31 @@ import {
 } from "@/lib/contentEvents";
 
 const SIDEBAR_NOTEBOOK_PAGE_SIZE = 15;
-const SIDEBAR_ROOT_PAGE_SIZE = 12;
+const SIDEBAR_MANUAL_ORDER_PAGE_SIZE = 200;
 const PINNED_KEY = "shelf:explorer-pinned";
 const MAX_PINNED = 5;
 
-type SortCriterion = "activity" | "name";
+type SortCriterion = "activity" | "name" | "manual";
 
 const SORT_CRITERIA: { id: SortCriterion; label: string }[] = [
   { id: "activity", label: "Last activity" },
   { id: "name", label: "Name" },
+  { id: "manual", label: "Manual order" },
 ];
 
 function notebookSortFor(
   criterion: SortCriterion,
   ascending: boolean
 ): NotebookSort {
+  if (criterion === "manual") return "order";
   if (criterion === "name") return ascending ? "name" : "nameDesc";
   return ascending ? "oldest" : "recent";
 }
 
 function directionTitle(criterion: SortCriterion, ascending: boolean): string {
+  if (criterion === "manual") {
+    return "Drag collections to reorder";
+  }
   if (criterion === "name") {
     return ascending ? "Ascending — A to Z" : "Descending — Z to A";
   }
@@ -171,8 +174,13 @@ export function MyContentSidebar({
     id: string;
     title: string;
   } | null>(null);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selected, setSelected] = useState<Set<ExplorerSelectionKey>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   const searching = debouncedQ.length > 0;
+  const manualOrder = sortCriterion === "manual";
+  const reorderEnabled = manualOrder && !searching;
   const scheduledHrefs = useScheduledPageHrefs(true);
 
   useEffect(() => {
@@ -208,9 +216,12 @@ export function MyContentSidebar({
 
   const load = useCallback((opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
+    const pageSize = manualOrder
+      ? SIDEBAR_MANUAL_ORDER_PAGE_SIZE
+      : SIDEBAR_NOTEBOOK_PAGE_SIZE;
     listSubjects({
         page: searching ? 1 : notebookPage,
-        pageSize: SIDEBAR_NOTEBOOK_PAGE_SIZE,
+        pageSize,
         sort,
         q: searching ? debouncedQ : undefined,
       })
@@ -229,7 +240,7 @@ export function MyContentSidebar({
         }
       })
       .finally(() => setLoading(false));
-  }, [notebookPage, sort, searching, debouncedQ]);
+  }, [notebookPage, sort, searching, debouncedQ, manualOrder]);
 
   useEffect(() => {
     load();
@@ -371,15 +382,6 @@ export function MyContentSidebar({
     return rootPages.filter((p) => p.title.toLowerCase().includes(q));
   }, [rootPages, searching, debouncedQ]);
 
-  const rootTotalPages = Math.max(
-    1,
-    Math.ceil(filteredRootPages.length / SIDEBAR_ROOT_PAGE_SIZE)
-  );
-  const visibleRootPages = filteredRootPages.slice(
-    (rootPage - 1) * SIDEBAR_ROOT_PAGE_SIZE,
-    rootPage * SIDEBAR_ROOT_PAGE_SIZE
-  );
-
   const [expandedNotebooks, setExpandedNotebooks] = useState<
     Record<string, boolean>
   >(() => {
@@ -474,111 +476,51 @@ export function MyContentSidebar({
     router.push(href);
   };
 
-  const renderPageRow = (
-    page: UserPageSummary,
-    href: string,
-    isActive: boolean
-  ) => {
-    const isScheduled = scheduledHrefs.has(href);
-    const scope = scopeFromHref(href);
-    const dragProps =
-      enablePageDrag && scope
-        ? {
-            draggable: true as const,
-            onDragStart: (e: React.DragEvent) => {
-              const payload: ShelfPageDragPayload = {
-                href,
-                title: page.title,
-                pageId: page.id,
-                scope,
-              };
-              e.dataTransfer.setData(SHELF_PAGE_MIME, JSON.stringify(payload));
-              e.dataTransfer.setData("text/plain", href);
-              e.dataTransfer.effectAllowed = "copy";
-            },
-          }
-        : {};
+  const selectionLabels = useMemo(
+    () => buildSelectionLabels(treeSubjects, filteredRootPages),
+    [treeSubjects, filteredRootPages]
+  );
 
-    return (
-      <div
-        key={page.id}
-        {...dragProps}
-        role="button"
-        tabIndex={0}
-        onClick={() => openPage(page, href)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            openPage(page, href);
-          }
-        }}
-        className={clsx(
-          "library-row group flex items-center gap-1 rounded-md text-[13px] min-w-0 px-1.5 py-1 cursor-pointer",
-          isActive
-            ? "bg-[var(--bg-elevated)] text-[var(--text-primary)]"
-            : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]",
-          enablePageDrag && "active:cursor-grabbing"
-        )}
-      >
-          {page.completed ? (
-            <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
-          ) : (
-          <FileText className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
-        )}
-        <span
-          className={`flex-1 min-w-0 truncate text-[13px] ${
-            isActive
-              ? "text-[var(--text-primary)]"
-              : "text-[var(--text-secondary)]"
-          }`}
-          title={page.title}
-        >
-          {page.title}
-        </span>
-        <span
-          className="flex items-center gap-0.5 shrink-0"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            type="button"
-            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--accent)] opacity-0 group-hover:opacity-100"
-            title="Share page"
-            aria-label="Share page"
-            onClick={() => setShareTarget({ id: page.id, title: page.title })}
-          >
-            <Share2 className="w-3 h-3" />
-          </button>
-          <button
-            type="button"
-            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] opacity-0 group-hover:opacity-100"
-            title="Rename page"
-            onClick={async () => {
-              const title = prompt("Rename page", page.title);
-              if (!title?.trim() || title.trim() === page.title) return;
-              await renamePage(page.id, title.trim());
-            }}
-          >
-            <Pencil className="w-3 h-3" />
-          </button>
-        {isScheduled && (
-            <span title="Scheduled to read">
-            <CalendarDays className="w-3 h-3 text-[var(--accent)]" />
-          </span>
-        )}
-        {page.starred && (
-            <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-        )}
-        <button
-          type="button"
-            className="p-1 rounded text-[var(--text-muted)] hover:text-red-500 opacity-0 group-hover:opacity-100"
-          title="Delete page"
-          onClick={() => deletePage(page.id, page.title)}
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
-        </span>
-      </div>
-    );
+  const exitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelected(new Set());
+    setBulkDeleteOpen(false);
+  };
+
+  const handleBulkDelete = () => {
+    const payload = buildBulkDeletePayload(selected);
+    const prevSubjects = subjects;
+    const prevPinned = pinnedExtra;
+    const prevRootPages = rootPages;
+
+    setSubjects((s) => applyBulkDeleteToTree(payload, s, rootPages).subjects);
+    setPinnedExtra((p) => applyBulkDeleteToTree(payload, p, rootPages).subjects);
+    setRootPages((r) => applyBulkDeleteToTree(payload, subjects, r).rootPages);
+    exitSelectionMode();
+
+    void api.myContent.bulkDelete(payload).catch(() => {
+      setSubjects(prevSubjects);
+      setPinnedExtra(prevPinned);
+      setRootPages(prevRootPages);
+      emitContentChanged();
+    });
+  };
+
+  const handleReorderSubjects = (orderedIds: string[]) => {
+    void api.myContent
+      .reorderSubjects(orderedIds)
+      .finally(() => load({ silent: true }));
+  };
+
+  const handleReorderTopics = (subjectId: string, orderedIds: string[]) => {
+    const prevSubjects = subjects;
+    const prevPinned = pinnedExtra;
+    setSubjects((s) => patchSubjectsOrder(s, subjectId, orderedIds));
+    setPinnedExtra((s) => patchSubjectsOrder(s, subjectId, orderedIds));
+    void api.myContent.reorderTopicGroups(subjectId, orderedIds).catch(() => {
+      setSubjects(prevSubjects);
+      setPinnedExtra(prevPinned);
+    });
   };
 
   const isEmpty =
@@ -604,6 +546,26 @@ export function MyContentSidebar({
             Explorer
           </h2>
           <div className="flex items-center shrink-0">
+            <button
+              type="button"
+              title={selectionMode ? "Exit selection mode" : "Select items to delete"}
+              aria-label={selectionMode ? "Exit selection mode" : "Select items"}
+              onClick={() =>
+                selectionMode ? exitSelectionMode() : setSelectionMode(true)
+              }
+              className={clsx(
+                "p-1.5 rounded-md hover:bg-[var(--bg-elevated)]",
+                selectionMode
+                  ? "text-[var(--accent)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              )}
+            >
+              {selectionMode ? (
+                <XSquare className="w-4 h-4" />
+              ) : (
+                <CheckSquare className="w-4 h-4" />
+              )}
+            </button>
             <button
               type="button"
               title={withShortcut("Add a page to your library", "c p")}
@@ -718,8 +680,9 @@ export function MyContentSidebar({
               type="button"
               title={sortDirTitle}
               aria-label={sortDirTitle}
+              disabled={manualOrder}
               onClick={() => setSortAscending((v) => !v)}
-              className="w-[34px] h-[34px] shrink-0 grid place-items-center rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:border-[var(--accent)]/40 hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)] transition-colors"
+              className="w-[34px] h-[34px] shrink-0 grid place-items-center rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:border-[var(--accent)]/40 hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)] transition-colors disabled:opacity-40 disabled:pointer-events-none"
             >
               <ArrowDownWideNarrow
                 className={clsx(
@@ -733,317 +696,49 @@ export function MyContentSidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto px-1.5 py-2">
-        {loading && subjects.length === 0 && pinnedExtra.length === 0 ? (
-          <ExplorerSidebarSkeleton />
-        ) : isEmpty ? (
-          <div className="px-3 py-6 text-center space-y-3">
-            <p className="text-sm text-[var(--text-muted)] leading-relaxed">
-              {searching
-                ? `No collections match “${debouncedQ}”.`
-                : "Your library is empty. Add a collection or page to get started."}
-            </p>
-            {!searching && (
-              <div className="flex items-center justify-center gap-1">
-                <button
-                  type="button"
-                  title="New collection"
-                  onClick={() => openAdd({ kind: "notebook" })}
-                  className="p-2 rounded-md border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
-                >
-                  <FolderPlus className="w-5 h-5" />
-                </button>
-                <button
-                  type="button"
-                  title="Add page"
-                  onClick={() => openAdd({ kind: "page" })}
-                  className="p-2 rounded-md border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
-                >
-                  <FilePlus className="w-5 h-5" />
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <>
-            {filteredRootPages.length > 0 && (
-              <div className="mb-2 space-y-0.5">
-                <div className="flex items-center justify-between gap-1 px-2 py-1">
-                  <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium">
-                  Pages
-                </p>
-                  {rootTotalPages > 1 && (
-                    <span className="text-[10px] text-[var(--text-muted)]">
-                      {rootPage}/{rootTotalPages}
-                    </span>
-                  )}
-                </div>
-                {visibleRootPages.map((page) => {
-                  const href = pageHref(null, null, page.slug);
-                  const isActive =
-                    currentHref === href ||
-                    (!currentHref && currentPageSlug === page.slug);
-                  return (
-                    <div key={page.id}>{renderPageRow(page, href, isActive)}</div>
-                  );
-                })}
-                {rootTotalPages > 1 && (
-                  <div className="flex items-center justify-center gap-1 px-1 pt-1">
-                    <button
-                      type="button"
-                      disabled={rootPage <= 1}
-                      onClick={() => setRootPage((p) => Math.max(1, p - 1))}
-                      className="p-1 rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] disabled:opacity-30"
-                      aria-label="Previous pages"
-                    >
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={rootPage >= rootTotalPages}
-                      onClick={() =>
-                        setRootPage((p) => Math.min(rootTotalPages, p + 1))
-                      }
-                      className="p-1 rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] disabled:opacity-30"
-                      aria-label="Next pages"
-                    >
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {treeSubjects.length > 0 && (
-              <div className="space-y-0.5">
-                <div className="flex items-center justify-between gap-1 px-2 py-1">
-                  <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium">
-                    {searching ? "Matches" : "Collections"}
-                  </p>
-                  <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
-                    {searching ? treeSubjects.length : totalNotebooks}
-                  </span>
-                </div>
-                {treeSubjects.map((nb) => {
-                  const open = expandedNotebooks[nb.slug] ?? false;
-                  const loose = getNotebookPages(nb);
-                  const groups = getTopicGroups(nb);
-                  const isPinned =
-                    notebook?.id === nb.id ||
-                    pinnedExtra.some((p) => p.id === nb.id);
-                return (
-                    <div key={nb.id} className="mb-0.5">
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => toggleNotebook(nb.slug)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            toggleNotebook(nb.slug);
-                          }
-                        }}
-                        className={clsx(
-                          "group flex items-center gap-0.5 px-1.5 py-1 rounded-md cursor-pointer hover:bg-[var(--bg-elevated)]",
-                          isPinned && notebook?.id === nb.id
-                            ? "bg-[var(--bg-elevated)]/60"
-                            : ""
-                        )}
-                      >
-                        <span className="p-0.5 text-[var(--text-muted)] shrink-0">
-                          {open ? (
-                            <ChevronDown className="w-3.5 h-3.5" />
-                          ) : (
-                            <ChevronRight className="w-3.5 h-3.5" />
-                          )}
-                        </span>
-                        <FolderMark seed={nb.id} size={14} />
-                        <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">
-                          {nb.name}
-                        </span>
-                        <span
-                          className={clsx(
-                            "flex items-center shrink-0 transition-opacity",
-                            notebook?.id === nb.id
-                              ? "opacity-100"
-                              : "opacity-0 group-hover:opacity-100"
-                          )}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <button
-                            type="button"
-                            className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                            title="Edit collection name and description"
-                            aria-label="Edit collection"
-                            onClick={() => setEditNotebook(nb)}
-                          >
-                            <Pencil className="w-3 h-3" />
-                          </button>
-                          <button
-                            type="button"
-                            title="Add a topic in this collection"
-                            aria-label="New topic"
-                            className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                            onClick={() =>
-                              openAdd({ kind: "topic", notebook: nb })
-                            }
-                          >
-                            <FolderPlus className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            title="Add a page in this collection"
-                            aria-label="Add page"
-                            className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                            onClick={() =>
-                              openAdd({ kind: "page", notebook: nb })
-                            }
-                          >
-                            <FilePlus className="w-3.5 h-3.5" />
-                          </button>
-                        </span>
-                      </div>
-
-                      {open && (
-                        <div className="ml-3 pl-2 border-l border-[var(--border)] space-y-0.5 mt-0.5">
-                          {loose.map((page) => {
-                            const href = pageHref(nb.slug, null, page.slug);
-                            const isActive =
-                              currentHref === href ||
-                              (notebookSlug === nb.slug &&
-                                !currentTopicSlug &&
-                                currentPageSlug === page.slug);
-                            return (
-                              <div key={page.id}>
-                                {renderPageRow(page, href, isActive)}
-                              </div>
-                            );
-                          })}
-                          {groups.map((group) => {
-                            const tKey = `${nb.slug}:${group.slug}`;
-                            const tOpen = expandedTopics[tKey] ?? false;
-                            const tone = folderTone(group.id);
-                            return (
-                              <div key={group.id}>
-                                <div
-                                  role="button"
-                                  tabIndex={0}
-                                  onClick={() =>
-                                    toggleTopic(nb.slug, group.slug)
-                                  }
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      e.preventDefault();
-                                      toggleTopic(nb.slug, group.slug);
-                                    }
-                                  }}
-                                  className="group flex items-center gap-0.5 px-1 py-1 rounded-md cursor-pointer hover:bg-[var(--bg-elevated)]"
-                                >
-                                  <span className="p-0.5 text-[var(--text-muted)] shrink-0">
-                                    {tOpen ? (
-                                      <ChevronDown className="w-3.5 h-3.5" />
-                                    ) : (
-                                      <ChevronRight className="w-3.5 h-3.5" />
-                                    )}
-                                  </span>
-                        <BookOpen
-                          className="w-3.5 h-3.5 shrink-0"
-                          style={{ color: tone.fg }}
-                        />
-                                  <span className="flex-1 min-w-0 truncate text-[13px] font-medium">
-                                    {group.title}
-                                  </span>
-                                  <span className="text-[10px] text-[var(--text-muted)] shrink-0">
-                        {group.pages.length}
-                      </span>
-                                  <span
-                                    className="flex items-center shrink-0 opacity-0 group-hover:opacity-100"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <button
-                                      type="button"
-                                      className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                                      title="Rename topic"
-                                      aria-label="Rename topic"
-                                      onClick={async () => {
-                                        const title = prompt(
-                                          "Rename topic",
-                                          group.title
-                                        );
-                                        if (
-                                          !title?.trim() ||
-                                          title.trim() === group.title
-                                        )
-                                          return;
-                                        await renameTopic(
-                                          nb,
-                                          group.id,
-                                          title.trim()
-                                        );
-                                      }}
-                                    >
-                                      <Pencil className="w-3 h-3" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      title="Add page"
-                                      aria-label="Add page"
-                                      className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                                      onClick={() =>
-                                        openAdd({
-                                          kind: "page",
-                                          notebook: nb,
-                                          topic: group,
-                                        })
-                                      }
-                                    >
-                                      <FilePlus className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="p-0.5 rounded text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--bg-secondary)]"
-                                      title="Delete topic"
-                                      aria-label="Delete topic"
-                                      onClick={() =>
-                                        deleteTopic(nb, group.id, group.title)
-                                      }
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </button>
-                                  </span>
-                    </div>
-                                {tOpen && (
-                                  <div className="ml-3 space-y-0.5 mt-0.5">
-                        {group.pages.map((page) => {
-                          const href = pageHref(
-                                        nb.slug,
-                            group.slug,
-                            page.slug
-                          );
-                          const isActive =
-                                        currentHref === href ||
-                                        (notebookSlug === nb.slug &&
-                            currentTopicSlug === group.slug &&
-                                          currentPageSlug === page.slug);
-                                      return (
-                                        <div key={page.id}>
-                                          {renderPageRow(page, href, isActive)}
-                                        </div>
-                                      );
-                                    })}
-                      </div>
-                    )}
-                  </div>
-                );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
+        <MyContentExplorerTree
+          loading={loading}
+          isEmpty={isEmpty}
+          searching={searching}
+          debouncedQ={debouncedQ}
+          treeSubjects={treeSubjects}
+          filteredRootPages={filteredRootPages}
+          rootPage={rootPage}
+          setRootPage={setRootPage}
+          totalNotebooks={totalNotebooks}
+          notebook={notebook}
+          pinnedExtra={pinnedExtra}
+          notebookSlug={notebookSlug}
+          currentTopicSlug={currentTopicSlug}
+          currentPageSlug={currentPageSlug}
+          currentHref={currentHref}
+          expandedNotebooks={expandedNotebooks}
+          expandedTopics={expandedTopics}
+          toggleNotebook={toggleNotebook}
+          toggleTopic={toggleTopic}
+          enablePageDrag={enablePageDrag}
+          workspaceMode={workspaceMode}
+          onOpenPage={openPage}
+          scheduledHrefs={scheduledHrefs}
+          selectionMode={selectionMode}
+          selected={selected}
+          onSelectionChange={setSelected}
+          reorderEnabled={reorderEnabled}
+          onReorderSubjects={handleReorderSubjects}
+          onReorderTopics={handleReorderTopics}
+          onEditNotebook={setEditNotebook}
+          onSharePage={(id, title) => setShareTarget({ id, title })}
+          onRenamePage={renamePage}
+          onDeletePage={deletePage}
+          onRenameTopic={renameTopic}
+          onDeleteTopic={deleteTopic}
+          onAddTopic={(nb) => openAdd({ kind: "topic", notebook: nb })}
+          onAddPage={(nb, topic) =>
+            openAdd({ kind: "page", notebook: nb, topic })
+          }
+          openAddPage={() => openAdd({ kind: "page" })}
+          openAddNotebook={() => openAdd({ kind: "notebook" })}
+        />
         <SharedWithMeSection
           workspaceMode={workspaceMode}
           onOpenPage={onOpenPage}
@@ -1055,7 +750,23 @@ export function MyContentSidebar({
         />
       </nav>
 
-      {!searching && totalNotebookPages > 1 && (
+      {selectionMode && selected.size > 0 && (
+        <div className="px-2 py-2 border-t border-[var(--border)] shrink-0 flex items-center gap-2">
+          <p className="text-[11px] text-[var(--text-muted)] flex-1 min-w-0">
+            {selected.size} selected
+          </p>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-red-600 text-white hover:bg-red-500"
+            onClick={() => setBulkDeleteOpen(true)}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Delete
+          </button>
+        </div>
+      )}
+
+      {!searching && !manualOrder && totalNotebookPages > 1 && (
         <div className="px-2 py-1.5 border-t border-[var(--border)] flex items-center justify-between gap-1 shrink-0">
           <button
             type="button"
@@ -1100,6 +811,14 @@ export function MyContentSidebar({
         }}
       />
     )}
+    <BulkDeleteModal
+      open={bulkDeleteOpen}
+      selected={selected}
+      labels={selectionLabels}
+      deleting={false}
+      onClose={() => setBulkDeleteOpen(false)}
+      onConfirm={handleBulkDelete}
+    />
   </>
   );
 }

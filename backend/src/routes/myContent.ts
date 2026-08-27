@@ -31,6 +31,14 @@ import {
   parseNotebookSort,
   type SlimNotebook,
 } from "../utils/notebookBrowse.js";
+import { mergeReorder } from "../utils/libraryReorder.js";
+import {
+  loadBulkDeletePages,
+  loadBulkDeleteSubjects,
+  loadBulkDeleteTopicGroups,
+  normalizeBulkDeleteInput,
+  pageCoveredByBulkDelete,
+} from "../utils/libraryBulkDelete.js";
 import { parsePublicHttpUrl } from "../utils/publicUrl.js";
 import { parseBytesRange } from "../utils/byteRange.js";
 import { errorFields } from "../utils/logger.js";
@@ -1110,7 +1118,10 @@ router.delete("/subjects/:id", async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const subject = await prisma.userSubject.findFirst({
     where: { id: param(req, "id"), userId },
-    include: { topics: true },
+    include: {
+      topics: true,
+      topicGroups: { include: { pages: true } },
+    },
   });
   if (!subject) {
     res.status(404).json({ error: "Collection not found" });
@@ -1119,10 +1130,184 @@ router.delete("/subjects/:id", async (req: Request, res: Response) => {
 
   for (const page of subject.topics) {
     await deletePageAssets(userId, page);
+    scheduleDeletePageVectors(page.id);
+  }
+  for (const group of subject.topicGroups) {
+    for (const page of group.pages) {
+      await deletePageAssets(userId, page);
+      scheduleDeletePageVectors(page.id);
+    }
   }
 
   await prisma.userSubject.delete({ where: { id: subject.id } });
   res.json({ success: true });
+});
+
+router.patch("/subjects/reorder", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { orderedIds } = req.body as { orderedIds?: string[] };
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      res.status(400).json({ error: "orderedIds required" });
+      return;
+    }
+
+    const all = await prisma.userSubject.findMany({
+      where: { userId },
+      orderBy: { order: "asc" },
+      select: { id: true },
+    });
+    const allIds = all.map((s) => s.id);
+    const idSet = new Set(allIds);
+    if (orderedIds.some((id) => !idSet.has(id))) {
+      res.status(400).json({ error: "Invalid collection ids" });
+      return;
+    }
+
+    const merged = mergeReorder(allIds, orderedIds);
+    res.json({ success: true });
+
+    void prisma
+      .$transaction(
+        merged.map((id, index) =>
+          prisma.userSubject.update({
+            where: { id },
+            data: { order: index + 1 },
+          })
+        )
+      )
+      .catch((err) => {
+        req.log?.error("my_content.subjects_reorder_async_failed", errorFields(err));
+      });
+  } catch (err) {
+    req.log?.error("my_content.subjects_reorder_failed", errorFields(err));
+    res.status(500).json({ error: "Could not reorder collections" });
+  }
+});
+
+router.patch(
+  "/subjects/:subjectId/topic-groups/reorder",
+  async (req: Request, res: Response) => {
+    try {
+      const userId = req.user!.userId;
+      const subject = await prisma.userSubject.findFirst({
+        where: { id: param(req, "subjectId"), userId },
+      });
+      if (!subject) {
+        res.status(404).json({ error: "Collection not found" });
+        return;
+      }
+
+      const { orderedIds } = req.body as { orderedIds?: string[] };
+      if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+        res.status(400).json({ error: "orderedIds required" });
+        return;
+      }
+
+      const all = await prisma.userTopicGroup.findMany({
+        where: { userSubjectId: subject.id },
+        orderBy: { order: "asc" },
+        select: { id: true },
+      });
+      const allIds = all.map((g) => g.id);
+      const idSet = new Set(allIds);
+      if (orderedIds.some((id) => !idSet.has(id))) {
+        res.status(400).json({ error: "Invalid topic ids" });
+        return;
+      }
+
+      const merged = mergeReorder(allIds, orderedIds);
+      res.json({ success: true });
+
+      void prisma
+        .$transaction(
+          merged.map((id, index) =>
+            prisma.userTopicGroup.update({
+              where: { id },
+              data: { order: index + 1 },
+            })
+          )
+        )
+        .catch((err) => {
+          req.log?.error("my_content.topics_reorder_async_failed", errorFields(err));
+        });
+    } catch (err) {
+      req.log?.error("my_content.topics_reorder_failed", errorFields(err));
+      res.status(500).json({ error: "Could not reorder topics" });
+    }
+  }
+);
+
+router.post("/bulk-delete", async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const body = req.body as {
+      subjectIds?: string[];
+      topicGroups?: { subjectId: string; groupId: string }[];
+      pageIds?: string[];
+    };
+    const { subjectIds, topicGroups, topicGroupKeys, pageIds } =
+      normalizeBulkDeleteInput(body);
+
+    const subjects = await loadBulkDeleteSubjects(userId, subjectIds);
+    if (subjects.length !== subjectIds.length) {
+      res.status(404).json({ error: "One or more collections not found" });
+      return;
+    }
+
+    const groups = await loadBulkDeleteTopicGroups(userId, topicGroups);
+    if (groups.length !== topicGroups.length) {
+      res.status(404).json({ error: "One or more topics not found" });
+      return;
+    }
+
+    const pages = await loadBulkDeletePages(userId, pageIds);
+    if (pages.length !== pageIds.length) {
+      res.status(404).json({ error: "One or more pages not found" });
+      return;
+    }
+
+    res.json({ success: true });
+
+    void (async () => {
+      try {
+        for (const subject of subjects) {
+          for (const page of subject.topics) {
+            await deletePageAssets(userId, page);
+            scheduleDeletePageVectors(page.id);
+          }
+          for (const group of subject.topicGroups) {
+            for (const page of group.pages) {
+              await deletePageAssets(userId, page);
+              scheduleDeletePageVectors(page.id);
+            }
+          }
+          await prisma.userSubject.delete({ where: { id: subject.id } });
+        }
+
+        for (const group of groups) {
+          for (const page of group.pages) {
+            await deletePageAssets(userId, page);
+            scheduleDeletePageVectors(page.id);
+          }
+          await prisma.userTopicGroup.delete({ where: { id: group.id } });
+        }
+
+        const subjectIdSet = new Set(subjectIds);
+        for (const page of pages) {
+          if (pageCoveredByBulkDelete(page, subjectIdSet, topicGroupKeys)) continue;
+          await deletePageAssets(userId, page);
+          scheduleDeletePageVectors(page.id);
+          await prisma.userTopic.delete({ where: { id: page.id } });
+        }
+      } catch (err) {
+        req.log?.error("my_content.bulk_delete_async_failed", errorFields(err));
+      }
+    })();
+  } catch (err) {
+    req.log?.error("my_content.bulk_delete_failed", errorFields(err));
+    res.status(500).json({ error: "Could not delete selected items" });
+  }
 });
 
 router.delete(

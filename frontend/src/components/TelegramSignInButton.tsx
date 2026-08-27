@@ -8,6 +8,7 @@ import {
   readTelegramWidgetError,
 } from "@/lib/telegramLoginWidget";
 import { useRouter } from "next/navigation";
+import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 
 export type TelegramAuthUser = {
@@ -54,7 +55,8 @@ export function TelegramSignInButton({
   const router = useRouter();
   const hostRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
-  const [hidden, setHidden] = useState(false);
+  const [widgetReady, setWidgetReady] = useState(false);
+  const [failed, setFailed] = useState(false);
   const username = botUsername();
 
   useEffect(() => {
@@ -62,13 +64,14 @@ export function TelegramSignInButton({
       onAvailabilityChange?.(false);
       return;
     }
-    onAvailabilityChange?.(true);
+    onAvailabilityChange?.(false);
   }, [onAvailabilityChange, username]);
 
   useEffect(() => {
     if (!username || !hostRef.current || !isTelegramLoginHostAllowed()) return;
 
-    setHidden(false);
+    setFailed(false);
+    setWidgetReady(false);
 
     window.onShelfTelegramAuth = async (user) => {
       setLoading(true);
@@ -89,6 +92,31 @@ export function TelegramSignInButton({
 
     const host = hostRef.current;
     host.innerHTML = "";
+
+    const markFailed = () => {
+      host.innerHTML = "";
+      setWidgetReady(false);
+      setFailed(true);
+      onAvailabilityChange?.(false);
+    };
+
+    const inspect = () => {
+      if (hasTelegramLoginWidget(host)) {
+        setWidgetReady(true);
+        setFailed(false);
+        onAvailabilityChange?.(true);
+        return;
+      }
+      if (readTelegramWidgetError(host)) {
+        if (isDevEnvironment()) {
+          onError?.(
+            "Telegram Login Widget: register this site with BotFather (/setdomain) if sign-in fails here."
+          );
+        }
+        markFailed();
+      }
+    };
+
     const script = document.createElement("script");
     script.src = "https://telegram.org/js/telegram-widget.js?22";
     script.async = true;
@@ -97,27 +125,6 @@ export function TelegramSignInButton({
     script.setAttribute("data-radius", "8");
     script.setAttribute("data-onauth", "onShelfTelegramAuth(user)");
     script.setAttribute("data-request-access", "write");
-
-    const inspect = () => {
-      if (hasTelegramLoginWidget(host)) {
-        onAvailabilityChange?.(true);
-        return;
-      }
-      const err = readTelegramWidgetError(host);
-      if (!err) return;
-
-      if (isDevEnvironment()) {
-        onError?.(
-          "Telegram Login Widget: register this site with BotFather (/setdomain) if sign-in fails here. The bot itself can still work for PDF forwarding."
-        );
-        return;
-      }
-
-      host.textContent = "";
-      setHidden(true);
-      onAvailabilityChange?.(false);
-    };
-
     script.addEventListener("load", () => window.setTimeout(inspect, 300));
     host.appendChild(script);
 
@@ -149,7 +156,7 @@ export function TelegramSignInButton({
     );
   }
 
-  if (hidden && !isDevEnvironment()) return null;
+  if (failed && !isDevEnvironment()) return null;
 
   return (
     <div className="w-full space-y-2">
@@ -158,7 +165,16 @@ export function TelegramSignInButton({
           Signing in with Telegram...
         </div>
       ) : (
-        <div ref={hostRef} className="flex justify-center w-full min-h-[40px]" />
+        <div
+          ref={hostRef}
+          aria-hidden={!widgetReady && !isDevEnvironment()}
+          className={clsx(
+            "flex justify-center w-full overflow-hidden",
+            widgetReady || isDevEnvironment()
+              ? "min-h-[40px]"
+              : "absolute w-px h-px opacity-0 pointer-events-none overflow-hidden"
+          )}
+        />
       )}
     </div>
   );

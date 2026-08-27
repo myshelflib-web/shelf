@@ -831,6 +831,25 @@ export const api = {
       request<{ success: boolean }>(`/api/my-content/subjects/${id}`, {
         method: "DELETE",
       }),
+    bulkDelete: (data: {
+      subjectIds?: string[];
+      topicGroups?: { subjectId: string; groupId: string }[];
+      pageIds?: string[];
+    }) =>
+      request<{ success: boolean }>("/api/my-content/bulk-delete", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    reorderSubjects: (orderedIds: string[]) =>
+      request<{ success: boolean }>("/api/my-content/subjects/reorder", {
+        method: "PATCH",
+        body: JSON.stringify({ orderedIds }),
+      }),
+    reorderTopicGroups: (subjectId: string, orderedIds: string[]) =>
+      request<{ success: boolean }>(
+        `/api/my-content/subjects/${subjectId}/topic-groups/reorder`,
+        { method: "PATCH", body: JSON.stringify({ orderedIds }) }
+      ),
     updateSubject: (
       id: string,
       data: { name?: string; description?: string | null; icon?: string }

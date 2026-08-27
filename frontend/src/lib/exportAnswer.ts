@@ -2,13 +2,11 @@
 
 import katexPkg from "katex/package.json";
 import type { ChatMessage } from "@/types";
-import {
-  escapeHtml,
-  inlineMarkdownToExportHtml,
-  looksLikeTex,
-  normalizeStudyMarkdown,
-  renderMathHtml,
-} from "@/lib/studyAiMath";
+import { escapeHtml } from "@/lib/studyAiMath";
+import { markdownToExportHtml } from "@/lib/studyAiExportHtml";
+import { prepareExportBody, stabilizeKatexForCapture } from "@/lib/exportCapturePrep";
+
+export { markdownToExportHtml } from "@/lib/studyAiExportHtml";
 
 const KATEX_VERSION = katexPkg.version;
 
@@ -29,154 +27,6 @@ function triggerDownload(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-/** Lightweight MD → HTML for Word / print-friendly exports (with math). */
-export function markdownToExportHtml(md: string): string {
-  const lines = normalizeStudyMarkdown(md).split("\n");
-  const out: string[] = [];
-  let inUl = false;
-  let inOl = false;
-  let inCode = false;
-  let codeBuf: string[] = [];
-
-  const closeLists = () => {
-    if (inUl) {
-      out.push("</ul>");
-      inUl = false;
-    }
-    if (inOl) {
-      out.push("</ol>");
-      inOl = false;
-    }
-  };
-
-  const pushDisplayMath = (tex: string) => {
-    const trimmed = tex.trim();
-    if (!trimmed) return;
-    if (looksLikeTex(trimmed)) {
-      out.push(
-        `<div class="math-block">${renderMathHtml(trimmed, true)}</div>`
-      );
-      return;
-    }
-    out.push(`<p>${inlineMarkdownToExportHtml(trimmed)}</p>`);
-  };
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    if (trimmed.startsWith("```")) {
-      if (inCode) {
-        out.push(
-          `<pre style="white-space:pre-wrap;font-family:monospace;font-size:12px;background:#f4f4f5;padding:12px;border-radius:8px;">${escapeHtml(codeBuf.join("\n"))}</pre>`
-        );
-        codeBuf = [];
-        inCode = false;
-      } else {
-        closeLists();
-        inCode = true;
-      }
-      continue;
-    }
-    if (inCode) {
-      codeBuf.push(line);
-      continue;
-    }
-
-    if (trimmed.startsWith("$$")) {
-      closeLists();
-      if (trimmed.endsWith("$$") && trimmed.length > 4) {
-        pushDisplayMath(trimmed.slice(2, -2));
-        continue;
-      }
-      const mathLines: string[] = [];
-      if (trimmed.length > 2) mathLines.push(trimmed.slice(2));
-      i += 1;
-      while (i < lines.length && !lines[i].trim().endsWith("$$")) {
-        mathLines.push(lines[i]);
-        i += 1;
-      }
-      if (i < lines.length) {
-        const end = lines[i].trim();
-        if (end !== "$$") mathLines.push(end.replace(/\$\$$/, ""));
-      }
-      pushDisplayMath(mathLines.join("\n"));
-      continue;
-    }
-
-    if (trimmed.startsWith("\\[")) {
-      closeLists();
-      if (trimmed.endsWith("\\]") && trimmed.length > 4) {
-        pushDisplayMath(trimmed.slice(2, -2));
-        continue;
-      }
-      const mathLines: string[] = [];
-      if (trimmed.length > 2) mathLines.push(trimmed.slice(2));
-      i += 1;
-      while (i < lines.length && !lines[i].trim().endsWith("\\]")) {
-        mathLines.push(lines[i]);
-        i += 1;
-      }
-      if (i < lines.length) {
-        const end = lines[i].trim();
-        if (end !== "\\]") mathLines.push(end.replace(/\\]$/, ""));
-      }
-      pushDisplayMath(mathLines.join("\n"));
-      continue;
-    }
-
-    if (!trimmed) {
-      closeLists();
-      continue;
-    }
-
-    const h2 = trimmed.match(/^##\s+(.+)$/);
-    const h3 = trimmed.match(/^###\s+(.+)$/);
-    const h1 = trimmed.match(/^#\s+(.+)$/);
-    const ul = trimmed.match(/^[-*•]\s+(.+)$/);
-    const ol = trimmed.match(/^\d+\.\s+(.+)$/);
-
-    if (h1 || h2) {
-      closeLists();
-      out.push(`<h2>${inlineMarkdownToExportHtml((h1 ?? h2)![1])}</h2>`);
-    } else if (h3) {
-      closeLists();
-      out.push(`<h3>${inlineMarkdownToExportHtml(h3[1])}</h3>`);
-    } else if (ul) {
-      if (inOl) {
-        out.push("</ol>");
-        inOl = false;
-      }
-      if (!inUl) {
-        out.push("<ul>");
-        inUl = true;
-      }
-      out.push(`<li>${inlineMarkdownToExportHtml(ul[1])}</li>`);
-    } else if (ol) {
-      if (inUl) {
-        out.push("</ul>");
-        inUl = false;
-      }
-      if (!inOl) {
-        out.push("<ol>");
-        inOl = true;
-      }
-      out.push(`<li>${inlineMarkdownToExportHtml(ol[1])}</li>`);
-    } else {
-      closeLists();
-      out.push(`<p>${inlineMarkdownToExportHtml(trimmed)}</p>`);
-    }
-  }
-
-  if (inCode) {
-    out.push(
-      `<pre style="white-space:pre-wrap;font-family:monospace;">${escapeHtml(codeBuf.join("\n"))}</pre>`
-    );
-  }
-  closeLists();
-  return out.join("\n");
-}
-
 const EXPORT_STYLES = `
   * { box-sizing: border-box; }
   body {
@@ -191,11 +41,31 @@ const EXPORT_STYLES = `
   h1 { font-size: 18pt; margin: 0 0 0.75em; color: #111111; }
   h2 { font-size: 14pt; margin: 1.2em 0 0.4em; color: #111111; }
   h3 { font-size: 12pt; margin: 1em 0 0.35em; color: #111111; }
+  h4 { font-size: 11pt; margin: 0.85em 0 0.3em; color: #111111; }
   p, li { margin: 0.4em 0; color: #111111; }
   ul, ol { padding-left: 1.25em; }
+  table { width: 100%; border-collapse: collapse; margin: 0.75em 0; font-size: 11pt; }
+  th, td { border: 1px solid #d4d4d4; padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #f4f4f5; font-weight: 600; }
   code, pre { font-family: Consolas, monospace; font-size: 10pt; color: #111111; }
+  .code-block {
+    white-space: pre-wrap;
+    font-family: Consolas, monospace;
+    font-size: 10pt;
+    background: #f4f4f5;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 0.75em 0;
+    page-break-inside: avoid;
+  }
+  .mermaid-export, .mermaid-rendered {
+    margin: 0.75em 0;
+    text-align: center;
+    page-break-inside: avoid;
+  }
+  .mermaid-export svg, .mermaid-rendered svg { max-width: 100%; height: auto; }
   a { color: #4444aa; }
-  .math-block { margin: 0.75em 0; overflow-x: auto; text-align: center; page-break-inside: avoid; }
+  .math-block { margin: 0.75em 0; overflow: visible; text-align: center; page-break-inside: avoid; }
   .msg { margin: 1.25em 0; padding: 0.75em 1em; border-radius: 10px; page-break-inside: avoid; }
   .msg-user { background: #eef0ff; border: 1px solid #d8dcf5; }
   .msg-ai { background: #f7f7f5; border: 1px solid #e4e3df; }
@@ -206,9 +76,16 @@ const EXPORT_STYLES = `
     color: #666666;
     margin-bottom: 0.35em;
   }
-  .katex { font-size: 1.05em; color: #111111; }
-  .katex-display { margin: 0.5em 0; overflow-x: auto; overflow-y: hidden; }
-  .katex .base { position: relative; }
+  .katex {
+    font-size: 1.05em;
+    color: #111111;
+    display: inline-block !important;
+    vertical-align: middle !important;
+    line-height: 1.2 !important;
+  }
+  .katex .katex-html, .katex .base, .katex .strut { position: static !important; }
+  .katex-display { margin: 0.5em 0; overflow: visible; text-align: center; display: block !important; }
+  .katex .base { position: static !important; }
   .katex-error { color: #111111 !important; }
 `;
 
@@ -276,6 +153,7 @@ async function waitForIframeReady(iframe: HTMLIFrameElement): Promise<HTMLElemen
   );
   await doc.fonts.ready.catch(() => {});
   await new Promise((r) => window.setTimeout(r, 400));
+  await prepareExportBody(doc.body);
   return doc.body;
 }
 
@@ -365,6 +243,9 @@ async function downloadHtmlAsPdf(title: string, bodyInner: string) {
       height: body.scrollHeight,
       windowWidth: body.scrollWidth,
       windowHeight: body.scrollHeight,
+      onclone: (clonedDoc) => {
+        if (clonedDoc.body) stabilizeKatexForCapture(clonedDoc.body);
+      },
     });
 
     if (canvas.width < 2 || canvas.height < 2) {

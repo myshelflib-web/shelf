@@ -4,7 +4,8 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { useAuth } from "@/hooks/useAuth";
-import { GoogleSignInButton, isGoogleSignInConfigured } from "@/components/GoogleSignInButton";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { useGoogleClientId } from "@/components/GoogleAuthProvider";
 import { TelegramSignInButton, isTelegramSignInConfigured } from "@/components/TelegramSignInButton";
 import { isDevEnvironment } from "@/lib/userFacingError";
 import { ShelfLogo } from "@/components/ShelfLogo";
@@ -32,9 +33,10 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [telegramVisible, setTelegramVisible] = useState(
-    () => isTelegramSignInConfigured() || isDevEnvironment()
-  );
+  const [telegramVisible, setTelegramVisible] = useState(false);
+  const googleClientId = useGoogleClientId();
+  const googleConfigured =
+    Boolean(googleClientId) && !googleClientId.includes("your-google-client-id");
 
   if (authLoading) {
     return <ThinkingIndicator label="Loading" />;
@@ -98,11 +100,10 @@ function LoginForm() {
     }
   };
 
-  const showGoogleSignIn =
-    isGoogleSignInConfigured() || isDevEnvironment();
+  const showGoogleSignIn = googleConfigured || isDevEnvironment();
+  const telegramConfigured = isTelegramSignInConfigured();
   const showTelegramSignIn =
-    (isTelegramSignInConfigured() || isDevEnvironment()) &&
-    (isDevEnvironment() || telegramVisible);
+    telegramConfigured && (isDevEnvironment() || telegramVisible);
   const showSocialSignIn = showGoogleSignIn || showTelegramSignIn;
 
   return (
@@ -243,7 +244,7 @@ function LoginForm() {
             {showGoogleSignIn ? (
               <GoogleSignInButton onError={setError} redirectTo={nextPath} />
             ) : null}
-            {showTelegramSignIn ? (
+            {telegramConfigured ? (
               <TelegramSignInButton
                 onError={setError}
                 onAvailabilityChange={setTelegramVisible}
