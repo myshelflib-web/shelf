@@ -1,12 +1,16 @@
 /** Client-side export helpers for Study AI answers and full chats. */
 
+import katexPkg from "katex/package.json";
 import type { ChatMessage } from "@/types";
 import {
   escapeHtml,
   inlineMarkdownToExportHtml,
+  looksLikeTex,
   normalizeStudyMarkdown,
   renderMathHtml,
 } from "@/lib/studyAiMath";
+
+const KATEX_VERSION = katexPkg.version;
 
 function safeFilename(title: string): string {
   const base = title.trim() || "study-ai-answer";
@@ -45,6 +49,18 @@ export function markdownToExportHtml(md: string): string {
     }
   };
 
+  const pushDisplayMath = (tex: string) => {
+    const trimmed = tex.trim();
+    if (!trimmed) return;
+    if (looksLikeTex(trimmed)) {
+      out.push(
+        `<div class="math-block">${renderMathHtml(trimmed, true)}</div>`
+      );
+      return;
+    }
+    out.push(`<p>${inlineMarkdownToExportHtml(trimmed)}</p>`);
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
@@ -70,9 +86,7 @@ export function markdownToExportHtml(md: string): string {
     if (trimmed.startsWith("$$")) {
       closeLists();
       if (trimmed.endsWith("$$") && trimmed.length > 4) {
-        out.push(
-          `<div class="math-block">${renderMathHtml(trimmed.slice(2, -2).trim(), true)}</div>`
-        );
+        pushDisplayMath(trimmed.slice(2, -2));
         continue;
       }
       const mathLines: string[] = [];
@@ -86,18 +100,14 @@ export function markdownToExportHtml(md: string): string {
         const end = lines[i].trim();
         if (end !== "$$") mathLines.push(end.replace(/\$\$$/, ""));
       }
-      out.push(
-        `<div class="math-block">${renderMathHtml(mathLines.join("\n").trim(), true)}</div>`
-      );
+      pushDisplayMath(mathLines.join("\n"));
       continue;
     }
 
     if (trimmed.startsWith("\\[")) {
       closeLists();
       if (trimmed.endsWith("\\]") && trimmed.length > 4) {
-        out.push(
-          `<div class="math-block">${renderMathHtml(trimmed.slice(2, -2).trim(), true)}</div>`
-        );
+        pushDisplayMath(trimmed.slice(2, -2));
         continue;
       }
       const mathLines: string[] = [];
@@ -111,9 +121,7 @@ export function markdownToExportHtml(md: string): string {
         const end = lines[i].trim();
         if (end !== "\\]") mathLines.push(end.replace(/\\]$/, ""));
       }
-      out.push(
-        `<div class="math-block">${renderMathHtml(mathLines.join("\n").trim(), true)}</div>`
-      );
+      pushDisplayMath(mathLines.join("\n"));
       continue;
     }
 
@@ -187,7 +195,7 @@ const EXPORT_STYLES = `
   ul, ol { padding-left: 1.25em; }
   code, pre { font-family: Consolas, monospace; font-size: 10pt; color: #111111; }
   a { color: #4444aa; }
-  .math-block { margin: 0.75em 0; overflow-x: auto; text-align: center; }
+  .math-block { margin: 0.75em 0; overflow-x: auto; text-align: center; page-break-inside: avoid; }
   .msg { margin: 1.25em 0; padding: 0.75em 1em; border-radius: 10px; page-break-inside: avoid; }
   .msg-user { background: #eef0ff; border: 1px solid #d8dcf5; }
   .msg-ai { background: #f7f7f5; border: 1px solid #e4e3df; }
@@ -199,6 +207,9 @@ const EXPORT_STYLES = `
     margin-bottom: 0.35em;
   }
   .katex { font-size: 1.05em; color: #111111; }
+  .katex-display { margin: 0.5em 0; overflow-x: auto; overflow-y: hidden; }
+  .katex .base { position: relative; }
+  .katex-error { color: #111111 !important; }
 `;
 
 function buildChatExportInnerHtml(
@@ -211,10 +222,7 @@ function buildChatExportInnerHtml(
     .map((m) => {
       const label = m.role === "user" ? "You" : "Study AI";
       const cls = m.role === "user" ? "msg-user" : "msg-ai";
-      const body =
-        m.role === "user"
-          ? `<p style="white-space:pre-wrap;margin:0">${escapeHtml(m.content)}</p>`
-          : markdownToExportHtml(m.content);
+      const body = markdownToExportHtml(m.content);
       return `<section class="msg ${cls}"><div class="msg-label">${label}</div>${body}</section>`;
     });
   return `<h1>${escapeHtml(pageTitle)}</h1>\n${parts.join("\n")}`;
@@ -226,7 +234,7 @@ function buildExportSrcDoc(bodyInner: string): string {
 <head>
 <meta charset="utf-8"/>
 <style>${EXPORT_STYLES}</style>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@${KATEX_VERSION}/dist/katex.min.css"/>
 </head>
 <body>${bodyInner}</body>
 </html>`;
@@ -267,7 +275,7 @@ async function waitForIframeReady(iframe: HTMLIFrameElement): Promise<HTMLElemen
     )
   );
   await doc.fonts.ready.catch(() => {});
-  await new Promise((r) => window.setTimeout(r, 150));
+  await new Promise((r) => window.setTimeout(r, 400));
   return doc.body;
 }
 

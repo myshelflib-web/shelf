@@ -4,8 +4,9 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { useAuth } from "@/hooks/useAuth";
-import { GoogleSignInButton } from "@/components/GoogleSignInButton";
-import { TelegramSignInButton } from "@/components/TelegramSignInButton";
+import { GoogleSignInButton, isGoogleSignInConfigured } from "@/components/GoogleSignInButton";
+import { TelegramSignInButton, isTelegramSignInConfigured } from "@/components/TelegramSignInButton";
+import { isDevEnvironment } from "@/lib/userFacingError";
 import { ShelfLogo } from "@/components/ShelfLogo";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { api } from "@/lib/api";
@@ -93,6 +94,12 @@ function LoginForm() {
       setLoading(false);
     }
   };
+
+  const showGoogleSignIn =
+    isGoogleSignInConfigured() || isDevEnvironment();
+  const showTelegramSignIn =
+    isTelegramSignInConfigured() || isDevEnvironment();
+  const showSocialSignIn = showGoogleSignIn || showTelegramSignIn;
 
   return (
     <div className="w-full max-w-md">
@@ -216,19 +223,27 @@ function LoginForm() {
           </p>
         )}
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[var(--border)]" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-[var(--bg-secondary)] px-2 text-[var(--text-muted)]">
-              or continue with
-            </span>
-          </div>
-        </div>
+        {showSocialSignIn ? (
+          <>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-[var(--border)]" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-[var(--bg-secondary)] px-2 text-[var(--text-muted)]">
+                  or continue with
+                </span>
+              </div>
+            </div>
 
-        <GoogleSignInButton onError={setError} redirectTo={nextPath} />
-        <TelegramSignInButton onError={setError} redirectTo={nextPath} />
+            {showGoogleSignIn ? (
+              <GoogleSignInButton onError={setError} redirectTo={nextPath} />
+            ) : null}
+            {showTelegramSignIn ? (
+              <TelegramSignInButton onError={setError} redirectTo={nextPath} />
+            ) : null}
+          </>
+        ) : null}
       </div>
 
       <p className="text-center text-sm text-[var(--text-secondary)] mt-4">

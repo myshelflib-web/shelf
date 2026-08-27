@@ -20,6 +20,8 @@ import {
   activatePremiumForUser,
   computePremiumExpiry,
 } from "../services/billing/activate.js";
+import { toUserFacingError } from "../utils/userFacingError.js";
+
 const router = Router();
 
 function mapRazorpayStatus(status: string) {
@@ -41,7 +43,10 @@ router.post(
   async (req: Request, res: Response) => {
     if (!razorpayConfigured()) {
       res.status(503).json({
-        error: "Payments not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.",
+        error: toUserFacingError(
+          "Payments not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.",
+          "Payments aren’t available right now. Please try again later."
+        ),
       });
       return;
     }

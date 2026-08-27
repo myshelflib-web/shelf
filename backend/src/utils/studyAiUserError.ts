@@ -16,7 +16,8 @@ export function mapStudyAiErrorMessage(raw: string): string {
     text.length <= 180 &&
     !text.includes("{") &&
     !text.includes("[") &&
-    !/error \(\d+\)|request failed \(\d+\)/i.test(text)
+    !/error \(\d+\)|request failed \(\d+\)/i.test(text) &&
+    !/\b(set|add)\s+[A-Z_]|is not configured\b/i.test(text)
   ) {
     return text;
   }

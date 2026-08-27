@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { PenLine, FileText, Upload, X } from "lucide-react";
+import { FolderUp, PenLine, FileText, Upload, X } from "lucide-react";
 import { FileUploadZone } from "@/components/FileUploadZone";
+import { FolderUploadZone } from "@/components/my-content/FolderUploadZone";
 import type { UploadProgress } from "@/lib/api";
 import {
   SKETCH_BACKGROUNDS,
@@ -11,7 +12,7 @@ import {
 } from "@/lib/sketchNotebook";
 
 export type AddModalKind = "notebook" | "topic" | "page";
-export type PageAddMode = "file" | "sketch" | "doc" | "link";
+export type PageAddMode = "file" | "bulk" | "sketch" | "doc" | "link";
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -24,6 +25,7 @@ function submitLabel(
   submitting: boolean,
   uploadProgress: UploadProgress | null
 ) {
+  if (submitting && addMode === "bulk") return "Importing…";
   if (submitting && addMode === "file") {
     if (uploadProgress && uploadProgress.percent < 100) {
       return `Uploading ${uploadProgress.percent}%`;
@@ -33,6 +35,14 @@ function submitLabel(
   if (submitting && addMode === "link") return "Adding…";
   if (submitting) return "Creating…";
   if (addMode === "link") return "Add link";
+  if (addMode === "bulk") {
+    return (
+      <>
+        <FolderUp className="w-4 h-4" />
+        Import folders
+      </>
+    );
+  }
   if (addMode === "file") {
     return (
       <>
@@ -100,6 +110,8 @@ interface MyContentAddModalProps {
   addMode: PageAddMode;
   pageLink: string;
   uploadFile: File | null;
+  bulkFiles: File[];
+  bulkProgress: { done: number; total: number; label: string } | null;
   submitting: boolean;
   uploadProgress: UploadProgress | null;
   message: string;
@@ -112,6 +124,7 @@ interface MyContentAddModalProps {
   onAddModeChange: (mode: PageAddMode) => void;
   onPageLinkChange: (v: string) => void;
   onUploadFileChange: (f: File | null) => void;
+  onBulkFilesChange: (files: File[]) => void;
   onSketchTemplateChange: (t: SketchTemplate) => void;
   onSketchBgChange: (c: string) => void;
   onSubmitNotebook: (e: React.FormEvent) => void;
@@ -132,6 +145,8 @@ export function MyContentAddModal({
   addMode,
   pageLink,
   uploadFile,
+  bulkFiles,
+  bulkProgress,
   submitting,
   uploadProgress,
   message,
@@ -142,6 +157,7 @@ export function MyContentAddModal({
   onAddModeChange,
   onPageLinkChange,
   onUploadFileChange,
+  onBulkFilesChange,
   sketchTemplate,
   sketchBg,
   onSketchTemplateChange,
@@ -276,6 +292,7 @@ export function MyContentAddModal({
               {(
                 [
                   ["file", "Upload"],
+                  ["bulk", "Folders"],
                   ["link", "Link"],
                   ["sketch", "Notebook"],
                   ["doc", "Doc"],
@@ -297,10 +314,56 @@ export function MyContentAddModal({
               placeholder="Page title"
               value={pageTitle}
               onChange={(e) => onPageTitleChange(e.target.value)}
-              required
-              disabled={submitting}
+              required={addMode !== "bulk"}
+              disabled={submitting || addMode === "bulk"}
               className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
             />
+            {addMode === "bulk" && !notebookName ? (
+              <>
+                <input
+                  type="text"
+                  placeholder="Collection name for this import"
+                  value={notebookNameInput}
+                  onChange={(e) => onNotebookNameChange(e.target.value)}
+                  required
+                  disabled={submitting}
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
+                />
+                <p className="text-xs text-[var(--text-muted)]">
+                  Each selected folder becomes a topic; PDFs inside are uploaded as pages.
+                </p>
+              </>
+            ) : null}
+            {addMode === "bulk" && notebookName ? (
+              <p className="text-xs text-[var(--text-muted)]">
+                Importing into {notebookName}. Folder names become topics; PDFs inside become pages.
+              </p>
+            ) : null}
+            {addMode === "bulk" && (
+              <>
+                <FolderUploadZone
+                  files={bulkFiles}
+                  onChange={onBulkFilesChange}
+                  disabled={submitting}
+                />
+                {submitting && bulkProgress ? (
+                  <UploadProgressBar
+                    progress={{
+                      loaded: bulkProgress.done,
+                      total: bulkProgress.total,
+                      percent: Math.round(
+                        (bulkProgress.done / Math.max(bulkProgress.total, 1)) * 100
+                      ),
+                    }}
+                  />
+                ) : null}
+                {submitting && bulkProgress ? (
+                  <p className="text-xs text-[var(--text-muted)] truncate">
+                    {bulkProgress.label}
+                  </p>
+                ) : null}
+              </>
+            )}
             {addMode === "file" && (
               <>
                 <FileUploadZone
@@ -399,6 +462,9 @@ export function MyContentAddModal({
               disabled={
                 submitting ||
                 (addMode === "file" && !uploadFile) ||
+                (addMode === "bulk" &&
+                  (bulkFiles.length === 0 ||
+                    (!notebookName && !notebookNameInput.trim()))) ||
                 (addMode === "link" && !pageLink.trim())
               }
               className="btn-primary w-full sm:w-auto"

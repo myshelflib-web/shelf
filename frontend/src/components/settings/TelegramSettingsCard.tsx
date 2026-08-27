@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { isDevEnvironment, toUserFacingError } from "@/lib/userFacingError";
 
 export function TelegramSettingsCard() {
   const { user, refreshUser } = useAuth();
@@ -21,7 +22,11 @@ export function TelegramSettingsCard() {
       .status()
       .then(setStatus)
       .catch((err) =>
-        setError(err instanceof Error ? err.message : "Could not load Telegram")
+        setError(
+          toUserFacingError(
+            err instanceof Error ? err.message : "Could not load Telegram"
+          )
+        )
       );
   };
 
@@ -45,7 +50,11 @@ export function TelegramSettingsCard() {
         load();
       }, 2500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start linking");
+      setError(
+        toUserFacingError(
+          err instanceof Error ? err.message : "Could not start linking"
+        )
+      );
     } finally {
       setBusy(false);
     }
@@ -61,7 +70,11 @@ export function TelegramSettingsCard() {
       load();
       setMessage("Telegram disconnected.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not unlink");
+      setError(
+        toUserFacingError(
+          err instanceof Error ? err.message : "Could not unlink"
+        )
+      );
     } finally {
       setBusy(false);
     }
@@ -70,6 +83,10 @@ export function TelegramSettingsCard() {
   const linked = status?.linked ?? user?.telegramLinked ?? false;
   const tgName =
     status?.telegramUsername ?? user?.telegramUsername ?? null;
+
+  if (status && !status.configured && !isDevEnvironment()) {
+    return null;
+  }
 
   return (
     <section className="p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] space-y-3">

@@ -7,16 +7,21 @@ import {
   useEffect,
   useMemo,
   useState,
-  type DragEvent,
   type FormEvent,
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import { api, type UploadProgress, type UploadProgressHandler } from "@/lib/api";
 import { requireOnline } from "@/lib/offline/notice";
-import { pageHref, getTopicGroups } from "@/lib/myContentTree";
+import { getTopicGroups } from "@/lib/myContentTree";
 import { UserPageSummary, UserSubject, UserTopicGroup } from "@/types";
-import { MyContentAddModal, AddModalKind } from "./MyContentAddModal";
+import { MyContentAddModal, type AddModalKind } from "./MyContentAddModal";
+import { MyContentAddDropLayer } from "./MyContentAddDropLayer";
+import {
+  submitAddPage,
+  submitBulkFolderImport,
+} from "./myContentAddPageSubmit";
+import { useMyContentAddDrop } from "./useMyContentAddDrop";
 import { SHELF_OPEN_ADD } from "@/lib/hotkeys";
 import {
   emitContentChanged,
@@ -24,16 +29,10 @@ import {
 } from "@/lib/contentEvents";
 import { isReaderHref } from "@/lib/softNavigate";
 import { scopeFromHref } from "@/components/my-content/reader/types";
-import { createDocHtml } from "@/lib/docEditor";
-import {
-  createSketchNotebookHtml,
-  type SketchTemplate,
-} from "@/lib/sketchNotebook";
+import type { SketchTemplate } from "@/lib/sketchNotebook";
 import { findCachedSubject } from "@/lib/offline/library";
 import {
   addContextFromPath,
-  isFileDrag,
-  pickDroppedFile,
   titleFromFile,
 } from "./myContentAddUtils";
 
@@ -45,8 +44,10 @@ export interface AddTarget {
   topic?: UserTopicGroup;
   /** Prefill the upload field (e.g. after a drag-and-drop). */
   file?: File;
-  /** Open the page modal on a specific tab (upload / sketch / doc / URL). */
-  pageMode?: "file" | "sketch" | "doc" | "link";
+  /** Open the page modal on a specific tab (upload / sketch / doc / URL / bulk). */
+  pageMode?: "file" | "bulk" | "sketch" | "doc" | "link";
+  /** Prefill bulk folder import. */
+  bulkFiles?: File[];
 }
 
 interface AddContextValue {
@@ -79,12 +80,18 @@ export function MyContentAddProvider({
   const [topicTitle, setTopicTitle] = useState("");
   const [pageTitle, setPageTitle] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [bulkProgress, setBulkProgress] = useState<{
+    done: number;
+    total: number;
+    label: string;
+  } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(
     null
   );
   const [message, setMessage] = useState("");
-  const [addMode, setAddMode] = useState<"file" | "sketch" | "doc" | "link">("file");
+  const [addMode, setAddMode] = useState<"file" | "bulk" | "sketch" | "doc" | "link">("file");
   const [pageLink, setPageLink] = useState("");
   const [sketchTemplate, setSketchTemplate] = useState<SketchTemplate>("ruled");
   const [sketchBg, setSketchBg] = useState("#ffffff");
@@ -95,6 +102,8 @@ export function MyContentAddProvider({
     setTopicTitle("");
     setPageTitle("");
     setUploadFile(null);
+    setBulkFiles([]);
+    setBulkProgress(null);
     setPageLink("");
     setAddMode("file");
     setSketchTemplate("ruled");
@@ -113,7 +122,16 @@ export function MyContentAddProvider({
     } else if (next.pageMode) {
       setAddMode(next.pageMode);
     }
-    setTarget({ ...next, kind: next.file ? "page" : next.kind, file: undefined });
+    if (next.bulkFiles?.length) {
+      setAddMode("bulk");
+      setBulkFiles(next.bulkFiles);
+    }
+    setTarget({
+      ...next,
+      kind: next.file || next.bulkFiles?.length ? "page" : next.kind,
+      file: undefined,
+      bulkFiles: undefined,
+    });
   }, []);
 
   const openAddFromHotkey = useCallback((kind: AddModalKind) => {
@@ -228,104 +246,57 @@ export function MyContentAddProvider({
     }
   };
 
-  const assertUploadOk = (file: File) => {
-    const name = file.name.toLowerCase();
-    if (!/\.(pdf|txt|md|markdown|docx)$/.test(name)) {
-      throw new Error(
-        "Use PDF, TXT, MD, or DOCX. HTML and other scriptable formats are not allowed."
-      );
-    }
-  };
-
   const handleAddPage = async (e: FormEvent) => {
     e.preventDefault();
+    if (addMode === "bulk") {
+      if (bulkFiles.length === 0) return;
+      if (!requireOnline("Import folders")) return;
+      setSubmitting(true);
+      setMessage("");
+      setBulkProgress({ done: 0, total: bulkFiles.length, label: "Starting…" });
+      try {
+        const result = await submitBulkFolderImport({
+          bulkFiles,
+          notebook: target?.notebook,
+          notebookName,
+          reportUploadProgress,
+          onProgress: setBulkProgress,
+        });
+        close();
+        if (result) openCreatedPage(result.href, result.page);
+      } catch (err) {
+        setMessage(err instanceof Error ? err.message : "Folder import failed");
+      } finally {
+        setSubmitting(false);
+        setBulkProgress(null);
+        setUploadProgress(null);
+      }
+      return;
+    }
     if (!pageTitle.trim()) return;
     if (!requireOnline("Add pages")) return;
     setSubmitting(true);
     setMessage("");
     try {
-      const notebook = target?.notebook;
-      const topic = target?.topic;
-      let page: UserPageSummary;
-
       if (addMode === "file" && uploadFile) {
-        assertUploadOk(uploadFile);
-        const fd = new FormData();
-        fd.append("file", uploadFile);
-        fd.append("title", pageTitle);
         setUploadProgress({
           loaded: 0,
           total: uploadFile.size,
           percent: 0,
         });
-        if (notebook && topic) {
-          ({ page } = await api.myContent.uploadFile(
-            notebook.id,
-            topic.id,
-            fd,
-            reportUploadProgress
-          ));
-        } else if (notebook) {
-          ({ page } = await api.myContent.uploadNotebookFile(
-            notebook.id,
-            fd,
-            reportUploadProgress
-          ));
-        } else {
-          ({ page } = await api.myContent.uploadRootFile(
-            fd,
-            reportUploadProgress
-          ));
-        }
-      } else if (addMode === "link") {
-        const body = { title: pageTitle, sourceUrl: pageLink };
-        if (notebook && topic) {
-          ({ page } = await api.myContent.createPage(notebook.id, topic.id, body));
-        } else if (notebook) {
-          ({ page } = await api.myContent.createNotebookPage(notebook.id, body));
-        } else {
-          ({ page } = await api.myContent.createRootPage(body));
-        }
-      } else if (addMode === "sketch") {
-        const body = {
-          title: pageTitle,
-          htmlContent: createSketchNotebookHtml({
-            bg: sketchBg,
-            template: sketchTemplate,
-          }),
-        };
-        if (notebook && topic) {
-          ({ page } = await api.myContent.createPage(notebook.id, topic.id, body));
-        } else if (notebook) {
-          ({ page } = await api.myContent.createNotebookPage(notebook.id, body));
-        } else {
-          ({ page } = await api.myContent.createRootPage(body));
-        }
-      } else {
-        const body = {
-          title: pageTitle,
-          htmlContent: createDocHtml(pageTitle),
-        };
-        if (notebook && topic) {
-          ({ page } = await api.myContent.createPage(notebook.id, topic.id, body));
-        } else if (notebook) {
-          ({ page } = await api.myContent.createNotebookPage(notebook.id, body));
-        } else {
-          ({ page } = await api.myContent.createRootPage(body));
-        }
       }
-
-      close();
-      const href = pageHref(notebook?.slug, topic?.slug, page.slug);
-      emitContentChanged({
-        type: "page-created",
-        page,
-        href,
-        notebookId: notebook?.id,
-        notebookSlug: notebook?.slug ?? null,
-        topicId: topic?.id,
-        topicSlug: topic?.slug ?? null,
+      const { page, href } = await submitAddPage({
+        addMode,
+        pageTitle,
+        pageLink,
+        uploadFile,
+        notebook: target?.notebook,
+        topic: target?.topic,
+        sketchTemplate,
+        sketchBg,
+        reportUploadProgress,
       });
+      close();
       openCreatedPage(href, page);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to add page");
@@ -337,108 +308,35 @@ export function MyContentAddProvider({
 
   const value = useMemo(() => ({ openAdd }), [openAdd]);
 
-  const [fileDragDepth, setFileDragDepth] = useState(0);
+  const {
+    fileDragDepth,
+    onFileDragEnter,
+    onFileDragLeave,
+    onFileDragOver,
+    onFileDrop,
+  } = useMyContentAddDrop({
+    submitting,
+    targetKind: target?.kind,
+    openAdd,
+    setAddMode,
+    setUploadFile,
+    setPageTitle,
+  });
 
-  const openDroppedFile = useCallback(
-    (file: File) => {
-      const ctx = addContextFromPath(window.location.pathname);
-      if (!ctx.notebookSlug) {
-        openAdd({ kind: "page", file });
-        return;
-      }
-      const apply = (subject: UserSubject) => {
-        const topic = ctx.topicSlug
-          ? getTopicGroups(subject).find((g) => g.slug === ctx.topicSlug)
-          : undefined;
-        openAdd({ kind: "page", notebook: subject, topic, file });
-      };
-      const cached = findCachedSubject(ctx.notebookSlug);
-      if (cached) {
-        apply(cached);
-        return;
-      }
-      openAdd({ kind: "page", file });
-      void api.myContent
-        .getSubject(ctx.notebookSlug)
-        .then(({ subject }) => apply(subject))
-        .catch(() => {});
-    },
-    [openAdd]
-  );
-
-  const onFileDragEnter = useCallback((e: DragEvent) => {
-    if (!isFileDrag(e)) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setFileDragDepth((d) => d + 1);
-  }, []);
-
-  const onFileDragLeave = useCallback((e: DragEvent) => {
-    if (!isFileDrag(e)) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setFileDragDepth((d) => Math.max(0, d - 1));
-  }, []);
-
-  const onFileDragOver = useCallback((e: DragEvent) => {
-    if (!isFileDrag(e)) return;
-    e.preventDefault();
-    e.stopPropagation();
-    e.dataTransfer.dropEffect = "copy";
-  }, []);
-
-  const onFileDrop = useCallback(
-    (e: DragEvent) => {
-      if (!isFileDrag(e)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      setFileDragDepth(0);
-      if (submitting) return;
-      const file = pickDroppedFile(e.dataTransfer.files);
-      if (!file) return;
-      // If add modal already open on page/file mode, just fill the file.
-      if (target?.kind === "page") {
-        setAddMode("file");
-        setUploadFile(file);
-        setPageTitle((t) => t.trim() || titleFromFile(file));
-        return;
-      }
-      void openDroppedFile(file);
-    },
-    [openDroppedFile, submitting, target?.kind]
-  );
-
-  // Only force a topic name when creating inside a notebook without a topic
-  // and the user somehow still needs one — we no longer auto-create topics.
   const needsTopic = false;
 
   return (
     <AddContext.Provider value={value}>
-      <div
-        className="relative h-full min-h-0"
-        inert={target ? true : undefined}
+      <MyContentAddDropLayer
+        fileDragDepth={fileDragDepth}
+        inert={Boolean(target)}
         onDragEnter={onFileDragEnter}
         onDragLeave={onFileDragLeave}
         onDragOver={onFileDragOver}
         onDrop={onFileDrop}
       >
         {children}
-        {fileDragDepth > 0 && (
-          <div
-            className="pointer-events-none absolute inset-0 z-[60] flex items-center justify-center bg-[var(--bg-primary)]/75 backdrop-blur-[1px]"
-            aria-hidden
-          >
-            <div className="rounded-2xl border-2 border-dashed border-[var(--accent)] bg-[var(--bg-elevated)] px-8 py-6 text-center shadow-xl">
-              <p className="text-base font-semibold text-[var(--text-primary)]">
-                Drop to upload
-              </p>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">
-                PDF, TXT, MD, or DOCX
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
+      </MyContentAddDropLayer>
       {target && (
         <MyContentAddModal
           kind={target.kind}
@@ -452,6 +350,8 @@ export function MyContentAddProvider({
           addMode={addMode}
           pageLink={pageLink}
           uploadFile={uploadFile}
+          bulkFiles={bulkFiles}
+          bulkProgress={bulkProgress}
           submitting={submitting}
           uploadProgress={uploadProgress}
           message={message}
@@ -462,6 +362,7 @@ export function MyContentAddProvider({
           onAddModeChange={setAddMode}
           onPageLinkChange={setPageLink}
           onUploadFileChange={setUploadFile}
+          onBulkFilesChange={setBulkFiles}
           sketchTemplate={sketchTemplate}
           sketchBg={sketchBg}
           onSketchTemplateChange={setSketchTemplate}

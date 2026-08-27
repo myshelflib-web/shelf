@@ -3,6 +3,8 @@
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { useGoogleClientId } from "@/components/GoogleAuthProvider";
 import { useAuth } from "@/hooks/useAuth";
+import { resolveGoogleClientId } from "@/lib/publicConfig";
+import { isDevEnvironment, toUserFacingError } from "@/lib/userFacingError";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -35,6 +37,11 @@ function GoogleIcon() {
   );
 }
 
+export function isGoogleSignInConfigured(): boolean {
+  const clientId = resolveGoogleClientId();
+  return Boolean(clientId) && !clientId.includes("your-google-client-id");
+}
+
 export function GoogleSignInButton({ onError, redirectTo = "/my-content" }: GoogleSignInButtonProps) {
   const { loginWithGoogle } = useAuth();
   const router = useRouter();
@@ -65,13 +72,19 @@ export function GoogleSignInButton({ onError, redirectTo = "/my-content" }: Goog
       await loginWithGoogle(response.credential);
       router.push(redirectTo);
     } catch (err) {
-      onError?.(err instanceof Error ? err.message : "Google sign-in failed");
+      onError?.(
+        toUserFacingError(
+          err instanceof Error ? err.message : "Google sign-in failed",
+          "Google sign-in failed"
+        )
+      );
     } finally {
       setLoading(false);
     }
   };
 
   if (!clientId || clientId.includes("your-google-client-id")) {
+    if (!isDevEnvironment()) return null;
     return (
       <div className="space-y-2">
         <button

@@ -20,6 +20,7 @@ import {
 } from "../services/email/index.js";
 import { isStudyGoal } from "../studyGoal.js";
 import { toPublicUser, userSelect } from "../utils/publicUser.js";
+import { toUserFacingError } from "../utils/userFacingError.js";
 import { QuotaError, assertStorageRoom } from "../utils/quotas.js";
 import { param } from "../utils/param.js";
 
@@ -294,8 +295,10 @@ router.post("/google", async (req: Request, res: Response) => {
 
     issueAuthResponse(res, user, 201);
   } catch (err) {
-    const message =
-      err instanceof Error ? err.message : "Google authentication failed";
+    const message = toUserFacingError(
+      err instanceof Error ? err.message : "Google authentication failed",
+      "Google sign-in failed"
+    );
     res.status(401).json({ error: message });
   }
 });
@@ -308,11 +311,15 @@ router.post("/telegram", async (req: Request, res: Response) => {
     );
   } catch (err) {
     if (err instanceof TelegramAuthError) {
-      res.status(err.status).json({ error: err.message });
+      res.status(err.status).json({
+        error: toUserFacingError(err.message, "Telegram sign-in failed"),
+      });
       return;
     }
-    const message =
-      err instanceof Error ? err.message : "Telegram authentication failed";
+    const message = toUserFacingError(
+      err instanceof Error ? err.message : "Telegram authentication failed",
+      "Telegram sign-in failed"
+    );
     res.status(401).json({ error: message });
   }
 });

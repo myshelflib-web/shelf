@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import prisma from "../utils/prisma.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { errorFields, logger } from "../utils/logger.js";
+import { toUserFacingError } from "../utils/userFacingError.js";
 import {
   downloadTelegramFile,
   isPdfDocument,
@@ -57,7 +58,12 @@ router.get("/status", authMiddleware, async (req: Request, res: Response) => {
 
 router.post("/link", authMiddleware, async (req: Request, res: Response) => {
   if (!isTelegramConfigured()) {
-    res.status(503).json({ error: "Telegram is not configured" });
+    res.status(503).json({
+      error: toUserFacingError(
+        "Telegram is not configured",
+        "Telegram isn’t available right now. Please try again later."
+      ),
+    });
     return;
   }
   try {

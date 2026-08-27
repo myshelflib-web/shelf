@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ExternalLink, Link2, Unlink, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { isDevEnvironment, toUserFacingError } from "@/lib/userFacingError";
 
 /** Full-bleed circular mark — same optical fill as Spotify (viewBox 0–24). */
 function TelegramMark({ className }: { className?: string }) {
@@ -50,7 +51,9 @@ export function TelegramDockPanel({
       return next;
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Could not load Telegram"
+        toUserFacingError(
+          err instanceof Error ? err.message : "Could not load Telegram"
+        )
       );
       return null;
     }
@@ -71,7 +74,11 @@ export function TelegramDockPanel({
         void load();
       }, 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start linking");
+      setError(
+        toUserFacingError(
+          err instanceof Error ? err.message : "Could not start linking"
+        )
+      );
     } finally {
       setBusy(false);
     }
@@ -109,7 +116,11 @@ export function TelegramDockPanel({
       await load();
       setHint("Telegram disconnected. PDFs already in My Content stay put.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not unlink");
+      setError(
+        toUserFacingError(
+          err instanceof Error ? err.message : "Could not unlink"
+        )
+      );
     } finally {
       setBusy(false);
     }
@@ -160,8 +171,9 @@ export function TelegramDockPanel({
           <div className="rounded-[10px] border border-dashed border-[var(--border)] px-4 py-8 text-center">
             <TelegramMark className="w-8 h-8 mx-auto mb-2 text-[var(--text-muted)]" />
             <p className="text-[12px] text-[var(--text-muted)] leading-relaxed">
-              Telegram is not configured yet. Add bot env vars on the API, then
-              reopen this panel.
+              {isDevEnvironment()
+                ? "Telegram is not configured yet. Add bot env vars on the API, then reopen this panel."
+                : "Telegram isn’t available right now."}
             </p>
           </div>
         ) : linked ? (

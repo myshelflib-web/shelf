@@ -3,8 +3,27 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { api } from "@/lib/api";
-import { UserSubject, UserTopicGroup } from "@/types";
-import { getTopicGroups, pageHref } from "@/lib/myContentTree";
+import { UserPageSummary, UserSubject, UserTopicGroup } from "@/types";
+import {
+  getNotebookPages,
+  getTopicGroups,
+  pageHref,
+} from "@/lib/myContentTree";
+
+const COLLECTION_SCOPE = "__collection__";
+
+const NOTE_TYPES = new Set(["HTML", "MARKDOWN", "TEXT", "DOCX"]);
+
+function isNotePage(page: UserPageSummary) {
+  return page.contentType != null && NOTE_TYPES.has(page.contentType);
+}
+
+type ClipTarget = {
+  id: string;
+  title: string;
+  slug: string;
+  topicSlug: string | null;
+};
 
 interface ClipSaveModalProps {
   imageDataUrl: string;
@@ -31,46 +50,69 @@ export function ClipSaveModal({
     () => (notebook ? getTopicGroups(notebook) : []),
     [notebook]
   );
-  const clipPages = useMemo(
-    () =>
-      groups.flatMap((g) =>
-        g.pages
-          .filter(
-            (p) =>
-              p.contentType === "HTML" ||
-              p.contentType === "MARKDOWN" ||
-              p.contentType === "TEXT" ||
-              p.contentType === "DOCX"
-          )
-          .map((p) => ({
-            id: p.id,
-            title: p.title,
-            slug: p.slug,
-            topicSlug: g.slug,
-            topicTitle: g.title,
-          }))
-      ),
-    [groups]
+  const collectionPages = useMemo(
+    () => (notebook ? getNotebookPages(notebook).filter(isNotePage) : []),
+    [notebook]
   );
+  const clipPages = useMemo(() => {
+    const loose: ClipTarget[] = collectionPages.map((p) => ({
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      topicSlug: null,
+    }));
+    const fromTopics = groups.flatMap((g) =>
+      g.pages.filter(isNotePage).map((p) => ({
+        id: p.id,
+        title: p.title,
+        slug: p.slug,
+        topicSlug: g.slug,
+      }))
+    );
+    return [...loose, ...fromTopics];
+  }, [collectionPages, groups]);
+
+  const scopeOptions = useMemo(() => {
+    const opts: { id: string; label: string }[] = [];
+    if (collectionPages.length > 0) {
+      opts.push({ id: COLLECTION_SCOPE, label: "Collection" });
+    }
+    for (const g of groups) {
+      opts.push({ id: g.id, label: g.title });
+    }
+    return opts;
+  }, [collectionPages, groups]);
+
+  const initialScope = useMemo(() => {
+    if (topic?.id) return topic.id;
+    if (collectionPages.some((p) => p.id === currentPageId)) {
+      return COLLECTION_SCOPE;
+    }
+    if (groups[0]?.id) return groups[0].id;
+    if (collectionPages.length > 0) return COLLECTION_SCOPE;
+    return groups[0]?.id ?? "";
+  }, [topic, collectionPages, groups, currentPageId]);
 
   const [title, setTitle] = useState("Clip");
   const [mode, setMode] = useState<"new" | "append">(
     canAppend || clipPages.length > 0 ? "append" : "new"
   );
-  const [topicId, setTopicId] = useState(topic?.id ?? groups[0]?.id ?? "");
-  const pagesInTopic = useMemo(() => {
-    const group = groups.find((g) => g.id === topicId) ?? groups[0];
-    return (group?.pages ?? []).filter(
-      (p) =>
-        p.contentType === "HTML" ||
-        p.contentType === "MARKDOWN" ||
-        p.contentType === "TEXT" ||
-        p.contentType === "DOCX"
-    );
-  }, [groups, topicId]);
-  const [appendId, setAppendId] = useState(
-    canAppend ? currentPageId : pagesInTopic[0]?.id ?? currentPageId
-  );
+  const [scopeId, setScopeId] = useState(initialScope);
+  const pagesInScope = useMemo(() => {
+    if (scopeId === COLLECTION_SCOPE) return collectionPages;
+    const group = groups.find((g) => g.id === scopeId) ?? groups[0];
+    return (group?.pages ?? []).filter(isNotePage);
+  }, [scopeId, collectionPages, groups]);
+  const [appendId, setAppendId] = useState(() => {
+    if (canAppend) return currentPageId;
+    const scopePages =
+      initialScope === COLLECTION_SCOPE
+        ? collectionPages
+        : (groups.find((g) => g.id === initialScope) ?? groups[0])?.pages.filter(
+            isNotePage
+          ) ?? [];
+    return scopePages[0]?.id ?? "";
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -100,11 +142,13 @@ export function ClipSaveModal({
         }
         const target = clipPages.find((p) => p.id === appendId);
         if (!target || !notebook) throw new Error("Choose a clips page to add to.");
-        const { page } = await api.myContent.getPage(
-          notebook.slug,
-          target.topicSlug,
-          target.slug
-        );
+        const { page } = target.topicSlug
+          ? await api.myContent.getPage(
+              notebook.slug,
+              target.topicSlug,
+              target.slug
+            )
+          : await api.myContent.getNotebookFilePage(notebook.slug, target.slug);
         await api.myContent.updateContent(
           page.id,
           `${page.content ?? ""}${imgHtml}`
@@ -121,9 +165,9 @@ export function ClipSaveModal({
         htmlContent: `<h2>${title.trim() || "Clip"}</h2>${imgHtml}`,
       };
 
-      if (notebook && (topicId || topic)) {
+      if (notebook && scopeId && scopeId !== COLLECTION_SCOPE) {
         const group =
-          groups.find((g) => g.id === topicId) ?? topic ?? groups[0];
+          groups.find((g) => g.id === scopeId) ?? topic ?? groups[0];
         if (group) {
           const { page } = await api.myContent.createPage(
             notebook.id,
@@ -157,7 +201,7 @@ export function ClipSaveModal({
   };
 
   const canSaveAppend = mode === "new" || clipPages.length > 0 || canAppend;
-  const showTopicPicker = groups.length > 0;
+  const showScopePicker = scopeOptions.length > 0;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
@@ -203,19 +247,19 @@ export function ClipSaveModal({
         </div>
         {mode === "new" ? (
           <>
-            {showTopicPicker ? (
+            {showScopePicker ? (
               <>
                 <label className="block text-xs text-[var(--text-muted)] mb-1">
-                  Topic
+                  {scopeOptions.length > 1 ? "Topic" : "Location"}
                 </label>
                 <select
-                  value={topicId}
-                  onChange={(e) => setTopicId(e.target.value)}
+                  value={scopeId}
+                  onChange={(e) => setScopeId(e.target.value)}
                   className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
                 >
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.title}
+                  {scopeOptions.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
                     </option>
                   ))}
                 </select>
@@ -233,31 +277,30 @@ export function ClipSaveModal({
           </>
         ) : (
           <>
-            {showTopicPicker ? (
+            {showScopePicker ? (
               <>
                 <label className="block text-xs text-[var(--text-muted)] mb-1">
-                  Topic
+                  {scopeOptions.length > 1 ? "Topic" : "Location"}
                 </label>
                 <select
-                  value={topicId}
+                  value={scopeId}
                   onChange={(e) => {
                     const id = e.target.value;
-                    setTopicId(id);
-                    const group = groups.find((g) => g.id === id);
-                    const first = (group?.pages ?? []).find(
-                      (p) =>
-                        p.contentType === "HTML" ||
-                        p.contentType === "MARKDOWN" ||
-                        p.contentType === "TEXT" ||
-                        p.contentType === "DOCX"
-                    );
-                    setAppendId(first?.id ?? "");
+                    setScopeId(id);
+                    const pages =
+                      id === COLLECTION_SCOPE
+                        ? collectionPages
+                        : (groups.find((g) => g.id === id)?.pages ?? []).filter(
+                            isNotePage
+                          );
+                    const preferred = pages.find((p) => p.id === currentPageId);
+                    setAppendId(preferred?.id ?? pages[0]?.id ?? "");
                   }}
                   className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
                 >
-                  {groups.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.title}
+                  {scopeOptions.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
                     </option>
                   ))}
                 </select>
@@ -265,14 +308,16 @@ export function ClipSaveModal({
                   Page
                 </label>
                 <select
-                  value={appendId}
+                  value={
+                    pagesInScope.some((p) => p.id === appendId) ? appendId : ""
+                  }
                   onChange={(e) => setAppendId(e.target.value)}
                   className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
                 >
-                  {pagesInTopic.length === 0 ? (
+                  {pagesInScope.length === 0 ? (
                     <option value="">No note pages in this topic</option>
                   ) : (
-                    pagesInTopic.map((p) => (
+                    pagesInScope.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.title}
                         {p.id === currentPageId ? " (this page)" : ""}

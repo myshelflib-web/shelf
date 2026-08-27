@@ -1,5 +1,6 @@
 import { clearAccountLocalState } from "@/lib/accountLocalState";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
+import { toUserFacingError } from "@/lib/userFacingError";
 
 /** Production (Vercel): set NEXT_PUBLIC_API_URL to the Render backend, e.g. https://your-api.onrender.com */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -46,14 +47,20 @@ async function request<T>(
     headers,
   }).catch(() => {
     throw new ApiError(
-      "Cannot reach the server. Check that the backend is running and NEXT_PUBLIC_API_URL is correct.",
+      toUserFacingError(
+        "Cannot reach the server. Check that the backend is running and NEXT_PUBLIC_API_URL is correct.",
+        "Couldn’t reach the server. Check your connection and try again."
+      ),
       0,
     );
   });
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new ApiError(error.error ?? "Request failed", res.status);
+    throw new ApiError(
+      toUserFacingError(error.error ?? "Request failed"),
+      res.status
+    );
   }
 
   const text = await res.text();
@@ -80,7 +87,10 @@ export type PresignedPdf = {
 async function fetchStorageBlob(url: string): Promise<Blob> {
   const res = await fetch(url).catch(() => {
     throw new ApiError(
-      "Cannot reach storage. Check that MinIO/R2 is running and bucket CORS allows this site.",
+      toUserFacingError(
+        "Cannot reach storage. Check that MinIO/R2 is running and bucket CORS allows this site.",
+        "Could not load this file. Please try again."
+      ),
       0
     );
   });

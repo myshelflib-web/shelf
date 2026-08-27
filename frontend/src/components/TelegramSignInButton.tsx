@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
+import { isDevEnvironment, toUserFacingError } from "@/lib/userFacingError";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -45,6 +46,10 @@ function botUsername(): string | null {
   return raw.replace(/^@/, "");
 }
 
+export function isTelegramSignInConfigured(): boolean {
+  return Boolean(botUsername());
+}
+
 export function TelegramSignInButton({
   onError,
   redirectTo = "/my-content",
@@ -65,7 +70,10 @@ export function TelegramSignInButton({
         router.push(redirectTo);
       } catch (err) {
         onError?.(
-          err instanceof Error ? err.message : "Telegram sign-in failed"
+          toUserFacingError(
+            err instanceof Error ? err.message : "Telegram sign-in failed",
+            "Telegram sign-in failed"
+          )
         );
       } finally {
         setLoading(false);
@@ -91,6 +99,7 @@ export function TelegramSignInButton({
   }, [username, loginWithTelegram, onError, redirectTo, router]);
 
   if (!username) {
+    if (!isDevEnvironment()) return null;
     return (
       <div className="space-y-2">
         <button
