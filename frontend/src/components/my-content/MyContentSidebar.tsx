@@ -61,6 +61,7 @@ import {
 const SIDEBAR_NOTEBOOK_PAGE_SIZE = 15;
 const SIDEBAR_MANUAL_ORDER_PAGE_SIZE = 200;
 const PINNED_KEY = "shelf:explorer-pinned";
+const SORT_KEY = "shelf:explorer-sort";
 const MAX_PINNED = 5;
 
 type SortCriterion = "activity" | "name" | "manual";
@@ -90,6 +91,17 @@ function directionTitle(criterion: SortCriterion, ascending: boolean): string {
   return ascending
     ? "Ascending — least recent first"
     : "Descending — most recent first";
+}
+
+function readSortCriterion(): SortCriterion {
+  if (typeof window === "undefined") return "activity";
+  try {
+    const raw = localStorage.getItem(SORT_KEY);
+    if (raw === "activity" || raw === "name" || raw === "manual") return raw;
+  } catch {
+    /* ignore */
+  }
+  return "activity";
 }
 
 function readPinnedSlugs(): string[] {
@@ -154,7 +166,7 @@ export function MyContentSidebar({
   const { openAdd } = useAddContent();
   const router = useRouter();
 
-  const [sortCriterion, setSortCriterion] = useState<SortCriterion>("activity");
+  const [sortCriterion, setSortCriterion] = useState<SortCriterion>(readSortCriterion);
   const [sortAscending, setSortAscending] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
@@ -187,6 +199,21 @@ export function MyContentSidebar({
     const t = window.setTimeout(() => setDebouncedQ(query.trim()), 220);
     return () => window.clearTimeout(t);
   }, [query]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SORT_KEY, sortCriterion);
+    } catch {
+      /* ignore */
+    }
+  }, [sortCriterion]);
+
+  useEffect(() => {
+    if (sortCriterion === "manual" && selectionMode) {
+      setSelectionMode(false);
+      setSelected(new Set());
+    }
+  }, [sortCriterion, selectionMode]);
 
   useEffect(() => {
     if (!sortOpen) return;
@@ -692,6 +719,15 @@ export function MyContentSidebar({
               />
             </button>
           </div>
+          {manualOrder && !searching && (
+            <p className="text-[10px] text-[var(--text-muted)] px-1 mt-1.5 leading-snug">
+              Drag the{" "}
+              <span className="inline-flex align-middle text-[var(--text-secondary)]">
+                ⋮⋮
+              </span>{" "}
+              handle on a collection or topic row to reorder.
+            </p>
+          )}
         </div>
       </div>
 

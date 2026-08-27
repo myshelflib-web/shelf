@@ -191,10 +191,12 @@ export function ExplorerCollectionBlock({
             draggable
             onDragStart={(e) => startReorderDrag({ kind: "subject", id: nb.id }, e)}
             onDragEnd={clearDropHint}
-            className="p-0.5 text-[var(--text-muted)] shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100"
+            title="Drag to reorder"
+            aria-label="Drag to reorder collection"
+            className="p-0.5 text-[var(--text-muted)] shrink-0 cursor-grab active:cursor-grabbing opacity-70 group-hover:opacity-100 hover:text-[var(--text-primary)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <GripVertical className="w-3.5 h-3.5" />
+            <GripVertical className="w-3.5 h-3.5" strokeWidth={2.25} />
           </span>
         ) : null}
         <span className="p-0.5 text-[var(--text-muted)] shrink-0">
@@ -350,10 +352,12 @@ export function ExplorerCollectionBlock({
                         )
                       }
                       onDragEnd={clearDropHint}
-                      className="p-0.5 text-[var(--text-muted)] shrink-0 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100"
+                      title="Drag to reorder"
+                      aria-label="Drag to reorder topic"
+                      className="p-0.5 text-[var(--text-muted)] shrink-0 cursor-grab active:cursor-grabbing opacity-70 group-hover:opacity-100 hover:text-[var(--text-primary)]"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <GripVertical className="w-3.5 h-3.5" />
+                      <GripVertical className="w-3.5 h-3.5" strokeWidth={2.25} />
                     </span>
                   ) : null}
                   <span className="p-0.5 text-[var(--text-muted)] shrink-0">
