@@ -13,7 +13,6 @@ import {
   MousePointer2,
   MousePointerClick,
   PenLine,
-  Pencil,
   Settings2,
   Sun,
   Undo2,
@@ -43,8 +42,6 @@ type Props = {
   deletingPages: boolean;
   onGoToPage: (page: number) => void;
   onDeletePages: (pages: number[]) => void | Promise<void>;
-  onOpenPagePreview: () => void;
-  onOpenPdfEdit?: () => void;
   mode: PdfToolbarMode;
   setMode: (
     mode: PdfToolbarMode | ((m: PdfToolbarMode) => PdfToolbarMode)
@@ -85,8 +82,6 @@ export function PdfToolbar(props: Props) {
     deletingPages,
     onGoToPage,
     onDeletePages,
-    onOpenPagePreview,
-    onOpenPdfEdit,
     mode,
     setMode,
     guestLocked,
@@ -124,24 +119,12 @@ export function PdfToolbar(props: Props) {
           currentPage={currentPage}
           numPages={numPages}
           pdfDoc={pdfDoc}
+          canDeletePages={canDeletePages}
+          deletingPages={deletingPages}
           onGoToPage={onGoToPage}
-          onOpenPagePreview={onOpenPagePreview}
+          onDeletePages={onDeletePages}
         />
       </ToolGroup>
-
-      {canDeletePages && onOpenPdfEdit && (
-        <>
-          <ToolSep />
-          <ToolGroup>
-            <ToolBtn
-              label="Edit PDF — remove pages"
-              onClick={onOpenPdfEdit}
-            >
-              <Pencil className="w-[17px] h-[17px]" />
-            </ToolBtn>
-          </ToolGroup>
-        </>
-      )}
 
       <ToolSep />
 

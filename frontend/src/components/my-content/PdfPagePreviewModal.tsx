@@ -155,7 +155,6 @@ export function PdfPagePreviewModal({
   currentPage,
   canDeletePages = false,
   deleting = false,
-  editMode = false,
   onGoToPage,
   onDeletePages,
   onClose,
@@ -165,7 +164,6 @@ export function PdfPagePreviewModal({
   currentPage: number;
   canDeletePages?: boolean;
   deleting?: boolean;
-  editMode?: boolean;
   onGoToPage: (page: number) => void;
   onDeletePages?: (pages: number[]) => void | Promise<void>;
   onClose: () => void;
@@ -256,20 +254,17 @@ export function PdfPagePreviewModal({
       />
       <div
         role="dialog"
-        aria-label={editMode ? "Edit PDF pages" : "Page previews"}
+        aria-label="Page previews"
         className="relative flex max-h-[min(36rem,88vh)] w-full max-w-2xl flex-col rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl"
       >
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3 shrink-0">
           <div>
             <h2 className="font-semibold text-[var(--text-primary)] text-sm">
-              {editMode ? "Edit PDF" : "Pages"}
+              Pages
             </h2>
             <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-              {editMode && canDeletePages
-                ? `${numPages} pages · mark pages to remove, then confirm below`
-                : `${numPages} pages · click a preview to jump${
-                    canDeletePages ? " · mark pages with trash to delete" : ""
-                  }`}
+              {numPages} pages · click a preview to jump
+              {canDeletePages ? " · mark pages with trash to delete" : ""}
             </p>
           </div>
           <button
@@ -298,7 +293,7 @@ export function PdfPagePreviewModal({
                 onSelect={() => {
                   if (deleting) return;
                   onGoToPage(pageNum);
-                  if (!editMode) onClose();
+                  onClose();
                 }}
                 onToggleDelete={() => toggleMark(pageNum)}
               />

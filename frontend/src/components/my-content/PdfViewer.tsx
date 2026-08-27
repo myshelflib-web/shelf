@@ -58,7 +58,6 @@ import {
   shouldPreventInkPointerDown,
 } from "@/lib/inkSurface";
 import { PdfDeleteUndoBar } from "./PdfDeleteUndoBar";
-import { PdfPagePreviewModal } from "./PdfPagePreviewModal";
 import { usePdfMarkUndo } from "./usePdfMarkUndo";
 import { usePdfWheelZoom } from "./usePdfWheelZoom";
 import { useHotkey } from "@/hooks/useHotkeys";
@@ -109,7 +108,7 @@ interface PdfViewerProps {
   /** Account-only annotate tools — visible but muted for guests. */
   guestLocked?: boolean;
   onGuestLockedClick?: (feature: string) => void;
-  /** Owner library PDFs — page delete/reorder via edit modal. */
+  /** Owner library PDFs — page delete via thumbnail grid. */
   canEditPdf?: boolean;
 }
 
@@ -712,13 +711,6 @@ export function PdfViewer({
 
   const canDeletePages =
     canEditPdf ?? (!getPdfSource && !guestLocked);
-  const [pagePreviewOpen, setPagePreviewOpen] = useState(false);
-  const [pagePreviewEditMode, setPagePreviewEditMode] = useState(false);
-
-  const openPagePreview = useCallback((editMode: boolean) => {
-    setPagePreviewEditMode(editMode);
-    setPagePreviewOpen(true);
-  }, []);
 
   useEffect(() => {
     if (!canDeletePages) {
@@ -1612,8 +1604,6 @@ export function PdfViewer({
         deletingPages={deletingPages}
         onGoToPage={scrollToPdfPage}
         onDeletePages={handleDeletePages}
-        onOpenPagePreview={() => openPagePreview(false)}
-        onOpenPdfEdit={() => openPagePreview(true)}
         mode={mode}
         setMode={setMode}
         guestLocked={guestLocked}
@@ -1990,25 +1980,6 @@ export function PdfViewer({
                 }
               : undefined
           }
-        />
-      )}
-
-      {pagePreviewOpen && pdfDoc && numPages > 0 && (
-        <PdfPagePreviewModal
-          pdfDoc={pdfDoc}
-          numPages={numPages}
-          currentPage={currentPage}
-          canDeletePages={canDeletePages}
-          deleting={deletingPages}
-          editMode={pagePreviewEditMode}
-          onGoToPage={scrollToPdfPage}
-          onDeletePages={async (pages) => {
-            await handleDeletePages(pages);
-            setPagePreviewOpen(false);
-          }}
-          onClose={() => {
-            if (!deletingPages) setPagePreviewOpen(false);
-          }}
         />
       )}
     </div>
