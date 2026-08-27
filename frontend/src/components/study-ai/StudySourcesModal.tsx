@@ -17,9 +17,9 @@ import type {
 } from "@/types";
 import { AddRelevancyModal } from "./AddRelevancyModal";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
+import { shelfFieldClass } from "@/lib/ui/fieldClasses";
 
-const fieldClass =
-  "mt-1 w-full px-3 py-2 text-sm rounded-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--ring)] disabled:opacity-50";
+const fieldClass = shelfFieldClass;
 
 type Draft = {
   contextKind: ChatContextKind;

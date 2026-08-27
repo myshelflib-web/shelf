@@ -8,11 +8,9 @@ import {
   syncRootPages,
 } from "@/lib/myContentTree";
 import {
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   FolderOpen,
-  Check,
   Trash2,
   FilePlus,
   FolderPlus,
@@ -49,7 +47,7 @@ import { useScheduledPageHrefs } from "@/hooks/useScheduledPageHrefs";
 import clsx from "clsx";
 import { withShortcut } from "@/lib/hotkeys";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAppDialog } from "@/hooks/useAppDialog";
 import {
   PersonalPageReaderScope,
@@ -63,6 +61,8 @@ import {
   emitContentChanged,
   emitPageRenamed,
 } from "@/lib/contentEvents";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
+import { shelfSelectSidebarClass } from "@/lib/ui/fieldClasses";
 
 const SIDEBAR_NOTEBOOK_PAGE_SIZE = 15;
 const SIDEBAR_MANUAL_ORDER_PAGE_SIZE = 200;
@@ -175,8 +175,6 @@ export function MyContentSidebar({
 
   const [sortCriterion, setSortCriterion] = useState<SortCriterion>(readSortCriterion);
   const [sortAscending, setSortAscending] = useState(false);
-  const [sortOpen, setSortOpen] = useState(false);
-  const sortRef = useRef<HTMLDivElement>(null);
   const sort = notebookSortFor(sortCriterion, sortAscending);
   const [query, setQuery] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
@@ -222,22 +220,6 @@ export function MyContentSidebar({
       setSelected(new Set());
     }
   }, [sortCriterion, selectionMode]);
-
-  useEffect(() => {
-    if (!sortOpen) return;
-    const onDoc = (e: MouseEvent) => {
-      if (!sortRef.current?.contains(e.target as Node)) setSortOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSortOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [sortOpen]);
 
   useEffect(() => {
     setNotebookPage(1);
@@ -694,8 +676,6 @@ export function MyContentSidebar({
   const isEmpty =
     !loading && treeSubjects.length === 0 && filteredRootPages.length === 0;
 
-  const sortLabel =
-    SORT_CRITERIA.find((s) => s.id === sortCriterion)?.label ?? "Last activity";
   const sortDirTitle = directionTitle(sortCriterion, sortAscending);
 
   return (
@@ -785,65 +765,19 @@ export function MyContentSidebar({
           </div>
         )}
 
-        <div className="px-0.5 pt-0.5" ref={sortRef}>
+        <div className="px-0.5 pt-0.5">
           <p className="text-[9.5px] uppercase tracking-[0.05em] font-bold text-[var(--text-muted)] px-1 mb-1.5">
             Sort by
           </p>
           <div className="flex items-center gap-1.5">
-            <div className="relative flex-1 min-w-0">
-              <button
-                type="button"
-                aria-haspopup="listbox"
-                aria-expanded={sortOpen}
-                aria-label={`Sort by ${sortLabel}`}
-                onClick={() => setSortOpen((open) => !open)}
-                className={clsx(
-                  "w-full h-[34px] flex items-center justify-between gap-2 px-2.5 rounded-lg border text-[11px] font-semibold transition-colors",
-                  sortOpen
-                    ? "border-[var(--accent)]/40 bg-[var(--accent-subtle)] text-[var(--accent)]"
-                    : "border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-primary)] hover:border-[var(--accent)]/40 hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)]"
-                )}
-              >
-                <span className="truncate">{sortLabel}</span>
-                <ChevronDown className="w-3.5 h-3.5 shrink-0 opacity-70" />
-              </button>
-              {sortOpen && (
-                <div
-                  role="listbox"
-                  aria-label="Sort collections"
-                  className="absolute z-20 left-0 right-0 top-[39px] rounded-[9px] border border-[var(--border)] bg-[var(--bg-elevated)] p-1 shadow-lg"
-                >
-                  {SORT_CRITERIA.map((s) => {
-                    const selected = sortCriterion === s.id;
-                    return (
-                      <button
-                        key={s.id}
-                        type="button"
-                        role="option"
-                        aria-selected={selected}
-                        className={clsx(
-                          "w-full flex items-center justify-between gap-2 rounded-md px-2.5 py-2 text-[11px] text-left",
-                          selected
-                            ? "text-[var(--text-primary)] bg-[var(--bg-secondary)]"
-                            : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-                        )}
-                        onClick={() => {
-                          setSortCriterion(s.id);
-                          setSortOpen(false);
-                        }}
-                      >
-                        <span>{s.label}</span>
-                        {selected ? (
-                          <Check className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
-                        ) : (
-                          <span className="w-3.5 h-3.5 shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            <ShelfSelect
+              compact
+              className={`flex-1 min-w-0 ${shelfSelectSidebarClass}`}
+              value={sortCriterion}
+              aria-label="Sort collections"
+              options={SORT_CRITERIA.map((s) => ({ value: s.id, label: s.label }))}
+              onChange={(v) => setSortCriterion(v as SortCriterion)}
+            />
             <button
               type="button"
               title={sortDirTitle}

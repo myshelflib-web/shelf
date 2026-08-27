@@ -1,3 +1,12 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "JSXOpeningElement[name.name='select']",
+        "message": "Use ShelfSelect from @/components/ui/ShelfSelect instead of native <select>."
+      }
+    ]
+  }
 }

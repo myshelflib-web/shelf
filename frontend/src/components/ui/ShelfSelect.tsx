@@ -47,6 +47,7 @@ type ShelfSelectProps = {
   groups?: ShelfSelectGroup[];
   disabled?: boolean;
   className?: string;
+  menuClassName?: string;
   compact?: boolean;
   placeholder?: string;
   "aria-label"?: string;
@@ -61,6 +62,7 @@ export function ShelfSelect({
   groups,
   disabled = false,
   className = "",
+  menuClassName = "",
   compact = false,
   placeholder = "Select…",
   "aria-label": ariaLabel,
@@ -68,6 +70,7 @@ export function ShelfSelect({
   onTriggerMouseDown,
 }: ShelfSelectProps) {
   const [open, setOpen] = useState(false);
+  const [menuReady, setMenuReady] = useState(false);
   const [mounted, setMounted] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -75,21 +78,28 @@ export function ShelfSelect({
 
   useEffect(() => setMounted(true), []);
 
-  const close = useCallback(() => setOpen(false), []);
+  const close = useCallback(() => {
+    setOpen(false);
+    setMenuReady(false);
+  }, []);
 
   const reposition = useCallback(() => {
     const trigger = triggerRef.current;
     const menu = menuRef.current;
     if (!trigger || !menu) return;
     positionMenuBelow(menu, trigger, { minWidth: trigger.offsetWidth });
+    setMenuReady(true);
   }, []);
 
   useLayoutEffect(() => {
     if (!open) return;
+    setMenuReady(false);
     reposition();
+    const raf = window.requestAnimationFrame(reposition);
     window.addEventListener("resize", reposition);
     window.addEventListener("scroll", reposition, true);
     return () => {
+      window.cancelAnimationFrame(raf);
       window.removeEventListener("resize", reposition);
       window.removeEventListener("scroll", reposition, true);
     };
@@ -98,7 +108,10 @@ export function ShelfSelect({
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        close();
+      }
     };
     const onPointer = (e: MouseEvent) => {
       const target = e.target as Node;
@@ -107,17 +120,28 @@ export function ShelfSelect({
       }
       close();
     };
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey, true);
+    document.addEventListener("mousedown", onPointer, true);
     return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey, true);
+      document.removeEventListener("mousedown", onPointer, true);
     };
   }, [open, close]);
 
   const pick = (next: string) => {
     onChange(next);
     close();
+  };
+
+  const handleTriggerMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onTriggerMouseDown?.(e);
+  };
+
+  const handleTriggerClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (!disabled) setOpen((v) => !v);
   };
 
   const selectedLabel = labelForValue(value, options, groups);
@@ -148,7 +172,8 @@ export function ShelfSelect({
         id={listId}
         role="listbox"
         aria-label={ariaLabel}
-        className="shelf-select-menu"
+        data-shelf-select-menu=""
+        className={`shelf-select-menu${menuReady ? " is-ready" : ""}${menuClassName ? ` ${menuClassName}` : ""}`.trim()}
         onMouseDown={(e) => e.stopPropagation()}
       >
         {options?.map(renderOption)}
@@ -168,13 +193,14 @@ export function ShelfSelect({
         id={id}
         type="button"
         disabled={disabled}
+        data-shelf-select=""
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         aria-label={ariaLabel}
         className={`shelf-select-trigger${compact ? " shelf-select-trigger-compact" : ""}${open ? " is-open" : ""} ${className}`.trim()}
-        onMouseDown={onTriggerMouseDown}
-        onClick={() => !disabled && setOpen((v) => !v)}
+        onMouseDown={handleTriggerMouseDown}
+        onClick={handleTriggerClick}
       >
         <span className={`shelf-select-value truncate${selectedLabel ? "" : " is-placeholder"}`}>
           {display}
