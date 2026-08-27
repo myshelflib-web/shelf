@@ -3,6 +3,7 @@
 import { STUDY_GOAL_GROUPS, STUDY_GOAL_LABELS } from "@/lib/studyGoal";
 import { StudyGoal } from "@/types";
 import { Target } from "lucide-react";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 export function GuestStudyGoalSelect({
   value,
@@ -27,27 +28,24 @@ export function GuestStudyGoalSelect({
           Your goal
         </span>
       )}
-      <select
+      <ShelfSelect
         value={value}
         disabled={disabled}
-        onChange={(e) => onChange(e.target.value as StudyGoal)}
+        groups={STUDY_GOAL_GROUPS.map((group) => ({
+          label: group.label,
+          options: group.options.map((goal) => ({
+            value: goal,
+            label: STUDY_GOAL_LABELS[goal],
+          })),
+        }))}
+        aria-label="Study goal"
         className={`rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] disabled:opacity-60 ${
           compact
             ? "select-compact text-sm py-2 pl-2.5 min-w-[10rem]"
             : "text-sm py-2 pl-3 w-full sm:min-w-[12rem]"
         }`}
-        aria-label="Study goal"
-      >
-        {STUDY_GOAL_GROUPS.map((group) => (
-          <optgroup key={group.label} label={group.label}>
-            {group.options.map((goal) => (
-              <option key={goal} value={goal}>
-                {STUDY_GOAL_LABELS[goal]}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-      </select>
+        onChange={(next) => onChange(next as StudyGoal)}
+      />
     </label>
   );
 }

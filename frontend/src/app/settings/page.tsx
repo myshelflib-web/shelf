@@ -14,6 +14,7 @@ import { ReadingGoalPicker } from "@/components/dashboard/ReadingGoalPicker";
 import { getReadingGoalMinutes } from "@/lib/readingStats";
 import { AffiliateSettingsCard } from "@/components/settings/AffiliateSettingsCard";
 import { TelegramSettingsCard } from "@/components/settings/TelegramSettingsCard";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import { StudyGoal } from "@/types";
 
 function UsageMeter({
@@ -118,21 +119,19 @@ export default function SettingsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">Study goal</label>
-              <select
+              <ShelfSelect
                 value={goal}
-                onChange={(e) => setGoal(e.target.value as StudyGoal)}
-                className="w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-              >
-                {STUDY_GOAL_GROUPS.map((group) => (
-                  <optgroup key={group.label} label={group.label}>
-                    {group.options.map((value) => (
-                      <option key={value} value={value}>
-                        {STUDY_GOAL_LABELS[value]}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+                groups={STUDY_GOAL_GROUPS.map((group) => ({
+                  label: group.label,
+                  options: group.options.map((value) => ({
+                    value,
+                    label: STUDY_GOAL_LABELS[value],
+                  })),
+                }))}
+                className="w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-primary)] border border-[var(--border)]"
+                aria-label="Study goal"
+                onChange={(next) => setGoal(next as StudyGoal)}
+              />
               <p className="text-xs text-[var(--text-muted)] mt-1.5">
                 Study AI uses this so answers stay on track. Non-General goals
                 unlock a Preloaded library on Library.
@@ -140,16 +139,16 @@ export default function SettingsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">Theme</label>
-              <select
+              <ShelfSelect
                 value={theme}
-                onChange={(e) =>
-                  setTheme(e.target.value === "light" ? "light" : "dark")
-                }
-                className="w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-              >
-                <option value="dark">Dark</option>
-                <option value="light">Light</option>
-              </select>
+                options={[
+                  { value: "dark", label: "Dark" },
+                  { value: "light", label: "Light" },
+                ]}
+                className="w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-primary)] border border-[var(--border)]"
+                aria-label="Theme"
+                onChange={(next) => setTheme(next === "light" ? "light" : "dark")}
+              />
             </div>
           </section>
 

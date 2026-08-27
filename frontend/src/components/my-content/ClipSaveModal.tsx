@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { UserSubject, UserTopicGroup } from "@/types";
 import { getNotebookPages, getTopicGroups, pageHref } from "@/lib/myContentTree";
 import { peekCachedLibrary } from "@/lib/offline/library";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import {
   clipTargetLabel,
   clipTargetsFromRootPages,
@@ -247,17 +248,16 @@ export function ClipSaveModal({
                 <label className="block text-xs text-[var(--text-muted)] mb-1">
                   {scopeOptions.length > 1 ? "Topic" : "Location"}
                 </label>
-                <select
+                <ShelfSelect
                   value={scopeId}
-                  onChange={(e) => setScopeId(e.target.value)}
+                  options={scopeOptions.map((opt) => ({
+                    value: opt.id,
+                    label: opt.label,
+                  }))}
                   className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
-                >
-                  {scopeOptions.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
+                  aria-label={scopeOptions.length > 1 ? "Topic" : "Location"}
+                  onChange={setScopeId}
+                />
               </>
             ) : null}
             <label className="block text-xs text-[var(--text-muted)] mb-1">
@@ -275,26 +275,24 @@ export function ClipSaveModal({
             <label className="block text-xs text-[var(--text-muted)] mb-1">
               Page
             </label>
-            <select
+            <ShelfSelect
               value={appendId}
-              onChange={(e) => setAppendId(e.target.value)}
+              options={
+                canAppend && !clipPages.some((p) => p.id === currentPageId)
+                  ? [{ value: currentPageId, label: "This page" }]
+                  : undefined
+              }
+              groups={grouped.map((g) => ({
+                label: g.label,
+                options: g.pages.map((p) => ({
+                  value: p.id,
+                  label: `${clipTargetLabel(p)}${p.id === currentPageId ? " (this page)" : ""}`,
+                })),
+              }))}
               className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
-            >
-              {canAppend &&
-              !clipPages.some((p) => p.id === currentPageId) ? (
-                <option value={currentPageId}>This page</option>
-              ) : null}
-              {grouped.map((g) => (
-                <optgroup key={g.key} label={g.label}>
-                  {g.pages.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {clipTargetLabel(p)}
-                      {p.id === currentPageId ? " (this page)" : ""}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+              aria-label="Page"
+              onChange={setAppendId}
+            />
           </>
         ) : (
           <p className="text-sm text-[var(--text-muted)] mb-2">

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Download, FileText, FolderPlus, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { CircleLoader } from "@/components/CircleLoader";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import {
   downloadAnswer,
   markdownToExportHtml,
@@ -297,21 +298,19 @@ export function SaveAnswerModal({
               <span className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
                 Collection (optional)
               </span>
-              <select
+              <ShelfSelect
                 value={notebookId}
-                onChange={(e) => {
-                  setNotebookId(e.target.value);
+                options={[
+                  { value: "", label: "Library root" },
+                  ...subjects.map((s) => ({ value: s.id, label: s.name })),
+                ]}
+                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[13px]"
+                aria-label="Collection"
+                onChange={(v) => {
+                  setNotebookId(v);
                   setTopicId("");
                 }}
-                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]"
-              >
-                <option value="">Library root</option>
-                {subjects.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
             {notebookId && (
               <label className="block">
@@ -323,18 +322,16 @@ export function SaveAnswerModal({
                     <CircleLoader size="sm" label="Loading topics" />
                   </div>
                 ) : (
-                <select
+                <ShelfSelect
                   value={topicId}
-                  onChange={(e) => setTopicId(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[13px] outline-none focus:border-[var(--accent)]"
-                >
-                  <option value="">Collection-level page</option>
-                  {topics.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.title}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "Collection-level page" },
+                    ...topics.map((t) => ({ value: t.id, label: t.title })),
+                  ]}
+                  className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[13px]"
+                  aria-label="Topic"
+                  onChange={setTopicId}
+                />
                 )}
               </label>
             )}

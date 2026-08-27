@@ -1,6 +1,7 @@
 "use client";
 
 import { Link2, Lock } from "lucide-react";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 type Props = {
   generalAccess: "restricted" | "link";
@@ -45,16 +46,17 @@ export function ShareGeneralAccess({
               : "Only people added above can open this."}
           </p>
         </div>
-        <select
+        <ShelfSelect
+          compact
           className="h-8 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-secondary)] px-2 max-w-[11rem]"
           value={generalAccess}
-          onChange={(e) =>
-            onGeneralAccessChange(e.target.value as "restricted" | "link")
-          }
-        >
-          <option value="restricted">Restricted</option>
-          <option value="link">Anyone with link · Can view</option>
-        </select>
+          options={[
+            { value: "restricted", label: "Restricted" },
+            { value: "link", label: "Anyone with link · Can view" },
+          ]}
+          aria-label="General access"
+          onChange={(v) => onGeneralAccessChange(v as "restricted" | "link")}
+        />
       </div>
       {generalAccess === "link" && (
         <div className="mt-3 space-y-2">

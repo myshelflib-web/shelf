@@ -5,6 +5,7 @@ import { api } from "@/lib/api";
 import { formatCoinsAsInr } from "@/lib/affiliateRef";
 import clsx from "clsx";
 import { Plus, ToggleLeft, ToggleRight } from "lucide-react";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 type Coupon = {
   id: string;
@@ -139,19 +140,21 @@ export default function AdminCouponsPage() {
           </label>
           <label className="text-xs space-y-1">
             <span className="text-[var(--text-muted)]">Type</span>
-            <select
+            <ShelfSelect
               value={form.type}
-              onChange={(e) =>
+              options={[
+                { value: "PERCENT", label: "Percent off" },
+                { value: "FIXED", label: "Fixed ₹ off" },
+              ]}
+              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-sm"
+              aria-label="Coupon type"
+              onChange={(v) =>
                 setForm((f) => ({
                   ...f,
-                  type: e.target.value as "PERCENT" | "FIXED",
+                  type: v as "PERCENT" | "FIXED",
                 }))
               }
-              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-sm"
-            >
-              <option value="PERCENT">Percent off</option>
-              <option value="FIXED">Fixed ₹ off</option>
-            </select>
+            />
           </label>
           <label className="text-xs space-y-1">
             <span className="text-[var(--text-muted)]">

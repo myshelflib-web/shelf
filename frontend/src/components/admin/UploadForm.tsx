@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { Subject } from "@/types";
 import { api } from "@/lib/api";
 import { Upload, Loader2, FileUp, X } from "lucide-react";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 interface UploadFormProps {
   subjects: Subject[];
@@ -116,24 +117,25 @@ export function UploadForm({ subjects: initialSubjects, onSuccess }: UploadFormP
     <form onSubmit={handleUpload} className="space-y-5">
       <div>
         <label className="block text-sm font-medium mb-1.5">Subject</label>
-        <select
+        <ShelfSelect
           value={subjectChoice}
-          onChange={(e) => {
-            setSubjectChoice(e.target.value);
+          options={[
+            ...subjects.map((s) => ({
+              value: s.id,
+              label: `${s.icon} ${s.name}`,
+            })),
+            { value: NEW, label: "+ Create new subject…" },
+          ]}
+          className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-primary)]"
+          aria-label="Subject"
+          onChange={(v) => {
+            setSubjectChoice(v);
             setTopicChoice(NEW);
             setCustomTopic("");
             setArticleChoice(NEW);
             setCustomArticle("");
           }}
-          className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
-        >
-          {subjects.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.icon} {s.name}
-            </option>
-          ))}
-          <option value={NEW}>+ Create new subject…</option>
-        </select>
+        />
         {subjectChoice === NEW && (
           <input
             type="text"
@@ -148,23 +150,21 @@ export function UploadForm({ subjects: initialSubjects, onSuccess }: UploadFormP
 
       <div>
         <label className="block text-sm font-medium mb-1.5">Topic</label>
-        <select
+        <ShelfSelect
           value={topicChoice}
-          onChange={(e) => {
-            setTopicChoice(e.target.value);
+          disabled={subjectChoice === NEW}
+          options={[
+            { value: NEW, label: "+ Create new topic…" },
+            ...topics.map((t) => ({ value: t.id, label: t.title })),
+          ]}
+          className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-primary)] disabled:opacity-50"
+          aria-label="Topic"
+          onChange={(v) => {
+            setTopicChoice(v);
             setArticleChoice(NEW);
             setCustomArticle("");
           }}
-          disabled={subjectChoice === NEW}
-          className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] disabled:opacity-50"
-        >
-          <option value={NEW}>+ Create new topic…</option>
-          {topics.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.title}
-            </option>
-          ))}
-        </select>
+        />
         {(topicChoice === NEW || subjectChoice === NEW) && (
           <input
             type="text"
@@ -184,19 +184,17 @@ export function UploadForm({ subjects: initialSubjects, onSuccess }: UploadFormP
 
       <div>
         <label className="block text-sm font-medium mb-1.5">Article</label>
-        <select
+        <ShelfSelect
           value={articleChoice}
-          onChange={(e) => setArticleChoice(e.target.value)}
           disabled={topicChoice === NEW || subjectChoice === NEW}
-          className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] disabled:opacity-50"
-        >
-          <option value={NEW}>+ Create new article…</option>
-          {articles.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.title}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: NEW, label: "+ Create new article…" },
+            ...articles.map((a) => ({ value: a.id, label: a.title })),
+          ]}
+          className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-primary)] disabled:opacity-50"
+          aria-label="Article"
+          onChange={setArticleChoice}
+        />
         {(articleChoice === NEW ||
           topicChoice === NEW ||
           subjectChoice === NEW) && (

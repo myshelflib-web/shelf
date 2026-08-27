@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import type { AdminBlogSection } from "@/types";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 type BlogEditorProps = {
   mode: "create" | "edit";
@@ -118,14 +119,16 @@ export function BlogEditor({ mode, postId, initial }: BlogEditorProps) {
         </label>
         <label className="block">
           <span className="text-sm font-medium mb-1.5 block">Status</span>
-          <select
+          <ShelfSelect
             value={status}
-            onChange={(e) => setStatus(e.target.value as "DRAFT" | "PUBLISHED")}
+            options={[
+              { value: "DRAFT", label: "Draft" },
+              { value: "PUBLISHED", label: "Published" },
+            ]}
             className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)]"
-          >
-            <option value="DRAFT">Draft</option>
-            <option value="PUBLISHED">Published</option>
-          </select>
+            aria-label="Status"
+            onChange={(v) => setStatus(v as "DRAFT" | "PUBLISHED")}
+          />
         </label>
         <label className="block sm:col-span-2">
           <span className="text-sm font-medium mb-1.5 block">SEO description</span>

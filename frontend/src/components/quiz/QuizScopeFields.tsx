@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import type { ChatContextKind, StudyRelevancyDocSummary, UserSubject } from "@/types";
 import { quizFieldClass } from "@/lib/quiz/ui";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 export type QuizScopeValue = {
   contextKind: ChatContextKind;
@@ -32,6 +33,13 @@ function pagesFor(
   ];
 }
 
+const SCOPE_OPTIONS = [
+  { value: "LIBRARY", label: "Entire library" },
+  { value: "NOTEBOOK", label: "Collection" },
+  { value: "TOPIC", label: "Topic" },
+  { value: "PAGE", label: "Document" },
+];
+
 export function QuizScopeFields({
   value,
   onChange,
@@ -58,7 +66,10 @@ export function QuizScopeFields({
   }, []);
 
   const selectedNb = notebooks.find((n) => n.id === value.contextNotebookId);
-  const topics = selectedNb?.topicGroups ?? [];
+  const topics = useMemo(
+    () => selectedNb?.topicGroups ?? [],
+    [selectedNb]
+  );
   const pages = useMemo(
     () =>
       pagesFor(
@@ -70,18 +81,53 @@ export function QuizScopeFields({
     [notebooks, value.contextKind, value.contextNotebookId, value.contextTopicId]
   );
 
+  const notebookOptions = useMemo(
+    () => [
+      { value: "", label: "Select…" },
+      ...notebooks.map((n) => ({ value: n.id, label: n.name })),
+    ],
+    [notebooks]
+  );
+
+  const topicOptions = useMemo(() => {
+    const opts = [{ value: "", label: "Select…" }];
+    if (value.contextKind === "PAGE" && (selectedNb?.pages?.length ?? 0) > 0) {
+      opts.push({ value: "__notebook__", label: "Collection pages" });
+    }
+    topics.forEach((t) => opts.push({ value: t.id, label: t.title }));
+    return opts;
+  }, [value.contextKind, selectedNb?.pages?.length, topics]);
+
+  const pageOptions = useMemo(
+    () => [
+      { value: "", label: "Select…" },
+      ...pages.map((p) => ({ value: p.id, label: p.title })),
+    ],
+    [pages]
+  );
+
+  const docOptions = useMemo(
+    () => [
+      { value: "", label: "None — use study goal + relevance" },
+      ...docs.map((d) => ({ value: d.id, label: d.title })),
+    ],
+    [docs]
+  );
+
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       {!syllabusOnly && (
       <>
       <label className="text-[12px] font-medium text-[var(--text-secondary)]">
         Scope
-        <select
+        <ShelfSelect
           className={quizFieldClass}
           disabled={disabled}
           value={value.contextKind}
-          onChange={(e) => {
-            const contextKind = e.target.value as ChatContextKind;
+          options={SCOPE_OPTIONS}
+          aria-label="Quiz scope"
+          onChange={(next) => {
+            const contextKind = next as ChatContextKind;
             const nb = selectedNb ?? notebooks[0];
             onChange({
               contextKind,
@@ -95,96 +141,68 @@ export function QuizScopeFields({
               relevancyDocId: value.relevancyDocId,
             });
           }}
-        >
-          <option value="LIBRARY">Entire library</option>
-          <option value="NOTEBOOK">Collection</option>
-          <option value="TOPIC">Topic</option>
-          <option value="PAGE">Document</option>
-        </select>
+        />
       </label>
       {value.contextKind !== "LIBRARY" && (
         <label className="text-[12px] font-medium text-[var(--text-secondary)]">
           Collection
-          <select
+          <ShelfSelect
             className={quizFieldClass}
             disabled={disabled}
             value={value.contextNotebookId}
-            onChange={(e) =>
+            options={notebookOptions}
+            aria-label="Collection"
+            onChange={(contextNotebookId) =>
               onChange({
                 ...value,
-                contextNotebookId: e.target.value,
+                contextNotebookId,
                 contextTopicId: "",
                 contextPageId: "",
               })
             }
-          >
-            <option value="">Select…</option>
-            {notebooks.map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.name}
-              </option>
-            ))}
-          </select>
+          />
         </label>
       )}
       {(value.contextKind === "TOPIC" || value.contextKind === "PAGE") && (
         <label className="text-[12px] font-medium text-[var(--text-secondary)]">
           Topic
-          <select
+          <ShelfSelect
             className={quizFieldClass}
             disabled={disabled}
             value={value.contextTopicId}
-            onChange={(e) =>
-              onChange({ ...value, contextTopicId: e.target.value, contextPageId: "" })
+            options={topicOptions}
+            aria-label="Topic"
+            onChange={(contextTopicId) =>
+              onChange({ ...value, contextTopicId, contextPageId: "" })
             }
-          >
-            <option value="">Select…</option>
-            {value.contextKind === "PAGE" && (selectedNb?.pages?.length ?? 0) > 0 && (
-              <option value="__notebook__">Collection pages</option>
-            )}
-            {topics.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.title}
-              </option>
-            ))}
-          </select>
+          />
         </label>
       )}
       {value.contextKind === "PAGE" && (
         <label className="text-[12px] font-medium text-[var(--text-secondary)]">
           Document
-          <select
+          <ShelfSelect
             className={quizFieldClass}
             disabled={disabled}
             value={value.contextPageId}
-            onChange={(e) => onChange({ ...value, contextPageId: e.target.value })}
-          >
-            <option value="">Select…</option>
-            {pages.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.title}
-              </option>
-            ))}
-          </select>
+            options={pageOptions}
+            aria-label="Document"
+            onChange={(contextPageId) => onChange({ ...value, contextPageId })}
+          />
         </label>
       )}
       </>
       )}
       <label className="text-[12px] font-medium text-[var(--text-secondary)] sm:col-span-2">
         Syllabus / relevancy (optional)
-        <select
+        <ShelfSelect
           className={quizFieldClass}
           disabled={disabled}
           value={value.relevancyDocId}
-          onChange={(e) => onChange({ ...value, relevancyDocId: e.target.value })}
-        >
-          <option value="">None — use study goal + relevance</option>
-          {docs.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.title}
-            </option>
-          ))}
-        </select>
+          options={docOptions}
+          aria-label="Syllabus or relevancy document"
+          onChange={(relevancyDocId) => onChange({ ...value, relevancyDocId })}
+        />
       </label>
     </div>
   );

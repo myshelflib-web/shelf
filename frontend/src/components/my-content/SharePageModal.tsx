@@ -5,6 +5,7 @@ import { Search, Share2, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { avatarSrc } from "@/lib/avatar";
 import { ShareGeneralAccess } from "@/components/my-content/ShareGeneralAccess";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 export type ShareRole = "view" | "edit";
 
@@ -383,11 +384,17 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
                         {p.email}
                       </p>
                     </div>
-                    <select
+                    <ShelfSelect
+                      compact
                       className="h-8 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-secondary)] px-2"
                       value={p.role}
-                      onChange={(e) => {
-                        const v = e.target.value;
+                      options={[
+                        { value: "view", label: "Can view" },
+                        { value: "edit", label: "Can edit" },
+                        { value: "remove", label: "Remove access" },
+                      ]}
+                      aria-label={`Access for ${p.email}`}
+                      onChange={(v) => {
                         if (v === "remove") {
                           setPeople((prev) =>
                             prev.filter((x) => x.email !== p.email)
@@ -397,18 +404,12 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
                         }
                         setPeople((prev) =>
                           prev.map((x) =>
-                            x.email === p.email
-                              ? { ...x, role: v as ShareRole }
-                              : x
+                            x.email === p.email ? { ...x, role: v as ShareRole } : x
                           )
                         );
                         setDirty(true);
                       }}
-                    >
-                      <option value="view">Can view</option>
-                      <option value="edit">Can edit</option>
-                      <option value="remove">Remove access</option>
-                    </select>
+                    />
                   </div>
                 ))}
               </>

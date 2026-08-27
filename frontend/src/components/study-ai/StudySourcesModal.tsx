@@ -16,6 +16,7 @@ import type {
   UserSubject,
 } from "@/types";
 import { AddRelevancyModal } from "./AddRelevancyModal";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 const fieldClass =
   "mt-1 w-full px-3 py-2 text-sm rounded-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-primary)] outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--ring)] disabled:opacity-50";
@@ -322,30 +323,35 @@ export function StudySourcesModal({
                 <>
               <label className="block text-[12px] text-[var(--text-secondary)]">
                 Scope
-                <select
+                <ShelfSelect
                   className={fieldClass}
                   disabled={saving}
                   value={kind}
-                  onChange={(e) => {
-                    onScopeChange(e.target.value as ChatContextKind);
-                  }}
-                >
-                  <option value="LIBRARY">All library</option>
-                  <option value="NOTEBOOK">One collection</option>
-                  <option value="TOPIC">One topic</option>
-                  <option value="PAGE">One page</option>
-                </select>
+                  options={[
+                    { value: "LIBRARY", label: "All library" },
+                    { value: "NOTEBOOK", label: "One collection" },
+                    { value: "TOPIC", label: "One topic" },
+                    { value: "PAGE", label: "One page" },
+                  ]}
+                  aria-label="Library scope"
+                  onChange={(v) => onScopeChange(v as ChatContextKind)}
+                />
               </label>
 
               {kind !== "LIBRARY" && (
                 <label className="block text-[12px] text-[var(--text-secondary)]">
                   Collection
-                  <select
+                  <ShelfSelect
                     className={fieldClass}
                     disabled={saving || notebooks.length === 0}
                     value={draft.contextNotebookId}
-                    onChange={(e) => {
-                      const id = e.target.value;
+                    options={
+                      notebooks.length === 0
+                        ? [{ value: "", label: "No collections yet" }]
+                        : notebooks.map((n) => ({ value: n.id, label: n.name }))
+                    }
+                    aria-label="Collection"
+                    onChange={(id) => {
                       const nb = notebooks.find((n) => n.id === id);
                       if (kind === "NOTEBOOK") {
                         apply({
@@ -373,23 +379,14 @@ export function StudySourcesModal({
                         contextPageId: page?.id ?? "",
                       });
                     }}
-                  >
-                    {notebooks.length === 0 && (
-                      <option value="">No collections yet</option>
-                    )}
-                    {notebooks.map((n) => (
-                      <option key={n.id} value={n.id}>
-                        {n.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </label>
               )}
 
               {(kind === "TOPIC" || kind === "PAGE") && (
                 <label className="block text-[12px] text-[var(--text-secondary)]">
                   Topic
-                  <select
+                  <ShelfSelect
                     className={fieldClass}
                     disabled={
                       saving ||
@@ -397,8 +394,22 @@ export function StudySourcesModal({
                       (topics.length === 0 && notebookPages.length === 0)
                     }
                     value={topicSelectValue}
-                    onChange={(e) => {
-                      const id = e.target.value;
+                    options={[
+                      ...(kind === "TOPIC" && topics.length === 0
+                        ? [{ value: "", label: "No topics in this collection" }]
+                        : []),
+                      ...(kind === "PAGE" && notebookPages.length > 0
+                        ? [
+                            {
+                              value: "__notebook__",
+                              label: "Collection pages (no topic)",
+                            },
+                          ]
+                        : []),
+                      ...topics.map((t) => ({ value: t.id, label: t.title })),
+                    ]}
+                    aria-label="Topic"
+                    onChange={(id) => {
                       if (kind === "TOPIC") {
                         apply({
                           contextTopicId: id === "__notebook__" ? "" : id,
@@ -421,44 +432,25 @@ export function StudySourcesModal({
                         contextPageId: page?.id ?? "",
                       });
                     }}
-                  >
-                    {kind === "TOPIC" && topics.length === 0 && (
-                      <option value="">No topics in this collection</option>
-                    )}
-                    {kind === "PAGE" && notebookPages.length > 0 && (
-                      <option value="__notebook__">
-                        Collection pages (no topic)
-                      </option>
-                    )}
-                    {topics.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.title}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </label>
               )}
 
               {kind === "PAGE" && (
                 <label className="block text-[12px] text-[var(--text-secondary)]">
                   Page
-                  <select
+                  <ShelfSelect
                     className={fieldClass}
                     disabled={saving || pageOptions.length === 0}
                     value={draft.contextPageId}
-                    onChange={(e) => {
-                      apply({ contextPageId: e.target.value });
-                    }}
-                  >
-                    {pageOptions.length === 0 && (
-                      <option value="">No pages here</option>
-                    )}
-                    {pageOptions.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.title}
-                      </option>
-                    ))}
-                  </select>
+                    options={
+                      pageOptions.length === 0
+                        ? [{ value: "", label: "No pages here" }]
+                        : pageOptions.map((p) => ({ value: p.id, label: p.title }))
+                    }
+                    aria-label="Page"
+                    onChange={(contextPageId) => apply({ contextPageId })}
+                  />
                 </label>
               )}
 
@@ -488,21 +480,17 @@ export function StudySourcesModal({
                 <>
               <label className="block text-[12px] text-[var(--text-secondary)]">
                 Relevancy doc
-                <select
+                <ShelfSelect
                   className={fieldClass}
                   disabled={saving}
                   value={draft.relevancyDocId}
-                  onChange={(e) => {
-                    apply({ relevancyDocId: e.target.value });
-                  }}
-                >
-                  <option value="">General</option>
-                  {docs.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.title}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "", label: "General" },
+                    ...docs.map((d) => ({ value: d.id, label: d.title })),
+                  ]}
+                  aria-label="Relevancy doc"
+                  onChange={(relevancyDocId) => apply({ relevancyDocId })}
+                />
               </label>
               <button
                 type="button"

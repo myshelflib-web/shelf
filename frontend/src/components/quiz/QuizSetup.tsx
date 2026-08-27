@@ -7,6 +7,7 @@ import { quizApi } from "@/lib/quiz/api";
 import type { QuizLaunch, QuizSourceKind } from "@/lib/quiz/types";
 import { DIFFICULTY_LABELS, TIME_OPTIONS, quizHref } from "@/lib/quiz/href";
 import { quizBtnPrimary, quizFieldClass } from "@/lib/quiz/ui";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import {
   QuizScopeFields,
   type QuizScopeValue,
@@ -188,36 +189,34 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
       <div className="grid gap-3 sm:grid-cols-2 mt-4">
         <label className="text-[12px] font-medium text-[var(--text-secondary)]">
           Difficulty
-          <select
+          <ShelfSelect
             className={quizFieldClass}
             disabled={busy}
             value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value)}
-          >
-            {Object.entries(DIFFICULTY_LABELS).map(([id, label]) => (
-              <option key={id} value={id}>
-                {label}
-              </option>
-            ))}
-          </select>
+            options={Object.entries(DIFFICULTY_LABELS).map(([id, label]) => ({
+              value: id,
+              label,
+            }))}
+            aria-label="Difficulty"
+            onChange={setDifficulty}
+          />
         </label>
         <label className="text-[12px] font-medium text-[var(--text-secondary)]">
           Time
-          <select
+          <ShelfSelect
             className={quizFieldClass}
             disabled={busy}
-            value={timeLimitSec ?? 0}
-            onChange={(e) => {
-              const n = Number(e.target.value);
+            value={String(timeLimitSec ?? 0)}
+            options={TIME_OPTIONS.map((t) => ({
+              value: String(t.sec ?? 0),
+              label: t.label,
+            }))}
+            aria-label="Time limit"
+            onChange={(v) => {
+              const n = Number(v);
               setTimeLimitSec(n > 0 ? n : null);
             }}
-          >
-            {TIME_OPTIONS.map((t) => (
-              <option key={String(t.sec ?? 0)} value={t.sec ?? 0}>
-                {t.label}
-              </option>
-            ))}
-          </select>
+          />
         </label>
         <label className="text-[12px] font-medium text-[var(--text-secondary)]">
           MCQs

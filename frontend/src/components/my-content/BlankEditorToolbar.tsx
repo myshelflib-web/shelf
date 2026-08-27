@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Bold,
   Italic,
@@ -20,6 +21,7 @@ import {
   ToolMuted,
   ToolSep,
 } from "./EditorToolbarChrome";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 export type DrawTool = "pen" | "stroke-erase" | "object-erase";
 
@@ -115,6 +117,9 @@ export function BlankEditorToolbar({
   canvasBg,
   onCanvasBgChange,
 }: BlankEditorToolbarProps) {
+  const [fontValue, setFontValue] = useState("");
+  const [fontSize, setFontSize] = useState("14px");
+
   return (
     <EditorToolbarShell>
       <ToolGroup>
@@ -139,38 +144,31 @@ export function BlankEditorToolbar({
       {!drawMode ? (
         <>
           <ToolGroup>
-            <select
-              className="select-compact h-[34px] max-w-[7.5rem] rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1.5"
-              title="Font"
+            <ShelfSelect
+              compact
+              className="h-[34px] max-w-[7.5rem] rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1.5"
+              value={fontValue}
+              options={FONTS.map((f) => ({ value: f.value, label: f.label }))}
               aria-label="Font family"
-              defaultValue=""
-              onMouseDown={(e) => e.stopPropagation()}
-              onChange={(e) => {
-                const v = e.target.value;
+              onTriggerMouseDown={(e) => e.stopPropagation()}
+              onChange={(v) => {
+                setFontValue(v);
                 if (!v) onCommand("removeFormat");
                 else onCommand("fontName", v);
               }}
-            >
-              {FONTS.map((f) => (
-                <option key={f.id} value={f.value}>
-                  {f.label}
-                </option>
-              ))}
-            </select>
-            <select
-              className="select-compact h-[34px] w-14 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1"
-              title="Font size"
+            />
+            <ShelfSelect
+              compact
+              className="h-[34px] w-14 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1"
+              value={fontSize}
+              options={FONT_SIZES.map((s) => ({ value: s.px, label: s.label }))}
               aria-label="Font size"
-              defaultValue="14px"
-              onMouseDown={(e) => e.stopPropagation()}
-              onChange={(e) => onCommand("fontSizePx", e.target.value)}
-            >
-              {FONT_SIZES.map((s) => (
-                <option key={s.px} value={s.px}>
-                  {s.label}
-                </option>
-              ))}
-            </select>
+              onTriggerMouseDown={(e) => e.stopPropagation()}
+              onChange={(v) => {
+                setFontSize(v);
+                onCommand("fontSizePx", v);
+              }}
+            />
           </ToolGroup>
 
           <ToolSep />

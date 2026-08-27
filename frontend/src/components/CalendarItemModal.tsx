@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import { StudyItemKind } from "@/types";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 export type Recurrence = "NONE" | "DAILY" | "WEEKLY" | "MONTHLY";
 
@@ -160,18 +161,18 @@ export function CalendarItemModal({
               />
               <label className="text-[11px] text-[var(--text-muted)] block">
                 Repeat
-                <select
+                <ShelfSelect
+                  className="mt-0.5 w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
                   value={recurrence}
-                  onChange={(e) =>
-                    onRecurrenceChange(e.target.value as Recurrence)
-                  }
-                  className="ui-select mt-0.5 w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
-                >
-                  <option value="NONE">Does not repeat</option>
-                  <option value="DAILY">Daily</option>
-                  <option value="WEEKLY">Weekly</option>
-                  <option value="MONTHLY">Monthly</option>
-                </select>
+                  options={[
+                    { value: "NONE", label: "Does not repeat" },
+                    { value: "DAILY", label: "Daily" },
+                    { value: "WEEKLY", label: "Weekly" },
+                    { value: "MONTHLY", label: "Monthly" },
+                  ]}
+                  aria-label="Repeat"
+                  onChange={(v) => onRecurrenceChange(v as Recurrence)}
+                />
               </label>
               {recurrence !== "NONE" && (
                 <label className="text-[11px] text-[var(--text-muted)] block">
@@ -187,30 +188,29 @@ export function CalendarItemModal({
             </>
           ) : (
             <>
-              <select
+              <ShelfSelect
                 value={notebookSlug}
-                onChange={(e) => onNotebookSlugChange(e.target.value)}
-                className="ui-select w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
-              >
-                <option value="">All collections</option>
-                {notebooks.map((n) => (
-                  <option key={n.slug} value={n.slug}>
-                    {n.name}
-                  </option>
-                ))}
-              </select>
-              <select
+                options={[
+                  { value: "", label: "All collections" },
+                  ...notebooks.map((n) => ({ value: n.slug, label: n.name })),
+                ]}
+                className="w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
+                aria-label="Collection"
+                onChange={onNotebookSlugChange}
+              />
+              <ShelfSelect
                 value={pageHref}
-                onChange={(e) => onPageHrefChange(e.target.value)}
-                className="ui-select w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
-              >
-                <option value="">Link collection, topic, or page (optional)</option>
-                {filteredPages.map((p) => (
-                  <option key={p.href} value={p.href}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  {
+                    value: "",
+                    label: "Link collection, topic, or page (optional)",
+                  },
+                  ...filteredPages.map((p) => ({ value: p.href, label: p.label })),
+                ]}
+                className="w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
+                aria-label="Linked page"
+                onChange={onPageHrefChange}
+              />
             </>
           )}
 

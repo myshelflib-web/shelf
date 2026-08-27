@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   AlignLeft,
   Bold,
@@ -16,6 +17,7 @@ import {
   ToolGroup,
   ToolSep,
 } from "./EditorToolbarChrome";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 const FONTS = [
   { id: "default", label: "Default", value: "" },
@@ -54,6 +56,9 @@ interface DocToolbarProps {
 }
 
 export function DocToolbar({ onCommand }: DocToolbarProps) {
+  const [fontValue, setFontValue] = useState("");
+  const [fontSize, setFontSize] = useState("16px");
+
   return (
     <EditorToolbarShell>
       <ToolGroup>
@@ -116,32 +121,30 @@ export function DocToolbar({ onCommand }: DocToolbarProps) {
       <ToolSep />
 
       <ToolGroup>
-        <select
-          className="select-compact h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
-          defaultValue=""
-          onChange={(e) => onCommand("fontName", e.target.value)}
-          onMouseDown={(e) => e.stopPropagation()}
+        <ShelfSelect
+          compact
+          className="h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+          value={fontValue}
+          options={FONTS.map((f) => ({ value: f.value, label: f.label }))}
           aria-label="Font"
-        >
-          {FONTS.map((f) => (
-            <option key={f.id} value={f.value}>
-              {f.label}
-            </option>
-          ))}
-        </select>
-        <select
-          className="select-compact h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
-          defaultValue="16px"
-          onChange={(e) => onCommand("fontSizePx", e.target.value)}
-          onMouseDown={(e) => e.stopPropagation()}
+          onTriggerMouseDown={(e) => e.stopPropagation()}
+          onChange={(v) => {
+            setFontValue(v);
+            onCommand("fontName", v);
+          }}
+        />
+        <ShelfSelect
+          compact
+          className="h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+          value={fontSize}
+          options={FONT_SIZES.map((s) => ({ value: s.px, label: s.label }))}
           aria-label="Font size"
-        >
-          {FONT_SIZES.map((s) => (
-            <option key={s.px} value={s.px}>
-              {s.label}
-            </option>
-          ))}
-        </select>
+          onTriggerMouseDown={(e) => e.stopPropagation()}
+          onChange={(v) => {
+            setFontSize(v);
+            onCommand("fontSizePx", v);
+          }}
+        />
       </ToolGroup>
 
       <ToolSep />

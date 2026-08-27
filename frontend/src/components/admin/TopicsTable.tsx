@@ -15,6 +15,7 @@ import {
   LockOpen,
 } from "lucide-react";
 import clsx from "clsx";
+import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 interface TopicsTableProps {
   topics: AdminArticle[];
@@ -105,29 +106,29 @@ export function TopicsTable({ topics, subjects, onUpdate }: TopicsTableProps) {
             className="w-full pl-9 pr-3 py-2 text-sm rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           />
         </div>
-        <select
+        <ShelfSelect
           value={filterSubject}
-          onChange={(e) => setFilterSubject(e.target.value)}
+          options={[
+            { value: "all", label: "All Subjects" },
+            ...subjects.map((s) => ({ value: s.slug, label: s.name })),
+          ]}
           className="px-3 py-2 text-sm rounded-lg bg-[var(--bg-primary)] border border-[var(--border)]"
-        >
-          <option value="all">All Subjects</option>
-          {subjects.map((s) => (
-            <option key={s.id} value={s.slug}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        <select
+          aria-label="Filter by subject"
+          onChange={setFilterSubject}
+        />
+        <ShelfSelect
           value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
+          options={[
+            { value: "all", label: "All Statuses" },
+            { value: "PUBLISHED", label: "Published" },
+            { value: "PROCESSING", label: "Processing" },
+            { value: "FAILED", label: "Failed" },
+            { value: "DRAFT", label: "Draft" },
+          ]}
           className="px-3 py-2 text-sm rounded-lg bg-[var(--bg-primary)] border border-[var(--border)]"
-        >
-          <option value="all">All Statuses</option>
-          <option value="PUBLISHED">Published</option>
-          <option value="PROCESSING">Processing</option>
-          <option value="FAILED">Failed</option>
-          <option value="DRAFT">Draft</option>
-        </select>
+          aria-label="Filter by status"
+          onChange={setFilterStatus}
+        />
       </div>
 
       <div className="rounded-xl border border-[var(--border)] overflow-hidden">
