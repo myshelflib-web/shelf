@@ -20,10 +20,10 @@ export default async function BlogIndexPage() {
   const posts = await fetchPublishedBlogPosts();
 
   return (
-    <div className="h-full overflow-y-auto flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       <BlogListingJsonLd posts={posts} />
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 min-h-0 overflow-y-auto">
         <section className="relative px-4 sm:px-6 py-16 sm:py-20 max-w-6xl mx-auto overflow-hidden">
           <div className="hero-glow" aria-hidden />
           <RevealOnScroll>

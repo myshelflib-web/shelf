@@ -285,9 +285,9 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="h-full overflow-y-auto flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       <Header />
-      <main className="flex-1 flex items-center justify-center px-4">
+      <main className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center px-4">
         <Suspense fallback={<ThinkingIndicator label="Loading" />}>
           <LoginForm />
         </Suspense>

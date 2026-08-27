@@ -31,10 +31,10 @@ export function HomePageClient() {
   }
 
   return (
-    <div className="h-full overflow-y-auto flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       <Header />
 
-      <main className="flex-1">
+      <main className="flex-1 min-h-0 overflow-y-auto">
         <section className="relative px-4 sm:px-6 pt-14 sm:pt-20 pb-6 max-w-6xl mx-auto overflow-hidden">
           <div className="hero-glow" aria-hidden />
           <RevealOnScroll>

@@ -52,10 +52,10 @@ export default async function BlogPostPage({ params }: PageProps) {
   if (!post) notFound();
 
   return (
-    <div className="h-full overflow-y-auto flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       <BlogJsonLd post={post} />
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 min-h-0 overflow-y-auto">
         <article className="px-4 sm:px-6 py-12 sm:py-16">
           <div className="max-w-3xl mx-auto">
           <Link

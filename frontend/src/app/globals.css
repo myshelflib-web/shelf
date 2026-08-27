@@ -1575,11 +1575,33 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
 }
 
+.app-header {
+  height: 3rem;
+  min-height: 3rem;
+  max-height: 3rem;
+}
+
+.app-header-inner {
+  height: 100%;
+}
+
 .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
   color: var(--text-muted);
   transition: color 0.15s ease, background 0.15s ease;
-  padding: 0.2rem 0.35rem;
-  border-radius: 6px;
+  padding: 0.375rem 0.625rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.nav-link-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
 }
 
 .nav-link:hover {

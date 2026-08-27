@@ -25,11 +25,35 @@ import {
   Search,
   Keyboard,
   Shield,
+  Newspaper,
+  Info,
+  type LucideIcon,
 } from "lucide-react";
 import { StreakPopover } from "@/components/StreakPopover";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { NotificationsPopover } from "@/components/NotificationsPopover";
 import { OfflineStatusBadge } from "@/components/OfflineStatusBadge";
+
+function NavItem({
+  href,
+  icon: Icon,
+  children,
+  className = "",
+  onNavigate,
+}: {
+  href: string;
+  icon: LucideIcon;
+  children: React.ReactNode;
+  className?: string;
+  onNavigate?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+}) {
+  return (
+    <NavLink href={href} onNavigate={onNavigate} className={className}>
+      <Icon className="nav-link-icon" aria-hidden />
+      {children}
+    </NavLink>
+  );
+}
 
 function NavLink({
   href,
@@ -77,7 +101,7 @@ function NavLink({
         if (wantHash) setHash(wantHash);
         else if (path === "/dashboard") setHash("");
       }}
-      className={`nav-link relative whitespace-nowrap ${active ? "nav-link-active" : ""} ${className}`}
+      className={`nav-link relative ${active ? "nav-link-active" : ""} ${className}`}
     >
       {children}
     </Link>
@@ -106,10 +130,8 @@ export function Header() {
 
   return (
     <>
-    <header className="h-12 border-b border-[var(--border)] bg-[var(--bg-primary)] sticky top-0 z-50">
-      <div
-        className="h-full flex items-center justify-between gap-4 w-full px-5 sm:px-6"
-      >
+    <header className="app-header shrink-0 border-b border-[var(--border)] bg-[var(--bg-primary)] sticky top-0 z-50">
+      <div className="app-header-inner flex items-center justify-between gap-4 w-full px-5 sm:px-6">
         <div className="flex items-center gap-6 min-w-0">
           <Link
             href={user ? libraryHref : "/"}
@@ -129,53 +151,46 @@ export function Header() {
           >
             {user ? (
               <>
-                <NavLink
+                <NavItem
                   href={libraryHref}
+                  icon={BookOpen}
                   onNavigate={onLibraryClick}
-                  className="inline-flex items-center gap-1.5"
                 >
-                  <BookOpen className="w-3.5 h-3.5" />
                   Library
-                </NavLink>
-                <NavLink
-                  href="/dashboard"
-                  className="inline-flex items-center gap-1.5"
-                >
-                  <LayoutDashboard className="w-3.5 h-3.5" />
+                </NavItem>
+                <NavItem href="/dashboard" icon={LayoutDashboard}>
                   Dashboard
-                </NavLink>
-                <NavLink href="/planner" className="inline-flex items-center gap-1.5">
-                  <CalendarDays className="w-3.5 h-3.5" />
+                </NavItem>
+                <NavItem href="/planner" icon={CalendarDays}>
                   Planner
-                </NavLink>
-                <NavLink href="/quiz" className="inline-flex items-center gap-1.5">
-                  <ListChecks className="w-3.5 h-3.5" />
+                </NavItem>
+                <NavItem href="/quiz" icon={ListChecks}>
                   Quiz
-                </NavLink>
-                <NavLink href="/study-ai" className="inline-flex items-center gap-1.5">
-                  <MessageSquareText className="w-3.5 h-3.5" />
+                </NavItem>
+                <NavItem href="/study-ai" icon={MessageSquareText}>
                   Study AI
-                </NavLink>
+                </NavItem>
               </>
             ) : (
               <>
-                <NavLink href="/learn" className="inline-flex items-center gap-1.5">
-                  <BookOpen className="w-3.5 h-3.5" />
+                <NavItem href="/learn" icon={BookOpen}>
                   Library
-                </NavLink>
-                <NavLink href="/blog">Blog</NavLink>
-                <NavLink href="/quiz">Quiz</NavLink>
-                <NavLink href="/about">About</NavLink>
+                </NavItem>
+                <NavItem href="/blog" icon={Newspaper}>
+                  Blog
+                </NavItem>
+                <NavItem href="/quiz" icon={ListChecks}>
+                  Quiz
+                </NavItem>
+                <NavItem href="/about" icon={Info}>
+                  About
+                </NavItem>
               </>
             )}
             {user?.role === "ADMIN" && (
-              <NavLink
-                href="/admin"
-                className="hidden lg:inline-flex items-center gap-1.5"
-              >
-                <Shield className="w-3.5 h-3.5" />
+              <NavItem href="/admin" icon={Shield} className="hidden lg:inline-flex">
                 Admin
-              </NavLink>
+              </NavItem>
             )}
           </nav>
         </div>

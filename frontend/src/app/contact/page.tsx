@@ -25,9 +25,9 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       <Header />
-      <main className="flex-1 px-4 sm:px-6 py-16 sm:py-20 max-w-2xl mx-auto w-full">
+      <main className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-16 sm:py-20 max-w-2xl mx-auto w-full">
         <RevealOnScroll>
           <p className="text-sm font-medium text-[var(--accent)] mb-3 tracking-wide uppercase">
             Contact

@@ -252,10 +252,10 @@ function SubscribePageInner() {
   const coinBalance = status?.coinBalance ?? user?.coinBalance ?? 0;
 
   return (
-    <div className="h-full overflow-y-auto flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       <Header />
 
-      <main className="flex-1 px-4 sm:px-6 py-12 sm:py-16">
+      <main className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-12 sm:py-16">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-10">
             <Sparkles className="w-9 h-9 text-[var(--accent)] mx-auto mb-3" />

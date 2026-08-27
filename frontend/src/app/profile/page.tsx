@@ -115,9 +115,9 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="h-full overflow-y-auto flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       <Header />
-      <main className="flex-1 px-5 sm:px-6 py-8 max-w-xl mx-auto w-full">
+      <main className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-8 max-w-xl mx-auto w-full">
         <h1 className="page-title mb-1">Profile</h1>
         <LivelyLine surface="profile" className="page-subtitle mb-4" />
         <AccountNav current="profile" />

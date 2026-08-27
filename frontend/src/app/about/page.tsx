@@ -7,9 +7,9 @@ import { ArrowRight } from "lucide-react";
 
 export default function AboutPage() {
   return (
-    <div className="h-full overflow-y-auto flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       <Header />
-      <main className="flex-1">
+      <main className="flex-1 min-h-0 overflow-y-auto">
         <section className="relative px-4 sm:px-6 py-16 sm:py-24 max-w-3xl mx-auto text-center overflow-hidden">
           <div className="hero-glow" aria-hidden />
           <RevealOnScroll>

@@ -66,9 +66,9 @@ export default function LearnIndexPage() {
   const singleGoal = goal !== "GENERAL";
 
   return (
-    <div className="h-full overflow-y-auto flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       <Header />
-      <main className="flex-1 px-5 sm:px-6 py-8 max-w-3xl mx-auto w-full">
+      <main className="flex-1 min-h-0 overflow-y-auto px-5 sm:px-6 py-8 max-w-3xl mx-auto w-full">
         <div className="flex items-start gap-3 mb-2">
           <Library className="w-7 h-7 text-[var(--accent)] shrink-0 mt-0.5" />
           <div>
