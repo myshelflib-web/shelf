@@ -20,6 +20,8 @@ function SpotifyMark({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
+      width="16"
+      height="16"
       className={className}
       aria-hidden
       fill="currentColor"
@@ -423,5 +425,9 @@ export function SpotifyDockPanel({
 }
 
 export function SpotifyToolbarIcon({ className }: { className?: string }) {
-  return <SpotifyMark className={className} />;
+  return (
+    <span className="inline-flex size-4 shrink-0 items-center justify-center leading-none align-middle">
+      <SpotifyMark className={className ?? "block size-4 shrink-0"} />
+    </span>
+  );
 }

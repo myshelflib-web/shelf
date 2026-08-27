@@ -1,14 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ExternalLink, Link2, Unlink, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 
+/** Full-bleed circular mark — same optical fill as Spotify (viewBox 0–24). */
 function TelegramMark({ className }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 24 24" aria-hidden fill="currentColor">
-      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06-.01.24 0 .38z" />
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      className={className}
+      aria-hidden
+      fill="currentColor"
+    >
+      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.14.18-.357.295-.6.295-.002 0-.01 0-.01-.002l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.12L6.85 13.56l-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z" />
     </svg>
   );
 }
@@ -33,28 +41,22 @@ export function TelegramDockPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [hint, setHint] = useState("");
+  const autoConnectTried = useRef(false);
 
-  const load = useCallback(() => {
-    api.telegram
-      .status()
-      .then(setStatus)
-      .catch((err) =>
-        setError(err instanceof Error ? err.message : "Could not load Telegram")
+  const load = useCallback(async () => {
+    try {
+      const next = await api.telegram.status();
+      setStatus(next);
+      return next;
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not load Telegram"
       );
+      return null;
+    }
   }, []);
 
-  useEffect(() => {
-    if (minimized) return;
-    load();
-  }, [minimized, load]);
-
-  const linked = status?.linked ?? user?.telegramLinked ?? false;
-  const tgName =
-    status?.telegramUsername ?? user?.telegramUsername ?? null;
-  const botUser = status?.botUsername;
-  const botUrl = botUser ? `https://t.me/${botUser}` : null;
-
-  const connect = async () => {
+  const connect = useCallback(async () => {
     setError("");
     setHint("");
     setBusy(true);
@@ -62,18 +64,40 @@ export function TelegramDockPanel({
       const { url } = await api.telegram.link();
       window.open(url, "_blank", "noopener,noreferrer");
       setHint(
-        "Tap Start in Telegram to finish linking. This panel will refresh in a few seconds."
+        "In Telegram, tap Start to finish. Works for Google, email, or any Shelf account."
       );
       window.setTimeout(() => {
         void refreshUser().catch(() => undefined);
-        load();
+        void load();
       }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start linking");
     } finally {
       setBusy(false);
     }
-  };
+  }, [load, refreshUser]);
+
+  useEffect(() => {
+    if (minimized) {
+      autoConnectTried.current = false;
+      return;
+    }
+    void load();
+  }, [minimized, load]);
+
+  // Opening the dock while unlinked starts Connect (same path for Google users).
+  useEffect(() => {
+    if (minimized || !status || autoConnectTried.current) return;
+    if (!status.configured || status.linked) return;
+    autoConnectTried.current = true;
+    void connect();
+  }, [minimized, status, connect]);
+
+  const linked = status?.linked ?? user?.telegramLinked ?? false;
+  const tgName =
+    status?.telegramUsername ?? user?.telegramUsername ?? null;
+  const botUser = status?.botUsername;
+  const botUrl = botUser ? `https://t.me/${botUser}` : null;
 
   const disconnect = async () => {
     setError("");
@@ -82,7 +106,7 @@ export function TelegramDockPanel({
     try {
       await api.telegram.unlink();
       await refreshUser();
-      load();
+      await load();
       setHint("Telegram disconnected. PDFs already in My Content stay put.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not unlink");
@@ -97,7 +121,7 @@ export function TelegramDockPanel({
     <div className="h-full flex flex-col border-l border-[var(--border)] bg-[var(--bg-elevated)] overflow-hidden">
       <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-2 shrink-0 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#2AABEE]/15 text-[#2AABEE] shrink-0">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent-subtle)] text-[var(--accent)] shrink-0">
             <TelegramMark className="w-3.5 h-3.5" />
           </span>
           <div className="min-w-0">
@@ -109,7 +133,7 @@ export function TelegramDockPanel({
                 ? tgName
                   ? `Connected as @${tgName}`
                   : "Connected to Telegram"
-                : "Connect to save PDFs from chats"}
+                : "Connect any Shelf account · save PDFs from chats"}
             </p>
           </div>
         </div>
@@ -133,21 +157,21 @@ export function TelegramDockPanel({
         {!status ? (
           <p className="text-[12px] text-[var(--text-muted)]">Loading…</p>
         ) : !status.configured ? (
-          <div className="rounded-xl border border-dashed border-[var(--border)] px-4 py-6 text-center space-y-2">
-            <TelegramMark className="w-8 h-8 mx-auto text-[#2AABEE]/70" />
+          <div className="rounded-[10px] border border-dashed border-[var(--border)] px-4 py-8 text-center">
+            <TelegramMark className="w-8 h-8 mx-auto mb-2 text-[var(--text-muted)]" />
             <p className="text-[12px] text-[var(--text-muted)] leading-relaxed">
-              Telegram is not configured on this server yet. Ask your admin to
-              set the bot token, or use Settings once it is live.
+              Telegram is not configured yet. Add bot env vars on the API, then
+              reopen this panel.
             </p>
           </div>
         ) : linked ? (
           <>
-            <div className="rounded-xl border border-[#2AABEE]/30 bg-[#2AABEE]/10 px-3 py-3 space-y-2">
+            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--bg-primary)] px-3 py-3 space-y-2">
               <p className="text-[12px] font-medium text-[var(--text-primary)] flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5 text-[#2AABEE]" />
+                <Check className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
                 Connected to Telegram
                 {tgName ? (
-                  <span className="text-[var(--text-muted)] font-normal">
+                  <span className="text-[var(--text-muted)] font-normal truncate">
                     @{tgName}
                   </span>
                 ) : null}
@@ -161,7 +185,7 @@ export function TelegramDockPanel({
             <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-[var(--text-secondary)] leading-relaxed">
               <li>Open a chat where someone shared a PDF</li>
               <li>Forward the file to the Shelf bot</li>
-              <li>Open the link the bot replies with — or refresh My Content</li>
+              <li>Open the bot’s link — or refresh My Content</li>
             </ol>
 
             <div className="flex flex-col gap-2">
@@ -170,7 +194,7 @@ export function TelegramDockPanel({
                   href={botUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 w-full rounded-lg bg-[#2AABEE]/15 hover:bg-[#2AABEE]/25 border border-[#2AABEE]/30 px-3 py-2 text-[12px] font-medium text-[#2AABEE] transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 w-full rounded-lg bg-[var(--accent-subtle)] hover:opacity-90 border border-[var(--border)] px-3 py-2 text-[12px] font-medium text-[var(--accent)] transition-colors"
                 >
                   Open Shelf bot
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -180,7 +204,7 @@ export function TelegramDockPanel({
                 type="button"
                 onClick={disconnect}
                 disabled={busy}
-                className="inline-flex items-center justify-center gap-1.5 w-full rounded-lg border border-[var(--border)] px-3 py-2 text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+                className="btn-secondary inline-flex items-center justify-center gap-1.5 w-full px-3 py-2 text-[12px] disabled:opacity-50"
               >
                 <Unlink className="w-3.5 h-3.5" />
                 {busy ? "Working…" : "Disconnect"}
@@ -190,31 +214,31 @@ export function TelegramDockPanel({
         ) : (
           <>
             <p className="text-[11px] leading-relaxed text-[var(--text-muted)]">
-              Link Telegram to forward study PDFs from groups into Shelf. You
-              can also sign in with Telegram on the login page — that links
-              automatically.
+              Signed in with Google or email? Connect still works — we link
+              Telegram to this Shelf account so forwarded PDFs land in your
+              library.
             </p>
 
             <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-[var(--text-secondary)] leading-relaxed">
-              <li>Tap Connect Telegram below</li>
-              <li>In Telegram, press Start on the Shelf bot</li>
-              <li>Come back here — status should show Connected</li>
+              <li>Telegram should open with Start on the Shelf bot</li>
+              <li>Tap Start to finish linking</li>
+              <li>Return here — status updates to Connected</li>
             </ol>
 
             <button
               type="button"
-              onClick={connect}
+              onClick={() => void connect()}
               disabled={busy}
-              className="inline-flex items-center justify-center gap-1.5 w-full rounded-lg bg-[#2AABEE]/15 hover:bg-[#2AABEE]/25 border border-[#2AABEE]/30 px-3 py-2 text-[12px] font-medium text-[#2AABEE] transition-colors disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-1.5 w-full rounded-lg bg-[var(--accent)] hover:bg-[var(--accent-hover)] px-3 py-2 text-[12px] font-medium text-white transition-colors disabled:opacity-50"
             >
               <Link2 className="w-3.5 h-3.5" />
-              {busy ? "Opening…" : "Connect Telegram"}
+              {busy ? "Opening Telegram…" : "Connect Telegram"}
             </button>
 
             <button
               type="button"
               onClick={() => {
-                load();
+                void load();
                 void refreshUser().catch(() => undefined);
               }}
               className="w-full text-center text-[11px] text-[var(--accent)] hover:underline"
@@ -228,6 +252,7 @@ export function TelegramDockPanel({
   );
 }
 
+/** Same footprint as SpotifyToolbarIcon (`size-4` / 16×16). */
 export function TelegramToolbarIcon({
   linked,
   className,
@@ -236,11 +261,13 @@ export function TelegramToolbarIcon({
   className?: string;
 }) {
   return (
-    <span className="relative inline-flex">
-      <TelegramMark className={className} />
+    <span className="relative inline-flex size-4 shrink-0 items-center justify-center leading-none align-middle">
+      <TelegramMark
+        className={className ?? "block size-4 shrink-0"}
+      />
       {linked ? (
         <span
-          className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-[#2AABEE] ring-1 ring-[var(--bg-elevated)]"
+          className="pointer-events-none absolute -right-px -top-px size-1.5 rounded-full bg-[var(--accent)] ring-1 ring-[var(--bg-elevated)]"
           aria-hidden
         />
       ) : null}

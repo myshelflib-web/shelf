@@ -318,10 +318,11 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
                     surface="studyAi"
                     className="mt-5 text-sm text-[var(--text-muted)] max-w-lg px-4 text-center leading-snug"
                   />
-                  <div className="relative mt-8 flex flex-wrap justify-center gap-2 max-w-sm">
+                  <div className="relative mt-8 max-w-md w-full px-2">
                     <StudyAiSuggestChips
                       scope="library"
                       count={4}
+                      align="center"
                       onPick={(item) => {
                         const parts = studyAiSendParts(item.insert, "library", {
                           label: item.label,
@@ -393,6 +394,12 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
             onRemoveQueued={chat.removeQueued}
             memoryLimit={memoryLimit}
             planLabel={isPremiumUser(user) ? "Premium" : "Free"}
+            suggestMode={
+              chat.messages.some((m) => m.role === "assistant" && m.content)
+                ? "followup"
+                : "suggest"
+            }
+            showSuggestions={!empty}
             quizLaunch={{
               contextKind: threadMeta?.contextKind,
               notebookId: threadMeta?.contextNotebookId,

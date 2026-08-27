@@ -41,6 +41,10 @@ export type PreparedPageAsk = {
   hasSelection: boolean;
   needVectors: boolean;
   packedChars: number;
+  /** Tools enabled for free-form ask (not summarize/notes/mindmap). */
+  toolsEnabled: boolean;
+  /** Open page id for quiz/default scope (personal library only). */
+  defaultPageId: string | null;
   chatMessages: ChatMessage[];
   user: {
     name: string | null;
@@ -61,17 +65,18 @@ function promptForMode(
   articleTitle: string,
   packedMaterial: string,
   question: string | undefined,
-  hasSelection: boolean
+  hasSelection: boolean,
+  withTools: boolean
 ): { system: string; user: string } {
-  const system = pageAskSystemPrompt(studyGoal, { name: learnerName });
+  const system = pageAskSystemPrompt(studyGoal, { name: learnerName }, { withTools });
 
   const scopeNote = hasSelection
     ? "Highlight is the primary focus. Still use the file passages and related library notes for full-document and persona context."
-    : "No highlight — answer from the full file. Retrieved passages cover the whole PDF when text was indexed. If a page image is attached, that is the page the learner is viewing (use it for scanned / image-only files).";
+    : "No highlight — answer from the full file when the question is about this document. Retrieved passages cover the whole PDF when text was indexed. If a page image is attached, that is the page the learner is viewing (use it for scanned / image-only files).";
 
   const material = packedMaterial.trim()
     ? packedMaterial.trim()
-    : "(No extractable text — use the attached PDF page image as the document.)";
+    : "(No extractable text — use the attached PDF page image as the document when the question is about this file.)";
 
   if (mode === "summarize") {
     return {
@@ -117,7 +122,13 @@ ${material}`,
 
   return {
     system,
-    user: `Question: ${question?.trim() || "Explain this clearly."}\n${scopeNote}\n\nFile: ${articleTitle}\n\n${material}`,
+    user: `Question: ${question?.trim() || "Explain this clearly."}
+${scopeNote}
+If this question is not about the open file, answer generally (and use tools for planner/quiz/app actions when asked). Do not refuse just because the answer is not in the PDF.
+
+File: ${articleTitle}
+
+${material}`,
   };
 }
 
@@ -301,7 +312,8 @@ export async function preparePageAsk(
     title,
     packedMaterial,
     input.question,
-    hasSelection
+    hasSelection,
+    resolvedMode === "ask"
   );
 
   const historyWindow = chatHistoryWindow(user);
@@ -354,6 +366,8 @@ export async function preparePageAsk(
     hasSelection,
     needVectors,
     packedChars: packed.charsUsed,
+    toolsEnabled: resolvedMode === "ask",
+    defaultPageId: pageIdForVectors,
     chatMessages,
     user: {
       name: user.name,

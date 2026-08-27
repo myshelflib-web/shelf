@@ -22,7 +22,7 @@ export function ReaderFocusToolbarButtons({
     <>
       <button
         type="button"
-        className={`p-1.5 rounded-md hover:bg-[var(--bg-elevated)] ${
+        className={`inline-flex size-8 items-center justify-center rounded-md hover:bg-[var(--bg-elevated)] ${
           spotifyCollapsed
             ? "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             : "text-[#1DB954] bg-[var(--bg-elevated)]"
@@ -35,35 +35,36 @@ export function ReaderFocusToolbarButtons({
         aria-label={spotifyCollapsed ? "Show Spotify" : "Hide Spotify"}
         onClick={onToggleSpotify}
       >
-        <SpotifyToolbarIcon className="w-4 h-4" />
+        <SpotifyToolbarIcon className="block size-4 shrink-0" />
       </button>
 
       <button
         type="button"
-        className={`p-1.5 rounded-md hover:bg-[var(--bg-elevated)] ${
+        className={`inline-flex size-8 items-center justify-center rounded-md hover:bg-[var(--bg-elevated)] ${
           telegramCollapsed
-            ? telegramLinked
-              ? "text-[#2AABEE]/80 hover:text-[#2AABEE]"
-              : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-            : "text-[#2AABEE] bg-[var(--bg-elevated)]"
+            ? "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            : "text-[var(--accent)] bg-[var(--bg-elevated)]"
         }`}
         title={
           telegramCollapsed
             ? telegramLinked
               ? "Show Telegram — connected"
-              : "Show Telegram — connect to save PDFs"
+              : "Connect Telegram — save PDFs from chats"
             : "Hide Telegram panel"
         }
         aria-label={
           telegramCollapsed
             ? telegramLinked
               ? "Show Telegram (connected)"
-              : "Show Telegram"
+              : "Connect Telegram"
             : "Hide Telegram"
         }
         onClick={onToggleTelegram}
       >
-        <TelegramToolbarIcon linked={telegramLinked} className="w-4 h-4" />
+        <TelegramToolbarIcon
+          linked={telegramLinked}
+          className="block size-4 shrink-0"
+        />
       </button>
     </>
   );

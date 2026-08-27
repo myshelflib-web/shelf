@@ -133,6 +133,8 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
       pageIds: scope.pageIds,
       scopeLabel: scope.label,
       syllabusText,
+      defaultPageId:
+        thread.contextKind === "PAGE" ? thread.contextPageId : null,
     });
 
     const assistantMsg = await prisma.chatMessage.create({
@@ -298,6 +300,8 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
       scopeLabel: scope.label,
       syllabusText,
       signal: llmAbort.signal,
+      defaultPageId:
+        thread.contextKind === "PAGE" ? thread.contextPageId : null,
     })) {
       if (clientGone) break;
       if (ev.type === "status") {

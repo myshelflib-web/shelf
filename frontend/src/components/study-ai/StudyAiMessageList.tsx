@@ -40,7 +40,7 @@ export function StudyAiMessageList({
         m.role === "user" ? (
           <div
             key={m.clientKey ?? m.id}
-            className="study-ai-msg group flex justify-end"
+            className="study-ai-msg-user group flex justify-end"
           >
             <div className="max-w-[72%]">
               {m.id.startsWith("tmp-") ? (
@@ -104,7 +104,7 @@ export function StudyAiMessageList({
                 </p>
               )}
               {!m.streaming && m.content && (
-                <div className="mt-2.5 flex flex-wrap items-center gap-1">
+                <div className="mt-2.5 flex flex-wrap items-center gap-1 study-ai-followups">
                   {hasFlashcardDeck(m.content) && (
                     <button
                       type="button"

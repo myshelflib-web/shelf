@@ -183,7 +183,7 @@ export function StudyPanel({
         )}
         {panel.turns.map((t) =>
           t.role === "user" ? (
-            <div key={t.id} className="group flex justify-end">
+            <div key={t.id} className="study-ai-msg-user group flex justify-end">
               <div className="max-w-[92%]">
                 <EditUserMessage
                   content={t.content}
@@ -213,7 +213,7 @@ export function StudyPanel({
               </div>
             </div>
           ) : (
-            <div key={t.id} className="flex justify-start">
+            <div key={t.id} className="study-ai-msg flex justify-start">
               <div className="max-w-[96%] w-full rounded-2xl rounded-bl-md border border-[var(--border)] bg-[var(--bg-secondary)] px-3.5 py-3">
                 <p className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-2">
                   {t.streaming ? (
@@ -231,12 +231,12 @@ export function StudyPanel({
                   />
                 )}
                 {t.streaming && t.content && panel.statusEvents.length > 0 && (
-                  <p className="mt-2 text-[11px] text-[var(--text-muted)]">
+                  <p className="mt-2 text-[11px] text-[var(--text-muted)] transition-opacity duration-200">
                     {panel.statusEvents[panel.statusEvents.length - 1]?.detail}
                   </p>
                 )}
                 {!t.streaming && t.content && (
-                  <div className="mt-3 flex flex-wrap gap-3">
+                  <div className="mt-3 flex flex-wrap gap-3 study-ai-followups">
                     {hasFlashcardDeck(t.content) && (
                       <button
                         type="button"

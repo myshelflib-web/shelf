@@ -35,6 +35,8 @@ export function StudyAiComposer({
   memoryLimit,
   planLabel,
   quizLaunch,
+  suggestMode = "suggest",
+  showSuggestions = true,
 }: {
   input: string;
   onInput: (v: string) => void;
@@ -55,6 +57,8 @@ export function StudyAiComposer({
   memoryLimit: number;
   planLabel: string;
   quizLaunch?: QuizLaunch;
+  suggestMode?: "suggest" | "followup";
+  showSuggestions?: boolean;
 }) {
   const router = useRouter();
   const [commandsOpen, setCommandsOpen] = useState(false);
@@ -174,12 +178,19 @@ export function StudyAiComposer({
             </div>
           )}
 
-          <div className="mb-2">
-            <StudyAiSuggestChips
-              scope="library"
-              onPick={(item) => runResolved(item.insert, undefined, item.label)}
-            />
-          </div>
+          {showSuggestions && (
+            <div className="mb-2">
+              <StudyAiSuggestChips
+                scope="library"
+                mode={suggestMode}
+                count={suggestMode === "followup" ? 3 : 4}
+                disabled={loading}
+                onPick={(item) =>
+                  runResolved(item.insert, undefined, item.label)
+                }
+              />
+            </div>
+          )}
 
           <div className="flex items-center gap-2 h-14 rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] pl-3 pr-2.5 shadow-[0_6px_22px_rgba(var(--shadow-color)/0.05)] transition-shadow focus-within:border-[var(--accent)] focus-within:shadow-[0_0_0_3px_var(--ring)]">
             <input
@@ -249,7 +260,9 @@ export function StudyAiComposer({
                 }
               }}
               placeholder={
-                loading ? "Queue another message…" : "Message Study AI…"
+                loading
+                  ? "Queue another message…"
+                  : "Ask anything, set a reminder, or type / …"
               }
               className="no-focus-ring flex-1 min-w-0 bg-transparent text-[12px] outline-none placeholder:text-[var(--text-muted)] py-2"
             />
@@ -274,6 +287,8 @@ export function StudyAiComposer({
           </div>
           <p className="text-center text-[9px] text-[var(--text-muted)] mt-2 leading-snug">
             Type / for commands
+            <span className="mx-1.5 opacity-35">·</span>
+            Planner & quiz from chat
             <span className="mx-1.5 opacity-35">·</span>
             Memory last {memoryLimit}
             <span className="mx-1.5 opacity-35">·</span>

@@ -75,8 +75,10 @@ export function TelegramSettingsCard() {
     <section className="p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] space-y-3">
       <h2 className="text-sm font-semibold">Telegram</h2>
       <p className="text-xs text-[var(--text-muted)]">
-        Sign in with Telegram, or connect the bot to forward PDFs straight into
-        My Content (library root, PDFs only, max 20 MB via the bot).
+        Works with Google, email, or Telegram login. Connect the bot to forward
+        PDFs into My Content (library root, PDFs only, max 20 MB via the bot).
+        You can also connect from the Telegram icon beside Spotify in the
+        reader.
       </p>
       {error && <p className="text-sm text-red-500">{error}</p>}
       {message && (

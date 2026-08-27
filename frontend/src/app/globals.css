@@ -514,7 +514,22 @@
 }
 
 .study-ai-msg {
-  animation: fade-in-up 0.28s ease-out both;
+  animation: fade-in-up 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.study-ai-msg-user {
+  animation: study-ai-msg-user 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes study-ai-msg-user {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .study-ai-live-dot {
@@ -540,14 +555,51 @@
 
 .study-ai-chip {
   transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease,
-    color 0.15s ease,
-    transform 0.15s ease;
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .study-ai-chip:hover {
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(var(--shadow-color) / 0.08);
+}
+
+.study-ai-chip:active {
+  transform: translateY(0);
+}
+
+.study-ai-chip-enter {
+  animation: study-ai-chip-in 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes study-ai-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.study-ai-suggest {
+  min-height: 2.75rem;
+}
+
+.study-ai-suggest-hint {
+  transition: opacity 0.2s ease;
+}
+
+.study-ai-followups {
+  animation: fade-in-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.study-ai-status-item {
+  animation: fade-in-up 0.22s ease-out both;
 }
 
 /* Study AI workspace — sidebar, composer, popovers */
@@ -1284,6 +1336,9 @@
   .study-ai-msg {
     animation: none;
   }
+  .study-ai-msg-user {
+    animation: none;
+  }
   .study-ai-stream-caret {
     animation: none;
     opacity: 0.8;
@@ -1291,8 +1346,18 @@
   .study-ai-live-dot {
     animation: none;
   }
+  .study-ai-chip-enter {
+    animation: none;
+  }
+  .study-ai-followups {
+    animation: none;
+  }
+  .study-ai-status-item {
+    animation: none;
+  }
   .study-ai-chip:hover {
     transform: none;
+    box-shadow: none;
   }
   .lively-line {
     transition: none;

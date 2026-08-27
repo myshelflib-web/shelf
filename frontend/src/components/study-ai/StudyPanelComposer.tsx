@@ -151,6 +151,8 @@ export function StudyPanelComposer({
       {!guestLocked && (
         <StudyAiSuggestChips
           scope="page"
+          mode={panel.turns.some((t) => t.role === "assistant" && t.content) ? "followup" : "suggest"}
+          count={panel.turns.length > 0 ? 3 : 4}
           onPick={(item) => runResolved(item.insert, undefined, item.label)}
           disabled={panel.busy}
         />
@@ -285,7 +287,7 @@ export function StudyPanelComposer({
                     ? "Ask about the highlight…"
                     : panel.busy
                       ? "Queue another question…"
-                      : "Ask or type / …"
+                      : "Ask anything — or set a reminder…"
             }
             className={`flex-1 min-w-0 bg-transparent px-1 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none ${
               guestLocked ? "cursor-not-allowed opacity-60" : ""

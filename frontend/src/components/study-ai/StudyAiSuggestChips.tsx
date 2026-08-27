@@ -1,63 +1,119 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useStudyAiSuggestions } from "@/hooks/useStudyAiSuggestions";
+import {
+  useCrossfadeItems,
+  useStudyAiSuggestions,
+} from "@/hooks/useStudyAiSuggestions";
 import type { StudyAiSuggestion } from "@/lib/studyAiSuggestions";
 
-export function StudyAiSuggestChips({
-  scope,
-  count = 3,
-  onPick,
+function ChipButton({
+  item,
   disabled,
+  index,
+  onPick,
 }: {
-  scope: "library" | "page";
-  count?: number;
-  onPick: (item: StudyAiSuggestion) => void;
+  item: StudyAiSuggestion;
   disabled?: boolean;
+  index: number;
+  onPick: (item: StudyAiSuggestion) => void;
 }) {
-  const items = useStudyAiSuggestions(scope, count);
+  const action = item.tone === "action";
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onPick(item)}
+      style={{ animationDelay: `${index * 45}ms` }}
+      className={`study-ai-chip study-ai-chip-enter text-[11px] px-2.5 py-1 rounded-full border disabled:opacity-45 ${
+        action
+          ? "border-[color-mix(in_srgb,var(--accent)_35%,var(--border))] bg-[var(--accent-subtle)] text-[var(--accent)] hover:border-[var(--accent)]"
+          : "border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--accent-subtle)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+      }`}
+    >
+      {item.label}
+    </button>
+  );
+}
+
+function useCrossfadeText(text: string) {
   const [visible, setVisible] = useState(true);
-  const [shown, setShown] = useState(items);
+  const [shown, setShown] = useState(text);
   const allowFade = useRef(false);
-  const key = items.map((i) => i.id).join("|");
-  const shownKey = shown.map((i) => i.id).join("|");
 
   useEffect(() => {
-    if (key === shownKey) {
+    if (text === shown) {
       allowFade.current = true;
       return;
     }
     if (!allowFade.current) {
-      setShown(items);
+      setShown(text);
       setVisible(true);
       allowFade.current = true;
       return;
     }
     setVisible(false);
     const id = window.setTimeout(() => {
-      setShown(items);
+      setShown(text);
       setVisible(true);
-    }, 180);
+    }, 200);
     return () => window.clearTimeout(id);
-  }, [key, shownKey, items]);
+  }, [text, shown]);
+
+  return { visible, shown };
+}
+
+export function StudyAiSuggestChips({
+  scope,
+  count = 3,
+  onPick,
+  disabled,
+  mode = "suggest",
+  showHint = true,
+  align = "start",
+  className = "",
+}: {
+  scope: "library" | "page";
+  count?: number;
+  onPick: (item: StudyAiSuggestion) => void;
+  disabled?: boolean;
+  mode?: "suggest" | "followup";
+  showHint?: boolean;
+  align?: "start" | "center";
+  className?: string;
+}) {
+  const { items, hint } = useStudyAiSuggestions(scope, count, mode);
+  const { visible, shown } = useCrossfadeItems(items);
+  const hintFade = useCrossfadeText(hint);
 
   return (
-    <div
-      className={`flex flex-wrap gap-1.5 lively-line ${
-        visible ? "lively-line-in" : "lively-line-out"
-      }`}
-    >
-      {shown.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          disabled={disabled}
-          onClick={() => onPick(item)}
-          className="study-ai-chip text-[11px] px-2.5 py-1 rounded-full border border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] hover:bg-[var(--accent-subtle)] hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-45 transition-colors"
+    <div className={`study-ai-suggest ${className}`.trim()}>
+      {showHint && (
+        <p
+          className={`study-ai-suggest-hint text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1.5 lively-line ${
+            align === "center" ? "text-center" : ""
+          } ${hintFade.visible ? "lively-line-in" : "lively-line-out"}`}
         >
-          {item.label}
-        </button>
-      ))}
+          {hintFade.shown}
+        </p>
+      )}
+      <div
+        className={`flex flex-wrap gap-1.5 lively-line ${
+          align === "center" ? "justify-center" : ""
+        } ${visible ? "lively-line-in" : "lively-line-out"}`}
+        role="list"
+        aria-label={mode === "followup" ? "Suggested next steps" : "Suggestions"}
+      >
+        {shown.map((item, i) => (
+          <ChipButton
+            key={item.id}
+            item={item}
+            index={i}
+            disabled={disabled}
+            onPick={onPick}
+          />
+        ))}
+      </div>
     </div>
   );
 }

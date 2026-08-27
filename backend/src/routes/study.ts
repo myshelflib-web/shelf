@@ -1,7 +1,6 @@
 import { Router, Request, Response } from "express";
 import prisma from "../utils/prisma.js";
 import { authMiddleware } from "../middleware/auth.js";
-import { completeChat, streamChat } from "../services/llm.js";
 import { logger, errorFields } from "../utils/logger.js";
 import { answerWithRag } from "../services/rag.js";
 import {
@@ -13,6 +12,10 @@ import {
   savePageAskTurn,
   titleFromQuery,
 } from "../services/chatThreads.js";
+import {
+  completeWithStudyTools,
+  streamWithStudyTools,
+} from "../services/studyToolLoop.js";
 import {
   QuotaError,
   assertLlmRoom,
@@ -131,7 +134,14 @@ router.post("/ask", async (req: Request, res: Response) => {
       estimateTokens(prepared.estimatePrompt)
     );
 
-    const { text: answer, tokens } = await completeChat(prepared.chatMessages);
+    const { text: answer, tokens } = await completeWithStudyTools(
+      prepared.chatMessages,
+      {
+        userId,
+        defaultPageId: prepared.defaultPageId,
+      },
+      { enabled: prepared.toolsEnabled }
+    );
 
     await prisma.user.update({
       where: { id: userId },
@@ -240,15 +250,24 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
 
     let tokens = 0;
     let answer = "";
-    for await (const ev of streamChat(prepared.chatMessages)) {
-      if (ev.type === "delta") {
+    for await (const ev of streamWithStudyTools(
+      prepared.chatMessages,
+      {
+        userId,
+        defaultPageId: prepared.defaultPageId,
+      },
+      { enabled: prepared.toolsEnabled }
+    )) {
+      if (ev.type === "status") {
+        send("status", { stage: "tools", detail: ev.detail });
+      } else if (ev.type === "delta") {
         answer += ev.text;
         send("delta", { text: ev.text });
       } else if (ev.type === "done") {
         tokens = ev.tokens;
         send("status", {
           stage: "finishing",
-          detail: `Done · ${ev.model}`,
+          detail: ev.model ? `Done · ${ev.model}` : "Done",
         });
       }
     }

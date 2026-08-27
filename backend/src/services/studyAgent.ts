@@ -1,26 +1,20 @@
 import { StudyGoal } from "@prisma/client";
 import {
-  completeChat,
-  streamChat,
-  isToolsUnsupportedMessage,
   type ChatContentPart,
   type ChatMessage,
-  type ChatToolCall,
 } from "./llm.js";
 import { studySystemPrompt } from "./goalPrompt.js";
 import { retrieveLibrary } from "./ragRetrieve.js";
 import { rewriteSearchQuery } from "../utils/queryRewrite.js";
 import {
   compactHistory,
-  mergeCitations,
   packLibraryExcerpts,
   type LibraryCitation,
 } from "../utils/ragPack.js";
 import {
-  executeStudyTool,
-  STUDY_TOOLS,
-  toolStatusDetail,
-} from "./studyTools.js";
+  completeWithStudyTools,
+  streamWithStudyTools,
+} from "./studyToolLoop.js";
 
 export type { LibraryCitation };
 
@@ -48,6 +42,7 @@ export type RagAskOpts = {
   scopeLabel?: string | null;
   syllabusText?: string | null;
   signal?: AbortSignal;
+  defaultPageId?: string | null;
 };
 
 export type RagStreamEvent =
@@ -61,8 +56,6 @@ export type RagStreamEvent =
       tokens: number;
       model: string;
     };
-
-const MAX_TOOL_ROUNDS = 3;
 
 type PreparedRag = {
   messages: ChatMessage[];
@@ -85,7 +78,7 @@ async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
   });
   const userPrompt =
     excerpts.length === 0
-      ? `The library search returned no excerpts.\nQuestion: ${opts.query}`
+      ? `The library search returned no excerpts.\nQuestion: ${opts.query}\nAnswer helpfully from general knowledge and tools (planner, quiz, web) when useful — do not refuse solely because the library is empty.`
       : `Question: ${opts.query}\n\nLibrary excerpts:\n${packed.numbered}`;
 
   const historyLimit = opts.historyLimit ?? 16;
@@ -125,106 +118,25 @@ async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
   };
 }
 
-function toolsUnsupported(err: unknown): boolean {
-  if (
-    err &&
-    typeof err === "object" &&
-    "code" in err &&
-    (err as { code?: string }).code === "thought_signature"
-  ) {
-    return true;
-  }
-  return (
-    err instanceof Error && isToolsUnsupportedMessage(err.message)
-  );
-}
-
-async function runTools(
-  calls: ChatToolCall[],
-  opts: RagAskOpts,
-  citations: LibraryCitation[],
-  onStatus?: (detail: string) => void
-): Promise<{
-  messages: ChatMessage[];
-  citations: LibraryCitation[];
-}> {
-  const out: ChatMessage[] = [];
-  let nextCitations = citations;
-  for (const call of calls) {
-    onStatus?.(toolStatusDetail(call.function.name));
-    const result = await executeStudyTool(call.function.name, call.function.arguments, {
-      userId: opts.userId,
-      pageIds: opts.pageIds,
-    });
-    if (result.citations?.length) {
-      nextCitations = mergeCitations(nextCitations, result.citations);
-    }
-    out.push({
-      role: "tool",
-      tool_call_id: call.id,
-      name: call.function.name,
-      content: result.text,
-    });
-  }
-  return { messages: out, citations: nextCitations };
+function toolCtx(opts: RagAskOpts) {
+  return {
+    userId: opts.userId,
+    pageIds: opts.pageIds,
+    defaultPageId: opts.defaultPageId ?? null,
+  };
 }
 
 export async function answerWithRag(opts: RagAskOpts): Promise<RagResult> {
   const prepared = await prepareRagAsk(opts);
-  let messages = prepared.messages;
-  let citations = prepared.citations;
-  let tokens = 0;
-  let useTools = true;
-
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    if (opts.signal?.aborted) break;
-    try {
-      const result = await completeChat(messages, {
-        tools: useTools ? STUDY_TOOLS : undefined,
-        toolChoice: useTools ? "auto" : "none",
-        signal: opts.signal,
-      });
-      tokens += result.tokens;
-      if (result.toolCalls?.length && useTools) {
-        messages = [
-          ...messages,
-          {
-            role: "assistant",
-            content: result.text || null,
-            tool_calls: result.toolCalls,
-          },
-        ];
-        const ran = await runTools(result.toolCalls, opts, citations);
-        messages = [...messages, ...ran.messages];
-        citations = ran.citations;
-        continue;
-      }
-      return {
-        answer: result.text,
-        citations,
-        matchCount: citations.length,
-        tokens,
-      };
-    } catch (err) {
-      if (useTools && toolsUnsupported(err)) {
-        useTools = false;
-        // Drop any partial tool turn — Gemini rejects history without signatures.
-        messages = prepared.messages;
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  const fallback = await completeChat(messages, {
-    toolChoice: "none",
+  const result = await completeWithStudyTools(prepared.messages, toolCtx(opts), {
+    citations: prepared.citations,
     signal: opts.signal,
   });
   return {
-    answer: fallback.text,
-    citations,
-    matchCount: citations.length,
-    tokens: tokens + fallback.tokens,
+    answer: result.text,
+    citations: result.citations,
+    matchCount: result.citations.length,
+    tokens: result.tokens,
   };
 }
 
@@ -249,95 +161,30 @@ export async function* streamAnswerWithRag(
     citations: prepared.citations,
   };
 
-  let messages = prepared.messages;
-  let citations = prepared.citations;
-  let tokens = 0;
-  let model = "";
-  let answer = "";
-  let useTools = true;
-
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    if (opts.signal?.aborted) break;
-    const lastRound = round === MAX_TOOL_ROUNDS - 1;
-    yield {
-      type: "status",
-      stage: "generating",
-      detail: round === 0 ? "Writing answer…" : "Continuing…",
-    };
-
-    let roundText = "";
-    let toolCalls: ChatToolCall[] | undefined;
-    try {
-      for await (const ev of streamChat(messages, {
-        tools: useTools && !lastRound ? STUDY_TOOLS : undefined,
-        toolChoice: useTools && !lastRound ? "auto" : "none",
-        signal: opts.signal,
-      })) {
-        if (opts.signal?.aborted) break;
-        if (ev.type === "delta") {
-          if (toolCalls?.length) continue;
-          roundText += ev.text;
-          answer = roundText;
-          yield { type: "delta", text: ev.text };
-        } else if (ev.type === "tool_calls") {
-          toolCalls = ev.calls;
-        } else {
-          tokens += ev.tokens;
-          model = ev.model;
-        }
-      }
-    } catch (err) {
-      if (opts.signal?.aborted || (err as Error)?.name === "AbortError") break;
-      if (useTools && toolsUnsupported(err)) {
-        useTools = false;
-        messages = prepared.messages;
-        answer = "";
-        continue;
-      }
-      throw err;
-    }
-
-    if (toolCalls?.length && useTools && !lastRound && !roundText.trim()) {
-      yield {
-        type: "status",
-        stage: "tools",
-        detail: toolStatusDetail(toolCalls[0].function.name),
-      };
-      messages = [
-        ...messages,
-        {
-          role: "assistant",
-          content: roundText.trim() ? roundText : null,
-          tool_calls: toolCalls,
-        },
-      ];
-      const ran = await runTools(toolCalls, opts, citations, (detail) => {
-        /* status yielded above; extra tools reuse generating */
-        void detail;
-      });
-      for (const call of toolCalls.slice(1)) {
-        yield {
-          type: "status",
-          stage: "tools",
-          detail: toolStatusDetail(call.function.name),
-        };
-      }
-      messages = [...messages, ...ran.messages];
-      citations = ran.citations;
-      answer = "";
-      continue;
-    }
-
-    answer = roundText;
-    break;
-  }
-
   yield {
-    type: "done",
-    answer,
-    citations,
-    matchCount: citations.length,
-    tokens,
-    model,
+    type: "status",
+    stage: "generating",
+    detail: "Writing answer…",
   };
+
+  for await (const ev of streamWithStudyTools(
+    prepared.messages,
+    toolCtx(opts),
+    { citations: prepared.citations, signal: opts.signal }
+  )) {
+    if (ev.type === "status") {
+      yield { type: "status", stage: "tools", detail: ev.detail };
+    } else if (ev.type === "delta") {
+      yield { type: "delta", text: ev.text };
+    } else {
+      yield {
+        type: "done",
+        answer: ev.answer,
+        citations: ev.citations,
+        matchCount: ev.citations.length,
+        tokens: ev.tokens,
+        model: ev.model,
+      };
+    }
+  }
 }

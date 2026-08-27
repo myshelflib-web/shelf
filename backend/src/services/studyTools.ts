@@ -5,7 +5,7 @@ import { truncateText } from "../utils/htmlText.js";
 import { rangedTaskWhere, mergeRangedTasks } from "../utils/plannerTasks.js";
 import { extractPageBody } from "./libraryIndex.js";
 import { retrieveLibrary, type Excerpt } from "./ragRetrieve.js";
-import { packLibraryExcerpts, type LibraryCitation } from "../utils/ragPack.js";
+import { packLibraryExcerpts } from "../utils/ragPack.js";
 import { webLookup } from "./webLookup.js";
 import {
   currentTimeLookup,
@@ -16,19 +16,16 @@ import {
   lookupRelevancy,
   lookupStarred,
 } from "./studyLookups.js";
+import {
+  STUDY_ACTION_TOOLS,
+  actionToolStatusDetail,
+  executeStudyActionTool,
+} from "./studyActionTools.js";
+import type { StudyToolContext, StudyToolResult } from "./studyToolTypes.js";
 
-export type StudyToolContext = {
-  userId: string;
-  pageIds?: string[] | null;
-};
+export type { StudyToolContext, StudyToolResult };
 
-export type StudyToolResult = {
-  text: string;
-  excerpts?: Excerpt[];
-  citations?: LibraryCitation[];
-};
-
-export const STUDY_TOOLS: ChatToolDef[] = [
+const STUDY_LOOKUP_TOOLS: ChatToolDef[] = [
   {
     type: "function",
     function: {
@@ -185,6 +182,11 @@ export const STUDY_TOOLS: ChatToolDef[] = [
       parameters: { type: "object", properties: {} },
     },
   },
+];
+
+export const STUDY_TOOLS: ChatToolDef[] = [
+  ...STUDY_LOOKUP_TOOLS,
+  ...STUDY_ACTION_TOOLS,
 ];
 
 function parseArgs(raw: string): Record<string, unknown> {
@@ -387,10 +389,14 @@ export async function executeStudyTool(
   if (name === "lookup_relevancy") return lookupRelevancy(ctx, args);
   if (name === "fetch_url") return fetchPublicUrl(args);
   if (name === "current_time") return currentTimeLookup();
+  const action = await executeStudyActionTool(name, rawArgs, ctx);
+  if (action) return action;
   return { text: `Unknown tool: ${name}` };
 }
 
 export function toolStatusDetail(name: string): string {
+  const action = actionToolStatusDetail(name);
+  if (action) return action;
   switch (name) {
     case "library_search":
       return "Searching your library…";

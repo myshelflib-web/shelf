@@ -28,7 +28,11 @@ export function StreamActivity({
       {events.map((event, i) => {
         const current = live && i === events.length - 1;
         return (
-          <li key={`${event.stage}-${i}`}>
+          <li
+            key={`${event.stage}-${i}`}
+            className="study-ai-status-item"
+            style={{ animationDelay: `${Math.min(i, 4) * 40}ms` }}
+          >
             {current ? (
               <ThinkingIndicator label={labelFor(event.detail)} />
             ) : (
