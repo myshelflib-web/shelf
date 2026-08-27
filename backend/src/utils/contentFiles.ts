@@ -1,6 +1,8 @@
-/** Upload and content processing limits */
-export const PDF_MAX_BYTES = 40 * 1024 * 1024;
+/** Non-PDF upload size cap (TXT/MD/DOCX). PDFs have no per-file cap — only plan storage quota. */
 export const DOCUMENT_MAX_BYTES = 50 * 1024 * 1024;
+
+/** Soft cap when buffering a remote PDF into memory (link import). Not an upload limit. */
+export const PDF_IMPORT_MAX_BYTES = 40 * 1024 * 1024;
 
 export type DetectedFileKind = "pdf" | "markdown" | "text" | "docx";
 
@@ -88,9 +90,6 @@ export function validateUploadBuffer(
   if (!buffer.length) return "File is empty";
 
   if (kind === "pdf") {
-    if (buffer.length > PDF_MAX_BYTES) {
-      return "PDF must be 40 MB or smaller";
-    }
     if (!buffer.subarray(0, 5).toString("latin1").startsWith("%PDF")) {
       return "File is not a valid PDF";
     }

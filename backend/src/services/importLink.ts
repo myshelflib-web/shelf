@@ -1,7 +1,7 @@
 import { parsePublicHttpUrl } from "../utils/publicUrl.js";
 import { TimeoutError, fetchWithTimeout } from "../utils/timeout.js";
 import {
-  PDF_MAX_BYTES,
+  PDF_IMPORT_MAX_BYTES,
   formatImportedHtml,
   escapeHtml,
 } from "../utils/contentFiles.js";
@@ -360,7 +360,7 @@ async function fetchFollowingRedirects(
     }
 
     // Allow PDF-sized downloads; HTML is rejected later if oversized text.
-    const body = await readBodyLimited(res, PDF_MAX_BYTES);
+    const body = await readBodyLimited(res, PDF_IMPORT_MAX_BYTES);
 
     return {
       finalUrl: safe,
@@ -401,11 +401,11 @@ export async function fetchRemoteDocument(url: string): Promise<ImportedDocument
         "The response looked like a PDF but the file is not valid."
       );
     }
-    if (body.length > PDF_MAX_BYTES) {
+    if (body.length > PDF_IMPORT_MAX_BYTES) {
       throw new ImportLinkError(
         413,
         "too_large",
-        "PDF must be 40 MB or smaller."
+        "Imported PDF is too large to fetch into Shelf. Upload the file instead."
       );
     }
     return { kind: "pdf", buffer: body, finalUrl };

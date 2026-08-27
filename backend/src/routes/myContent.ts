@@ -561,13 +561,8 @@ router.post("/uploads/init", async (req: Request, res: Response) => {
   }
 
   const maxBytes = maxBytesForKind(kind);
-  if (size > maxBytes) {
-    res.status(400).json({
-      error:
-        kind === "pdf"
-          ? "PDF must be 40 MB or smaller"
-          : "File is too large",
-    });
+  if (maxBytes != null && size > maxBytes) {
+    res.status(400).json({ error: "File is too large" });
     return;
   }
 

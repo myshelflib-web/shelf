@@ -1,7 +1,6 @@
 import jwt from "jsonwebtoken";
 import {
   DOCUMENT_MAX_BYTES,
-  PDF_MAX_BYTES,
   type DetectedFileKind,
 } from "./contentFiles.js";
 
@@ -33,8 +32,9 @@ export function contentTypeForKind(kind: DetectedFileKind): string {
   }
 }
 
-export function maxBytesForKind(kind: DetectedFileKind): number {
-  return kind === "pdf" ? PDF_MAX_BYTES : DOCUMENT_MAX_BYTES;
+/** Per-file byte cap, or `null` when only the user's storage quota applies (PDFs). */
+export function maxBytesForKind(kind: DetectedFileKind): number | null {
+  return kind === "pdf" ? null : DOCUMENT_MAX_BYTES;
 }
 
 export function signDirectUpload(

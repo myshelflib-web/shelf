@@ -8,6 +8,7 @@ import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { ShelfLogo } from "@/components/ShelfLogo";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { api } from "@/lib/api";
+import { OtpDigitInput } from "@/components/OtpDigitInput";
 
 function safeNextPath(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/my-content";
@@ -159,20 +160,14 @@ function LoginForm() {
 
           {isRegister && otpSent && (
             <div>
-              <label className="block text-sm font-medium mb-1.5">
+              <label className="block text-sm font-medium mb-2">
                 Verification code
               </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="\d{6}"
-                maxLength={6}
+              <OtpDigitInput
                 value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                required
-                placeholder="000000"
-                className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-primary)] tracking-[0.35em] font-mono text-center focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                onChange={setOtp}
+                disabled={loading || sendingOtp}
+                autoFocus
               />
               <button
                 type="button"

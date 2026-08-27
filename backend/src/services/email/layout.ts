@@ -166,11 +166,22 @@ export function renderEmailLayout(opts: EmailLayoutOptions): string {
 }
 
 export function otpCodeBlock(code: string): string {
-  const digits = escapeHtml(code);
+  const cells = code
+    .split("")
+    .map(
+      (digit) => `
+      <td style="padding: 0 4px;">
+        <div style="width: 44px; height: 52px; line-height: 52px; text-align: center; background: ${BRAND.bg}; border: 1px solid ${BRAND.border}; border-radius: 10px; font-size: 22px; font-weight: 700; color: ${BRAND.text}; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">
+          ${escapeHtml(digit)}
+        </div>
+      </td>`
+    )
+    .join("");
+
   return `
-${sectionLabel("Verification code")}
-<div style="margin: 0 0 16px; padding: 18px 20px; background: ${BRAND.bg}; border: 1px solid ${BRAND.border}; border-radius: 10px; text-align: center; font-size: 34px; font-weight: 700; letter-spacing: 0.35em; color: ${BRAND.text}; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;">
-  ${digits}
-</div>
-<p style="margin: 0; color: ${BRAND.faint}; font-size: 13px; line-height: 1.5;">Enter this 6-digit code in Shelf. It expires in <strong style="color: ${BRAND.muted};">10 minutes</strong>. If you didn't request it, you can safely ignore this email.</p>`;
+<p style="margin: 0 0 14px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: ${BRAND.faint}; text-align: center;">Verification code</p>
+<table role="presentation" cellspacing="0" cellpadding="0" align="center" style="margin: 0 auto 16px;">
+  <tr>${cells}</tr>
+</table>
+<p style="margin: 0; color: ${BRAND.faint}; font-size: 13px; line-height: 1.5; text-align: center;">Enter this 6-digit code in Shelf. It expires in <strong style="color: ${BRAND.muted};">10 minutes</strong>. If you didn't request it, you can safely ignore this email.</p>`;
 }

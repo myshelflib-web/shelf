@@ -5,7 +5,6 @@ import { authMiddleware } from "../middleware/auth.js";
 import { param } from "../utils/param.js";
 import { QuotaError, assertStorageRoom } from "../utils/quotas.js";
 import { userSelect } from "../utils/publicUser.js";
-import { PDF_MAX_BYTES } from "../utils/contentFiles.js";
 import {
   deleteFromS3,
   getObjectPrefix,
@@ -86,10 +85,6 @@ router.post(
 
     if (!Number.isFinite(size) || size <= 0) {
       res.status(400).json({ error: "Valid file size is required" });
-      return;
-    }
-    if (size > PDF_MAX_BYTES) {
-      res.status(400).json({ error: "PDF must be 40 MB or smaller" });
       return;
     }
     if (!restore && !deletedPages) {

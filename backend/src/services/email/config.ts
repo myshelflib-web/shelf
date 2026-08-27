@@ -1,6 +1,9 @@
-import { SHELF_EMAIL_LOGO_DATA_URI } from "./logoDataUri.js";
+import {
+  SHELF_EMAIL_LOGO_BASE64,
+  SHELF_EMAIL_LOGO_CID,
+} from "./logoDataUri.js";
 
-/** Public app URL for email links and assets (logo). */
+/** Public app URL for email links. */
 export function getAppUrl(): string {
   const fromEnv = process.env.APP_URL?.trim();
   if (fromEnv) return fromEnv.replace(/\/$/, "");
@@ -11,11 +14,33 @@ export function getAppUrl(): string {
   return "http://localhost:3000";
 }
 
-/** Logo src for email `<img>` — embedded by default; override with EMAIL_LOGO_URL. */
+/**
+ * Logo `<img src>` for emails.
+ * Default: Resend CID inline attachment (works in Gmail — data: URIs do not).
+ * Override with EMAIL_LOGO_URL for a hosted https image.
+ */
 export function getEmailLogoSrc(): string {
   const custom = process.env.EMAIL_LOGO_URL?.trim();
   if (custom) return custom;
-  return SHELF_EMAIL_LOGO_DATA_URI;
+  return `cid:${SHELF_EMAIL_LOGO_CID}`;
+}
+
+/** Inline logo attachment for Resend, or null when using EMAIL_LOGO_URL. */
+export function getEmailLogoAttachment():
+  | {
+      filename: string;
+      content: string;
+      contentId: string;
+      contentType: string;
+    }
+  | null {
+  if (process.env.EMAIL_LOGO_URL?.trim()) return null;
+  return {
+    filename: "shelf-logo.png",
+    content: SHELF_EMAIL_LOGO_BASE64,
+    contentId: SHELF_EMAIL_LOGO_CID,
+    contentType: "image/png",
+  };
 }
 
 export function getResendApiKey(): string | undefined {

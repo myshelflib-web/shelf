@@ -1,4 +1,4 @@
-import { getEmailFrom, isEmailConfigured } from "./config.js";
+import { getEmailFrom, getEmailLogoAttachment, isEmailConfigured } from "./config.js";
 import { getResendClient } from "./resendClient.js";
 import { errorFields, logger } from "../../utils/logger.js";
 
@@ -21,12 +21,25 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
   }
 
   try {
+    const logo = getEmailLogoAttachment();
     const { error } = await getResendClient().emails.send({
       from,
       to: input.to,
       subject: input.subject,
       html: input.html,
       ...(input.text ? { text: input.text } : {}),
+      ...(logo
+        ? {
+            attachments: [
+              {
+                filename: logo.filename,
+                content: logo.content,
+                contentId: logo.contentId,
+                contentType: logo.contentType,
+              },
+            ],
+          }
+        : {}),
     });
 
     if (error) {

@@ -5,7 +5,7 @@ import {
   signDirectUpload,
   verifyDirectUpload,
 } from "./directUpload.js";
-import { PDF_MAX_BYTES } from "./contentFiles.js";
+import { DOCUMENT_MAX_BYTES } from "./contentFiles.js";
 
 describe("directUpload", () => {
   it("signs a token the same user can complete", () => {
@@ -31,6 +31,7 @@ describe("directUpload", () => {
   it("maps kinds to PUT content types and size caps", () => {
     expect(contentTypeForKind("pdf")).toBe("application/pdf");
     expect(contentTypeForKind("docx")).toContain("wordprocessingml");
-    expect(maxBytesForKind("pdf")).toBe(PDF_MAX_BYTES);
+    expect(maxBytesForKind("pdf")).toBeNull();
+    expect(maxBytesForKind("text")).toBe(DOCUMENT_MAX_BYTES);
   });
 });

@@ -235,9 +235,6 @@ export function MyContentAddProvider({
         "Use PDF, TXT, MD, or DOCX. HTML and other scriptable formats are not allowed."
       );
     }
-    if (name.endsWith(".pdf") && file.size > 40 * 1024 * 1024) {
-      throw new Error("PDF must be 40 MB or smaller");
-    }
   };
 
   const handleAddPage = async (e: FormEvent) => {

@@ -315,7 +315,7 @@ export function MyContentAddModal({
                   <UploadProgressBar progress={uploadProgress} />
                 ) : (
                   <p className="text-xs text-[var(--text-muted)]">
-                    Drag a file here, or click to browse. PDF (max 40 MB), TXT, MD, or DOCX.
+                    Drag a file here, or click to browse. PDF, TXT, MD, or DOCX.
                   </p>
                 )}
               </>

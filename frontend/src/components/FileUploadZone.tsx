@@ -114,7 +114,7 @@ export function FileUploadZone({
                 ? `${(file.size / 1024 / 1024).toFixed(2)} MB · click or drop to change`
                 : dragOver
                   ? "Drop file to upload"
-                  : "Drag & drop or click · PDF, TXT, MD, DOCX · PDF max 40 MB"}
+                  : "Drag & drop or click · PDF, TXT, MD, DOCX"}
           </span>
         </span>
       </button>
