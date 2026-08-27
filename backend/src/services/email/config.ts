@@ -1,3 +1,5 @@
+import { SHELF_EMAIL_LOGO_DATA_URI } from "./logoDataUri.js";
+
 /** Public app URL for email links and assets (logo). */
 export function getAppUrl(): string {
   const fromEnv = process.env.APP_URL?.trim();
@@ -9,10 +11,11 @@ export function getAppUrl(): string {
   return "http://localhost:3000";
 }
 
-export function getEmailLogoUrl(): string {
+/** Logo src for email `<img>` — embedded by default; override with EMAIL_LOGO_URL. */
+export function getEmailLogoSrc(): string {
   const custom = process.env.EMAIL_LOGO_URL?.trim();
   if (custom) return custom;
-  return `${getAppUrl()}/icons/shelf-icon-2048.png`;
+  return SHELF_EMAIL_LOGO_DATA_URI;
 }
 
 export function getResendApiKey(): string | undefined {

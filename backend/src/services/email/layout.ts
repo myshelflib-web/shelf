@@ -1,4 +1,4 @@
-import { getAppUrl, getEmailLogoUrl } from "./config.js";
+import { getAppUrl, getEmailLogoSrc } from "./config.js";
 import { getEmailGreetingParts } from "./greeting.js";
 
 export const BRAND = {
@@ -102,7 +102,7 @@ export function sectionLabel(text: string): string {
 /** Shelf-branded HTML email shell (dark theme, inline styles for clients). */
 export function renderEmailLayout(opts: EmailLayoutOptions): string {
   const appUrl = getAppUrl();
-  const logoUrl = getEmailLogoUrl();
+  const logoSrc = getEmailLogoSrc();
   const preheader = opts.preheader ? escapeHtml(opts.preheader) : "";
   const title = escapeHtml(opts.title);
   const greeting = emailGreetingBlock(opts.greetingName);
@@ -136,7 +136,7 @@ export function renderEmailLayout(opts: EmailLayoutOptions): string {
           <tr>
             <td style="padding: 28px 28px 16px; text-align: center; border-bottom: 1px solid ${BRAND.border};">
               <a href="${escapeHtml(appUrl)}" style="text-decoration: none; display: inline-block;">
-                <img src="${escapeHtml(logoUrl)}" alt="Shelf" width="48" height="48" style="display: block; border-radius: 10px;" />
+                <img src="${escapeHtml(logoSrc)}" alt="Shelf" width="48" height="48" style="display: block; border-radius: 10px;" />
               </a>
               <div style="margin-top: 12px; font-size: 20px; font-weight: 700; color: ${BRAND.text}; letter-spacing: -0.02em;">Shelf</div>
               <div style="font-size: 13px; color: ${BRAND.muted}; margin-top: 4px;">Your personal study library</div>
