@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAppDialog } from "@/hooks/useAppDialog";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { Loader2, Trash2, X } from "lucide-react";
 
@@ -167,6 +168,7 @@ export function PdfPagePreviewModal({
   onDeletePages?: (pages: number[]) => void | Promise<void>;
   onClose: () => void;
 }) {
+  const { confirm } = useAppDialog();
   const [visibleCount, setVisibleCount] = useState(Math.min(numPages, 24));
   const [marked, setMarked] = useState<Set<number>>(() => new Set());
   const [error, setError] = useState("");
@@ -225,7 +227,13 @@ export function PdfPagePreviewModal({
       markedList.length === 1
         ? `Delete page ${markedList[0]}?`
         : `Delete ${markedList.length} pages (${markedList.join(", ")})?`;
-    if (!confirm(`${label}\n\nThis permanently updates the PDF.`)) return;
+    const ok = await confirm({
+      title: "Delete PDF pages",
+      message: `${label}\nThis permanently updates the PDF.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     setError("");
     try {
       await onDeletePages(markedList);

@@ -30,6 +30,7 @@ import { ApiError } from "@/lib/api";
 import { FullscreenButton } from "@/components/FullscreenButton";
 import { StudyPanel } from "@/components/StudyPanel";
 import { useFullscreen } from "@/hooks/useFullscreen";
+import { useAppDialog } from "@/hooks/useAppDialog";
 import {
   getTabViewState,
   pickNewerView,
@@ -300,6 +301,7 @@ export function DocumentPane({
   onReadPercent,
   signInGate,
 }: DocumentPaneProps) {
+  const { confirm, alert } = useAppDialog();
   const scope = tab.scope;
   const [pageData, setPageData] = useState<LoadedPage | null>(null);
   const [highlights, setHighlights] = useState<UserContentHighlight[]>([]);
@@ -652,10 +654,17 @@ export function DocumentPane({
   const handleDelete = useCallback(async () => {
     if (pageData?.isPreloaded) return;
     if (!requireOnline("Delete pages")) return;
-    if (!pageData || !confirm(`Delete "${pageData.title}"?`)) return;
+    if (!pageData) return;
+    const ok = await confirm({
+      title: "Delete page",
+      message: `Delete "${pageData.title}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     await api.myContent.deletePage(pageData.id);
     onNavigate(afterDeletePath(scope));
-  }, [pageData, scope, onNavigate]);
+  }, [pageData, scope, onNavigate, confirm]);
 
   const startEditing = useCallback(() => {
     if (!pageData || pageData.contentType === "PDF") return;
@@ -701,14 +710,17 @@ export function DocumentPane({
         if (gen !== saveGen.current) return;
         setSaveStatus("error");
         if (exitEdit) {
-          alert(err instanceof Error ? err.message : "Could not save");
+          void alert({
+            title: "Could not save",
+            message: err instanceof Error ? err.message : "Could not save",
+          });
         }
         throw err;
       } finally {
         if (gen === saveGen.current) setSaving(false);
       }
     },
-    [pageData]
+    [pageData, alert]
   );
 
   const flushEditing = useCallback(async () => {
@@ -740,7 +752,10 @@ export function DocumentPane({
         emitPageRenamed(pageData.id, title);
         setEditing(false);
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Could not save");
+        void alert({
+          title: "Could not save",
+          message: err instanceof Error ? err.message : "Could not save",
+        });
       } finally {
         setSaving(false);
       }
@@ -770,6 +785,7 @@ export function DocumentPane({
     onMeta,
     onNotebookPatch,
     persistHtmlContent,
+    alert,
   ]);
 
   const importLinkPage = useCallback(async () => {

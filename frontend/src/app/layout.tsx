@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/hooks/useTheme";
 import { GoogleAuthProvider } from "@/components/GoogleAuthProvider";
 import { resolveGoogleClientId } from "@/lib/publicConfig";
 import { HotkeysProvider } from "@/hooks/useHotkeys";
+import { AppDialogProvider } from "@/hooks/useAppDialog";
 import { AppHotkeys } from "@/components/AppHotkeys";
 import { PwaInstallHint } from "@/components/PwaInstallHint";
 import { PwaRegister } from "@/components/PwaRegister";
@@ -59,13 +60,15 @@ export default function RootLayout({
           <GoogleAuthProvider clientId={googleClientId}>
             <AuthProvider>
               <HotkeysProvider>
-                <PwaRegister />
-                <CompactPortraitSync />
-                <OfflineSyncProvider />
-                <OfflineNotice />
-                <AppHotkeys />
-                {children}
-                <PwaInstallHint />
+                <AppDialogProvider>
+                  <PwaRegister />
+                  <CompactPortraitSync />
+                  <OfflineSyncProvider />
+                  <OfflineNotice />
+                  <AppHotkeys />
+                  {children}
+                  <PwaInstallHint />
+                </AppDialogProvider>
               </HotkeysProvider>
             </AuthProvider>
           </GoogleAuthProvider>

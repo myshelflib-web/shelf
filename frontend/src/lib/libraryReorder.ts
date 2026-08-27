@@ -1,20 +1,43 @@
 export const SHELF_REORDER_MIME = "application/x-shelf-library-reorder";
 
-export type ReorderDragKind = "subject" | "topic";
+export type ReorderDragKind = "subject" | "topic" | "page";
 
 export type ReorderDragPayload = {
   kind: ReorderDragKind;
   id: string;
-  subjectId?: string;
+  subjectId?: string | null;
+  topicGroupId?: string | null;
 };
 
 export function parseReorderDrag(data: string): ReorderDragPayload | null {
   try {
     const parsed = JSON.parse(data) as ReorderDragPayload;
-    if (parsed?.kind !== "subject" && parsed?.kind !== "topic") return null;
+    if (
+      parsed?.kind !== "subject" &&
+      parsed?.kind !== "topic" &&
+      parsed?.kind !== "page"
+    ) {
+      return null;
+    }
     if (typeof parsed.id !== "string") return null;
     if (parsed.kind === "topic" && typeof parsed.subjectId !== "string") {
       return null;
+    }
+    if (parsed.kind === "page") {
+      if (
+        parsed.subjectId !== null &&
+        parsed.subjectId !== undefined &&
+        typeof parsed.subjectId !== "string"
+      ) {
+        return null;
+      }
+      if (
+        parsed.topicGroupId !== null &&
+        parsed.topicGroupId !== undefined &&
+        typeof parsed.topicGroupId !== "string"
+      ) {
+        return null;
+      }
     }
     return parsed;
   } catch {

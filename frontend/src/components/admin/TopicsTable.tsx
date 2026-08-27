@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAppDialog } from "@/hooks/useAppDialog";
 import Link from "next/link";
 import { AdminArticle, Subject } from "@/types";
 import { api } from "@/lib/api";
@@ -29,6 +30,7 @@ const statusStyles: Record<string, string> = {
 };
 
 export function TopicsTable({ topics, subjects, onUpdate }: TopicsTableProps) {
+  const { confirm } = useAppDialog();
   const [filterSubject, setFilterSubject] = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
   const [search, setSearch] = useState("");
@@ -72,7 +74,13 @@ export function TopicsTable({ topics, subjects, onUpdate }: TopicsTableProps) {
   };
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+    const ok = await confirm({
+      title: "Delete article",
+      message: `Delete "${title}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     setActionId(id);
     try {
       await api.admin.deleteTopic(id);

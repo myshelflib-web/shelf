@@ -12,8 +12,9 @@ import { ExplorerSidebarSkeleton } from "@/components/dashboard/DashboardSkeleto
 import { ExplorerPageRow } from "@/components/my-content/ExplorerPageRow";
 import { ExplorerCollectionBlock } from "@/components/my-content/ExplorerCollectionBlock";
 import { ExplorerDropLine } from "@/components/my-content/ExplorerDropLine";
-import { useExplorerReorderDrop } from "@/components/my-content/useExplorerReorderDrop";
+import { useExplorerLibraryDrag } from "@/components/my-content/useExplorerReorderDrop";
 import type { ExplorerSelectionKey } from "@/lib/explorerSelection";
+import { useMemo } from "react";
 
 const SIDEBAR_ROOT_PAGE_SIZE = 12;
 
@@ -50,6 +51,18 @@ interface MyContentExplorerTreeProps {
     subjectId: string,
     orderedIds: string[]
   ) => void | Promise<void>;
+  onMovePage: (payload: {
+    pageId: string;
+    subjectId: string | null;
+    topicGroupId: string | null;
+    beforePageId: string | null;
+  }) => void | Promise<void>;
+  onMoveTopic: (payload: {
+    groupId: string;
+    sourceSubjectId: string;
+    targetSubjectId: string;
+    beforeGroupId: string | null;
+  }) => void | Promise<void>;
   onEditNotebook: (nb: UserSubject) => void;
   onSharePage: (pageId: string, title: string) => void;
   onRenamePage: (pageId: string, title: string) => void | Promise<void>;
@@ -100,6 +113,8 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
     reorderEnabled,
     onReorderSubjects,
     onReorderTopics,
+    onMovePage,
+    onMoveTopic,
     onEditNotebook,
     onSharePage,
     onRenamePage,
@@ -112,13 +127,26 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
     openAddNotebook,
   } = props;
 
+  const dragHandlers = useMemo(
+    () => ({
+      onReorderSubjects,
+      onReorderTopics,
+      onMovePage,
+      onMoveTopic,
+    }),
+    [onReorderSubjects, onReorderTopics, onMovePage, onMoveTopic]
+  );
+
   const {
     dropHint,
+    activeDrag,
     startReorderDrag,
     allowReorderDrop,
     finishReorderDrop,
     clearDropHint,
-  } = useExplorerReorderDrop();
+  } = useExplorerLibraryDrag(dragHandlers);
+
+  const rootPageIds = filteredRootPages.map((p) => p.id);
 
   const rootTotalPages = Math.max(
     1,
@@ -195,6 +223,16 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
                 selected={selected}
                 onSelectionChange={onSelectionChange}
                 enablePageDrag={enablePageDrag}
+                libraryMoveEnabled={reorderEnabled && !searching}
+                subjectId={null}
+                topicGroupId={null}
+                showPageDrop={reorderEnabled && !selectionMode}
+                pageIds={rootPageIds}
+                dropHint={dropHint}
+                startReorderDrag={startReorderDrag}
+                allowReorderDrop={allowReorderDrop}
+                finishReorderDrop={finishReorderDrop}
+                clearDropHint={clearDropHint}
                 scheduledHrefs={scheduledHrefs}
                 onOpenPage={onOpenPage}
                 onSharePage={onSharePage}
@@ -203,6 +241,30 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               />
             );
           })}
+          {reorderEnabled && !selectionMode && !searching && filteredRootPages.length > 0 && (
+            <>
+              <ExplorerDropLine
+                active={
+                  dropHint?.kind === "page-root" &&
+                  dropHint.beforePageId === null
+                }
+              />
+              <div
+                className="h-1"
+                onDragOver={(e) =>
+                  allowReorderDrop({ kind: "page-root", beforePageId: null }, e)
+                }
+                onDragLeave={clearDropHint}
+                onDrop={(e) =>
+                  void finishReorderDrop(
+                    { kind: "page-root", beforePageId: null },
+                    e,
+                    { pageIds: rootPageIds }
+                  )
+                }
+              />
+            </>
+          )}
           {rootTotalPages > 1 && (
             <div className="flex items-center justify-center gap-1 px-1 pt-1">
               <button
@@ -263,6 +325,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               reorderEnabled={reorderEnabled}
               searching={searching}
               dropHint={dropHint}
+              activeDrag={activeDrag}
               onToggleNotebook={toggleNotebook}
               onToggleTopic={toggleTopic}
               onEditNotebook={onEditNotebook}
@@ -274,8 +337,6 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               allowReorderDrop={allowReorderDrop}
               finishReorderDrop={finishReorderDrop}
               clearDropHint={clearDropHint}
-              onReorderSubjects={onReorderSubjects}
-              onReorderTopics={onReorderTopics}
               enablePageDrag={enablePageDrag}
               scheduledHrefs={scheduledHrefs}
               onOpenPage={onOpenPage}
@@ -301,8 +362,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
                   void finishReorderDrop(
                     { kind: "subject", beforeId: null },
                     e,
-                    subjectIds,
-                    onReorderSubjects
+                    { subjectIds }
                   )
                 }
               />

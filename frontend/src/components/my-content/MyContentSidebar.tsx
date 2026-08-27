@@ -36,6 +36,11 @@ import { applyBulkDeleteToTree } from "@/lib/explorerBulkDeleteTree";
 import {
   patchSubjectsOrder,
 } from "@/lib/libraryReorder";
+import {
+  findTopicLocation,
+  movePageInTree,
+  moveTopicInTree,
+} from "@/lib/libraryMove";
 import { useAddContent } from "@/components/my-content/MyContentAddProvider";
 import { listSubjects } from "@/lib/offline/library";
 import { api } from "@/lib/api";
@@ -45,6 +50,7 @@ import clsx from "clsx";
 import { withShortcut } from "@/lib/hotkeys";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useAppDialog } from "@/hooks/useAppDialog";
 import {
   PersonalPageReaderScope,
   scopeFromHref,
@@ -164,6 +170,7 @@ export function MyContentSidebar({
   libraryModeTabs,
 }: MyContentSidebarProps) {
   const { openAdd } = useAddContent();
+  const { confirm } = useAppDialog();
   const router = useRouter();
 
   const [sortCriterion, setSortCriterion] = useState<SortCriterion>(readSortCriterion);
@@ -477,13 +484,25 @@ export function MyContentSidebar({
     groupId: string,
     title: string
   ) => {
-    if (!confirm(`Delete topic "${title}" and its pages?`)) return;
+    const ok = await confirm({
+      title: "Delete topic",
+      message: `Delete topic "${title}" and its pages? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     await api.myContent.deleteTopicGroup(nb.id, groupId);
     emitContentChanged();
   };
 
   const deletePage = async (pageId: string, title: string) => {
-    if (!confirm(`Delete page "${title}"?`)) return;
+    const ok = await confirm({
+      title: "Delete page",
+      message: `Delete page "${title}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      danger: true,
+    });
+    if (!ok) return;
     await api.myContent.deletePage(pageId);
     emitContentChanged();
     if (!workspaceMode) router.push("/my-content");
@@ -548,6 +567,127 @@ export function MyContentSidebar({
       setSubjects(prevSubjects);
       setPinnedExtra(prevPinned);
     });
+  };
+
+  const findPageSummary = (pageId: string): UserPageSummary | null => {
+    for (const page of rootPages) {
+      if (page.id === pageId) return page;
+    }
+    for (const subject of treeSubjects) {
+      for (const page of subject.pages ?? []) {
+        if (page.id === pageId) return page;
+      }
+      for (const group of subject.topicGroups ?? []) {
+        for (const page of group.pages) {
+          if (page.id === pageId) return page;
+        }
+      }
+    }
+    return null;
+  };
+
+  const handleMovePage = (payload: {
+    pageId: string;
+    subjectId: string | null;
+    topicGroupId: string | null;
+    beforePageId: string | null;
+  }) => {
+    const page = findPageSummary(payload.pageId);
+    if (!page) return;
+
+    const prevSubjects = subjects;
+    const prevPinned = pinnedExtra;
+    const prevRoot = rootPages;
+
+    const combined: UserSubject[] = [...subjects];
+    for (const extra of pinnedExtra) {
+      if (!combined.some((s) => s.id === extra.id)) combined.push(extra);
+    }
+
+    const next = movePageInTree(combined, rootPages, payload.pageId, {
+      ...payload,
+      page,
+    });
+
+    setRootPages(next.rootPages);
+    setSubjects((prev) =>
+      prev.map((s) => next.subjects.find((n) => n.id === s.id) ?? s)
+    );
+    setPinnedExtra((prev) =>
+      prev.map((s) => next.subjects.find((n) => n.id === s.id) ?? s)
+    );
+
+    if (payload.subjectId) {
+      const target = next.subjects.find((s) => s.id === payload.subjectId);
+      if (target) {
+        setExpandedNotebooks((prev) => ({ ...prev, [target.slug]: true }));
+        if (payload.topicGroupId) {
+          const group = target.topicGroups?.find((g) => g.id === payload.topicGroupId);
+          if (group) {
+            setExpandedTopics((prev) => ({
+              ...prev,
+              [`${target.slug}:${group.slug}`]: true,
+            }));
+          }
+        }
+      }
+    }
+
+    void api.myContent
+      .movePage(payload.pageId, {
+        subjectId: payload.subjectId,
+        topicGroupId: payload.topicGroupId,
+        beforePageId: payload.beforePageId,
+      })
+      .catch(() => {
+        setSubjects(prevSubjects);
+        setPinnedExtra(prevPinned);
+        setRootPages(prevRoot);
+      })
+      .then(() => emitContentChanged());
+  };
+
+  const handleMoveTopic = (payload: {
+    groupId: string;
+    sourceSubjectId: string;
+    targetSubjectId: string;
+    beforeGroupId: string | null;
+  }) => {
+    const loc =
+      findTopicLocation(treeSubjects, payload.groupId) ??
+      findTopicLocation(pinnedExtra, payload.groupId);
+    if (!loc) return;
+
+    const prevSubjects = subjects;
+    const prevPinned = pinnedExtra;
+
+    const applyMove = (list: UserSubject[]) =>
+      moveTopicInTree(
+        list,
+        payload.groupId,
+        payload.targetSubjectId,
+        loc.group,
+        payload.beforeGroupId
+      );
+
+    setSubjects(applyMove);
+    setPinnedExtra(applyMove);
+
+    const target = treeSubjects.find((s) => s.id === payload.targetSubjectId);
+    if (target) {
+      setExpandedNotebooks((prev) => ({ ...prev, [target.slug]: true }));
+    }
+
+    void api.myContent
+      .moveTopicGroup(payload.sourceSubjectId, payload.groupId, {
+        targetSubjectId: payload.targetSubjectId,
+        beforeGroupId: payload.beforeGroupId,
+      })
+      .catch(() => {
+        setSubjects(prevSubjects);
+        setPinnedExtra(prevPinned);
+      })
+      .then(() => emitContentChanged());
   };
 
   const isEmpty =
@@ -725,7 +865,7 @@ export function MyContentSidebar({
               <span className="inline-flex align-middle text-[var(--text-secondary)]">
                 ⋮⋮
               </span>{" "}
-              handle on a collection or topic row to reorder.
+              handle to reorder, or drop pages and topics into another collection.
             </p>
           )}
         </div>
@@ -762,6 +902,8 @@ export function MyContentSidebar({
           reorderEnabled={reorderEnabled}
           onReorderSubjects={handleReorderSubjects}
           onReorderTopics={handleReorderTopics}
+          onMovePage={handleMovePage}
+          onMoveTopic={handleMoveTopic}
           onEditNotebook={setEditNotebook}
           onSharePage={(id, title) => setShareTarget({ id, title })}
           onRenamePage={renamePage}

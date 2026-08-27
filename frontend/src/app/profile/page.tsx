@@ -6,12 +6,14 @@ import { Header } from "@/components/Header";
 import { LivelyLine } from "@/components/LivelyLine";
 import { AccountNav } from "@/components/AccountNav";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppDialog } from "@/hooks/useAppDialog";
 import { api } from "@/lib/api";
 import { avatarSrc } from "@/lib/avatar";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { user, loading: authLoading, refreshUser, logout } = useAuth();
+  const { confirm } = useAppDialog();
   const [name, setName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
@@ -91,7 +93,14 @@ export default function ProfilePage() {
       setError("Type your email exactly to confirm deletion.");
       return;
     }
-    if (!confirm("This permanently deletes your account and library. Continue?")) {
+    const ok = await confirm({
+      title: "Delete account",
+      message:
+        "This permanently deletes your account and library. This cannot be undone.",
+      confirmLabel: "Delete account",
+      danger: true,
+    });
+    if (!ok) {
       return;
     }
     setError("");

@@ -850,6 +850,35 @@ export const api = {
         `/api/my-content/subjects/${subjectId}/topic-groups/reorder`,
         { method: "PATCH", body: JSON.stringify({ orderedIds }) }
       ),
+    movePage: (
+      pageId: string,
+      data: {
+        subjectId: string | null;
+        topicGroupId: string | null;
+        beforePageId?: string | null;
+      }
+    ) =>
+      request<{
+        page: import("@/types").UserPageSummary;
+        subjectId: string | null;
+        topicGroupId: string | null;
+      }>(`/api/my-content/pages/${pageId}/move`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    moveTopicGroup: (
+      sourceSubjectId: string,
+      groupId: string,
+      data: { targetSubjectId: string; beforeGroupId?: string | null }
+    ) =>
+      request<{
+        topicGroup: import("@/types").UserTopicGroup;
+        sourceSubjectId: string;
+        targetSubjectId: string;
+      }>(
+        `/api/my-content/subjects/${sourceSubjectId}/topic-groups/${groupId}/move`,
+        { method: "PATCH", body: JSON.stringify(data) }
+      ),
     updateSubject: (
       id: string,
       data: { name?: string; description?: string | null; icon?: string }

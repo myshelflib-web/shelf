@@ -61,6 +61,7 @@ import { PdfDeleteUndoBar } from "./PdfDeleteUndoBar";
 import { usePdfMarkUndo } from "./usePdfMarkUndo";
 import { usePdfWheelZoom } from "./usePdfWheelZoom";
 import { useHotkey } from "@/hooks/useHotkeys";
+import { useAppDialog } from "@/hooks/useAppDialog";
 import { clampPdfScale } from "@/lib/pdfZoom";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
@@ -141,6 +142,7 @@ export function PdfViewer({
   guestLocked = false,
   onGuestLockedClick,
 }: PdfViewerProps) {
+  const { alert } = useAppDialog();
   const rootRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
@@ -769,11 +771,14 @@ export function PdfViewer({
       setCurrentPage(restored.viewPdfPage);
       setReloadToken((t) => t + 1);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Could not undo");
+      void alert({
+        title: "Could not undo",
+        message: err instanceof Error ? err.message : "Could not undo",
+      });
     } finally {
       setUndoing(false);
     }
-  }, [canDeletePages, onHighlightsChange, undoing, userTopicId]);
+  }, [canDeletePages, onHighlightsChange, undoing, userTopicId, alert]);
 
   const layoutForScrollRef = useRef(pageLayout);
   useEffect(() => {

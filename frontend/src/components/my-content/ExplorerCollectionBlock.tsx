@@ -22,8 +22,7 @@ import { ExplorerPageRow } from "@/components/my-content/ExplorerPageRow";
 import { ExplorerSelectionToggle } from "@/components/my-content/ExplorerSelectionToggle";
 import { ExplorerDropLine } from "@/components/my-content/ExplorerDropLine";
 import {
-  type ReorderDropHint,
-  useExplorerReorderDrop,
+  type ExplorerDropHint,
 } from "@/components/my-content/useExplorerReorderDrop";
 import clsx from "clsx";
 import type { DragEvent } from "react";
@@ -35,6 +34,7 @@ import {
 } from "@/lib/explorerSelection";
 import type { ReorderDragPayload } from "@/lib/libraryReorder";
 import type { UserPageSummary } from "@/types";
+import { useAppDialog } from "@/hooks/useAppDialog";
 
 interface ExplorerCollectionBlockProps {
   nb: UserSubject;
@@ -54,7 +54,8 @@ interface ExplorerCollectionBlockProps {
   onSelectionChange: (next: Set<ExplorerSelectionKey>) => void;
   reorderEnabled: boolean;
   searching: boolean;
-  dropHint: ReorderDropHint | null;
+  dropHint: ExplorerDropHint | null;
+  activeDrag: ReorderDragPayload | null;
   onToggleNotebook: (slug: string) => void;
   onToggleTopic: (notebookSlug: string, topicSlug: string) => void;
   onEditNotebook: (nb: UserSubject) => void;
@@ -71,19 +72,17 @@ interface ExplorerCollectionBlockProps {
     title: string
   ) => void | Promise<void>;
   startReorderDrag: (payload: ReorderDragPayload, e: DragEvent) => void;
-  allowReorderDrop: (hint: ReorderDropHint, e: DragEvent) => void;
+  allowReorderDrop: (hint: ExplorerDropHint, e: DragEvent) => void;
   finishReorderDrop: (
-    hint: ReorderDropHint,
+    hint: ExplorerDropHint,
     e: DragEvent,
-    orderedIds: string[],
-    apply: (ids: string[]) => void | Promise<void>
+    context: {
+      subjectIds?: string[];
+      topicIds?: string[];
+      pageIds?: string[];
+    }
   ) => void | Promise<void>;
   clearDropHint: () => void;
-  onReorderSubjects: (orderedIds: string[]) => void | Promise<void>;
-  onReorderTopics: (
-    subjectId: string,
-    orderedIds: string[]
-  ) => void | Promise<void>;
   enablePageDrag: boolean;
   scheduledHrefs: Set<string>;
   onOpenPage: (page: UserPageSummary, href: string) => void;
@@ -111,6 +110,7 @@ export function ExplorerCollectionBlock({
   reorderEnabled,
   searching,
   dropHint,
+  activeDrag,
   onToggleNotebook,
   onToggleTopic,
   onEditNotebook,
@@ -122,8 +122,6 @@ export function ExplorerCollectionBlock({
   allowReorderDrop,
   finishReorderDrop,
   clearDropHint,
-  onReorderSubjects,
-  onReorderTopics,
   enablePageDrag,
   scheduledHrefs,
   onOpenPage,
@@ -131,6 +129,7 @@ export function ExplorerCollectionBlock({
   onRenamePage,
   onDeletePage,
 }: ExplorerCollectionBlockProps) {
+  const { prompt } = useAppDialog();
   const loose = getNotebookPages(nb);
   const groups = getTopicGroups(nb);
   const subjectKey = subjectSelectionKey(nb.id);
@@ -145,6 +144,13 @@ export function ExplorerCollectionBlock({
     !searching &&
     dropHint?.kind === "subject" &&
     dropHint.beforeId === nb.id;
+
+  const looseIds = loose.map((p) => p.id);
+  const showSubjectRowDrop =
+    reorderEnabled &&
+    !selectionMode &&
+    dropHint?.kind === "subject-row" &&
+    dropHint.subjectId === nb.id;
 
   return (
     <div className="mb-0.5">
@@ -161,24 +167,39 @@ export function ExplorerCollectionBlock({
         }}
         onDragOver={
           reorderEnabled && !selectionMode && !searching
-            ? (e) => allowReorderDrop({ kind: "subject", beforeId: nb.id }, e)
+            ? (e) => {
+                if (activeDrag?.kind === "page") {
+                  allowReorderDrop({ kind: "subject-row", subjectId: nb.id }, e);
+                  return;
+                }
+                allowReorderDrop({ kind: "subject", beforeId: nb.id }, e);
+              }
             : undefined
         }
         onDragLeave={clearDropHint}
         onDrop={
           reorderEnabled && !selectionMode && !searching
-            ? (e) =>
+            ? (e) => {
+                if (activeDrag?.kind === "page") {
+                  void finishReorderDrop(
+                    { kind: "subject-row", subjectId: nb.id },
+                    e,
+                    {}
+                  );
+                  return;
+                }
                 void finishReorderDrop(
                   { kind: "subject", beforeId: nb.id },
                   e,
-                  subjectIds,
-                  onReorderSubjects
-                )
+                  { subjectIds }
+                );
+              }
             : undefined
         }
         className={clsx(
           "group flex items-center gap-0.5 px-1.5 py-1 rounded-md cursor-pointer hover:bg-[var(--bg-elevated)]",
-          isPinned && isCurrentNotebook ? "bg-[var(--bg-elevated)]/60" : ""
+          isPinned && isCurrentNotebook ? "bg-[var(--bg-elevated)]/60" : "",
+          showSubjectRowDrop && "ring-1 ring-[var(--accent)]/50 bg-[var(--accent-subtle)]"
         )}
       >
         {selectionMode ? (
@@ -265,6 +286,16 @@ export function ExplorerCollectionBlock({
                 selected={selected}
                 onSelectionChange={onSelectionChange}
                 enablePageDrag={enablePageDrag}
+                libraryMoveEnabled={reorderEnabled && !searching}
+                subjectId={nb.id}
+                topicGroupId={null}
+                showPageDrop={reorderEnabled && !selectionMode}
+                pageIds={looseIds}
+                dropHint={dropHint}
+                startReorderDrag={startReorderDrag}
+                allowReorderDrop={allowReorderDrop}
+                finishReorderDrop={finishReorderDrop}
+                clearDropHint={clearDropHint}
                 scheduledHrefs={scheduledHrefs}
                 onOpenPage={onOpenPage}
                 onSharePage={onSharePage}
@@ -273,6 +304,42 @@ export function ExplorerCollectionBlock({
               />
             );
           })}
+          {reorderEnabled && !selectionMode && loose.length > 0 && (
+            <>
+              <ExplorerDropLine
+                active={
+                  dropHint?.kind === "page-notebook" &&
+                  dropHint.subjectId === nb.id &&
+                  dropHint.beforePageId === null
+                }
+              />
+              <div
+                className="h-1"
+                onDragOver={(e) =>
+                  allowReorderDrop(
+                    {
+                      kind: "page-notebook",
+                      subjectId: nb.id,
+                      beforePageId: null,
+                    },
+                    e
+                  )
+                }
+                onDragLeave={clearDropHint}
+                onDrop={(e) =>
+                  void finishReorderDrop(
+                    {
+                      kind: "page-notebook",
+                      subjectId: nb.id,
+                      beforePageId: null,
+                    },
+                    e,
+                    { pageIds: looseIds }
+                  )
+                }
+              />
+            </>
+          )}
           {groups.map((group) => {
             const tKey = `${nb.slug}:${group.slug}`;
             const tOpen = expandedTopics[tKey] ?? false;
@@ -286,6 +353,14 @@ export function ExplorerCollectionBlock({
               dropHint?.kind === "topic" &&
               dropHint.subjectId === nb.id &&
               dropHint.beforeId === group.id;
+
+            const showTopicRowDrop =
+              reorderEnabled &&
+              !selectionMode &&
+              dropHint?.kind === "topic-row" &&
+              dropHint.subjectId === nb.id &&
+              dropHint.topicGroupId === group.id;
+            const topicPageIds = group.pages.map((p) => p.id);
 
             return (
               <div key={group.id}>
@@ -308,7 +383,18 @@ export function ExplorerCollectionBlock({
                   }}
                   onDragOver={
                     reorderEnabled && !selectionMode
-                      ? (e) =>
+                      ? (e) => {
+                          if (activeDrag?.kind === "page") {
+                            allowReorderDrop(
+                              {
+                                kind: "topic-row",
+                                subjectId: nb.id,
+                                topicGroupId: group.id,
+                              },
+                              e
+                            );
+                            return;
+                          }
                           allowReorderDrop(
                             {
                               kind: "topic",
@@ -316,13 +402,26 @@ export function ExplorerCollectionBlock({
                               subjectId: nb.id,
                             },
                             e
-                          )
+                          );
+                        }
                       : undefined
                   }
                   onDragLeave={clearDropHint}
                   onDrop={
                     reorderEnabled && !selectionMode
-                      ? (e) =>
+                      ? (e) => {
+                          if (activeDrag?.kind === "page") {
+                            void finishReorderDrop(
+                              {
+                                kind: "topic-row",
+                                subjectId: nb.id,
+                                topicGroupId: group.id,
+                              },
+                              e,
+                              {}
+                            );
+                            return;
+                          }
                           void finishReorderDrop(
                             {
                               kind: "topic",
@@ -330,12 +429,16 @@ export function ExplorerCollectionBlock({
                               subjectId: nb.id,
                             },
                             e,
-                            groupIds,
-                            (ids) => onReorderTopics(nb.id, ids)
-                          )
+                            { topicIds: groupIds }
+                          );
+                        }
                       : undefined
                   }
-                  className="group flex items-center gap-0.5 px-1 py-1 rounded-md cursor-pointer hover:bg-[var(--bg-elevated)]"
+                  className={clsx(
+                    "group flex items-center gap-0.5 px-1 py-1 rounded-md cursor-pointer hover:bg-[var(--bg-elevated)]",
+                    showTopicRowDrop &&
+                      "ring-1 ring-[var(--accent)]/50 bg-[var(--accent-subtle)]"
+                  )}
                 >
                   {selectionMode ? (
                     <ExplorerSelectionToggle
@@ -387,10 +490,13 @@ export function ExplorerCollectionBlock({
                         className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
                         title="Rename topic"
                         onClick={async () => {
-                          const title = prompt("Rename topic", group.title);
-                          if (!title?.trim() || title.trim() === group.title)
-                            return;
-                          await onRenameTopic(nb, group.id, title.trim());
+                          const title = await prompt({
+                            title: "Rename topic",
+                            defaultValue: group.title,
+                            confirmLabel: "Rename",
+                          });
+                          if (!title || title === group.title) return;
+                          await onRenameTopic(nb, group.id, title);
                         }}
                       >
                         <Pencil className="w-3 h-3" />
@@ -433,6 +539,16 @@ export function ExplorerCollectionBlock({
                           selected={selected}
                           onSelectionChange={onSelectionChange}
                           enablePageDrag={enablePageDrag}
+                          libraryMoveEnabled={reorderEnabled}
+                          subjectId={nb.id}
+                          topicGroupId={group.id}
+                          showPageDrop={reorderEnabled && !selectionMode}
+                          pageIds={topicPageIds}
+                          dropHint={dropHint}
+                          startReorderDrag={startReorderDrag}
+                          allowReorderDrop={allowReorderDrop}
+                          finishReorderDrop={finishReorderDrop}
+                          clearDropHint={clearDropHint}
                           scheduledHrefs={scheduledHrefs}
                           onOpenPage={onOpenPage}
                           onSharePage={onSharePage}
@@ -441,6 +557,45 @@ export function ExplorerCollectionBlock({
                         />
                       );
                     })}
+                    {reorderEnabled && !selectionMode && group.pages.length > 0 && (
+                      <>
+                        <ExplorerDropLine
+                          active={
+                            dropHint?.kind === "page-topic" &&
+                            dropHint.subjectId === nb.id &&
+                            dropHint.topicGroupId === group.id &&
+                            dropHint.beforePageId === null
+                          }
+                        />
+                        <div
+                          className="h-1"
+                          onDragOver={(e) =>
+                            allowReorderDrop(
+                              {
+                                kind: "page-topic",
+                                subjectId: nb.id,
+                                topicGroupId: group.id,
+                                beforePageId: null,
+                              },
+                              e
+                            )
+                          }
+                          onDragLeave={clearDropHint}
+                          onDrop={(e) =>
+                            void finishReorderDrop(
+                              {
+                                kind: "page-topic",
+                                subjectId: nb.id,
+                                topicGroupId: group.id,
+                                beforePageId: null,
+                              },
+                              e,
+                              { pageIds: topicPageIds }
+                            )
+                          }
+                        />
+                      </>
+                    )}
                   </div>
                 )}
               </div>
@@ -468,8 +623,7 @@ export function ExplorerCollectionBlock({
                   void finishReorderDrop(
                     { kind: "topic", beforeId: null, subjectId: nb.id },
                     e,
-                    groupIds,
-                    (ids) => onReorderTopics(nb.id, ids)
+                    { topicIds: groupIds }
                   )
                 }
               />
