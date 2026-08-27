@@ -6,25 +6,19 @@ export function isTelegramWidgetError(text: string): boolean {
   return WIDGET_ERROR.test(text.replace(/\s+/g, " ").trim());
 }
 
-/** Hostnames allowed to show the Login Widget (comma-separated env). */
+/**
+ * Optional allowlist via NEXT_PUBLIC_TELEGRAM_LOGIN_HOSTS only.
+ * When unset, every host may load the widget (BotFather /setdomain is the source of truth).
+ */
 export function isTelegramLoginHostAllowed(): boolean {
   if (typeof window === "undefined") return true;
 
   const listed = process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_HOSTS?.split(",")
     .map((h) => h.trim().toLowerCase())
     .filter(Boolean);
-  const host = window.location.hostname.toLowerCase();
-  if (listed?.length) return listed.includes(host);
+  if (!listed?.length) return true;
 
-  const site = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (site) {
-    try {
-      return new URL(site).hostname.toLowerCase() === host;
-    } catch {
-      return true;
-    }
-  }
-  return true;
+  return listed.includes(window.location.hostname.toLowerCase());
 }
 
 export function readTelegramWidgetError(root: HTMLElement | null): string | null {
@@ -32,4 +26,12 @@ export function readTelegramWidgetError(root: HTMLElement | null): string | null
   const text = root.textContent ?? "";
   if (!isTelegramWidgetError(text)) return null;
   return text.replace(/\s+/g, " ").trim();
+}
+
+/** True when Telegram injected the interactive login control (not just an error string). */
+export function hasTelegramLoginWidget(root: HTMLElement | null): boolean {
+  if (!root) return false;
+  return Boolean(
+    root.querySelector("iframe, a[href*='telegram.org'], a[href*='t.me']")
+  );
 }
