@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { LayoutGrid, ChevronLeft, ChevronRight } from "lucide-react";
 import { withShortcut } from "@/lib/hotkeys";
-import { PdfPagePreviewModal } from "./PdfPagePreviewModal";
 import { ToolBtn, ToolMuted, ToolPill } from "./EditorToolbarChrome";
 
 export function PdfPageNav({
@@ -13,25 +12,20 @@ export function PdfPageNav({
   modeHint = "",
   pdfDoc,
   compact = false,
-  canDeletePages = false,
-  deletingPages = false,
   onGoToPage,
-  onDeletePages,
+  onOpenPagePreview,
 }: {
   currentPage: number;
   numPages: number;
   modeHint?: string;
   pdfDoc: PDFDocumentProxy | null;
   compact?: boolean;
-  canDeletePages?: boolean;
-  deletingPages?: boolean;
   onGoToPage: (page: number) => void;
-  onDeletePages?: (pages: number[]) => void | Promise<void>;
+  onOpenPagePreview: () => void;
 }) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const focusedRef = useRef(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (focusedRef.current) return;
@@ -126,7 +120,7 @@ export function PdfPageNav({
         <ToolBtn
           label="Page thumbnails"
           disabled={!pdfDoc || !numPages}
-          onClick={() => setPreviewOpen(true)}
+          onClick={onOpenPagePreview}
         >
           <LayoutGrid className="w-[17px] h-[17px]" />
         </ToolBtn>
@@ -136,23 +130,6 @@ export function PdfPageNav({
           {modeHint}
         </p>
       ) : null}
-      {previewOpen && pdfDoc && numPages > 0 && (
-        <PdfPagePreviewModal
-          pdfDoc={pdfDoc}
-          numPages={numPages}
-          currentPage={currentPage}
-          canDeletePages={canDeletePages}
-          deleting={deletingPages}
-          onGoToPage={onGoToPage}
-          onDeletePages={async (pages) => {
-            await onDeletePages?.(pages);
-            setPreviewOpen(false);
-          }}
-          onClose={() => {
-            if (!deletingPages) setPreviewOpen(false);
-          }}
-        />
-      )}
     </div>
   );
 }

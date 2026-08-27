@@ -1287,6 +1287,12 @@ export function DocumentPane({
                 <PdfViewer
                   userTopicId={pageData.id}
                   getPdfSource={curriculumPdfSource}
+                  canEditPdf={
+                    !curriculumPdfSource &&
+                    !guestLocked &&
+                    !isPreloadedDoc &&
+                    (!pageData.access || pageData.access.isOwner)
+                  }
                   fileName={pageData.title}
                   highlights={highlights}
                   onHighlightsChange={setHighlights}
