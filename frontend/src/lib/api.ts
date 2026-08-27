@@ -1,5 +1,5 @@
 import { clearAccountLocalState } from "@/lib/accountLocalState";
-import { compressUploadFile, shouldCompressUpload } from "@/lib/compressUploadFile";
+import { compressFormDataFiles, compressUploadFile, shouldCompressUpload } from "@/lib/compressUploadFile";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { toUserFacingError } from "@/lib/userFacingError";
 
@@ -385,9 +385,9 @@ export const api = {
         method: "PATCH",
         body: JSON.stringify(data),
       }),
-    uploadAvatar: (file: File) => {
+    uploadAvatar: async (file: File) => {
       const formData = new FormData();
-      formData.append("avatar", file);
+      formData.append("avatar", await compressUploadFile(file));
       return request<{ user: import("@/types").User }>("/api/auth/me/avatar", {
         method: "POST",
         body: formData,
@@ -540,11 +540,13 @@ export const api = {
       request<{ subjects: import("@/types").Subject[] }>(
         "/api/admin/hierarchy"
       ),
-    upload: (formData: FormData) =>
-      request<{ article: import("@/types").ArticleSummary; message: string }>(
+    upload: async (formData: FormData) => {
+      await compressFormDataFiles(formData, ["pdf"]);
+      return request<{ article: import("@/types").ArticleSummary; message: string }>(
         "/api/admin/upload",
         { method: "POST", body: formData }
-      ),
+      );
+    },
     listTopics: () =>
       request<{ topics: import("@/types").AdminArticle[] }>(
         "/api/admin/topics"
@@ -611,9 +613,9 @@ export const api = {
         `/api/admin/blog/${id}`,
         { method: "PATCH", body: JSON.stringify(data) }
       ),
-    uploadBlogCover: (id: string, file: File) => {
+    uploadBlogCover: async (id: string, file: File) => {
       const formData = new FormData();
-      formData.append("cover", file);
+      formData.append("cover", await compressUploadFile(file));
       return request<{ coverImageUrl: string }>(
         `/api/admin/blog/${id}/cover`,
         { method: "POST", body: formData }
@@ -1229,6 +1231,11 @@ export const api = {
       file: Blob,
       opts: { deletedPages: number[]; numPagesBefore: number }
     ) => {
+      const packed = await compressUploadFile(
+        file instanceof File
+          ? file
+          : new File([file], "source.pdf", { type: "application/pdf" })
+      );
       const init = await request<{
         uploadUrl: string;
         headers: { "Content-Type": string };
@@ -1236,14 +1243,14 @@ export const api = {
       }>(`/api/my-content/pages/${id}/pdf/replace/init`, {
         method: "POST",
         body: JSON.stringify({
-          size: file.size,
+          size: packed.size,
           deletedPages: opts.deletedPages,
           numPagesBefore: opts.numPagesBefore,
         }),
       });
       await putToUrl(
         init.uploadUrl,
-        file,
+        packed,
         init.headers["Content-Type"] || "application/pdf"
       );
       return request<{
@@ -1535,11 +1542,13 @@ export const api = {
         "/api/study/relevancy-docs",
         { method: "POST", body: JSON.stringify(data) }
       ),
-    uploadRelevancyDoc: (formData: FormData) =>
-      request<{ doc: import("@/types").StudyRelevancyDoc }>(
+    uploadRelevancyDoc: async (formData: FormData) => {
+      await compressFormDataFiles(formData, ["file"]);
+      return request<{ doc: import("@/types").StudyRelevancyDoc }>(
         "/api/study/relevancy-docs/upload",
         { method: "POST", body: formData }
-      ),
+      );
+    },
     getRelevancyDoc: (id: string) =>
       request<{ doc: import("@/types").StudyRelevancyDoc }>(
         `/api/study/relevancy-docs/${id}`

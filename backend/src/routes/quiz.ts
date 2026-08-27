@@ -10,6 +10,7 @@ import {
 } from "../utils/chatContext.js";
 import { extractRelevancyText } from "../utils/relevancyExtract.js";
 import { deleteFromS3, uploadToS3 } from "../services/s3.js";
+import { losslessCompressBuffer } from "../utils/losslessCompress.js";
 import {
   clampFocus,
   clampQuestionCounts,
@@ -357,18 +358,23 @@ router.post(
       throw err;
     }
 
+    const packed = await losslessCompressBuffer(
+      req.file.buffer,
+      mime,
+      req.file.originalname
+    );
     const key = `users/${req.user!.userId}/quiz/${quiz.id}/${question.id}`;
     if (question.userImageKey && question.userImageKey !== key) {
       await deleteFromS3(question.userImageKey).catch(() => undefined);
     }
-    await uploadToS3(key, req.file.buffer, mime);
+    await uploadToS3(key, packed, mime);
     await prisma.quizQuestion.update({
       where: { id: question.id },
       data: { userImageKey: key, userImageMime: mime },
     });
     await prisma.user.update({
       where: { id: req.user!.userId },
-      data: { storageUsedBytes: { increment: req.file.size } },
+      data: { storageUsedBytes: { increment: packed.length } },
     });
     if (!quiz.startedAt) {
       await prisma.quiz.update({

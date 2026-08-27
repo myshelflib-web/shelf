@@ -1,5 +1,6 @@
 import prisma from "../utils/prisma.js";
 import { uploadToS3 } from "./s3.js";
+import { losslessCompressBuffer } from "../utils/losslessCompress.js";
 import { scheduleIndexPage } from "./libraryIndex.js";
 import { userDocPrefix, sourcePdfKey, pageHref } from "../utils/docPaths.js";
 import {
@@ -67,9 +68,14 @@ export async function ingestTelegramPdf(opts: {
   let charged = 0;
 
   try {
-    await chargeStorage(opts.userId, opts.buffer.length);
-    charged = opts.buffer.length;
-    await uploadToS3(pdfKey, opts.buffer, "application/pdf");
+    const packed = await losslessCompressBuffer(
+      opts.buffer,
+      "application/pdf",
+      `${opts.title}.pdf`
+    );
+    await chargeStorage(opts.userId, packed.length);
+    charged = packed.length;
+    await uploadToS3(pdfKey, packed, "application/pdf");
 
     const page = await prisma.userTopic.create({
       data: {
@@ -80,7 +86,7 @@ export async function ingestTelegramPdf(opts: {
         slug,
         pdfKey,
         contentType: "PDF",
-        fileSizeBytes: opts.buffer.length,
+        fileSizeBytes: packed.length,
         status: "PUBLISHED",
         order,
       },

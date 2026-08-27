@@ -14,6 +14,7 @@ import {
 import { contentKeyFromPdfKey } from "../utils/docPaths.js";
 import { scheduleIndexPage } from "../services/libraryIndex.js";
 import { errorFields } from "../utils/logger.js";
+import { recompressS3ObjectIfSmaller } from "../utils/s3ObjectCompress.js";
 import {
   normalizeDeletedPages,
   remapPageNumberAfterDeletes,
@@ -234,7 +235,14 @@ router.post(
     }
 
     const oldBytes = page.fileSizeBytes ?? 0;
-    const newBytes = meta.contentLength;
+    const newBytes =
+      claims.mode === "restore"
+        ? meta.contentLength
+        : await recompressS3ObjectIfSmaller(
+            claims.key,
+            "application/pdf",
+            meta.contentLength
+          );
     const delta = newBytes - oldBytes;
 
     try {

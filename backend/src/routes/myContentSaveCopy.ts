@@ -6,6 +6,7 @@ import {
   getObjectBuffer,
   uploadToS3,
 } from "../services/s3.js";
+import { compressAndUploadToS3 } from "../utils/s3ObjectCompress.js";
 import { userDocPrefix } from "../utils/docPaths.js";
 import { errorFields } from "../utils/logger.js";
 import { param } from "../utils/param.js";
@@ -70,7 +71,7 @@ router.post("/pages/:id/save-copy", async (req: Request, res: Response) => {
   }
 
   const src = access.page;
-  const bytes = src.fileSizeBytes ?? 0;
+  let storedBytes = src.fileSizeBytes ?? 0;
   try {
     const me = await prisma.user.findUnique({
       where: { id: userId },
@@ -80,7 +81,7 @@ router.post("/pages/:id/save-copy", async (req: Request, res: Response) => {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
-    assertStorageRoom(me, bytes);
+    assertStorageRoom(me, storedBytes);
   } catch (err) {
     if (err instanceof QuotaError) {
       res.status(err.status).json({ error: err.message });
@@ -98,7 +99,12 @@ router.post("/pages/:id/save-copy", async (req: Request, res: Response) => {
     if (src.pdfKey) {
       const { buffer } = await getObjectBuffer(src.pdfKey);
       pdfKey = `${docPrefix}/source.pdf`;
-      await uploadToS3(pdfKey, buffer, "application/pdf");
+      const uploaded = await compressAndUploadToS3(
+        pdfKey,
+        buffer,
+        "application/pdf"
+      );
+      storedBytes = uploaded.byteLength;
     }
     if (src.contentUrl) {
       const html = await getFromS3(src.contentUrl);
@@ -122,14 +128,14 @@ router.post("/pages/:id/save-copy", async (req: Request, res: Response) => {
       pdfKey,
       contentUrl,
       sourceUrl: src.sourceUrl,
-      fileSizeBytes: bytes,
+      fileSizeBytes: storedBytes,
       status: src.status,
     },
   });
 
   await prisma.user.update({
     where: { id: userId },
-    data: { storageUsedBytes: { increment: bytes } },
+    data: { storageUsedBytes: { increment: storedBytes } },
   });
 
   if (access.shareId) {

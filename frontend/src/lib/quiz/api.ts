@@ -1,4 +1,5 @@
 import { API_URL, ApiError } from "@/lib/api";
+import { compressUploadFile } from "@/lib/compressUploadFile";
 import { toUserFacingError } from "@/lib/userFacingError";
 import type { Quiz, QuizSummary } from "./types";
 
@@ -70,7 +71,7 @@ export const quizApi = {
       if (input.relevancyDocId) fd.append("relevancyDocId", input.relevancyDocId);
       if (input.focusTopic) fd.append("focusTopic", input.focusTopic);
       if (input.sourceText) fd.append("sourceText", input.sourceText);
-      fd.append("file", input.file);
+      fd.append("file", await compressUploadFile(input.file));
       return request<{ quiz: Quiz }>("/api/quiz", { method: "POST", body: fd });
     }
     return request<{ quiz: Quiz }>("/api/quiz", {
@@ -110,9 +111,9 @@ export const quizApi = {
     }),
   submit: (id: string) =>
     request<{ quiz: Quiz }>(`/api/quiz/${id}/submit`, { method: "POST" }),
-  uploadAnswerImage: (quizId: string, questionId: string, file: File) => {
+  uploadAnswerImage: async (quizId: string, questionId: string, file: File) => {
     const fd = new FormData();
-    fd.append("file", file);
+    fd.append("file", await compressUploadFile(file));
     return request<{ quiz: Quiz }>(
       `/api/quiz/${quizId}/questions/${questionId}/image`,
       { method: "POST", body: fd }

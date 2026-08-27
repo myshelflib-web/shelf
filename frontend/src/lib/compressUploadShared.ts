@@ -1,21 +1,6 @@
-export const COMPRESS_MIN_FILE_BYTES = 32 * 1024;
-export const COMPRESS_MIN_IMAGE_BYTES = 24 * 1024;
-export const COMPRESS_MAX_EDGE = 2000;
-export const COMPRESS_JPEG_QUALITY = 0.8;
+export const COMPRESS_MIN_FILE_BYTES = 8 * 1024;
 /** Keep the original unless the new file is at least this much smaller. */
-export const COMPRESS_FILE_RATIO = 0.95;
-export const COMPRESS_IMAGE_RATIO = 0.92;
-
-export type CompressedRaster = {
-  bytes: Uint8Array<ArrayBuffer>;
-  width: number;
-  height: number;
-};
-
-export type CompressRasterFn = (input: {
-  bytes: Uint8Array;
-  mime: string;
-}) => Promise<CompressedRaster | null>;
+export const COMPRESS_FILE_RATIO = 0.99;
 
 export function copyBytes(src: Uint8Array): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(src.byteLength);

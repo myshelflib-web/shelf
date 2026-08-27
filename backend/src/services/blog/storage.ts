@@ -1,4 +1,5 @@
 import { getObjectBuffer, uploadToS3 } from "../s3.js";
+import { compressAndUploadToS3 } from "../../utils/s3ObjectCompress.js";
 import { blogContentKey } from "../../utils/blogPaths.js";
 import {
   parseBlogContent,
@@ -25,6 +26,6 @@ export async function uploadBlogAsset(
   body: Buffer,
   contentType: string
 ): Promise<string> {
-  await uploadToS3(key, body, contentType);
+  await compressAndUploadToS3(key, body, contentType);
   return key;
 }

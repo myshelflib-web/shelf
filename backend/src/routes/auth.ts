@@ -9,6 +9,7 @@ import {
 } from "../services/telegramAuth.js";
 import { authenticateTelegramLogin } from "../services/telegramLogin.js";
 import { uploadToS3, getObjectBuffer } from "../services/s3.js";
+import { losslessCompressBuffer } from "../utils/losslessCompress.js";
 import {
   createAndSendOtp,
   normalizeEmail,
@@ -438,8 +439,14 @@ router.post(
       return;
     }
 
+    const packed = await losslessCompressBuffer(
+      file.buffer,
+      file.mimetype,
+      file.originalname
+    );
+
     try {
-      assertStorageRoom(stored, file.size);
+      assertStorageRoom(stored, packed.length);
     } catch (err) {
       if (err instanceof QuotaError) {
         res.status(err.status).json({ error: err.message });
@@ -450,13 +457,13 @@ router.post(
 
     const ext = file.mimetype === "image/png" ? "png" : "jpg";
     const key = `users/${req.user!.userId}/avatar.${ext}`;
-    await uploadToS3(key, file.buffer, file.mimetype);
+    await uploadToS3(key, packed, file.mimetype);
 
     const user = await prisma.user.update({
       where: { id: req.user!.userId },
       data: {
         avatarUrl: key,
-        storageUsedBytes: { increment: BigInt(file.size) },
+        storageUsedBytes: { increment: BigInt(packed.length) },
       },
       select: userSelect,
     });

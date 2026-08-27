@@ -1,7 +1,7 @@
 import { unzipSync, zipSync } from "fflate";
-import { compressPngBytes } from "./compressPngLossless";
+import { compressPngBytes } from "./losslessPng.js";
 
-/** Lossless ZIP/DOCX: recompress PNG parts, then re-deflate the archive at level 9. */
+/** Lossless ZIP/DOCX: recompress PNG parts, re-deflate archive at level 9. */
 export function compressZipBytes(source: Uint8Array): Uint8Array | null {
   let entries: Record<string, Uint8Array>;
   try {
@@ -23,12 +23,4 @@ export function compressZipBytes(source: Uint8Array): Uint8Array | null {
   } catch {
     return null;
   }
-}
-
-export function compressDocxBytes(
-  source: ArrayBuffer | Uint8Array
-): Uint8Array | null {
-  const bytes =
-    source instanceof Uint8Array ? source : new Uint8Array(source);
-  return compressZipBytes(bytes);
 }

@@ -1,7 +1,8 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
 import prisma from "../utils/prisma.js";
-import { uploadToS3, deleteFromS3 } from "../services/s3.js";
+import { deleteFromS3 } from "../services/s3.js";
+import { compressAndUploadToS3 } from "../utils/s3ObjectCompress.js";
 import { authMiddleware, adminMiddleware } from "../middleware/auth.js";
 import { param } from "../utils/param.js";
 import { slugify } from "../utils/slugify.js";
@@ -259,7 +260,12 @@ router.post(
 
       const docPrefix = adminDocPrefix(subject.slug, topic.slug, article.slug);
       const pdfKey = sourcePdfKey(docPrefix);
-      await uploadToS3(pdfKey, file.buffer, "application/pdf");
+      const { byteLength } = await compressAndUploadToS3(
+        pdfKey,
+        file.buffer,
+        "application/pdf",
+        file.originalname
+      );
 
       article = await prisma.article.update({
         where: { id: article.id },
@@ -286,7 +292,7 @@ router.post(
         topicSlug: topic.slug,
         articleSlug: article.slug,
         pdfKey,
-        bytes: file.size,
+        bytes: byteLength,
       });
 
       res.status(201).json({

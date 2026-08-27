@@ -1,19 +1,10 @@
-import {
-  PDFDocument,
-  PDFName,
-  PDFRawStream,
-} from "pdf-lib";
+import { PDFDocument, PDFName, PDFRawStream } from "pdf-lib";
 
-/**
- * Lossless PDF pack: Flate any uncompressed streams, then save with object
- * streams. Image pixels and page layout are not re-encoded.
- */
+/** Lossless PDF pack: Flate uncompressed streams + object streams. */
 export async function compressPdfBytes(
-  source: ArrayBuffer | Uint8Array
+  source: Uint8Array
 ): Promise<Uint8Array | null> {
-  const bytes =
-    source instanceof Uint8Array ? source : new Uint8Array(source);
-  const doc = await PDFDocument.load(bytes, {
+  const doc = await PDFDocument.load(source, {
     ignoreEncryption: true,
     updateMetadata: false,
   });
@@ -36,11 +27,11 @@ export async function compressPdfBytes(
       }
       doc.context.assign(ref, flate);
     } catch {
-      /* leave the original stream */
+      /* leave original stream */
     }
   }
 
   const saved = await doc.save({ useObjectStreams: true });
-  if (saved.byteLength > 0 && saved.byteLength < bytes.byteLength) return saved;
+  if (saved.byteLength > 0 && saved.byteLength < source.byteLength) return saved;
   return null;
 }

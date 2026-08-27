@@ -3,6 +3,8 @@ import multer from "multer";
 import { UserContentType } from "@prisma/client";
 import prisma from "../utils/prisma.js";
 import { uploadToS3, getFromS3, deleteFromS3, headObjectMeta, getObjectStream, getPresignedPutUrl, getPresignedPdfGetUrl, PDF_PRESIGN_EXPIRES_SEC, getObjectPrefix, getObjectBuffer } from "../services/s3.js";
+import { losslessCompressBuffer } from "../utils/losslessCompress.js";
+import { recompressS3ObjectIfSmaller } from "../utils/s3ObjectCompress.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { param } from "../utils/param.js";
 import { QuotaError, assertStorageRoom } from "../utils/quotas.js";
@@ -283,21 +285,19 @@ async function handlePageUpload(
     slug
   );
   const order = await nextPageOrder(parent.scope);
-
-  try {
-    await chargeStorage(parent.userId, file.size);
-  } catch (err) {
-    if (err instanceof QuotaError) {
-      res.status(err.status).json({ error: err.message });
-      return;
-    }
-    throw err;
-  }
+  let chargedBytes = 0;
 
   try {
     if (kind === "pdf") {
+      const packed = await losslessCompressBuffer(
+        file.buffer,
+        "application/pdf",
+        file.originalname
+      );
+      await chargeStorage(parent.userId, packed.length);
+      chargedBytes = packed.length;
       const pdfKey = sourcePdfKey(docPrefix);
-      await uploadToS3(pdfKey, file.buffer, "application/pdf");
+      await uploadToS3(pdfKey, packed, "application/pdf");
       const page = await prisma.userTopic.create({
         data: {
           userId: parent.userId,
@@ -307,7 +307,7 @@ async function handlePageUpload(
           slug,
           pdfKey,
           contentType: "PDF",
-          fileSizeBytes: file.size,
+          fileSizeBytes: packed.length,
           status: "PUBLISHED",
           order,
         },
@@ -321,8 +321,15 @@ async function handlePageUpload(
       return;
     }
 
-    const html = await bufferToHtml(file.buffer, kind, title.trim());
+    const packed = await losslessCompressBuffer(
+      file.buffer,
+      contentTypeForKind(kind),
+      file.originalname
+    );
+    const html = await bufferToHtml(packed, kind, title.trim());
     const htmlBytes = Buffer.byteLength(html, "utf8");
+    await chargeStorage(parent.userId, htmlBytes);
+    chargedBytes = htmlBytes;
     const contentKey = contentHtmlKey(docPrefix);
     await uploadToS3(contentKey, html, "text/html");
 
@@ -345,7 +352,13 @@ async function handlePageUpload(
     scheduleIndexPage(page.id);
     res.status(201).json({ page, message: "File converted and ready to read." });
   } catch (err) {
-    await releaseStorage(parent.userId, file.size);
+    if (chargedBytes > 0) {
+      await releaseStorage(parent.userId, chargedBytes).catch(() => undefined);
+    }
+    if (err instanceof QuotaError) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
     throw err;
   }
 }
@@ -741,8 +754,13 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
         res.status(400).json({ error: invalid });
         return;
       }
-      await chargeStorage(parent.userId, meta.contentLength);
-      chargedBytes = meta.contentLength;
+      const storedBytes = await recompressS3ObjectIfSmaller(
+        claims.key,
+        "application/pdf",
+        meta.contentLength
+      );
+      await chargeStorage(parent.userId, storedBytes);
+      chargedBytes = storedBytes;
       const page = await prisma.userTopic.create({
         data: {
           userId: parent.userId,
@@ -752,7 +770,7 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
           slug,
           pdfKey: claims.key,
           contentType: "PDF",
-          fileSizeBytes: meta.contentLength,
+          fileSizeBytes: storedBytes,
           status: "PUBLISHED",
           order,
         },
@@ -767,13 +785,18 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
     }
 
     const { buffer } = await getObjectBuffer(claims.key);
-    const invalid = validateUploadBuffer(claims.kind, buffer);
+    const packed = await losslessCompressBuffer(
+      buffer,
+      claims.contentType,
+      claims.title
+    );
+    const invalid = validateUploadBuffer(claims.kind, packed);
     if (invalid) {
       await deleteFromS3(claims.key).catch(() => undefined);
       res.status(400).json({ error: invalid });
       return;
     }
-    const html = await bufferToHtml(buffer, claims.kind, claims.title);
+    const html = await bufferToHtml(packed, claims.kind, claims.title);
     const htmlBytes = Buffer.byteLength(html, "utf8");
     await chargeStorage(parent.userId, htmlBytes);
     chargedBytes = htmlBytes;
@@ -1911,10 +1934,19 @@ router.post("/pages/:id/import", async (req: Request, res: Response) => {
       page.slug
     );
 
-    const bytes =
-      remote.kind === "pdf"
-        ? remote.buffer.length
-        : Buffer.byteLength(remote.html, "utf8");
+    let storePdf: Buffer | null = null;
+    let importHtml: string | null = null;
+    if (remote.kind === "pdf") {
+      storePdf = await losslessCompressBuffer(
+        remote.buffer,
+        "application/pdf"
+      );
+    } else {
+      importHtml = remote.html;
+    }
+    const bytes = storePdf
+      ? storePdf.length
+      : Buffer.byteLength(importHtml ?? "", "utf8");
 
     try {
       await chargeStorage(userId, bytes);
@@ -1927,9 +1959,9 @@ router.post("/pages/:id/import", async (req: Request, res: Response) => {
     }
 
     try {
-      if (remote.kind === "pdf") {
+      if (storePdf) {
         const pdfKey = sourcePdfKey(docPrefix);
-        await uploadToS3(pdfKey, remote.buffer, "application/pdf");
+        await uploadToS3(pdfKey, storePdf, "application/pdf");
         const updated = await prisma.userTopic.update({
           where: { id: page.id },
           data: {
@@ -1951,7 +1983,7 @@ router.post("/pages/:id/import", async (req: Request, res: Response) => {
       }
 
       const contentKey = contentHtmlKey(docPrefix);
-      await uploadToS3(contentKey, remote.html, "text/html");
+      await uploadToS3(contentKey, importHtml ?? "", "text/html");
       const nextTitle =
         page.title.trim().toLowerCase() === "untitled" && remote.titleHint
           ? remote.titleHint
