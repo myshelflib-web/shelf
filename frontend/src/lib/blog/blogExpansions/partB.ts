@@ -390,4 +390,48 @@ export const BLOG_EXPANSIONS_B: Record<string, BlogSection[]> = {
       ],
     },
   ],
+  "telegram-save-pdfs": [
+    {
+      heading: "Link once, reuse everywhere",
+      paragraphs: [
+        "Telegram Login on the web and Connect Telegram in Settings both bind the same Telegram user id to your Shelf account. After that, the bot recognizes you without pasting tokens each time.",
+        "If you signed up with Telegram first, Settings already shows Linked — you can forward PDFs immediately. Email or Google users should Connect Telegram so bot imports land in the library they already use.",
+      ],
+    },
+    {
+      heading: "Where files land",
+      paragraphs: [
+        "Bot imports create library-root pages under My Content, not inside a random collection. Rename or move them later with the same explorer tools you use for manual uploads.",
+        "Titles come from the Telegram file name when present. Storage counts against your plan quota the same way as an in-app PDF upload, and Study AI indexing runs after the page is saved.",
+      ],
+    },
+    {
+      heading: "Limits to know",
+      paragraphs: [
+        "The bot path is PDF-only in this release and respects Telegram’s roughly 20 MB download cap. Oversized notes still belong in Shelf’s direct upload flow.",
+        "The bot only sees messages you send or forward to it — it cannot scan private groups or channels unless you add it and forward the file yourself.",
+      ],
+    },
+    {
+      heading: "Open the PDF on the web",
+      paragraphs: [
+        "When a save succeeds, the bot replies with an Open link into Shelf. Sign in on that browser (Telegram login works) and the reader opens the new page like any other library file.",
+        "Highlights, Ask AI, planner Schedule, and sharing work on bot-imported PDFs the same as uploads from the Add page dialog.",
+      ],
+    },
+    {
+      heading: "Disconnect without losing files",
+      paragraphs: [
+        "Disconnect in Settings clears the Telegram binding and stops bot imports. Pages already in My Content stay put — disconnect does not delete library files.",
+        "You can reconnect later with a fresh Connect Telegram deep link if you switch Telegram accounts or want bot ingest again.",
+      ],
+    },
+    {
+      heading: "Study groups on Telegram",
+      paragraphs: [
+        "Forward a classmate’s handout from a Telegram study group into the Shelf bot, then keep your annotated copy private in your library. Share from Shelf when you want controlled view or edit access instead of another chat dump.",
+        "WhatsApp Business ingest is a separate roadmap item. For now, Telegram is the supported messaging path into Shelf.",
+      ],
+    },
+  ],
 };

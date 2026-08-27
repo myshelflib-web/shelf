@@ -22,6 +22,8 @@ const userSelect = {
   vectorChunksUsed: true,
   coinBalance: true,
   passwordHash: true,
+  telegramId: true,
+  telegramUsername: true,
 } as const;
 
 export { userSelect };
@@ -41,6 +43,8 @@ type DbUser = {
   vectorChunksUsed: number;
   coinBalance?: number;
   passwordHash?: string | null;
+  telegramId?: string | null;
+  telegramUsername?: string | null;
 };
 
 export function toPublicUser(user: DbUser) {
@@ -70,5 +74,7 @@ export function toPublicUser(user: DbUser) {
     vectorChunksUsed: usedVectorChunks(quotaUser),
     vectorChunkLimit: vectorChunkLimit(quotaUser),
     coinBalance: user.coinBalance ?? 0,
+    telegramLinked: Boolean(user.telegramId),
+    telegramUsername: user.telegramUsername ?? null,
   };
 }

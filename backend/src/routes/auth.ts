@@ -4,6 +4,10 @@ import multer from "multer";
 import prisma from "../utils/prisma.js";
 import { signToken, authMiddleware } from "../middleware/auth.js";
 import { verifyGoogleToken } from "../services/googleAuth.js";
+import {
+  TelegramAuthError,
+} from "../services/telegramAuth.js";
+import { authenticateTelegramLogin } from "../services/telegramLogin.js";
 import { uploadToS3, getObjectBuffer } from "../services/s3.js";
 import {
   createAndSendOtp,
@@ -292,6 +296,23 @@ router.post("/google", async (req: Request, res: Response) => {
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Google authentication failed";
+    res.status(401).json({ error: message });
+  }
+});
+
+router.post("/telegram", async (req: Request, res: Response) => {
+  try {
+    await authenticateTelegramLogin(
+      res,
+      (req.body ?? {}) as Record<string, unknown>
+    );
+  } catch (err) {
+    if (err instanceof TelegramAuthError) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
+    const message =
+      err instanceof Error ? err.message : "Telegram authentication failed";
     res.status(401).json({ error: message });
   }
 });

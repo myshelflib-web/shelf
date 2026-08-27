@@ -11,7 +11,7 @@ API client: `src/lib/api.ts` (`NEXT_PUBLIC_API_URL`, default `http://localhost:4
 | `/dashboard` | Focused home: greeting, search/Ask AI, continue last collection, Next up (max 2 planner actionables), recent collections, paginated achievements. First-time users see Add material instead of empty metrics/cards. **No page scroll** (`h-full overflow-hidden`), same as Library. Still in primary nav. |
 | `/planner` | Planner board (week / month) with a To plan backlog. Query: `date=YYYY-MM-DD`, `edit=<taskId>`. `/calendar` redirects here. |
 | `/my-content` | **Signed-in home** (Library). Collections + root pages; inside collection, topics + collection pages; topic → pages. Readers: `file/[page]`, `[notebook]/file/[page]`, `[notebook]/[topic]/[page]`. |
-| `/settings` | App settings: theme, study goal, reading goal, plan usage. |
+| `/settings` | App settings: theme, study goal, reading goal, plan usage, Telegram connect. |
 | `/profile` | Name, picture, password, delete account. |
 | `/study-ai` | Full Study AI (multi-turn chat, RAG, tools, images, save/download). Also `/study-ai/[id]`. Per-thread **library scope** (collection/topic/page) and **syllabus / relevancy docs** (paste or upload; free 10 / paid 50). Stop generation, queue the next message, **edit a sent user message** (Cursor-style truncate + resubmit), delete a turn, **study flashcards** in a modal (download / save to library), and preview Mermaid diagrams. Type `/` for slash commands (`/quiz` opens the Quiz workspace, plus mind map, PYQ, flashcards, …); suggestion chips rotate above the composer. Tools can search the library, highlights, recents, starred pages, planner, Google, and public URLs. Reader panel is multi-turn page Ask with the same formatting, and its chats are **saved** as page-scoped threads that appear here. Failed replies stay in the thread with short user-facing errors (no raw provider dumps). Library indexing covers PDFs, notebooks, docs, and imports; thin/scanned PDFs get OCR text when indexing. With no highlight, the panel sends this file's vectors plus a snapshot of the visible PDF page when the file has little text. |
 | `/quiz` | Public, indexable explainer for guests; signed-in users get the quiz workspace (MCQ, typed, photo working). Scope a document/collection/topic, upload notes + syllabus, or exam bank (PYQ/standard/preloaded). Settings: difficulty, timer, MCQ count, written count. `/quiz/[id]` is private (noindex) and still requires sign-in. Same UI from nav, `g q`, `/quiz` slash, and search. |
@@ -62,7 +62,7 @@ Signed-in only. `?` opens the cheatsheet (header keyboard icon). Sequences: `g` 
 
 | Route | Purpose |
 |---|---|
-| `/settings` | Theme, reading goal, study goal, plan usage |
+| `/settings` | Theme, reading goal, study goal, plan usage, Telegram connect |
 | `/profile` | Name, avatar, password, delete account (`DELETE /api/auth/me`) |
 
 `AccountNav` toggles between the two pages. Avatar menu links to both.

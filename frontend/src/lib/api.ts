@@ -374,6 +374,28 @@ export const api = {
         "/api/auth/google",
         { method: "POST", body: JSON.stringify({ credential }) }
       ),
+    telegram: (payload: Record<string, unknown>) =>
+      request<{ user: import("@/types").User; token: string }>(
+        "/api/auth/telegram",
+        { method: "POST", body: JSON.stringify(payload) }
+      ),
+  },
+
+  telegram: {
+    status: () =>
+      request<{
+        configured: boolean;
+        botUsername: string | null;
+        linked: boolean;
+        telegramUsername: string | null;
+        linkedAt: string | null;
+      }>("/api/telegram/status"),
+    link: () =>
+      request<{ url: string; expiresAt: string }>("/api/telegram/link", {
+        method: "POST",
+      }),
+    unlink: () =>
+      request<{ ok: boolean }>("/api/telegram/link", { method: "DELETE" }),
   },
 
   subjects: {

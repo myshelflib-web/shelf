@@ -27,6 +27,8 @@ export interface User {
   vectorChunksUsed?: number;
   vectorChunkLimit?: number;
   coinBalance?: number;
+  telegramLinked?: boolean;
+  telegramUsername?: string | null;
 }
 
 export interface ArticleSummary {

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { useAuth } from "@/hooks/useAuth";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { TelegramSignInButton } from "@/components/TelegramSignInButton";
 import { ShelfLogo } from "@/components/ShelfLogo";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { api } from "@/lib/api";
@@ -227,6 +228,7 @@ function LoginForm() {
         </div>
 
         <GoogleSignInButton onError={setError} redirectTo={nextPath} />
+        <TelegramSignInButton onError={setError} redirectTo={nextPath} />
       </div>
 
       <p className="text-center text-sm text-[var(--text-secondary)] mt-4">

@@ -18,6 +18,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string, otp: string) => Promise<void>;
   loginWithGoogle: (credential: string) => Promise<void>;
+  loginWithTelegram: (payload: Record<string, unknown>) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
 }
@@ -83,6 +84,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(user);
   }, []);
 
+  const loginWithTelegram = useCallback(async (payload: Record<string, unknown>) => {
+    const { user, token } = await api.auth.telegram(payload);
+    bindAccountLocalState(user.id);
+    localStorage.setItem("token", token);
+    localStorage.setItem("user", JSON.stringify(user));
+    setUser(user);
+  }, []);
+
   const logout = useCallback(() => {
     setUser(null);
     void clearAccountLocalState().finally(() => {
@@ -98,7 +107,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, register, loginWithGoogle, logout, refreshUser }}
+      value={{
+        user,
+        loading,
+        login,
+        register,
+        loginWithGoogle,
+        loginWithTelegram,
+        logout,
+        refreshUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

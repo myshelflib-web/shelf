@@ -141,6 +141,11 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "collaborative study documents",
     "shared with me study library",
   ],
+  "telegram-save-pdfs": [
+    "save Telegram PDF to library",
+    "Telegram study notes import",
+    "forward PDF to study app",
+  ],
   "keyboard-shortcuts-command-search": [
     "study app shortcuts",
     "command palette search",

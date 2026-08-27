@@ -12,6 +12,13 @@ model User {
   email                 String    @unique
   passwordHash          String?
   googleId              String?   @unique
+  /** Telegram user id (numeric string). Used for Login Widget + bot PDF ingest. */
+  telegramId            String?   @unique
+  telegramUsername      String?
+  telegramLinkedAt      DateTime?
+  /** One-time bot deep-link code (`/start <code>`), max ~32 chars for Telegram. */
+  telegramLinkCode      String?   @unique
+  telegramLinkExpiresAt DateTime?
   name                  String
   avatarUrl             String?
   role                  Role      @default(STUDENT)

@@ -26,6 +26,7 @@ import studyChatMessageRoutes from "./routes/studyChatMessages.js";
 import studyRelevancyRoutes from "./routes/studyRelevancy.js";
 import quizRoutes from "./routes/quiz.js";
 import taskRoutes from "./routes/tasks.js";
+import telegramRoutes from "./routes/telegram.js";
 import { requestContext } from "./middleware/requestContext.js";
 import { logger } from "./utils/logger.js";
 import { metrics } from "./utils/metrics.js";
@@ -144,6 +145,7 @@ app.get("/metrics", (_req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/telegram", telegramRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/highlights", highlightRoutes);
 app.use("/api/progress", progressRoutes);
