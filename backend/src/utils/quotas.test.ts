@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   FREE_STORAGE_BYTES,
+  LEGACY_FREE_STORAGE_BYTES,
   PREMIUM_STORAGE_BYTES,
   FREE_VECTOR_CHUNKS,
   PREMIUM_VECTOR_CHUNKS,
@@ -12,11 +13,34 @@ import {
   vectorChunkLimit,
 } from "./quotas.js";
 
+const NEW_FREE_CREATED_AT = new Date("2026-09-01T00:00:00.000Z");
+const LEGACY_FREE_CREATED_AT = new Date("2026-01-01T00:00:00.000Z");
+
 describe("quotas", () => {
-  it("gives free users 250 MB", () => {
+  it("gives new free users 100 MB", () => {
+    expect(
+      storageLimitBytes({
+        plan: "FREE",
+        role: "STUDENT",
+        createdAt: NEW_FREE_CREATED_AT,
+      })
+    ).toBe(FREE_STORAGE_BYTES);
+  });
+
+  it("keeps 250 MB for free users created before the cap change", () => {
+    expect(
+      storageLimitBytes({
+        plan: "FREE",
+        role: "STUDENT",
+        createdAt: LEGACY_FREE_CREATED_AT,
+      })
+    ).toBe(LEGACY_FREE_STORAGE_BYTES);
+  });
+
+  it("keeps 250 MB when createdAt is missing so existing accounts stay grandfathered", () => {
     expect(
       storageLimitBytes({ plan: "FREE", role: "STUDENT" })
-    ).toBe(FREE_STORAGE_BYTES);
+    ).toBe(LEGACY_FREE_STORAGE_BYTES);
   });
 
   it("gives premium users more storage", () => {
@@ -25,10 +49,40 @@ describe("quotas", () => {
     ).toBe(PREMIUM_STORAGE_BYTES);
   });
 
-  it("rejects uploads past the free cap", () => {
+  it("rejects uploads past the new free cap", () => {
     expect(() =>
       assertStorageRoom(
-        { plan: "FREE", role: "STUDENT", storageUsedBytes: FREE_STORAGE_BYTES },
+        {
+          plan: "FREE",
+          role: "STUDENT",
+          createdAt: NEW_FREE_CREATED_AT,
+          storageUsedBytes: FREE_STORAGE_BYTES,
+        },
+        1
+      )
+    ).toThrow(/Storage limit/);
+  });
+
+  it("lets legacy free users use the previous 250 MB cap", () => {
+    expect(() =>
+      assertStorageRoom(
+        {
+          plan: "FREE",
+          role: "STUDENT",
+          createdAt: LEGACY_FREE_CREATED_AT,
+          storageUsedBytes: FREE_STORAGE_BYTES,
+        },
+        1
+      )
+    ).not.toThrow();
+    expect(() =>
+      assertStorageRoom(
+        {
+          plan: "FREE",
+          role: "STUDENT",
+          createdAt: LEGACY_FREE_CREATED_AT,
+          storageUsedBytes: LEGACY_FREE_STORAGE_BYTES,
+        },
         1
       )
     ).toThrow(/Storage limit/);

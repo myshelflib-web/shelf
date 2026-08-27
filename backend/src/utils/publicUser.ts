@@ -24,6 +24,7 @@ const userSelect = {
   passwordHash: true,
   telegramId: true,
   telegramUsername: true,
+  createdAt: true,
 } as const;
 
 export { userSelect };
@@ -45,6 +46,7 @@ type DbUser = {
   passwordHash?: string | null;
   telegramId?: string | null;
   telegramUsername?: string | null;
+  createdAt?: Date | string | null;
 };
 
 export function toPublicUser(user: DbUser) {
@@ -55,6 +57,7 @@ export function toPublicUser(user: DbUser) {
     storageUsedBytes: user.storageUsedBytes,
     llmTokensUsed: user.llmTokensUsed,
     vectorChunksUsed: user.vectorChunksUsed,
+    createdAt: user.createdAt,
   };
   return {
     id: user.id,

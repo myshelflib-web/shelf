@@ -4,7 +4,7 @@ export const SHELF_PLANS = {
     name: "Free",
     priceLabel: "₹0",
     periodLabel: "forever",
-    storageLabel: "250 MB",
+    storageLabel: "100 MB",
     tokensLabel: "50,000 / month",
     features: [
       "Upload PDFs and notes",
@@ -23,7 +23,7 @@ export const SHELF_PLANS = {
     tokensLabel: "2M / month",
     features: [
       "Everything in Free",
-      "10× more upload storage",
+      "10 GB upload storage",
       "40× more Study AI tokens",
       "Priority access to new features",
       "Full year of Premium access",

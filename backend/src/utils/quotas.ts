@@ -1,6 +1,9 @@
 import { isPremiumUser } from "./paywall.js";
 
-export const FREE_STORAGE_BYTES = 250 * 1024 * 1024;
+export const FREE_STORAGE_BYTES = 100 * 1024 * 1024;
+/** Free accounts created before the 100 MB cap keep the previous 250 MB quota. */
+export const LEGACY_FREE_STORAGE_BYTES = 250 * 1024 * 1024;
+export const LEGACY_FREE_STORAGE_BEFORE = new Date("2026-08-28T00:00:00.000Z");
 export const PREMIUM_STORAGE_BYTES = 10 * 1024 * 1024 * 1024;
 export const FREE_LLM_TOKENS = 50_000;
 export const PREMIUM_LLM_TOKENS = 2_000_000;
@@ -32,10 +35,20 @@ type QuotaUser = {
   llmTokensUsed?: number;
   llmTokensResetAt?: Date | string | null;
   vectorChunksUsed?: number;
+  createdAt?: Date | string | null;
 };
+
+function isLegacyFreeStorage(user: QuotaUser): boolean {
+  if (!user.createdAt) return true;
+  const created =
+    user.createdAt instanceof Date ? user.createdAt : new Date(user.createdAt);
+  if (Number.isNaN(created.getTime())) return true;
+  return created.getTime() < LEGACY_FREE_STORAGE_BEFORE.getTime();
+}
 
 export function storageLimitBytes(user: QuotaUser): number {
   if (user.role === "ADMIN" || isPremiumUser(user)) return PREMIUM_STORAGE_BYTES;
+  if (isLegacyFreeStorage(user)) return LEGACY_FREE_STORAGE_BYTES;
   return FREE_STORAGE_BYTES;
 }
 
@@ -96,9 +109,8 @@ export class QuotaError extends Error {
 export function assertStorageRoom(user: QuotaUser, extraBytes: number): void {
   const limit = storageLimitBytes(user);
   if (usedBytes(user) + extraBytes > limit) {
-    const mb = Math.round(limit / (1024 * 1024));
     throw new QuotaError(
-      `Storage limit reached (${mb} MB on your plan). Upgrade for more space.`
+      "Storage limit reached on your plan. Upgrade for more space."
     );
   }
 }

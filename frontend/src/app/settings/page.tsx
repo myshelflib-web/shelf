@@ -21,21 +21,18 @@ function UsageMeter({
   label,
   used,
   limit,
-  format,
 }: {
   label: string;
   used: number;
   limit: number;
-  format: (n: number) => string;
 }) {
   const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const remaining = Math.max(0, 100 - pct);
   return (
     <div>
       <div className="flex justify-between text-sm mb-1.5">
         <span className="font-medium">{label}</span>
-        <span className="text-[var(--text-muted)] text-xs">
-          {format(used)} / {format(limit)}
-        </span>
+        <span className="text-[var(--text-muted)] text-xs">{pct}% used</span>
       </div>
       <div className="h-2 rounded-full bg-[var(--border)] overflow-hidden">
         <div
@@ -44,7 +41,7 @@ function UsageMeter({
         />
       </div>
       <p className="text-[11px] text-[var(--text-muted)] mt-1">
-        {Math.max(0, 100 - pct)}% remaining
+        {remaining}% remaining
       </p>
     </div>
   );
@@ -162,18 +159,12 @@ export default function SettingsPage() {
             <UsageMeter
               label="Upload storage"
               used={user.storageUsedBytes ?? 0}
-              limit={user.storageLimitBytes ?? 250 * 1024 * 1024}
-              format={(n) =>
-                n >= 1024 * 1024 * 1024
-                  ? `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`
-                  : `${Math.round(n / (1024 * 1024))} MB`
-              }
+              limit={user.storageLimitBytes ?? 0}
             />
             <UsageMeter
               label="Study AI tokens (this month)"
               used={user.llmTokensUsed ?? 0}
-              limit={user.llmTokenLimit ?? 50_000}
-              format={(n) => n.toLocaleString()}
+              limit={user.llmTokenLimit ?? 0}
             />
             {!(user.plan === "PREMIUM" || user.role === "ADMIN") && (
               <Link href="/subscribe" className="text-sm text-[var(--accent)] inline-block">

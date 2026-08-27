@@ -88,7 +88,7 @@ ${bulletList([
   "Ask Study AI questions grounded in your own library",
 ])}
 ${detailCard([
-  { label: "Plan", value: "Free — 250 MB storage" },
+  { label: "Plan", value: "Free — 100 MB storage" },
   { label: "Study AI", value: "50k tokens / month" },
   { label: "Next step", value: "Add your first PDF or note" },
 ])}

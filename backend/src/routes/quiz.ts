@@ -342,6 +342,7 @@ router.post(
         role: true,
         subscriptionExpiresAt: true,
         storageUsedBytes: true,
+        createdAt: true,
       },
     });
     if (!user) {

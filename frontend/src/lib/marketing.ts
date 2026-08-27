@@ -21,7 +21,7 @@ export const MARKETING_FEATURES: MarketingFeature[] = [
   {
     icon: FileUp,
     title: "Upload notes and PDFs",
-    body: "Bring your own files into private sections. Free accounts get 250 MB; paid plans add more storage and Study AI tokens.",
+    body: "Bring your own files into private sections. Free accounts get 100 MB; paid plans add more storage and Study AI tokens.",
   },
   {
     icon: Highlighter,

@@ -17,6 +17,12 @@ import {
 } from "../services/billing/razorpay.js";
 import { activatePremiumFromPayment } from "../services/billing/activate.js";
 import { toUserFacingError } from "../utils/userFacingError.js";
+import {
+  FREE_LLM_TOKENS,
+  FREE_STORAGE_BYTES,
+  PREMIUM_LLM_TOKENS,
+  PREMIUM_STORAGE_BYTES,
+} from "../utils/quotas.js";
 
 const router = Router();
 
@@ -83,10 +89,10 @@ router.get("/status", authMiddleware, async (req: Request, res: Response) => {
       },
     },
     recurring,
-    freeStorageMb: 250,
-    premiumStorageGb: 10,
-    freeLlmTokens: 50_000,
-    premiumLlmTokens: 2_000_000,
+    freeStorageMb: Math.round(FREE_STORAGE_BYTES / (1024 * 1024)),
+    premiumStorageGb: Math.round(PREMIUM_STORAGE_BYTES / (1024 * 1024 * 1024)),
+    freeLlmTokens: FREE_LLM_TOKENS,
+    premiumLlmTokens: PREMIUM_LLM_TOKENS,
   });
 });
 
