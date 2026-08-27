@@ -1,4 +1,5 @@
 import { clearAccountLocalState } from "@/lib/accountLocalState";
+import { compressUploadFile, shouldCompressUpload } from "@/lib/compressUploadFile";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { toUserFacingError } from "@/lib/userFacingError";
 
@@ -74,6 +75,7 @@ export type UploadProgress = {
   loaded: number;
   total: number;
   percent: number;
+  phase?: "compressing" | "uploading";
 };
 
 export type UploadProgressHandler = (progress: UploadProgress) => void;
@@ -117,11 +119,16 @@ function putToUrl(
       const loaded = event.loaded;
       const percent =
         total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
-      onProgress({ loaded, total, percent });
+      onProgress({ loaded, total, percent, phase: "uploading" });
     };
 
     xhr.upload.onload = () => {
-      onProgress?.({ loaded: body.size, total: body.size, percent: 100 });
+      onProgress?.({
+        loaded: body.size,
+        total: body.size,
+        percent: 100,
+        phase: "uploading",
+      });
     };
 
     xhr.onload = () => {
@@ -160,6 +167,15 @@ async function uploadLibraryFile(
   scope: { subjectId?: string; topicGroupId?: string },
   onProgress?: UploadProgressHandler
 ) {
+  if (shouldCompressUpload(file)) {
+    onProgress?.({
+      loaded: 0,
+      total: file.size,
+      percent: 0,
+      phase: "compressing",
+    });
+  }
+  const toUpload = await compressUploadFile(file);
   const init = await request<{
     uploadUrl: string;
     headers: { "Content-Type": string };
@@ -168,16 +184,16 @@ async function uploadLibraryFile(
     method: "POST",
     body: JSON.stringify({
       title,
-      filename: file.name,
-      contentType: file.type,
-      size: file.size,
+      filename: toUpload.name,
+      contentType: toUpload.type,
+      size: toUpload.size,
       subjectId: scope.subjectId,
       topicGroupId: scope.topicGroupId,
     }),
   });
   await putToUrl(
     init.uploadUrl,
-    file,
+    toUpload,
     init.headers["Content-Type"],
     onProgress
   );

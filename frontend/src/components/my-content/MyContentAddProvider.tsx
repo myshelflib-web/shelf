@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { api, type UploadProgress, type UploadProgressHandler } from "@/lib/api";
+import { shouldCompressUpload } from "@/lib/compressUploadFile";
 import { requireOnline } from "@/lib/offline/notice";
 import { getTopicGroups } from "@/lib/myContentTree";
 import { UserPageSummary, UserSubject, UserTopicGroup } from "@/types";
@@ -180,9 +181,10 @@ export function MyContentAddProvider({
 
   const reportUploadProgress: UploadProgressHandler = useCallback((next) => {
     setUploadProgress((prev) => ({
-      loaded: next.loaded || prev?.loaded || 0,
-      total: next.total || prev?.total || 0,
+      loaded: next.loaded ?? prev?.loaded ?? 0,
+      total: next.total ?? prev?.total ?? 0,
       percent: next.percent,
+      phase: next.phase ?? prev?.phase,
     }));
   }, []);
 
@@ -283,6 +285,7 @@ export function MyContentAddProvider({
           loaded: 0,
           total: uploadFile.size,
           percent: 0,
+          phase: shouldCompressUpload(uploadFile) ? "compressing" : "uploading",
         });
       }
       const { page, href } = await submitAddPage({

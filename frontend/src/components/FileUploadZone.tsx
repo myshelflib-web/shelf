@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import clsx from "clsx";
+import type { UploadProgress } from "@/lib/api";
 
 interface FileUploadZoneProps {
   accept?: string;
@@ -10,7 +11,7 @@ interface FileUploadZoneProps {
   onChange: (file: File | null) => void;
   label?: string;
   disabled?: boolean;
-  progress?: { percent: number } | null;
+  progress?: Pick<UploadProgress, "percent" | "phase"> | null;
 }
 
 function fileMatchesAccept(file: File, accept: string): boolean {
@@ -107,9 +108,11 @@ export function FileUploadZone({
           </span>
           <span className="text-xs text-[var(--text-muted)] truncate max-w-full">
             {progress
-              ? progress.percent >= 100
-                ? "Upload complete — finishing up"
-                : `Uploading ${progress.percent}%`
+              ? progress.phase === "compressing"
+                ? "Compressing before upload…"
+                : progress.percent >= 100
+                  ? "Upload complete — finishing up"
+                  : `Uploading ${progress.percent}%`
               : file
                 ? `${(file.size / 1024 / 1024).toFixed(2)} MB · click or drop to change`
                 : dragOver

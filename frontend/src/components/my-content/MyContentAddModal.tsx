@@ -27,6 +27,7 @@ function submitLabel(
 ) {
   if (submitting && addMode === "bulk") return "Importing…";
   if (submitting && addMode === "file") {
+    if (uploadProgress?.phase === "compressing") return "Compressing…";
     if (uploadProgress && uploadProgress.percent < 100) {
       return `Uploading ${uploadProgress.percent}%`;
     }
@@ -68,17 +69,26 @@ function submitLabel(
 }
 
 function UploadProgressBar({ progress }: { progress: UploadProgress }) {
-  const saving = progress.percent >= 100;
+  const compressing = progress.phase === "compressing";
+  const saving = !compressing && progress.percent >= 100;
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
-        <span>{saving ? "Saving to library…" : "Uploading"}</span>
+        <span>
+          {compressing
+            ? "Compressing…"
+            : saving
+              ? "Saving to library…"
+              : "Uploading"}
+        </span>
         <span className="tabular-nums text-[var(--text-secondary)]">
-          {saving
-            ? "100%"
-            : progress.total > 0
-              ? `${formatBytes(progress.loaded)} of ${formatBytes(progress.total)} · ${progress.percent}%`
-              : `${progress.percent}%`}
+          {compressing
+            ? "Preparing file"
+            : saving
+              ? "100%"
+              : progress.total > 0
+                ? `${formatBytes(progress.loaded)} of ${formatBytes(progress.total)} · ${progress.percent}%`
+                : `${progress.percent}%`}
         </span>
       </div>
       <div
@@ -91,7 +101,11 @@ function UploadProgressBar({ progress }: { progress: UploadProgress }) {
       >
         <div
           className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-150 ease-out"
-          style={{ width: `${Math.max(saving ? 100 : progress.percent, 2)}%` }}
+          style={{
+            width: compressing
+              ? "18%"
+              : `${Math.max(saving ? 100 : progress.percent, 2)}%`,
+          }}
         />
       </div>
     </div>
