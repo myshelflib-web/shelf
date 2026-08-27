@@ -4,7 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { useAuth } from "@/hooks/useAuth";
-import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { GoogleSignInButton, isGoogleSignInConfigured } from "@/components/GoogleSignInButton";
 import { useGoogleClientId } from "@/components/GoogleAuthProvider";
 import { TelegramSignInButton, isTelegramSignInConfigured } from "@/components/TelegramSignInButton";
 import { isDevEnvironment } from "@/lib/userFacingError";
@@ -35,7 +35,7 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [telegramVisible, setTelegramVisible] = useState(false);
   const googleClientId = useGoogleClientId();
-  const googleConfigured =
+  const googleFromServer =
     Boolean(googleClientId) && !googleClientId.includes("your-google-client-id");
 
   if (authLoading) {
@@ -100,7 +100,8 @@ function LoginForm() {
     }
   };
 
-  const showGoogleSignIn = googleConfigured || isDevEnvironment();
+  const showGoogleSignIn =
+    isGoogleSignInConfigured() || googleFromServer || isDevEnvironment();
   const telegramConfigured = isTelegramSignInConfigured();
   const showTelegramSignIn =
     telegramConfigured && (isDevEnvironment() || telegramVisible);
@@ -244,7 +245,14 @@ function LoginForm() {
             {showGoogleSignIn ? (
               <GoogleSignInButton onError={setError} redirectTo={nextPath} />
             ) : null}
-            {telegramConfigured ? (
+            {telegramConfigured && !showTelegramSignIn ? (
+              <TelegramSignInButton
+                probeOnly
+                onAvailabilityChange={setTelegramVisible}
+                redirectTo={nextPath}
+              />
+            ) : null}
+            {showTelegramSignIn ? (
               <TelegramSignInButton
                 onError={setError}
                 onAvailabilityChange={setTelegramVisible}

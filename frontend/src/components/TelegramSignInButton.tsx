@@ -25,6 +25,8 @@ interface TelegramSignInButtonProps {
   onError?: (message: string) => void;
   onAvailabilityChange?: (available: boolean) => void;
   redirectTo?: string;
+  /** Load widget off-screen to detect availability without showing errors. */
+  probeOnly?: boolean;
 }
 
 declare global {
@@ -50,6 +52,7 @@ export function TelegramSignInButton({
   onError,
   onAvailabilityChange,
   redirectTo = "/my-content",
+  probeOnly = false,
 }: TelegramSignInButtonProps) {
   const { loginWithTelegram } = useAuth();
   const router = useRouter();
@@ -143,6 +146,17 @@ export function TelegramSignInButton({
       host.innerHTML = "";
     };
   }, [username, loginWithTelegram, onAvailabilityChange, onError, redirectTo, router]);
+
+  if (probeOnly) {
+    if (!username || !isTelegramLoginHostAllowed()) return null;
+    return (
+      <div
+        ref={hostRef}
+        aria-hidden
+        className="fixed -left-[9999px] top-0 h-px w-px overflow-hidden opacity-0 pointer-events-none"
+      />
+    );
+  }
 
   if (!username || !isTelegramLoginHostAllowed()) {
     if (!isDevEnvironment()) return null;
