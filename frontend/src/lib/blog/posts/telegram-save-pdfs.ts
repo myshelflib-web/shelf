@@ -17,7 +17,7 @@ export const telegramSavePdfs = buildPost(
       heading: "Sign in with Telegram",
       paragraphs: [
         "On the Shelf login page, choose Continue with Telegram. Approve the Login Widget in the Telegram app — you land in My Content with your Telegram identity linked. Email/password and Google sign-in still work the same way.",
-        "If you already use Shelf with email or Google, open App settings and tap Connect Telegram. That opens a one-time bot deep link so your existing library stays on the same account.",
+        "Already signed in? Open the reader and tap the Telegram icon beside Spotify, or go to App settings → Connect Telegram. That opens a one-time bot deep link so your existing library stays on the same account. When linked, the icon shows a connected badge and the panel says Connected to Telegram.",
       ],
     },
     {

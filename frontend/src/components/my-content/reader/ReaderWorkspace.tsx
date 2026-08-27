@@ -38,7 +38,10 @@ import {
 import Link from "next/link";
 import { DocumentPane, DocumentPaneHandlers, DocumentPaneSnapshot, LoadedPage } from "./DocumentPane";
 import { ReaderTabStrip } from "./ReaderTabStrip";
-import { SpotifyDockPanel, SpotifyToolbarIcon } from "./SpotifyDockPanel";
+import {
+  ReaderFocusDockSlot,
+  ReaderFocusToolbarButtons,
+} from "./ReaderFocusDocks";
 import { useReaderWorkspace } from "./useReaderWorkspace";
 import { useHotkey } from "@/hooks/useHotkeys";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
@@ -102,6 +105,7 @@ export function ReaderWorkspace({
     setLibraryCollapsed,
     setStudyAICollapsed,
     setSpotifyCollapsed,
+    setTelegramCollapsed,
     focusPane,
     activateTab,
     updateTabMeta,
@@ -334,6 +338,14 @@ export function ReaderWorkspace({
     setSpotifyCollapsed(true);
   }, [setSpotifyCollapsed]);
 
+  const openTelegramPanel = useCallback(() => {
+    setTelegramCollapsed(false);
+  }, [setTelegramCollapsed]);
+
+  const closeTelegramPanel = useCallback(() => {
+    setTelegramCollapsed(true);
+  }, [setTelegramCollapsed]);
+
   const syncReaderUrl = useCallback((href: string) => {
     if (href === scopeHref(routeScope)) return;
     // Already inside a reader route → soft update. Leaving/entering uses Next navigation.
@@ -491,6 +503,11 @@ export function ReaderWorkspace({
     if (state.spotifyCollapsed) openSpotifyPanel();
     else closeSpotifyPanel();
   }, [state.spotifyCollapsed, openSpotifyPanel, closeSpotifyPanel]);
+
+  const toggleTelegram = useCallback(() => {
+    if (state.telegramCollapsed) openTelegramPanel();
+    else closeTelegramPanel();
+  }, [state.telegramCollapsed, openTelegramPanel, closeTelegramPanel]);
 
   const cycleTab = useCallback(
     (dir: 1 | -1) => {
@@ -814,31 +831,13 @@ export function ReaderWorkspace({
                 )}
 
                 <div className="flex items-center gap-1 shrink-0 pl-1">
-                  <button
-                    type="button"
-                    className={`p-1.5 rounded-md hover:bg-[var(--bg-elevated)] ${
-                      state.spotifyCollapsed
-                        ? "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-                        : "text-[#1DB954] bg-[var(--bg-elevated)]"
-                    }`}
-                    title={
-                      state.spotifyCollapsed
-                        ? withShortcut("Show Spotify focus audio", "\\")
-                        : withShortcut(
-                            "Hide Spotify — audio keeps playing",
-                            "\\"
-                          )
-                    }
-                    aria-label={
-                      state.spotifyCollapsed ? "Show Spotify" : "Hide Spotify"
-                    }
-                    onClick={() => {
-                      if (state.spotifyCollapsed) openSpotifyPanel();
-                      else closeSpotifyPanel();
-                    }}
-                  >
-                    <SpotifyToolbarIcon className="w-4 h-4" />
-                  </button>
+                  <ReaderFocusToolbarButtons
+                    spotifyCollapsed={state.spotifyCollapsed}
+                    telegramCollapsed={state.telegramCollapsed}
+                    telegramLinked={user?.telegramLinked}
+                    onToggleSpotify={toggleSpotify}
+                    onToggleTelegram={toggleTelegram}
+                  />
 
                   <button
                     type="button"
@@ -973,23 +972,17 @@ export function ReaderWorkspace({
                 })}
                 </div>
 
-                <div
-                  className={
-                    state.spotifyCollapsed
-                      ? "contents"
-                      : layoutCompact
-                        ? "fixed inset-x-0 bottom-0 z-[55] h-[min(42vh,320px)] shrink-0 overflow-hidden border-t border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl"
-                        : "w-[min(360px,42vw)] shrink-0 h-full min-h-0 overflow-hidden"
-                  }
-                >
-                  <SpotifyDockPanel
-                    notebookId={notebook?.id}
-                    notebookName={notebook?.name}
-                    minimized={state.spotifyCollapsed}
-                    onMinimize={closeSpotifyPanel}
-                    onExpand={openSpotifyPanel}
-                  />
-                </div>
+                <ReaderFocusDockSlot
+                  layoutCompact={layoutCompact}
+                  notebookId={notebook?.id}
+                  notebookName={notebook?.name}
+                  spotifyCollapsed={state.spotifyCollapsed}
+                  telegramCollapsed={state.telegramCollapsed}
+                  onSpotifyMinimize={closeSpotifyPanel}
+                  onSpotifyExpand={openSpotifyPanel}
+                  onTelegramMinimize={closeTelegramPanel}
+                  onTelegramExpand={openTelegramPanel}
+                />
               </div>
 
               {pageData && focusedHandlers && (

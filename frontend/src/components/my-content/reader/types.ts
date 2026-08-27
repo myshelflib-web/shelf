@@ -36,6 +36,8 @@ export type ReaderWorkspaceState = {
   studyAICollapsed: boolean;
   /** Spotify focus-audio dock collapsed. */
   spotifyCollapsed: boolean;
+  /** Telegram connect / PDF-import dock collapsed. */
+  telegramCollapsed: boolean;
 };
 
 export const SHELF_PAGE_MIME = "application/x-shelf-page";
@@ -257,6 +259,7 @@ export function emptyPanesWorkspace(): ReaderWorkspaceState {
     libraryCollapsed: false,
     studyAICollapsed: false,
     spotifyCollapsed: true,
+    telegramCollapsed: true,
   };
 }
 
@@ -288,5 +291,6 @@ export function emptyWorkspace(scope: PersonalPageReaderScope): ReaderWorkspaceS
     libraryCollapsed: false,
     studyAICollapsed: false,
     spotifyCollapsed: true,
+    telegramCollapsed: true,
   };
 }

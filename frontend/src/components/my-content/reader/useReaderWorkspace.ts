@@ -107,6 +107,10 @@ function sanitize(
       stored.spotifyCollapsed !== undefined
         ? Boolean(stored.spotifyCollapsed)
         : true,
+    telegramCollapsed:
+      stored.telegramCollapsed !== undefined
+        ? Boolean(stored.telegramCollapsed)
+        : true,
   };
 }
 
@@ -222,7 +226,19 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
   }, []);
 
   const setSpotifyCollapsed = useCallback((collapsed: boolean) => {
-    setState((prev) => ({ ...prev, spotifyCollapsed: collapsed }));
+    setState((prev) => ({
+      ...prev,
+      spotifyCollapsed: collapsed,
+      ...(collapsed === false ? { telegramCollapsed: true } : {}),
+    }));
+  }, []);
+
+  const setTelegramCollapsed = useCallback((collapsed: boolean) => {
+    setState((prev) => ({
+      ...prev,
+      telegramCollapsed: collapsed,
+      ...(collapsed === false ? { spotifyCollapsed: true } : {}),
+    }));
   }, []);
 
   const focusPane = useCallback((paneId: string) => {
@@ -621,6 +637,7 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
     setLibraryCollapsed,
     setStudyAICollapsed,
     setSpotifyCollapsed,
+    setTelegramCollapsed,
     focusPane,
     activateTab,
     updateTabMeta,
