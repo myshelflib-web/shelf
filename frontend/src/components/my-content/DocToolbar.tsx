@@ -117,7 +117,7 @@ export function DocToolbar({ onCommand }: DocToolbarProps) {
 
       <ToolGroup>
         <select
-          className="h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+          className="select-compact h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
           defaultValue=""
           onChange={(e) => onCommand("fontName", e.target.value)}
           onMouseDown={(e) => e.stopPropagation()}
@@ -130,7 +130,7 @@ export function DocToolbar({ onCommand }: DocToolbarProps) {
           ))}
         </select>
         <select
-          className="h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+          className="select-compact h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
           defaultValue="16px"
           onChange={(e) => onCommand("fontSizePx", e.target.value)}
           onMouseDown={(e) => e.stopPropagation()}

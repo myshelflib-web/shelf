@@ -140,7 +140,7 @@ export function BlankEditorToolbar({
         <>
           <ToolGroup>
             <select
-              className="h-[34px] max-w-[7.5rem] rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1.5"
+              className="select-compact h-[34px] max-w-[7.5rem] rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1.5"
               title="Font"
               aria-label="Font family"
               defaultValue=""
@@ -158,7 +158,7 @@ export function BlankEditorToolbar({
               ))}
             </select>
             <select
-              className="h-[34px] w-14 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1"
+              className="select-compact h-[34px] w-14 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1"
               title="Font size"
               aria-label="Font size"
               defaultValue="14px"

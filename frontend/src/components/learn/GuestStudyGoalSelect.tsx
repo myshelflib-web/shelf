@@ -33,8 +33,8 @@ export function GuestStudyGoalSelect({
         onChange={(e) => onChange(e.target.value as StudyGoal)}
         className={`rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] disabled:opacity-60 ${
           compact
-            ? "text-sm py-2 pl-2.5 pr-8 min-w-[10rem]"
-            : "text-sm py-2 pl-3 pr-9 w-full sm:min-w-[12rem]"
+            ? "select-compact text-sm py-2 pl-2.5 min-w-[10rem]"
+            : "text-sm py-2 pl-3 w-full sm:min-w-[12rem]"
         }`}
         aria-label="Study goal"
       >

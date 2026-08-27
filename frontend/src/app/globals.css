@@ -850,19 +850,68 @@
   color: var(--text-primary);
 }
 
-.ui-select {
+/*
+ * Native selects / number inputs — custom chevron, room for the arrow, no spin
+ * buttons. Unlayered (after Tailwind) so padding-inline-end wins over px-*.
+ */
+select:not([multiple]):not([size]) {
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239b9b96' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  --select-arrow-inset: 0.75rem;
+  --select-arrow-size: 12px;
+  --select-padding-end: 2.25rem;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239b9ba0' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
   background-repeat: no-repeat;
-  background-position: right 0.7rem center;
-  background-size: 12px 12px;
-  padding-right: 2rem;
+  background-position: right var(--select-arrow-inset) center;
+  background-size: var(--select-arrow-size) var(--select-arrow-size);
+  padding-inline-end: var(--select-padding-end);
   line-height: 1.25;
 }
 
-.dark .ui-select {
+.dark select:not([multiple]):not([size]) {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23b4b4ae' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+}
+
+select.select-compact:not([multiple]):not([size]) {
+  --select-arrow-inset: 0.35rem;
+  --select-arrow-size: 10px;
+  --select-padding-end: 1.5rem;
+}
+
+.ui-select:not([multiple]):not([size]) {
+  /* Explicit alias — styles come from the select rules above. */
+}
+
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  color-scheme: light dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.55;
+  margin-inline-end: 0.15rem;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  opacity: 0.72;
 }
 
 .textLayer,
