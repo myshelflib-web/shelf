@@ -14,8 +14,8 @@ import {
   FilePlus,
   FolderPlus,
   Pencil,
-  GripVertical,
 } from "lucide-react";
+import { ExplorerDragGrip } from "@/components/my-content/ExplorerDragGrip";
 import { FolderMark } from "@/components/FolderMark";
 import { folderTone } from "@/lib/folderTone";
 import { ExplorerPageRow } from "@/components/my-content/ExplorerPageRow";
@@ -53,6 +53,7 @@ interface ExplorerCollectionBlockProps {
   selected: Set<ExplorerSelectionKey>;
   onSelectionChange: (next: Set<ExplorerSelectionKey>) => void;
   reorderEnabled: boolean;
+  showDragAffordance: boolean;
   searching: boolean;
   dropHint: ExplorerDropHint | null;
   activeDrag: ReorderDragPayload | null;
@@ -108,6 +109,7 @@ export function ExplorerCollectionBlock({
   selected,
   onSelectionChange,
   reorderEnabled,
+  showDragAffordance,
   searching,
   dropHint,
   activeDrag,
@@ -207,19 +209,15 @@ export function ExplorerCollectionBlock({
             checked={selected.has(subjectKey)}
             onToggle={toggleSubject}
           />
-        ) : reorderEnabled && !searching ? (
-          <span
-            draggable
+        ) : (
+          <ExplorerDragGrip
+            active={reorderEnabled && !searching}
+            showHint={showDragAffordance && (!reorderEnabled || searching)}
+            label="Drag to reorder collection"
             onDragStart={(e) => startReorderDrag({ kind: "subject", id: nb.id }, e)}
             onDragEnd={clearDropHint}
-            title="Drag to reorder"
-            aria-label="Drag to reorder collection"
-            className="p-0.5 text-[var(--text-muted)] shrink-0 cursor-grab active:cursor-grabbing opacity-70 group-hover:opacity-100 hover:text-[var(--text-primary)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <GripVertical className="w-3.5 h-3.5" strokeWidth={2.25} />
-          </span>
-        ) : null}
+          />
+        )}
         <span className="p-0.5 text-[var(--text-muted)] shrink-0">
           {open ? (
             <ChevronDown className="w-3.5 h-3.5" />
@@ -287,6 +285,7 @@ export function ExplorerCollectionBlock({
                 onSelectionChange={onSelectionChange}
                 enablePageDrag={enablePageDrag}
                 libraryMoveEnabled={reorderEnabled && !searching}
+                showDragAffordance={showDragAffordance}
                 subjectId={nb.id}
                 topicGroupId={null}
                 showPageDrop={reorderEnabled && !selectionMode}
@@ -445,9 +444,11 @@ export function ExplorerCollectionBlock({
                       checked={selected.has(topicKey)}
                       onToggle={toggleTopicSelect}
                     />
-                  ) : reorderEnabled ? (
-                    <span
-                      draggable
+                  ) : (
+                    <ExplorerDragGrip
+                      active={reorderEnabled}
+                      showHint={showDragAffordance && !reorderEnabled}
+                      label="Drag to reorder topic"
                       onDragStart={(e) =>
                         startReorderDrag(
                           { kind: "topic", id: group.id, subjectId: nb.id },
@@ -455,14 +456,8 @@ export function ExplorerCollectionBlock({
                         )
                       }
                       onDragEnd={clearDropHint}
-                      title="Drag to reorder"
-                      aria-label="Drag to reorder topic"
-                      className="p-0.5 text-[var(--text-muted)] shrink-0 cursor-grab active:cursor-grabbing opacity-70 group-hover:opacity-100 hover:text-[var(--text-primary)]"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <GripVertical className="w-3.5 h-3.5" strokeWidth={2.25} />
-                    </span>
-                  ) : null}
+                    />
+                  )}
                   <span className="p-0.5 text-[var(--text-muted)] shrink-0">
                     {tOpen ? (
                       <ChevronDown className="w-3.5 h-3.5" />
@@ -540,6 +535,7 @@ export function ExplorerCollectionBlock({
                           onSelectionChange={onSelectionChange}
                           enablePageDrag={enablePageDrag}
                           libraryMoveEnabled={reorderEnabled}
+                          showDragAffordance={showDragAffordance}
                           subjectId={nb.id}
                           topicGroupId={group.id}
                           showPageDrop={reorderEnabled && !selectionMode}

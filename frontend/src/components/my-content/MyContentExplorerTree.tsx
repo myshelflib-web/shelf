@@ -46,6 +46,7 @@ interface MyContentExplorerTreeProps {
   selected: Set<ExplorerSelectionKey>;
   onSelectionChange: (next: Set<ExplorerSelectionKey>) => void;
   reorderEnabled: boolean;
+  showDragAffordance: boolean;
   onReorderSubjects: (orderedIds: string[]) => void | Promise<void>;
   onReorderTopics: (
     subjectId: string,
@@ -111,6 +112,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
     selected,
     onSelectionChange,
     reorderEnabled,
+    showDragAffordance,
     onReorderSubjects,
     onReorderTopics,
     onMovePage,
@@ -224,6 +226,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
                 onSelectionChange={onSelectionChange}
                 enablePageDrag={enablePageDrag}
                 libraryMoveEnabled={reorderEnabled && !searching}
+                showDragAffordance={showDragAffordance}
                 subjectId={null}
                 topicGroupId={null}
                 showPageDrop={reorderEnabled && !selectionMode}
@@ -323,6 +326,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               selected={selected}
               onSelectionChange={onSelectionChange}
               reorderEnabled={reorderEnabled}
+              showDragAffordance={showDragAffordance}
               searching={searching}
               dropHint={dropHint}
               activeDrag={activeDrag}

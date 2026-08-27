@@ -242,23 +242,25 @@ function LoginForm() {
               </div>
             </div>
 
-            {showGoogleSignIn ? (
-              <GoogleSignInButton onError={setError} redirectTo={nextPath} />
-            ) : null}
-            {telegramConfigured && !showTelegramSignIn ? (
-              <TelegramSignInButton
-                probeOnly
-                onAvailabilityChange={setTelegramVisible}
-                redirectTo={nextPath}
-              />
-            ) : null}
-            {showTelegramSignIn ? (
-              <TelegramSignInButton
-                onError={setError}
-                onAvailabilityChange={setTelegramVisible}
-                redirectTo={nextPath}
-              />
-            ) : null}
+            <div className="space-y-3 w-full">
+              {showGoogleSignIn ? (
+                <GoogleSignInButton onError={setError} redirectTo={nextPath} />
+              ) : null}
+              {telegramConfigured && !showTelegramSignIn ? (
+                <TelegramSignInButton
+                  probeOnly
+                  onAvailabilityChange={setTelegramVisible}
+                  redirectTo={nextPath}
+                />
+              ) : null}
+              {showTelegramSignIn ? (
+                <TelegramSignInButton
+                  onError={setError}
+                  onAvailabilityChange={setTelegramVisible}
+                  redirectTo={nextPath}
+                />
+              ) : null}
+            </div>
           </>
         ) : null}
       </div>

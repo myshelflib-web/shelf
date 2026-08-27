@@ -10,6 +10,7 @@ import {
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
+import { useSocialSignInWidth } from "@/hooks/useSocialSignInWidth";
 
 export type TelegramAuthUser = {
   id: number;
@@ -56,10 +57,12 @@ export function TelegramSignInButton({
 }: TelegramSignInButtonProps) {
   const { loginWithTelegram } = useAuth();
   const router = useRouter();
-  const hostRef = useRef<HTMLDivElement>(null);
+  const { ref: widthRef, width: containerWidth } = useSocialSignInWidth();
+  const widgetHostRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [widgetReady, setWidgetReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [widgetScale, setWidgetScale] = useState(1);
   const username = botUsername();
 
   useEffect(() => {
@@ -71,7 +74,7 @@ export function TelegramSignInButton({
   }, [onAvailabilityChange, username]);
 
   useEffect(() => {
-    if (!username || !hostRef.current || !isTelegramLoginHostAllowed()) return;
+    if (!username || !widgetHostRef.current || !isTelegramLoginHostAllowed()) return;
 
     setFailed(false);
     setWidgetReady(false);
@@ -93,8 +96,16 @@ export function TelegramSignInButton({
       }
     };
 
-    const host = hostRef.current;
+    const host = widgetHostRef.current;
     host.innerHTML = "";
+
+    const syncScale = () => {
+      const iframe = host.querySelector("iframe");
+      const natural = iframe?.getBoundingClientRect().width;
+      if (natural && natural > 0 && containerWidth > 0) {
+        setWidgetScale(containerWidth / natural);
+      }
+    };
 
     const markFailed = () => {
       host.innerHTML = "";
@@ -108,6 +119,7 @@ export function TelegramSignInButton({
         setWidgetReady(true);
         setFailed(false);
         onAvailabilityChange?.(true);
+        syncScale();
         return;
       }
       if (readTelegramWidgetError(host)) {
@@ -145,13 +157,30 @@ export function TelegramSignInButton({
       delete window.onShelfTelegramAuth;
       host.innerHTML = "";
     };
-  }, [username, loginWithTelegram, onAvailabilityChange, onError, redirectTo, router]);
+  }, [
+    username,
+    loginWithTelegram,
+    onAvailabilityChange,
+    onError,
+    redirectTo,
+    router,
+    containerWidth,
+  ]);
+
+  useEffect(() => {
+    if (!widgetReady || !widgetHostRef.current) return;
+    const iframe = widgetHostRef.current.querySelector("iframe");
+    const natural = iframe?.getBoundingClientRect().width;
+    if (natural && natural > 0 && containerWidth > 0) {
+      setWidgetScale(containerWidth / natural);
+    }
+  }, [widgetReady, containerWidth]);
 
   if (probeOnly) {
     if (!username || !isTelegramLoginHostAllowed()) return null;
     return (
       <div
-        ref={hostRef}
+        ref={widgetHostRef}
         aria-hidden
         className="fixed -left-[9999px] top-0 h-px w-px overflow-hidden opacity-0 pointer-events-none"
       />
@@ -173,22 +202,36 @@ export function TelegramSignInButton({
   if (failed && !isDevEnvironment()) return null;
 
   return (
-    <div className="w-full space-y-2">
+    <div ref={widthRef} className="w-full">
       {loading ? (
         <div className="w-full py-2.5 text-center text-sm text-[var(--text-muted)]">
           Signing in with Telegram...
         </div>
       ) : (
         <div
-          ref={hostRef}
-          aria-hidden={!widgetReady && !isDevEnvironment()}
           className={clsx(
-            "flex justify-center w-full overflow-hidden",
-            widgetReady || isDevEnvironment()
-              ? "min-h-[40px]"
-              : "absolute w-px h-px opacity-0 pointer-events-none overflow-hidden"
+            "w-full overflow-hidden",
+            widgetReady || isDevEnvironment() ? "h-10" : "h-0"
           )}
-        />
+          aria-hidden={!widgetReady && !isDevEnvironment()}
+        >
+          <div
+            ref={widgetHostRef}
+            className={clsx(
+              "origin-top-left",
+              !widgetReady && !isDevEnvironment() &&
+                "absolute w-px h-px opacity-0 pointer-events-none overflow-hidden"
+            )}
+            style={
+              widgetReady
+                ? {
+                    transform: `scale(${widgetScale})`,
+                    width: containerWidth / widgetScale,
+                  }
+                : undefined
+            }
+          />
+        </div>
       )}
     </div>
   );

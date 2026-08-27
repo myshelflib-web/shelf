@@ -9,7 +9,6 @@ import {
   FileText,
   Pencil,
   Share2,
-  GripVertical,
 } from "lucide-react";
 import { UserPageSummary } from "@/types";
 import {
@@ -25,6 +24,7 @@ import {
 } from "@/lib/explorerSelection";
 import { ExplorerSelectionToggle } from "@/components/my-content/ExplorerSelectionToggle";
 import { ExplorerDropLine } from "@/components/my-content/ExplorerDropLine";
+import { ExplorerDragGrip } from "@/components/my-content/ExplorerDragGrip";
 import type { DragEvent } from "react";
 import { useAppDialog } from "@/hooks/useAppDialog";
 import type { ExplorerDropHint } from "@/components/my-content/useExplorerReorderDrop";
@@ -39,6 +39,7 @@ interface ExplorerPageRowProps {
   onSelectionChange: (next: Set<ExplorerSelectionKey>) => void;
   enablePageDrag: boolean;
   libraryMoveEnabled?: boolean;
+  showDragAffordance?: boolean;
   subjectId?: string | null;
   topicGroupId?: string | null;
   showPageDrop?: boolean;
@@ -68,6 +69,7 @@ export function ExplorerPageRow({
   onSelectionChange,
   enablePageDrag,
   libraryMoveEnabled = false,
+  showDragAffordance = false,
   subjectId = null,
   topicGroupId = null,
   showPageDrop = false,
@@ -188,32 +190,32 @@ export function ExplorerPageRow({
       >
         {selectionMode ? (
           <ExplorerSelectionToggle checked={selected.has(key)} onToggle={toggle} />
-        ) : libraryMoveEnabled && startReorderDrag ? (
-          <span
-            draggable
-            onDragStart={(e) =>
-              startReorderDrag(
-                {
-                  kind: "page",
-                  id: page.id,
-                  subjectId,
-                  topicGroupId,
-                },
-                e
-              )
-            }
-            onDragEnd={clearDropHint}
-            title="Drag to move"
-            aria-label="Drag to move page"
-            className="p-0.5 text-[var(--text-muted)] shrink-0 cursor-grab active:cursor-grabbing opacity-70 group-hover:opacity-100 hover:text-[var(--text-primary)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <GripVertical className="w-3 h-3" strokeWidth={2.25} />
-          </span>
-        ) : page.completed ? (
-          <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)] ml-0.5" />
         ) : (
-          <FileText className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)] ml-0.5" />
+          <>
+            <ExplorerDragGrip
+              active={Boolean(libraryMoveEnabled && startReorderDrag)}
+              showHint={showDragAffordance && !libraryMoveEnabled}
+              label="Drag to move page"
+              iconClassName="w-3 h-3"
+              onDragStart={(e) =>
+                startReorderDrag?.(
+                  {
+                    kind: "page",
+                    id: page.id,
+                    subjectId,
+                    topicGroupId,
+                  },
+                  e
+                )
+              }
+              onDragEnd={clearDropHint}
+            />
+            {page.completed ? (
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
+            ) : (
+              <FileText className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
+            )}
+          </>
         )}
         <span className="flex-1 min-w-0 truncate text-[13px]" title={page.title}>
           {page.title}

@@ -200,6 +200,7 @@ export function MyContentSidebar({
   const searching = debouncedQ.length > 0;
   const manualOrder = sortCriterion === "manual";
   const reorderEnabled = manualOrder && !searching;
+  const showDragAffordance = !searching && !selectionMode;
   const scheduledHrefs = useScheduledPageHrefs(true);
 
   useEffect(() => {
@@ -865,7 +866,24 @@ export function MyContentSidebar({
               <span className="inline-flex align-middle text-[var(--text-secondary)]">
                 ⋮⋮
               </span>{" "}
-              handle to reorder, or drop pages and topics into another collection.
+              handle (hover a row) to reorder, or drop pages and topics into another collection.
+            </p>
+          )}
+          {!manualOrder && !searching && (
+            <p className="text-[10px] text-[var(--text-muted)] px-1 mt-1.5 leading-snug">
+              Set Sort by to{" "}
+              <button
+                type="button"
+                onClick={() => setSortCriterion("manual")}
+                className="text-[var(--accent)] hover:underline font-medium"
+              >
+                Manual order
+              </button>{" "}
+              to show drag handles (
+              <span className="inline-flex align-middle text-[var(--text-muted)]/70">
+                ⋮⋮
+              </span>
+              ) on each row when you hover it.
             </p>
           )}
         </div>
@@ -900,6 +918,7 @@ export function MyContentSidebar({
           selected={selected}
           onSelectionChange={setSelected}
           reorderEnabled={reorderEnabled}
+          showDragAffordance={showDragAffordance}
           onReorderSubjects={handleReorderSubjects}
           onReorderTopics={handleReorderTopics}
           onMovePage={handleMovePage}

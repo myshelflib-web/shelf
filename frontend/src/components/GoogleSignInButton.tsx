@@ -6,7 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { resolveGoogleClientId } from "@/lib/publicConfig";
 import { isDevEnvironment, toUserFacingError } from "@/lib/userFacingError";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
+import { useSocialSignInWidth } from "@/hooks/useSocialSignInWidth";
 
 interface GoogleSignInButtonProps {
   onError?: (message: string) => void;
@@ -45,21 +46,9 @@ export function isGoogleSignInConfigured(): boolean {
 export function GoogleSignInButton({ onError, redirectTo = "/my-content" }: GoogleSignInButtonProps) {
   const { loginWithGoogle } = useAuth();
   const router = useRouter();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { ref: containerRef, width: buttonWidth } = useSocialSignInWidth();
   const [loading, setLoading] = useState(false);
-  const [buttonWidth, setButtonWidth] = useState(360);
   const clientId = useGoogleClientId();
-
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setButtonWidth(containerRef.current.offsetWidth);
-      }
-    };
-    updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
-  }, []);
 
   const handleSuccess = async (response: CredentialResponse) => {
     if (!response.credential) {
@@ -111,7 +100,7 @@ export function GoogleSignInButton({ onError, redirectTo = "/my-content" }: Goog
           Signing in with Google...
         </div>
       ) : (
-        <div className="flex justify-center w-full [&>div]:w-full">
+        <div className="flex w-full h-10 [&>div]:!w-full [&>div>div]:!w-full">
           <GoogleLogin
             onSuccess={handleSuccess}
             onError={() => onError?.("Google sign-in was cancelled or failed")}

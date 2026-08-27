@@ -24,6 +24,7 @@ import {
   insertTopicInTree,
   syncPageInTree,
 } from "@/lib/myContentTree";
+import { findCachedSubject } from "@/lib/offline/library";
 import { UserSubject } from "@/types";
 import { setLastRead } from "@/lib/tabViewState";
 import {
@@ -163,11 +164,12 @@ export function ReaderWorkspace({
       return;
     }
     const slug = notebookSlug;
+    setNotebook(findCachedSubject(slug));
     const load = () =>
       api.myContent
         .getSubject(slug)
         .then(({ subject }) => setNotebook(subject))
-        .catch(() => setNotebook(null));
+        .catch(() => setNotebook((prev) => (prev?.slug === slug ? prev : null)));
     load();
     const onChange = (e: Event) => {
       const change = contentChangeFromEvent(e);

@@ -3,27 +3,29 @@
 import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { api } from "@/lib/api";
-import { UserPageSummary, UserSubject, UserTopicGroup } from "@/types";
+import { UserSubject, UserTopicGroup } from "@/types";
+import { getNotebookPages, getTopicGroups, pageHref } from "@/lib/myContentTree";
+import { peekCachedLibrary } from "@/lib/offline/library";
 import {
-  getNotebookPages,
-  getTopicGroups,
-  pageHref,
-} from "@/lib/myContentTree";
+  clipTargetLabel,
+  clipTargetsFromRootPages,
+  clipTargetsFromSubject,
+  groupClipTargets,
+  isClipNotePage,
+  mergeClipTargets,
+  type ClipTarget,
+} from "@/lib/clipSaveTargets";
 
 const COLLECTION_SCOPE = "__collection__";
 
-const NOTE_TYPES = new Set(["HTML", "MARKDOWN", "TEXT", "DOCX"]);
-
-function isNotePage(page: UserPageSummary) {
-  return page.contentType != null && NOTE_TYPES.has(page.contentType);
+function cachedClipTargets(): ClipTarget[] {
+  const cached = peekCachedLibrary();
+  if (!cached) return [];
+  return mergeClipTargets(
+    ...cached.subjects.map(clipTargetsFromSubject),
+    clipTargetsFromRootPages(cached.rootPages)
+  );
 }
-
-type ClipTarget = {
-  id: string;
-  title: string;
-  slug: string;
-  topicSlug: string | null;
-};
 
 interface ClipSaveModalProps {
   imageDataUrl: string;
@@ -51,37 +53,28 @@ export function ClipSaveModal({
     [notebook]
   );
   const collectionPages = useMemo(
-    () => (notebook ? getNotebookPages(notebook).filter(isNotePage) : []),
+    () =>
+      notebook ? getNotebookPages(notebook).filter(isClipNotePage) : [],
     [notebook]
   );
-  const clipPages = useMemo(() => {
-    const loose: ClipTarget[] = collectionPages.map((p) => ({
-      id: p.id,
-      title: p.title,
-      slug: p.slug,
-      topicSlug: null,
-    }));
-    const fromTopics = groups.flatMap((g) =>
-      g.pages.filter(isNotePage).map((p) => ({
-        id: p.id,
-        title: p.title,
-        slug: p.slug,
-        topicSlug: g.slug,
-      }))
-    );
-    return [...loose, ...fromTopics];
-  }, [collectionPages, groups]);
+  const notebookTargets = useMemo(
+    () => (notebook ? clipTargetsFromSubject(notebook) : []),
+    [notebook]
+  );
+  const [libraryTargets, setLibraryTargets] = useState(cachedClipTargets);
+  const clipPages = useMemo(
+    () => mergeClipTargets(notebookTargets, libraryTargets),
+    [notebookTargets, libraryTargets]
+  );
 
   const scopeOptions = useMemo(() => {
     const opts: { id: string; label: string }[] = [];
-    if (collectionPages.length > 0) {
-      opts.push({ id: COLLECTION_SCOPE, label: "Collection" });
-    }
+    if (notebook) opts.push({ id: COLLECTION_SCOPE, label: "Collection" });
     for (const g of groups) {
       opts.push({ id: g.id, label: g.title });
     }
     return opts;
-  }, [collectionPages, groups]);
+  }, [notebook, groups]);
 
   const initialScope = useMemo(() => {
     if (topic?.id) return topic.id;
@@ -89,32 +82,24 @@ export function ClipSaveModal({
       return COLLECTION_SCOPE;
     }
     if (groups[0]?.id) return groups[0].id;
-    if (collectionPages.length > 0) return COLLECTION_SCOPE;
-    return groups[0]?.id ?? "";
-  }, [topic, collectionPages, groups, currentPageId]);
+    if (notebook) return COLLECTION_SCOPE;
+    return "";
+  }, [topic, collectionPages, groups, currentPageId, notebook]);
 
   const [title, setTitle] = useState("Clip");
-  const [mode, setMode] = useState<"new" | "append">(
-    canAppend || clipPages.length > 0 ? "append" : "new"
+  const [mode, setMode] = useState<"new" | "append">(() =>
+    canAppend || notebookTargets.length > 0 || cachedClipTargets().length > 0
+      ? "append"
+      : "new"
   );
   const [scopeId, setScopeId] = useState(initialScope);
-  const pagesInScope = useMemo(() => {
-    if (scopeId === COLLECTION_SCOPE) return collectionPages;
-    const group = groups.find((g) => g.id === scopeId) ?? groups[0];
-    return (group?.pages ?? []).filter(isNotePage);
-  }, [scopeId, collectionPages, groups]);
-  const [appendId, setAppendId] = useState(() => {
-    if (canAppend) return currentPageId;
-    const scopePages =
-      initialScope === COLLECTION_SCOPE
-        ? collectionPages
-        : (groups.find((g) => g.id === initialScope) ?? groups[0])?.pages.filter(
-            isNotePage
-          ) ?? [];
-    return scopePages[0]?.id ?? "";
-  });
+  const [appendId, setAppendId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setLibraryTargets(cachedClipTargets());
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -124,6 +109,17 @@ export function ClipSaveModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  useEffect(() => {
+    if (appendId && clipPages.some((p) => p.id === appendId)) return;
+    if (canAppend) {
+      setAppendId(currentPageId);
+      return;
+    }
+    setAppendId(clipPages[0]?.id ?? "");
+  }, [appendId, canAppend, clipPages, currentPageId]);
+
+  const grouped = useMemo(() => groupClipTargets(clipPages), [clipPages]);
+  const hasExisting = clipPages.length > 0 || canAppend;
   const imgHtml = `<p><img src="${imageDataUrl}" alt="${title.replace(/"/g, "")}" /></p>`;
 
   const save = async () => {
@@ -131,7 +127,9 @@ export function ClipSaveModal({
     setError("");
     try {
       if (mode === "append") {
-        if (appendId === currentPageId && canAppend) {
+        const id = appendId || (canAppend ? currentPageId : "");
+        if (!id) throw new Error("Choose a note page to add to.");
+        if (id === currentPageId && canAppend) {
           await api.myContent.updateContent(
             currentPageId,
             `${currentContent}${imgHtml}`
@@ -140,21 +138,20 @@ export function ClipSaveModal({
           onClose();
           return;
         }
-        const target = clipPages.find((p) => p.id === appendId);
-        if (!target || !notebook) throw new Error("Choose a clips page to add to.");
-        const { page } = target.topicSlug
-          ? await api.myContent.getPage(
-              notebook.slug,
-              target.topicSlug,
-              target.slug
-            )
-          : await api.myContent.getNotebookFilePage(notebook.slug, target.slug);
+        const { page } = await api.myContent.getPageById(id);
+        if (page.contentType === "PDF" || page.contentType === "LINK") {
+          throw new Error("Clips can only be added to note pages.");
+        }
         await api.myContent.updateContent(
           page.id,
           `${page.content ?? ""}${imgHtml}`
         );
         onSaved(
-          pageHref(notebook.slug, target.topicSlug, target.slug)
+          pageHref(
+            page.notebook?.slug ?? null,
+            page.topic?.slug ?? null,
+            page.slug
+          )
         );
         onClose();
         return;
@@ -200,7 +197,6 @@ export function ClipSaveModal({
     }
   };
 
-  const canSaveAppend = mode === "new" || clipPages.length > 0 || canAppend;
   const showScopePicker = scopeOptions.length > 0;
 
   return (
@@ -238,9 +234,8 @@ export function ClipSaveModal({
           </button>
           <button
             type="button"
-            disabled={!canSaveAppend}
-            className={`flex-1 py-2 rounded-lg text-sm border ${mode === "append" ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]" : "border-[var(--border)]"} disabled:opacity-40`}
-            onClick={() => canSaveAppend && setMode("append")}
+            className={`flex-1 py-2 rounded-lg text-sm border ${mode === "append" ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]" : "border-[var(--border)]"}`}
+            onClick={() => setMode("append")}
           >
             Existing page
           </button>
@@ -275,74 +270,43 @@ export function ClipSaveModal({
               className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
             />
           </>
-        ) : (
+        ) : hasExisting ? (
           <>
-            {showScopePicker ? (
-              <>
-                <label className="block text-xs text-[var(--text-muted)] mb-1">
-                  {scopeOptions.length > 1 ? "Topic" : "Location"}
-                </label>
-                <select
-                  value={scopeId}
-                  onChange={(e) => {
-                    const id = e.target.value;
-                    setScopeId(id);
-                    const pages =
-                      id === COLLECTION_SCOPE
-                        ? collectionPages
-                        : (groups.find((g) => g.id === id)?.pages ?? []).filter(
-                            isNotePage
-                          );
-                    const preferred = pages.find((p) => p.id === currentPageId);
-                    setAppendId(preferred?.id ?? pages[0]?.id ?? "");
-                  }}
-                  className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
-                >
-                  {scopeOptions.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.label}
+            <label className="block text-xs text-[var(--text-muted)] mb-1">
+              Page
+            </label>
+            <select
+              value={appendId}
+              onChange={(e) => setAppendId(e.target.value)}
+              className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
+            >
+              {canAppend &&
+              !clipPages.some((p) => p.id === currentPageId) ? (
+                <option value={currentPageId}>This page</option>
+              ) : null}
+              {grouped.map((g) => (
+                <optgroup key={g.key} label={g.label}>
+                  {g.pages.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {clipTargetLabel(p)}
+                      {p.id === currentPageId ? " (this page)" : ""}
                     </option>
                   ))}
-                </select>
-                <label className="block text-xs text-[var(--text-muted)] mb-1">
-                  Page
-                </label>
-                <select
-                  value={
-                    pagesInScope.some((p) => p.id === appendId) ? appendId : ""
-                  }
-                  onChange={(e) => setAppendId(e.target.value)}
-                  className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
-                >
-                  {pagesInScope.length === 0 ? (
-                    <option value="">No note pages in this topic</option>
-                  ) : (
-                    pagesInScope.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.title}
-                        {p.id === currentPageId ? " (this page)" : ""}
-                      </option>
-                    ))
-                  )}
-                </select>
-              </>
-            ) : (
-              <p className="text-sm text-[var(--text-muted)] mb-2">
-                {canAppend
-                  ? "Append this clip to the current page."
-                  : "Create a new note page for this clip."}
-              </p>
-            )}
+                </optgroup>
+              ))}
+            </select>
           </>
+        ) : (
+          <p className="text-sm text-[var(--text-muted)] mb-2">
+            No note pages yet. Use New page to create one, then clips can be
+            added to it.
+          </p>
         )}
         {error && <p className="text-xs text-red-400 mb-2">{error}</p>}
         <button
           type="button"
           disabled={
-            busy ||
-            (mode === "append" &&
-              !appendId &&
-              !(canAppend && appendId === currentPageId))
+            busy || (mode === "append" && !hasExisting && !canAppend)
           }
           className="btn-primary"
           onClick={() => void save()}
