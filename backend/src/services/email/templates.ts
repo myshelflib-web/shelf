@@ -134,8 +134,8 @@ ${detailCard([
 ])}
 ${sectionLabel("Premium includes")}
 ${bulletList([
-  "10 GB storage for PDFs and notes",
-  "2 million Study AI tokens per month",
+  "1 GB storage for PDFs and notes",
+  "1 million Study AI tokens per month",
   "10,000 indexed library chunks for deeper search",
   "300 chat messages per Study AI thread",
 ])}

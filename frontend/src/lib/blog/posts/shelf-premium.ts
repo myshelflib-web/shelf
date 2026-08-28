@@ -5,7 +5,7 @@ export const shelfPremium = buildPost(
     slug: "shelf-premium-subscription",
     title: "Shelf Premium: Storage, Study AI Tokens, and Vector Search",
     description:
-      "Upgrade to Shelf Premium for 10 GB storage, 2M Study AI tokens per month, deeper library vector indexing, and longer chat threads. Coupons, affiliate coins, and UPI Autopay.",
+      "Upgrade to Shelf Premium for 1 GB storage, 1M Study AI tokens per month, deeper library vector indexing, and longer chat threads. Coupons, affiliate coins, and UPI Autopay.",
     excerpt:
       "Free Shelf is fully usable at 100 MB and 50k AI tokens monthly. Premium expands limits for heavy PDF libraries and daily Study AI workflows — with coupons, referrals, and optional monthly/yearly UPI Autopay.",
     publishedAt: "2026-02-18",
@@ -20,8 +20,8 @@ export const shelfPremium = buildPost(
         "Every account starts on the free plan: 100 MB uploads, 50,000 Study AI tokens per month, 500 indexed vector chunks, 30 chat messages per thread, and 10 relevancy docs.",
       ],
       bullets: [
-        "Premium — 10 GB storage",
-        "Premium — 2,000,000 Study AI tokens / month",
+        "Premium — 1 GB storage",
+        "Premium — 1,000,000 Study AI tokens / month",
         "Premium — 10,000 indexed vector chunks (LRU eviction when over quota)",
         "Premium — 300 chat messages per thread",
         "Premium — 50 relevancy / syllabus docs",

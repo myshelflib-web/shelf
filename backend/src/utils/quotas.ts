@@ -4,7 +4,7 @@ export const FREE_STORAGE_BYTES = 100 * 1024 * 1024;
 /** Free accounts created before the 100 MB cap keep the previous 250 MB quota. */
 export const LEGACY_FREE_STORAGE_BYTES = 250 * 1024 * 1024;
 export const LEGACY_FREE_STORAGE_BEFORE = new Date("2026-08-28T00:00:00.000Z");
-export const PREMIUM_STORAGE_BYTES = 10 * 1024 * 1024 * 1024;
+export const PREMIUM_STORAGE_BYTES = 1024 * 1024 * 1024;
 /** Monthly Study AI pool — hard stop when exhausted (resets each calendar month). */
 export const FREE_LLM_TOKENS = Number(process.env.FREE_LLM_TOKENS ?? 50_000);
 export const PREMIUM_LLM_TOKENS = Number(

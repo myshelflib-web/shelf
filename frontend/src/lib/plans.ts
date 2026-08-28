@@ -19,11 +19,11 @@ export const SHELF_PLANS = {
     name: "Premium",
     priceInr: 999,
     planDays: 365,
-    storageLabel: "10 GB",
+    storageLabel: "1 GB",
     tokensLabel: "1M / month",
     features: [
       "Everything in Free",
-      "10 GB upload storage",
+      "1 GB upload storage",
       "20× more Study AI tokens",
       "Standard & Deep answer modes",
       "Priority access to new features",

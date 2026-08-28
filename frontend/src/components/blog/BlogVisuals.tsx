@@ -204,7 +204,7 @@ export function PremiumVisual() {
       <div className="p-4 text-xs space-y-2">
         <div className="p-3 rounded-lg bg-[var(--accent-subtle)] border border-[var(--accent)]">
           <Sparkles className="w-5 h-5 text-[var(--accent)] mb-2" />
-          <p className="font-semibold">10 GB · 2M AI tokens</p>
+          <p className="font-semibold">1 GB · 1M AI tokens</p>
         </div>
         <p className="text-[var(--text-muted)]">Deeper library search & longer chats</p>
       </div>
