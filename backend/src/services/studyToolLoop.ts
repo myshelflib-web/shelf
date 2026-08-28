@@ -15,6 +15,8 @@ import {
   mergeCitations,
   type LibraryCitation,
 } from "../utils/ragPack.js";
+import { logger, errorFields } from "../utils/logger.js";
+import { logStudyAiEmptyReply } from "../utils/studyAiDiagnostics.js";
 
 export type StudyLlmOpts = {
   model?: string;
@@ -178,6 +180,8 @@ export async function* streamWithStudyTools(
   const initial = messages;
   const rounds = maxToolRounds(opts?.maxToolRounds);
   const llmOpts = opts?.llm;
+  let toolCallsRun = 0;
+  let fallbackError: unknown;
 
   for (let round = 0; round < rounds; round++) {
     if (opts?.signal?.aborted) break;
@@ -218,6 +222,7 @@ export async function* streamWithStudyTools(
     }
 
     if (toolCalls?.length && useTools && !roundText.trim()) {
+      toolCallsRun += toolCalls.length;
       yield {
         type: "status",
         detail: toolStatusDetail(toolCalls[0].function.name),
@@ -259,9 +264,35 @@ export async function* streamWithStudyTools(
       if (answer) {
         yield { type: "delta", text: answer };
       }
-    } catch {
-      // Route layer surfaces a friendly 503 when still empty.
+    } catch (err) {
+      fallbackError = err;
+      logger.error("study.tools.stream.fallback_failed", {
+        model: model || llmOpts?.model || null,
+        toolsEnabled: enabled,
+        toolCallsRun,
+        ...errorFields(err),
+      });
     }
+  }
+
+  if (!answer.trim()) {
+    logStudyAiEmptyReply({
+      channel: "tool_stream",
+      reason: opts?.signal?.aborted
+        ? "client_aborted"
+        : fallbackError
+          ? "synthesis_fallback_failed"
+          : toolCallsRun > 0
+            ? "tools_without_final_text"
+            : "llm_returned_no_text",
+      model: model || llmOpts?.model,
+      tokens,
+      toolsEnabled: enabled,
+      aborted: Boolean(opts?.signal?.aborted),
+      toolRounds: rounds,
+      toolCallsRun,
+      err: fallbackError,
+    });
   }
 
   yield { type: "done", answer, tokens, model, citations };

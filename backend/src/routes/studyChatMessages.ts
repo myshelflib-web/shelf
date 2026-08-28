@@ -22,6 +22,11 @@ import { resolveContextPageIds } from "../utils/chatContext.js";
 import { titleFromQuery, trimThreadToLimit } from "../services/chatThreads.js";
 import { truncateText } from "../utils/htmlText.js";
 import { studyAiFailureStub, toUserFacingStudyError } from "../utils/studyAiUserError.js";
+import {
+  abortStudyStreamOnClientDisconnect,
+  logStudyAiEmptyReply,
+  logStudyAiStreamFailure,
+} from "../utils/studyAiDiagnostics.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -226,9 +231,9 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
   const send = (event: string, data: unknown) => writeSse(res, event, data);
   const llmAbort = new AbortController();
   let clientGone = false;
-  req.on("close", () => {
+  abortStudyStreamOnClientDisconnect(res, llmAbort);
+  res.on("close", () => {
     clientGone = true;
-    llmAbort.abort();
   });
 
   const memoryLimit = chatMessageLimit(user);
@@ -302,18 +307,36 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
         answer += ev.text;
         send("delta", { text: ev.text });
       } else {
-        answer = ev.answer;
+        if (!answer.trim() && ev.answer?.trim()) {
+          answer = ev.answer;
+          send("delta", { text: ev.answer });
+        }
+        answer = ev.answer || answer;
         citations = ev.citations;
         matchCount = ev.matchCount;
         tokens = ev.tokens;
-        send("status", {
-          stage: "finishing",
-          detail: `Done · ${ev.model}`,
-        });
+        if (answer.trim()) {
+          send("status", {
+            stage: "finishing",
+            detail: ev.model ? `Done · ${ev.model}` : "Done",
+          });
+        }
       }
     }
 
     if (!answer.trim() && !clientGone) {
+      logStudyAiEmptyReply({
+        channel: "chat_stream",
+        reason: llmAbort.signal.aborted
+          ? "client_aborted"
+          : "no_text_after_stream",
+        userId,
+        depth,
+        tokens,
+        toolsEnabled: ragToolsEnabled(displayContent),
+        aborted: llmAbort.signal.aborted,
+        clientGone,
+      });
       const stub = "Study AI could not finish this reply.";
       const assistantMsg = await prisma.chatMessage.create({
         data: {
@@ -370,6 +393,13 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
     res.end();
   } catch (err) {
     const status = err instanceof QuotaError ? err.status : 503;
+    if (!(err instanceof QuotaError)) {
+      logStudyAiStreamFailure("chat_stream", err, {
+        userId,
+        threadId: thread.id,
+        depth,
+      });
+    }
     const message =
       err instanceof QuotaError
         ? err.message

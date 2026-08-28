@@ -27,6 +27,11 @@ import {
   studyAiFailureStub,
   toUserFacingStudyError,
 } from "../utils/studyAiUserError.js";
+import {
+  abortStudyStreamOnClientDisconnect,
+  logStudyAiEmptyReply,
+  logStudyAiStreamFailure,
+} from "../utils/studyAiDiagnostics.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -247,7 +252,7 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
   };
 
   const llmAbort = new AbortController();
-  req.on("close", () => llmAbort.abort());
+  abortStudyStreamOnClientDisconnect(res, llmAbort);
 
   try {
     send("status", { stage: "starting", detail: "Starting Study AI…" });
@@ -303,6 +308,21 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
     });
 
     if (!answer.trim()) {
+      logStudyAiEmptyReply({
+        channel: "page_ask_stream",
+        reason: llmAbort.signal.aborted
+          ? "client_aborted"
+          : "no_text_after_stream",
+        userId,
+        mode: prepared.resolvedMode,
+        depth: prepared.depth,
+        tokens,
+        toolsEnabled: prepared.toolsEnabled,
+        aborted: llmAbort.signal.aborted,
+        usedVectors: prepared.needVectors,
+        contextChars: prepared.packedChars,
+        mapReduce: prepared.useMapReduce,
+      });
       const threadId = await persistAskTurn({
         userId,
         body,
@@ -342,10 +362,12 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
         ? err.status
         : 503;
     if (!(err instanceof QuotaError || err instanceof PageAskPrepareError)) {
-      logger.error("study.ask.stream.failed", {
-        ...errorFields(err),
+      logStudyAiStreamFailure("page_ask_stream", err, {
+        userId,
         userTopicId: body.userTopicId ?? null,
         articleId: body.articleId ?? null,
+        mode: body.mode ?? "ask",
+        depth: body.depth ?? "quick",
       });
     }
     const message =

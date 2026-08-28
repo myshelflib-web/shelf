@@ -4,6 +4,11 @@ import { streamWithStudyTools } from "../services/studyToolLoop.js";
 import { studyToolLoopOpts } from "../services/studyToolOpts.js";
 import { logger, errorFields } from "../utils/logger.js";
 
+function finishingDetail(model?: string, answer?: string): string | null {
+  if (!answer?.trim()) return null;
+  return model ? `Done · ${model}` : "Done";
+}
+
 export type StudyAskStreamEvent =
   | { type: "status"; stage: string; detail: string }
   | { type: "delta"; text: string };
@@ -39,11 +44,14 @@ export async function runStudyAskStream(
         onEvent({ type: "delta", text: ev.text });
       } else if (ev.type === "done") {
         tokens = ev.tokens;
-        onEvent({
-          type: "status",
-          stage: "finishing",
-          detail: ev.model ? `Done · ${ev.model}` : "Done",
-        });
+        if (!answer.trim() && ev.answer?.trim()) {
+          answer = ev.answer;
+          onEvent({ type: "delta", text: ev.answer });
+        }
+        const detail = finishingDetail(ev.model, answer);
+        if (detail) {
+          onEvent({ type: "status", stage: "finishing", detail });
+        }
       }
     }
   };
@@ -66,11 +74,10 @@ export async function runStudyAskStream(
           onEvent({ type: "delta", text: ev.text });
         } else if (ev.type === "done") {
           tokens = ev.tokens;
-          onEvent({
-            type: "status",
-            stage: "finishing",
-            detail: ev.model ? `Done · ${ev.model}` : "Done",
-          });
+          const detail = finishingDetail(ev.model, answer);
+          if (detail) {
+            onEvent({ type: "status", stage: "finishing", detail });
+          }
         }
       }
     } catch (mapErr) {
