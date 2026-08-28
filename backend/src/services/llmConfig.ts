@@ -10,8 +10,6 @@ const RETIRED_GEMINI_EMBEDDING_MODELS: Record<string, string> = {
   "models/text-embedding-004": SHELF_GEMINI.EMBEDDING,
   "embedding-001": SHELF_GEMINI.EMBEDDING,
   "text-embedding-005": SHELF_GEMINI.EMBEDDING,
-  [SHELF_GEMINI.EMBEDDING_LEGACY]: SHELF_GEMINI.EMBEDDING,
-  [`models/${SHELF_GEMINI.EMBEDDING_LEGACY}`]: SHELF_GEMINI.EMBEDDING,
 };
 
 /** Chat models Google has restricted for new API keys / retired early. */

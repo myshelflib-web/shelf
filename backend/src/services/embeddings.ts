@@ -1,5 +1,6 @@
 import { logger } from "../utils/logger.js";
 import { fetchWithTimeout } from "../utils/timeout.js";
+import { SHELF_GEMINI } from "./shelfGeminiModels.js";
 import {
   apiKeyHint,
   embeddingApiKey,
@@ -159,7 +160,24 @@ async function embedTextsGeminiNative(
 
   for (let i = 0; i < texts.length; i += GEMINI_EMBED_BATCH) {
     const slice = texts.slice(i, i + GEMINI_EMBED_BATCH);
-    const vectors = await geminiBatchOnce(slice, apiKey, modelId, modelSlug, task);
+    let vectors: number[][];
+    try {
+      vectors = await geminiBatchOnce(slice, apiKey, modelId, modelSlug, task);
+    } catch (err) {
+      const fallback = SHELF_GEMINI.EMBEDDING;
+      const canFallback =
+        resolved !== fallback &&
+        err instanceof Error &&
+        /not found|NOT_FOUND|404/i.test(err.message);
+      if (!canFallback) throw err;
+      logger.warn("embeddings.gemini.model_fallback", {
+        from: resolved,
+        to: fallback,
+      });
+      const fbId = geminiEmbeddingModelId(fallback);
+      const fbSlug = geminiEmbeddingModelSlug(fallback);
+      vectors = await geminiBatchOnce(slice, apiKey, fbId, fbSlug, task);
+    }
     out.push(...vectors);
     if (i + GEMINI_EMBED_BATCH < texts.length) {
       await sleep(GEMINI_EMBED_PAUSE_MS);

@@ -15,8 +15,8 @@ describe("shelfGeminiModels", () => {
     expect(SHELF_GEMINI_CHAT_FALLBACKS[1]).toBe(SHELF_GEMINI.FAST_ALT);
   });
 
-  it("keeps deep and embeddings pinned", () => {
+  it("keeps deep pinned and defaults embeddings to 001", () => {
     expect(SHELF_GEMINI.DEEP).toBe("gemini-3.7-flash");
-    expect(SHELF_GEMINI.EMBEDDING).toBe("gemini-embedding-002");
+    expect(SHELF_GEMINI.EMBEDDING).toBe("gemini-embedding-001");
   });
 });

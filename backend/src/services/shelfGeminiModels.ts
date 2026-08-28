@@ -21,9 +21,10 @@ export const SHELF_GEMINI = {
   DEEP: "gemini-3.7-flash",
   /** Extra flash fallback after latest alias. */
   FLASH: "gemini-3.6-flash",
-  /** Pinned — reindex after any embedding model change. */
-  EMBEDDING: "gemini-embedding-002",
-  EMBEDDING_LEGACY: "gemini-embedding-001",
+  /** Default embedding — widely available on AI Studio keys (768-dim). */
+  EMBEDDING: "gemini-embedding-001",
+  /** Opt-in when your key supports it: EMBEDDING_MODEL=gemini-embedding-002 */
+  EMBEDDING_NEXT: "gemini-embedding-002",
 } as const;
 
 /** Lite-first; step up to Flash on 404 / rate limit. */
