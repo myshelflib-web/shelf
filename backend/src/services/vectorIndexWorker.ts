@@ -5,9 +5,9 @@ import { logger, errorFields } from "../utils/logger.js";
 import { isTransientError, withRetry } from "../utils/retry.js";
 import { TimeoutError, withTimeout } from "../utils/timeout.js";
 
-const DEFAULT_INTERVAL_MS = 60_000;
-/** Keep small on Gemini free tier (100 embed requests / window). */
-const DEFAULT_BATCH_SIZE = 2;
+const DEFAULT_INTERVAL_MS = 120_000;
+/** Keep at 1 on Gemini free tier — shares embed quota with Study AI (Standard/Deep). */
+const DEFAULT_BATCH_SIZE = 1;
 const DEFAULT_PAGE_TIMEOUT_MS = 120_000;
 const DEFAULT_BATCH_TIMEOUT_MS = 300_000;
 const DEFAULT_STUCK_MS = 360_000;
@@ -160,7 +160,7 @@ export async function runVectorIndexBatch(batchSize?: number): Promise<number> {
         await indexPageWithReliability(pageId);
         indexed += 1;
         consecutiveFailures = 0;
-        await sleep(envNum("VECTOR_INDEX_PAGE_PAUSE_MS", 1500));
+        await sleep(envNum("VECTOR_INDEX_PAGE_PAUSE_MS", 3000));
       } catch (err) {
         if (isRateLimitError(err)) {
           const waitSec = rateLimitWaitSec(err);

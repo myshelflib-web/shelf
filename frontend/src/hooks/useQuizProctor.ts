@@ -94,7 +94,6 @@ export function useQuizProctor({
       const pseudo = Boolean(el?.classList.contains(FS_CLASS));
       if (!native && !pseudo) violate("fullscreen");
     };
-    const onPageHide = () => violate("tab");
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       const el = shellRef.current;
@@ -105,13 +104,11 @@ export function useQuizProctor({
 
     document.addEventListener("visibilitychange", onVis);
     document.addEventListener("fullscreenchange", onFs);
-    window.addEventListener("pagehide", onPageHide);
     window.addEventListener("keydown", onKey, true);
     return () => {
       document.documentElement.removeAttribute(QUIZ_PROCTOR_ATTR);
       document.removeEventListener("visibilitychange", onVis);
       document.removeEventListener("fullscreenchange", onFs);
-      window.removeEventListener("pagehide", onPageHide);
       window.removeEventListener("keydown", onKey, true);
     };
   }, [active, violate]);

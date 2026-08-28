@@ -5,7 +5,7 @@ export const examStyleQuiz = buildPost(
     slug: "exam-style-quiz-from-your-notes",
     title: "Exam-Style Quizzes from Your Library, Uploads, and PYQ Banks",
     description:
-      "Sit MCQ, written, and photo-answer quizzes on Shelf: scoped to a document or collection, an uploaded syllabus, or preloaded PYQ-style papers at your exam track.",
+      "Sit proctored MCQ, written, and photo quizzes on Shelf: fullscreen papers from your library, an uploaded syllabus, or PYQ-style exam banks.",
     excerpt:
       "Quiz is a first-class Shelf workspace. Generate exam-level papers from a page, topic, or collection; upload notes plus a syllabus; or drill PYQs and standard questions. Timed, proctored MCQs, typed answers, and photos of working — with math.",
     publishedAt: "2026-08-26",

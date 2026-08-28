@@ -32,6 +32,7 @@ export function QuizTake({
   const [error, setError] = useState("");
   const [locked, setLocked] = useState(false);
   const saveTimer = useRef<number | null>(null);
+  const beginningRef = useRef(false);
   const q = quiz.questions[index];
   const reveal = quiz.status === "GRADED" || quiz.status === "SUBMITTED";
 
@@ -99,6 +100,8 @@ export function QuizTake({
   }, [submit]);
 
   const begin = useCallback(async () => {
+    if (beginningRef.current || locked) return;
+    beginningRef.current = true;
     setError("");
     try {
       await enter();
@@ -108,9 +111,10 @@ export function QuizTake({
         onQuiz(next);
       }
     } catch (err) {
+      beginningRef.current = false;
       setError(err instanceof Error ? err.message : "Could not start");
     }
-  }, [enter, quiz.id, quiz.startedAt, onQuiz]);
+  }, [enter, locked, quiz.id, quiz.startedAt, onQuiz]);
 
   if (!q) {
     return (

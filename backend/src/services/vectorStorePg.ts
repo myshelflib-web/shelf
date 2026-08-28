@@ -3,6 +3,11 @@ import { logger } from "../utils/logger.js";
 import type { VectorHit, VectorPoint } from "./vectorStoreTypes.js";
 import { isVectorConfigured } from "./vectorStoreTypes.js";
 
+function embeddingVectorDims(): number {
+  const n = Number(process.env.EMBEDDING_DIMENSIONS ?? 768);
+  return Number.isFinite(n) && n > 0 ? Math.min(Math.floor(n), 4096) : 768;
+}
+
 function toPgVector(values: number[]): string {
   return `[${values.join(",")}]`;
 }
@@ -11,6 +16,8 @@ let schemaEnsured = false;
 
 async function ensurePgVectorSchema(): Promise<void> {
   if (schemaEnsured || !isVectorConfigured()) return;
+
+  const dims = embeddingVectorDims();
 
   await prisma.$executeRawUnsafe(`CREATE EXTENSION IF NOT EXISTS vector`);
 
@@ -25,10 +32,24 @@ async function ensurePgVectorSchema(): Promise<void> {
       "href" TEXT NOT NULL,
       "text" TEXT NOT NULL,
       "chunkIndex" INTEGER NOT NULL,
-      "embedding" vector NOT NULL,
+      "embedding" vector(${dims}) NOT NULL,
       CONSTRAINT "LibraryVectorChunk_pkey" PRIMARY KEY ("id")
     )
   `);
+
+  // Legacy tables used untyped vector() — HNSW requires fixed dimensions.
+  try {
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "LibraryVectorChunk"
+      ALTER COLUMN "embedding" TYPE vector(${dims})
+      USING "embedding"::vector(${dims})
+    `);
+  } catch (err) {
+    logger.debug("vector.pg.alter_dimensions_skipped", {
+      dims,
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
 
   await prisma.$executeRawUnsafe(`
     CREATE INDEX IF NOT EXISTS "LibraryVectorChunk_userId_idx"
@@ -47,6 +68,7 @@ async function ensurePgVectorSchema(): Promise<void> {
   } catch (err) {
     logger.warn("vector.pg.hnsw_index_skipped", {
       hint: "HNSW index optional; sequential scan still works on small datasets.",
+      dims,
       message: err instanceof Error ? err.message : String(err),
     });
   }
