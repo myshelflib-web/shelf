@@ -46,7 +46,14 @@ export type RagAskOpts = {
   signal?: AbortSignal;
   defaultPageId?: string | null;
   depth?: string;
+  /** False for slash commands (/flashcards, /pyq) that need markdown, not tools. */
+  toolsEnabled?: boolean;
 };
+
+/** Slash bubbles use /cmd labels — answer in text, not via tool calls. */
+export function ragToolsEnabled(bubbleContent: string): boolean {
+  return !bubbleContent.trim().startsWith("/");
+}
 
 export type RagStreamEvent =
   | { type: "status"; stage: string; detail: string; citations?: LibraryCitation[] }
@@ -66,11 +73,13 @@ type PreparedRag = {
   matchCount: number;
   llm: StudyLlmOpts;
   maxToolRounds: number;
+  toolsEnabled: boolean;
 };
 
 async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
   const depth = parseStudyDepth(opts.depth);
   const depthCfg = studyDepthConfig(depth);
+  const toolsEnabled = opts.toolsEnabled !== false;
   const searchQuery = rewriteSearchQuery(opts.query, opts.history);
   const excerpts = await retrieveLibrary(opts.userId, searchQuery, {
     pageIds: opts.pageIds,
@@ -81,7 +90,7 @@ async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
   const system = studySystemPrompt(opts.studyGoal, {
     syllabusText: opts.syllabusText,
     scopeLabel: opts.scopeLabel,
-    withTools: true,
+    withTools: toolsEnabled,
     depth,
   });
   const userPrompt =
@@ -129,6 +138,7 @@ async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
       temperature: depthCfg.temperature,
     },
     maxToolRounds: depthCfg.toolRounds,
+    toolsEnabled,
   };
 }
 
@@ -145,6 +155,7 @@ export async function answerWithRag(opts: RagAskOpts): Promise<RagResult> {
   const result = await completeWithStudyTools(prepared.messages, toolCtx(opts), {
     citations: prepared.citations,
     signal: opts.signal,
+    enabled: prepared.toolsEnabled,
     llm: prepared.llm,
     maxToolRounds: prepared.maxToolRounds,
   });
@@ -189,6 +200,7 @@ export async function* streamAnswerWithRag(
     {
       citations: prepared.citations,
       signal: opts.signal,
+      enabled: prepared.toolsEnabled,
       llm: prepared.llm,
       maxToolRounds: prepared.maxToolRounds,
     }

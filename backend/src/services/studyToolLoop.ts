@@ -181,14 +181,13 @@ export async function* streamWithStudyTools(
 
   for (let round = 0; round < rounds; round++) {
     if (opts?.signal?.aborted) break;
-    const lastRound = round === rounds - 1;
 
     let roundText = "";
     let toolCalls: ChatToolCall[] | undefined;
     try {
       for await (const ev of streamChat(working, {
-        tools: useTools && !lastRound ? STUDY_TOOLS : undefined,
-        toolChoice: useTools && !lastRound ? "auto" : "none",
+        tools: useTools ? STUDY_TOOLS : undefined,
+        toolChoice: useTools ? "auto" : "none",
         signal: opts?.signal,
         model: llmOpts?.model,
         maxTokens: llmOpts?.maxTokens,
@@ -218,7 +217,7 @@ export async function* streamWithStudyTools(
       throw err;
     }
 
-    if (toolCalls?.length && useTools && !lastRound && !roundText.trim()) {
+    if (toolCalls?.length && useTools && !roundText.trim()) {
       yield {
         type: "status",
         detail: toolStatusDetail(toolCalls[0].function.name),
@@ -227,7 +226,7 @@ export async function* streamWithStudyTools(
         ...working,
         {
           role: "assistant",
-          content: roundText.trim() ? roundText : null,
+          content: null,
           tool_calls: toolCalls,
         },
       ];
@@ -243,6 +242,26 @@ export async function* streamWithStudyTools(
 
     answer = roundText;
     break;
+  }
+
+  if (!answer.trim() && !opts?.signal?.aborted) {
+    yield { type: "status", detail: "Finishing answer…" };
+    try {
+      const fallback = await completeChat(working, {
+        toolChoice: "none",
+        signal: opts?.signal,
+        model: llmOpts?.model,
+        maxTokens: llmOpts?.maxTokens,
+        temperature: llmOpts?.temperature,
+      });
+      tokens += fallback.tokens;
+      answer = fallback.text;
+      if (answer) {
+        yield { type: "delta", text: answer };
+      }
+    } catch {
+      // Route layer surfaces a friendly 503 when still empty.
+    }
   }
 
   yield { type: "done", answer, tokens, model, citations };

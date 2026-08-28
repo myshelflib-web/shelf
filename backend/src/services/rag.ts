@@ -3,6 +3,7 @@ export { retrieveLibrary, retrievePageAskContext } from "./ragRetrieve.js";
 export {
   answerWithRag,
   streamAnswerWithRag,
+  ragToolsEnabled,
   type RagResult,
   type RagAskOpts,
   type RagHistoryMessage,

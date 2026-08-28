@@ -5,6 +5,7 @@ import { param } from "../utils/param.js";
 import {
   answerWithRag,
   streamAnswerWithRag,
+  ragToolsEnabled,
   type LibraryCitation,
 } from "../services/rag.js";
 import {
@@ -130,6 +131,7 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
       defaultPageId:
         thread.contextKind === "PAGE" ? thread.contextPageId : null,
       depth,
+      toolsEnabled: ragToolsEnabled(displayContent),
     });
 
     const assistantMsg = await prisma.chatMessage.create({
@@ -287,6 +289,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
       defaultPageId:
         thread.contextKind === "PAGE" ? thread.contextPageId : null,
       depth,
+      toolsEnabled: ragToolsEnabled(displayContent),
     })) {
       if (clientGone) break;
       if (ev.type === "status") {
