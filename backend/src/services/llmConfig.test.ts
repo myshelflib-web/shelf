@@ -1,4 +1,5 @@
 import { describe, expect, it, afterEach } from "vitest";
+import { SHELF_GEMINI } from "./shelfGeminiModels.js";
 import {
   embeddingApiKey,
   embeddingBaseUrl,
@@ -52,11 +53,11 @@ describe("llmConfig", () => {
     expect(llmBaseUrl()).toBe(
       "https://generativelanguage.googleapis.com/v1beta/openai"
     );
-    expect(chatModel()).toBe("gemini-flash-lite-latest");
+    expect(chatModel()).toBe(SHELF_GEMINI.FAST);
     expect(embeddingBaseUrl()).toBe(
       "https://generativelanguage.googleapis.com/v1beta/openai"
     );
-    expect(embeddingModel()).toBe("gemini-embedding-001");
+    expect(embeddingModel()).toBe(SHELF_GEMINI.EMBEDDING);
   });
 
   it("remaps retired gemini-2.5-flash for new API keys", () => {
@@ -76,7 +77,7 @@ describe("llmConfig", () => {
     );
     const first = chatModelCandidates();
     expect(first[0]).toBe("gemini-flash-latest");
-    expect(first).toContain("gemini-flash-lite-latest");
+    expect(first).toContain(SHELF_GEMINI.FAST);
 
     rememberWorkingChatModel(llmBaseUrl(), "gemini-3.6-flash");
     expect(chatModelCandidates()[0]).toBe("gemini-3.6-flash");
@@ -126,7 +127,7 @@ describe("llmConfig", () => {
       "https://generativelanguage.googleapis.com/v1beta/openai"
     );
     setEnv("EMBEDDING_MODEL", undefined);
-    expect(embeddingModel()).toBe("gemini-embedding-001");
+    expect(embeddingModel()).toBe(SHELF_GEMINI.EMBEDDING);
   });
 
   it("respects explicit EMBEDDING_MODEL", () => {
@@ -155,9 +156,9 @@ describe("llmConfig", () => {
       "https://generativelanguage.googleapis.com/v1beta/openai"
     );
     setEnv("EMBEDDING_MODEL", "text-embedding-004");
-    expect(embeddingModel()).toBe("gemini-embedding-001");
+    expect(embeddingModel()).toBe(SHELF_GEMINI.EMBEDDING);
     expect(resolveGeminiEmbeddingModel("text-embedding-004")).toBe(
-      "gemini-embedding-001"
+      SHELF_GEMINI.EMBEDDING
     );
   });
 

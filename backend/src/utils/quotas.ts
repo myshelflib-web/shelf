@@ -5,8 +5,11 @@ export const FREE_STORAGE_BYTES = 100 * 1024 * 1024;
 export const LEGACY_FREE_STORAGE_BYTES = 250 * 1024 * 1024;
 export const LEGACY_FREE_STORAGE_BEFORE = new Date("2026-08-28T00:00:00.000Z");
 export const PREMIUM_STORAGE_BYTES = 10 * 1024 * 1024 * 1024;
-export const FREE_LLM_TOKENS = 50_000;
-export const PREMIUM_LLM_TOKENS = 2_000_000;
+/** Monthly Study AI pool — hard stop when exhausted (resets each calendar month). */
+export const FREE_LLM_TOKENS = Number(process.env.FREE_LLM_TOKENS ?? 50_000);
+export const PREMIUM_LLM_TOKENS = Number(
+  process.env.PREMIUM_LLM_TOKENS ?? 2_000_000
+);
 
 /** Max messages retained per Study AI chat thread (user + assistant). */
 export const FREE_CHAT_MESSAGES = Number(process.env.FREE_CHAT_MESSAGES ?? 30);
@@ -27,7 +30,7 @@ export const PREMIUM_RELEVANCY_DOCS = Number(
   process.env.PREMIUM_RELEVANCY_DOCS ?? 50
 );
 
-type QuotaUser = {
+export type QuotaUser = {
   plan: string;
   role: string;
   subscriptionExpiresAt?: Date | string | null;
@@ -115,12 +118,13 @@ export function assertStorageRoom(user: QuotaUser, extraBytes: number): void {
   }
 }
 
+/** Block only when the monthly pool is exhausted — never pre-reject by estimated cost. */
 export function assertLlmRoom(user: QuotaUser, extraTokens = 1): void {
   const limit = llmTokenLimit(user);
   const used = user.llmTokensUsed ?? 0;
   if (used + extraTokens > limit) {
     throw new QuotaError(
-      "Monthly Study AI token limit reached. Upgrade for a higher allowance."
+      "Study AI token limit reached for this month. Upgrade for more, or wait until next month."
     );
   }
 }

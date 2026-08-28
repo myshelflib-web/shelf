@@ -4,10 +4,7 @@ import prisma from "../../utils/prisma.js";
 import { completeChat, type ChatContentPart } from "../llm.js";
 import { getObjectBuffer } from "../s3.js";
 import { logger, errorFields } from "../../utils/logger.js";
-import {
-  assertLlmRoom,
-  shouldResetLlmWindow,
-} from "../../utils/quotas.js";
+import { assertLlmBudget, chargeLlmTokens } from "../../utils/llmUsage.js";
 import { parseGradeJson } from "./quizParse.js";
 import { billedQuizTokens } from "./quizTokens.js";
 import { gradeWrittenSystemPrompt } from "./quizPrompt.js";
@@ -59,7 +56,7 @@ async function gradeOpenAnswer(
       { role: "system", content: gradeWrittenSystemPrompt(goal) },
       { role: "user", content: parts },
     ],
-    { maxTokens: 700, temperature: 0.1 }
+    { maxTokens: 512, temperature: 0.1 }
   );
   const parsed = parseGradeJson(result.text);
   return {
@@ -92,14 +89,7 @@ export async function gradeQuiz(quizId: string, userId: string): Promise<void> {
   });
   if (!user) throw new Error("User not found");
 
-  let tokensUsed = user.llmTokensUsed;
-  if (shouldResetLlmWindow(user.llmTokensResetAt)) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { llmTokensUsed: 0, llmTokensResetAt: new Date() },
-    });
-    tokensUsed = 0;
-  }
+  await assertLlmBudget(userId, 1);
 
   let billed = 0;
   for (const q of quiz.questions) {
@@ -111,7 +101,7 @@ export async function gradeQuiz(quizId: string, userId: string): Promise<void> {
       });
       continue;
     }
-    assertLlmRoom({ ...user, llmTokensUsed: tokensUsed + billed });
+    await assertLlmBudget(userId, 1);
     const graded = await gradeOpenAnswer(q, user.studyGoal);
     billed += graded.tokens;
     await prisma.quizQuestion.update({
@@ -124,10 +114,7 @@ export async function gradeQuiz(quizId: string, userId: string): Promise<void> {
   }
 
   if (billed > 0) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { llmTokensUsed: { increment: billed } },
-    });
+    await chargeLlmTokens(userId, billed);
   }
 
   await prisma.quiz.update({

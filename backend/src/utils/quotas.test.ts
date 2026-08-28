@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  FREE_LLM_TOKENS,
   FREE_STORAGE_BYTES,
   LEGACY_FREE_STORAGE_BYTES,
   PREMIUM_STORAGE_BYTES,
@@ -9,6 +10,7 @@ import {
   assertStorageRoom,
   chatMessageLimit,
   estimateTokens,
+  llmTokenLimit,
   storageLimitBytes,
   vectorChunkLimit,
 } from "./quotas.js";
@@ -88,13 +90,26 @@ describe("quotas", () => {
     ).toThrow(/Storage limit/);
   });
 
-  it("rejects LLM over the free token cap", () => {
+  it("rejects LLM when the monthly pool is exhausted", () => {
     expect(() =>
       assertLlmRoom(
-        { plan: "FREE", role: "STUDENT", llmTokensUsed: 50_000 },
+        { plan: "FREE", role: "STUDENT", llmTokensUsed: FREE_LLM_TOKENS },
         1
       )
-    ).toThrow(/token limit/);
+    ).toThrow(/token limit reached/);
+  });
+
+  it("does not pre-reject by estimated cost", () => {
+    expect(() =>
+      assertLlmRoom(
+        { plan: "FREE", role: "STUDENT", llmTokensUsed: 49_000 },
+        1
+      )
+    ).not.toThrow();
+  });
+
+  it("gives free users a 50k monthly Study AI pool", () => {
+    expect(llmTokenLimit({ plan: "FREE", role: "STUDENT" })).toBe(50_000);
   });
 
   it("estimates tokens from length", () => {

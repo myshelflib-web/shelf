@@ -14,7 +14,7 @@ export function mergeInstructionForMode(mode: PageAskMode): string {
   if (mode === "deep-summary") {
     return `Create a comprehensive chapter-by-chapter deep summary of this document.
 Use ## Deep summary, then ### per major section/chapter with detailed bullets, definitions, examples, and a ### Cross-cutting themes section.
-Target 2,000+ words. Do not abbreviate — the learner needs exam-ready depth.`;
+Target 1,500+ words — thorough and dense, no filler.`;
   }
   if (mode === "summarize") {
     return `Summarize this file for revision. Use ## Summary, then ### Key points (detailed), ### Chapter notes, and ### Recap.
@@ -68,7 +68,7 @@ function promptForMode(
   if (mode === "summarize") {
     const detail =
       depth === "deep"
-        ? "Write a long, chapter-aware summary (1,500+ words). "
+        ? "Write a long, chapter-aware summary (~900 words). "
         : depth === "standard"
           ? "Give a complete summary with substantive bullets. "
           : "";

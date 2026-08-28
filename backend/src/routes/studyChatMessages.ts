@@ -9,15 +9,12 @@ import {
 } from "../services/rag.js";
 import {
   QuotaError,
-  assertLlmRoom,
   chatHistoryWindow,
   chatMessageLimit,
-  estimateTokens,
-  shouldResetLlmWindow,
 } from "../utils/quotas.js";
+import { assertLlmBudget, chargeLlmTokens } from "../utils/llmUsage.js";
 import {
   assertDepthAllowed,
-  estimateDepthTokens,
   parseStudyDepth,
 } from "../services/studyDepth.js";
 import { resolveContextPageIds } from "../utils/chatContext.js";
@@ -93,21 +90,7 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
   assertDepthAllowed(user, depth);
 
   try {
-    let tokensUsed = user.llmTokensUsed;
-    if (shouldResetLlmWindow(user.llmTokensResetAt)) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { llmTokensUsed: 0, llmTokensResetAt: new Date() },
-      });
-      tokensUsed = 0;
-    }
-    assertLlmRoom(
-      { ...user, llmTokensUsed: tokensUsed },
-      estimateDepthTokens(
-        estimateTokens(prompt || content || "image") + 1200,
-        depth
-      )
-    );
+    await assertLlmBudget(userId, 1);
 
     const displayContent =
       content || (imageBase64 ? "📷 [Image attached]" : "");
@@ -170,10 +153,7 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
       data: { title: nextTitle, updatedAt: new Date() },
     });
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { llmTokensUsed: { increment: result.tokens } },
-    });
+    await chargeLlmTokens(userId, result.tokens);
 
     res.json({
       userMessage: userMsg,
@@ -263,21 +243,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
   try {
     send("status", { stage: "starting", detail: "Starting Study AI…" });
 
-    let tokensUsed = user.llmTokensUsed;
-    if (shouldResetLlmWindow(user.llmTokensResetAt)) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { llmTokensUsed: 0, llmTokensResetAt: new Date() },
-      });
-      tokensUsed = 0;
-    }
-    assertLlmRoom(
-      { ...user, llmTokensUsed: tokensUsed },
-      estimateDepthTokens(
-        estimateTokens(prompt || content || "image") + 1200,
-        depth
-      )
-    );
+    await assertLlmBudget(userId, 1);
 
     const prior = await prisma.chatMessage.findMany({
       where: { threadId: thread.id },
@@ -386,10 +352,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
       data: { title: nextTitle, updatedAt: new Date() },
     });
     if (tokens > 0) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { llmTokensUsed: { increment: tokens } },
-      });
+      await chargeLlmTokens(userId, tokens);
     }
 
     if (!clientGone && assistantMsg) {

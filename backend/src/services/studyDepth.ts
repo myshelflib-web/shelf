@@ -1,6 +1,7 @@
 import { isPremiumUser } from "../utils/paywall.js";
 import { QuotaError } from "../utils/quotas.js";
 import { chatModel, llmMaxOutputTokens } from "./llmConfig.js";
+import { SHELF_GEMINI } from "./shelfGeminiModels.js";
 
 export type StudyDepth = "quick" | "standard" | "deep";
 
@@ -53,35 +54,35 @@ export function studyDepthConfig(depth: StudyDepth): StudyDepthConfig {
     case "standard":
       return {
         depth,
-        model: envModel("LLM_MODEL_STANDARD", "gemini-flash-latest"),
+        model: envModel("LLM_MODEL_STANDARD", SHELF_GEMINI.STANDARD),
         maxTokens: envInt("LLM_MAX_OUTPUT_TOKENS_STANDARD", 4096),
-        pageContextBudget: envInt("PAGE_ASK_CONTEXT_BUDGET_STANDARD", 12_000),
-        libraryContextBudget: envInt("LIBRARY_CONTEXT_BUDGET_STANDARD", 16_000),
-        toolRounds: 5,
+        pageContextBudget: envInt("PAGE_ASK_CONTEXT_BUDGET_STANDARD", 10_000),
+        libraryContextBudget: envInt("LIBRARY_CONTEXT_BUDGET_STANDARD", 10_000),
+        toolRounds: 3,
         mapReduce: false,
         temperature: 0.25,
-        tokenEstimateMultiplier: 2.5,
+        tokenEstimateMultiplier: 2,
       };
     case "deep":
       return {
         depth,
-        model: envModel("LLM_MODEL_DEEP", "gemini-3.5-flash"),
+        model: envModel("LLM_MODEL_DEEP", SHELF_GEMINI.DEEP),
         maxTokens: envInt("LLM_MAX_OUTPUT_TOKENS_DEEP", 8192),
-        pageContextBudget: envInt("PAGE_ASK_CONTEXT_BUDGET_DEEP", 20_000),
-        libraryContextBudget: envInt("LIBRARY_CONTEXT_BUDGET_DEEP", 24_000),
-        toolRounds: 10,
+        pageContextBudget: envInt("PAGE_ASK_CONTEXT_BUDGET_DEEP", 16_000),
+        libraryContextBudget: envInt("LIBRARY_CONTEXT_BUDGET_DEEP", 14_000),
+        toolRounds: 5,
         mapReduce: true,
         temperature: 0.3,
-        tokenEstimateMultiplier: 5,
+        tokenEstimateMultiplier: 3,
       };
     default:
       return {
         depth: "quick",
         model: quickModel,
         maxTokens: llmMaxOutputTokens(),
-        pageContextBudget: envInt("PAGE_ASK_CONTEXT_BUDGET", 6_500),
-        libraryContextBudget: envInt("LIBRARY_CONTEXT_BUDGET", 8_000),
-        toolRounds: 3,
+        pageContextBudget: envInt("PAGE_ASK_CONTEXT_BUDGET", 4_500),
+        libraryContextBudget: envInt("LIBRARY_CONTEXT_BUDGET", 5_500),
+        toolRounds: 2,
         mapReduce: false,
         temperature: 0.2,
         tokenEstimateMultiplier: 1,

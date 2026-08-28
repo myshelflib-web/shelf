@@ -43,11 +43,11 @@ Policy:
 export function depthResponseRules(depth: StudyDepth = "quick"): string {
   switch (depth) {
     case "deep":
-      return `Depth: thorough analysis. Write long, well-structured answers (target 1,500–3,000+ words for summaries and analyses). Use a ### heading per major theme or chapter. Include examples, definitions, and connections. Do not abbreviate lists — cover the material comprehensively.`;
+      return `Depth: thorough analysis. Structure clearly with ### headings. Target ~800–1,200 words unless the learner asks for more.`;
     case "standard":
-      return `Depth: standard. Give complete answers with clear sections; use bullets and tables. Prefer substance over brevity unless the learner asks for a short version.`;
+      return `Depth: standard. Complete but efficient — bullets and short sections; avoid repetition.`;
     default:
-      return "Be concise. Prefer short answers to limit latency unless the learner asks for depth.";
+      return "Be concise. Short paragraphs and bullets; skip filler. Respect token limits.";
   }
 }
 

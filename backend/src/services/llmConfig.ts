@@ -1,10 +1,17 @@
 /** Shared OpenAI-compatible LLM / embedding settings from env. */
 
+import {
+  SHELF_GEMINI,
+  SHELF_GEMINI_CHAT_FALLBACKS,
+} from "./shelfGeminiModels.js";
+
 const RETIRED_GEMINI_EMBEDDING_MODELS: Record<string, string> = {
-  "text-embedding-004": "gemini-embedding-001",
-  "models/text-embedding-004": "gemini-embedding-001",
-  "embedding-001": "gemini-embedding-001",
-  "text-embedding-005": "gemini-embedding-001",
+  "text-embedding-004": SHELF_GEMINI.EMBEDDING,
+  "models/text-embedding-004": SHELF_GEMINI.EMBEDDING,
+  "embedding-001": SHELF_GEMINI.EMBEDDING,
+  "text-embedding-005": SHELF_GEMINI.EMBEDDING,
+  [SHELF_GEMINI.EMBEDDING_LEGACY]: SHELF_GEMINI.EMBEDDING,
+  [`models/${SHELF_GEMINI.EMBEDDING_LEGACY}`]: SHELF_GEMINI.EMBEDDING,
 };
 
 /** Chat models Google has restricted for new API keys / retired early. */
@@ -19,16 +26,10 @@ const RETIRED_GEMINI_CHAT_MODELS: Record<string, string> = {
 
 /**
  * Tried in order when the configured Gemini chat model returns 404 /
- * "no longer available". Lite-first keeps free-tier latency down.
+ * "no longer available". Lite-first preserves high-RPD pools.
  * Override with comma-separated `LLM_MODEL_FALLBACKS`.
  */
-export const DEFAULT_GEMINI_CHAT_FALLBACKS = [
-  "gemini-flash-lite-latest",
-  "gemini-3.5-flash-lite",
-  "gemini-flash-latest",
-  "gemini-3.5-flash",
-  "gemini-3.6-flash",
-];
+export const DEFAULT_GEMINI_CHAT_FALLBACKS = SHELF_GEMINI_CHAT_FALLBACKS;
 
 const GEMINI_OPENAI_COMPAT =
   "https://generativelanguage.googleapis.com/v1beta/openai";
@@ -80,8 +81,8 @@ export function chatModel(): string {
   const base = (process.env.LLM_BASE_URL ?? "").toLowerCase();
   if (isOllamaBaseUrl(base)) return "llama3.2:1b";
   if (base.includes("api.groq.com")) return "llama-3.1-8b-instant";
-  // Lite-first keeps free-tier latency down; set LLM_MODEL=gemini-flash-latest for quality.
-  return "gemini-flash-lite-latest";
+  // Lite-first: 500 RPD on 3.5 Flash Lite (paid tier default for Shelf).
+  return SHELF_GEMINI.FAST;
 }
 
 export function llmBaseUrl(): string {
@@ -238,7 +239,7 @@ export function embeddingModel(): string {
     return "nomic-embed-text";
   }
   if (base.includes("generativelanguage.googleapis.com")) {
-    return "gemini-embedding-001";
+    return SHELF_GEMINI.EMBEDDING;
   }
   return "text-embedding-3-small";
 }

@@ -1,11 +1,12 @@
 import { truncateText } from "../utils/htmlText.js";
 import { completeChat, streamChat } from "./llm.js";
+import { SHELF_GEMINI } from "./shelfGeminiModels.js";
 import { studyDepthConfig, type StudyDepth } from "./studyDepth.js";
 
 const SECTION_TARGET = 4_500;
-const MAP_MAX_TOKENS = 1_024;
+const MAP_MAX_TOKENS = 640;
 /** Cap section map calls so a whole textbook cannot stall or trip rate limits. */
-export const MAX_MAP_REDUCE_SECTIONS = 16;
+export const MAX_MAP_REDUCE_SECTIONS = 10;
 
 /** Split long plain text into section-sized chunks on paragraph boundaries. */
 export function splitIntoSections(text: string, target = SECTION_TARGET): string[] {
@@ -45,7 +46,7 @@ export type MapReduceStreamEvent =
   | { type: "done"; tokens: number; model: string };
 
 function mapModel(): string {
-  return process.env.LLM_MODEL_FAST?.trim() || "gemini-flash-lite-latest";
+  return process.env.LLM_MODEL_MAP?.trim() || SHELF_GEMINI.FAST;
 }
 
 /** Evenly sample sections across the document when there are too many chunks. */

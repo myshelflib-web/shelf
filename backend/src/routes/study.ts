@@ -16,16 +16,13 @@ import {
   completeWithStudyTools,
 } from "../services/studyToolLoop.js";
 import { streamMapReduceAnswer } from "../services/mapReduceSummary.js";
-import { estimateDepthTokens } from "../services/studyDepth.js";
 import { runStudyAskStream } from "./studyAskStreamRun.js";
 import { studyToolLoopOpts } from "../services/studyToolOpts.js";
 import {
   QuotaError,
-  assertLlmRoom,
   chatHistoryWindow,
-  estimateTokens,
-  shouldResetLlmWindow,
 } from "../utils/quotas.js";
+import { assertLlmBudget, chargeLlmTokens } from "../utils/llmUsage.js";
 import {
   studyAiFailureStub,
   toUserFacingStudyError,
@@ -132,19 +129,7 @@ router.post("/ask", async (req: Request, res: Response) => {
       history: body.history,
     });
 
-    let tokensUsed = prepared.user.llmTokensUsed;
-    if (shouldResetLlmWindow(prepared.user.llmTokensResetAt)) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { llmTokensUsed: 0, llmTokensResetAt: new Date() },
-      });
-      tokensUsed = 0;
-    }
-
-    assertLlmRoom(
-      { ...prepared.user, llmTokensUsed: tokensUsed },
-      estimateDepthTokens(estimateTokens(prepared.estimatePrompt), prepared.depth)
-    );
+    await assertLlmBudget(userId, 1);
 
     let answer = "";
     let tokens = 0;
@@ -188,10 +173,7 @@ router.post("/ask", async (req: Request, res: Response) => {
       tokens = result.tokens;
     }
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { llmTokensUsed: { increment: tokens } },
-    });
+    await chargeLlmTokens(userId, tokens);
 
     const durationMs = Date.now() - askStarted;
     logger.info("study.ask.ok", {
@@ -286,19 +268,7 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
       (stage, detail) => send("status", { stage, detail })
     );
 
-    let tokensUsed = prepared.user.llmTokensUsed;
-    if (shouldResetLlmWindow(prepared.user.llmTokensResetAt)) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { llmTokensUsed: 0, llmTokensResetAt: new Date() },
-      });
-      tokensUsed = 0;
-    }
-
-    assertLlmRoom(
-      { ...prepared.user, llmTokensUsed: tokensUsed },
-      estimateDepthTokens(estimateTokens(prepared.estimatePrompt), prepared.depth)
-    );
+    await assertLlmBudget(userId, 1);
 
     send("status", { stage: "generating", detail: "Writing answer…" });
 
@@ -322,10 +292,7 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
     tokens = streamResult.tokens;
     answer = streamResult.answer;
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { llmTokensUsed: { increment: tokens } },
-    });
+    await chargeLlmTokens(userId, tokens);
 
     const durationMs = Date.now() - askStarted;
     logger.info("study.ask.stream.ok", {
@@ -429,18 +396,7 @@ router.post("/library-ask", async (req: Request, res: Response) => {
   }
 
   try {
-    let tokensUsed = user.llmTokensUsed;
-    if (shouldResetLlmWindow(user.llmTokensResetAt)) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { llmTokensUsed: 0, llmTokensResetAt: new Date() },
-      });
-      tokensUsed = 0;
-    }
-    assertLlmRoom(
-      { ...user, llmTokensUsed: tokensUsed },
-      estimateTokens(query) + 800
-    );
+    await assertLlmBudget(userId, 1);
 
     const result = await answerWithRag({
       userId,
@@ -448,10 +404,7 @@ router.post("/library-ask", async (req: Request, res: Response) => {
       studyGoal: user.studyGoal ?? "GENERAL",
     });
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { llmTokensUsed: { increment: result.tokens } },
-    });
+    await chargeLlmTokens(userId, result.tokens);
 
     res.json({
       answer: result.answer,

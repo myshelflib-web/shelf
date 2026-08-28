@@ -4,9 +4,8 @@ import { completeChat } from "../llm.js";
 import { logger, errorFields } from "../../utils/logger.js";
 import {
   assertLlmRoom,
-  estimateTokens,
-  shouldResetLlmWindow,
 } from "../../utils/quotas.js";
+import { assertLlmBudget, chargeLlmTokens } from "../../utils/llmUsage.js";
 import { packQuizContext } from "./quizContext.js";
 import { parseGeneratedQuiz } from "./quizParse.js";
 import { userFacingQuizParseError } from "./quizJsonRepair.js";
@@ -21,37 +20,23 @@ import type { ChatMessage, ChatResult } from "../llmTypes.js";
 const generating = new Set<string>();
 
 async function chargeTokens(userId: string, tokens: number): Promise<void> {
-  if (tokens <= 0) return;
-  await prisma.user.update({
-    where: { id: userId },
-    data: { llmTokensUsed: { increment: tokens } },
-  });
+  await chargeLlmTokens(userId, tokens);
 }
 
 export async function prepareQuizUser(userId: string) {
+  await assertLlmBudget(userId, 1);
   const user = await prisma.user.findUnique({
     where: { id: userId },
     select: {
-      id: true,
       studyGoal: true,
       plan: true,
       role: true,
       subscriptionExpiresAt: true,
       llmTokensUsed: true,
-      llmTokensResetAt: true,
     },
   });
   if (!user) throw new Error("User not found");
-  let tokensUsed = user.llmTokensUsed;
-  if (shouldResetLlmWindow(user.llmTokensResetAt)) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { llmTokensUsed: 0, llmTokensResetAt: new Date() },
-    });
-    tokensUsed = 0;
-  }
-  assertLlmRoom({ ...user, llmTokensUsed: tokensUsed });
-  return { ...user, llmTokensUsed: tokensUsed };
+  return user;
 }
 
 function splitDrafts(questions: DraftQuestion[], mcqCount: number, writtenCount: number) {
@@ -97,7 +82,7 @@ async function callQuizModel(input: {
   const firstPrompt = promptText(firstMessages);
   input.bill.assertRoom(firstPrompt);
   const result = await completeChat(firstMessages, {
-    maxTokens: 4096,
+    maxTokens: 2048,
     temperature: 0.45,
   });
   await input.bill.charge(firstPrompt, result);
@@ -116,7 +101,7 @@ async function callQuizModel(input: {
     const retryPrompt = promptText(retryMessages);
     input.bill.assertRoom(retryPrompt);
     const retry = await completeChat(retryMessages, {
-      maxTokens: 4096,
+      maxTokens: 2048,
       temperature: 0.15,
     });
     await input.bill.charge(retryPrompt, retry);
@@ -136,8 +121,8 @@ export async function generateQuizPaper(quizId: string): Promise<void> {
     const user = await prepareQuizUser(quiz.userId);
     let used = user.llmTokensUsed;
     const bill: QuizBill = {
-      assertRoom: (prompt) => {
-        assertLlmRoom({ ...user, llmTokensUsed: used }, estimateTokens(prompt));
+      assertRoom: () => {
+        assertLlmRoom({ ...user, llmTokensUsed: used }, 1);
       },
       charge: async (prompt, result) => {
         const n = billedQuizTokens(result, prompt);
