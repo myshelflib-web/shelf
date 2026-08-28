@@ -171,7 +171,10 @@ async function openChatWithFallbacks(
   }
 
   const baseUrl = llmBaseUrl();
-  const candidates = chatModelCandidates();
+  const baseCandidates = chatModelCandidates();
+  const candidates = opts.model
+    ? [...new Set([opts.model, ...baseCandidates])]
+    : baseCandidates;
   let lastFail: { status: number; body: string; model: string } | null = null;
 
   for (let i = 0; i < candidates.length; i++) {

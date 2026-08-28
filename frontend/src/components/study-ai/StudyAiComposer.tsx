@@ -14,6 +14,9 @@ import { quizSetupHref } from "@/lib/quiz/href";
 import type { QuizLaunch } from "@/lib/quiz/types";
 import { StudyAiCommandsModal } from "./StudyAiCommandsModal";
 import { StudyAiSuggestChips } from "./StudyAiSuggestChips";
+import { StudyAiThinkingMenu } from "./StudyAiThinkingMenu";
+import { StudyAiToolsMenu } from "./StudyAiToolsMenu";
+import type { StudyDepth } from "@/lib/studyDepth";
 
 export function StudyAiComposer({
   input,
@@ -34,6 +37,9 @@ export function StudyAiComposer({
   onRemoveQueued,
   memoryLimit,
   planLabel,
+  depth,
+  onDepthChange,
+  isPremium,
   quizLaunch,
   suggestMode = "suggest",
   showSuggestions = true,
@@ -56,6 +62,9 @@ export function StudyAiComposer({
   onRemoveQueued: (id: string) => void;
   memoryLimit: number;
   planLabel: string;
+  depth: StudyDepth;
+  onDepthChange: (depth: StudyDepth) => void;
+  isPremium: boolean;
   quizLaunch?: QuizLaunch;
   suggestMode?: "suggest" | "followup";
   showSuggestions?: boolean;
@@ -65,7 +74,6 @@ export function StudyAiComposer({
   const [commandSeed, setCommandSeed] = useState("/");
   const canSend = Boolean(input.trim() || attachImage);
 
-  /** Bubble shows slash/chip label; model gets expanded prompt via opts.prompt. */
   const runResolved = (
     raw: string,
     image?: string,
@@ -78,7 +86,9 @@ export function StudyAiComposer({
       return;
     }
     if (parts.kind === "quiz") {
-      router.push(quizSetupHref({ ...quizLaunch, focus: parts.topic || quizLaunch?.focus }));
+      router.push(
+        quizSetupHref({ ...quizLaunch, focus: parts.topic || quizLaunch?.focus })
+      );
       return;
     }
     if (parts.kind === "send") {
@@ -87,9 +97,12 @@ export function StudyAiComposer({
   };
 
   const pickCommand = (cmd: StudyAiCommand) => {
-    setCommandsOpen(false);
     onInput("");
-    if (cmd.slash === "help") return;
+    if (cmd.slash === "help") {
+      setCommandSeed("/");
+      setCommandsOpen(true);
+      return;
+    }
     runResolved(`/${cmd.slash}`);
   };
 
@@ -192,7 +205,7 @@ export function StudyAiComposer({
             </div>
           )}
 
-          <div className="flex items-center gap-2 h-14 rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] pl-3 pr-2.5 shadow-[0_6px_22px_rgba(var(--shadow-color)/0.05)] transition-shadow focus-within:border-[var(--accent)] focus-within:shadow-[0_0_0_3px_var(--ring)]">
+          <div className="flex items-center gap-1.5 h-14 rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] pl-2 pr-2.5 shadow-[0_6px_22px_rgba(var(--shadow-color)/0.05)] transition-shadow focus-within:border-[var(--accent)] focus-within:shadow-[0_0_0_3px_var(--ring)]">
             <input
               ref={fileRef}
               type="file"
@@ -237,18 +250,21 @@ export function StudyAiComposer({
                 <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
               )}
             </button>
-            <button
-              type="button"
-              aria-label="Commands"
-              title="Commands"
-              onClick={() => {
+            <StudyAiToolsMenu
+              scope="library"
+              disabled={loading}
+              onPick={pickCommand}
+              onBrowseAll={() => {
                 setCommandSeed("/");
                 setCommandsOpen(true);
               }}
-              className="no-focus-ring w-9 h-9 shrink-0 rounded-[9px] border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-muted)] flex items-center justify-center hover:border-[var(--accent)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)] transition-colors"
-            >
-              <span className="text-[13px] font-semibold leading-none">/</span>
-            </button>
+            />
+            <StudyAiThinkingMenu
+              value={depth}
+              onChange={onDepthChange}
+              isPremium={isPremium}
+              disabled={loading}
+            />
             <input
               value={input}
               onChange={(e) => {
@@ -262,7 +278,7 @@ export function StudyAiComposer({
               placeholder={
                 loading
                   ? "Queue another message…"
-                  : "Ask anything, set a reminder, or type / …"
+                  : "Ask anything or pick a tool…"
               }
               className="no-focus-ring flex-1 min-w-0 bg-transparent text-[12px] outline-none placeholder:text-[var(--text-muted)] py-2"
             />
@@ -286,9 +302,7 @@ export function StudyAiComposer({
             </button>
           </div>
           <p className="text-center text-[9px] text-[var(--text-muted)] mt-2 leading-snug">
-            Type / for commands
-            <span className="mx-1.5 opacity-35">·</span>
-            Planner & quiz from chat
+            Quick stays fast — use Think longer only when you need depth
             <span className="mx-1.5 opacity-35">·</span>
             Memory last {memoryLimit}
             <span className="mx-1.5 opacity-35">·</span>

@@ -14,7 +14,9 @@ import {
 import {
   completeWithStudyTools,
   streamWithStudyTools,
+  type StudyLlmOpts,
 } from "./studyToolLoop.js";
+import { parseStudyDepth, studyDepthConfig } from "./studyDepth.js";
 
 export type { LibraryCitation };
 
@@ -43,6 +45,7 @@ export type RagAskOpts = {
   syllabusText?: string | null;
   signal?: AbortSignal;
   defaultPageId?: string | null;
+  depth?: string;
 };
 
 export type RagStreamEvent =
@@ -61,20 +64,25 @@ type PreparedRag = {
   messages: ChatMessage[];
   citations: LibraryCitation[];
   matchCount: number;
+  llm: StudyLlmOpts;
+  maxToolRounds: number;
 };
 
 async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
+  const depth = parseStudyDepth(opts.depth);
+  const depthCfg = studyDepthConfig(depth);
   const searchQuery = rewriteSearchQuery(opts.query, opts.history);
   const excerpts = await retrieveLibrary(opts.userId, searchQuery, {
     pageIds: opts.pageIds,
   });
-  const packed = packLibraryExcerpts(excerpts);
+  const packed = packLibraryExcerpts(excerpts, depthCfg.libraryContextBudget);
   const citations = packed.citations;
 
   const system = studySystemPrompt(opts.studyGoal, {
     syllabusText: opts.syllabusText,
     scopeLabel: opts.scopeLabel,
     withTools: true,
+    depth,
   });
   const userPrompt =
     excerpts.length === 0
@@ -115,6 +123,12 @@ async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
     ],
     citations,
     matchCount: excerpts.length,
+    llm: {
+      model: depthCfg.model,
+      maxTokens: depthCfg.maxTokens,
+      temperature: depthCfg.temperature,
+    },
+    maxToolRounds: depthCfg.toolRounds,
   };
 }
 
@@ -131,6 +145,8 @@ export async function answerWithRag(opts: RagAskOpts): Promise<RagResult> {
   const result = await completeWithStudyTools(prepared.messages, toolCtx(opts), {
     citations: prepared.citations,
     signal: opts.signal,
+    llm: prepared.llm,
+    maxToolRounds: prepared.maxToolRounds,
   });
   return {
     answer: result.text,
@@ -170,7 +186,12 @@ export async function* streamAnswerWithRag(
   for await (const ev of streamWithStudyTools(
     prepared.messages,
     toolCtx(opts),
-    { citations: prepared.citations, signal: opts.signal }
+    {
+      citations: prepared.citations,
+      signal: opts.signal,
+      llm: prepared.llm,
+      maxToolRounds: prepared.maxToolRounds,
+    }
   )) {
     if (ev.type === "status") {
       yield { type: "status", stage: "tools", detail: ev.detail };

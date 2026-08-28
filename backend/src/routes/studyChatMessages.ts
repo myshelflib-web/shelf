@@ -15,6 +15,11 @@ import {
   estimateTokens,
   shouldResetLlmWindow,
 } from "../utils/quotas.js";
+import {
+  assertDepthAllowed,
+  estimateDepthTokens,
+  parseStudyDepth,
+} from "../services/studyDepth.js";
 import { resolveContextPageIds } from "../utils/chatContext.js";
 import { titleFromQuery, trimThreadToLimit } from "../services/chatThreads.js";
 import { truncateText } from "../utils/htmlText.js";
@@ -47,6 +52,7 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
     content?: string;
     prompt?: string;
     imageBase64?: string;
+    depth?: string;
   };
   const content = String(body.content ?? "").trim();
   const prompt = String(body.prompt ?? content).trim();
@@ -83,6 +89,8 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
 
   const memoryLimit = chatMessageLimit(user);
   const historyWindow = chatHistoryWindow(user);
+  const depth = parseStudyDepth(body.depth);
+  assertDepthAllowed(user, depth);
 
   try {
     let tokensUsed = user.llmTokensUsed;
@@ -95,7 +103,10 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
     }
     assertLlmRoom(
       { ...user, llmTokensUsed: tokensUsed },
-      estimateTokens(prompt || content || "image") + 1200
+      estimateDepthTokens(
+        estimateTokens(prompt || content || "image") + 1200,
+        depth
+      )
     );
 
     const displayContent =
@@ -135,6 +146,7 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
       syllabusText,
       defaultPageId:
         thread.contextKind === "PAGE" ? thread.contextPageId : null,
+      depth,
     });
 
     const assistantMsg = await prisma.chatMessage.create({
@@ -186,6 +198,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
     content?: string;
     prompt?: string;
     imageBase64?: string;
+    depth?: string;
   };
   const content = String(body.content ?? "").trim();
   const prompt = String(body.prompt ?? content).trim();
@@ -238,6 +251,8 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
 
   const memoryLimit = chatMessageLimit(user);
   const historyWindow = chatHistoryWindow(user);
+  const depth = parseStudyDepth(body.depth);
+  assertDepthAllowed(user, depth);
   const displayContent = content || (imageBase64 ? "📷 [Image attached]" : "");
   const nextTitle =
     thread.title === "New chat"
@@ -258,7 +273,10 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
     }
     assertLlmRoom(
       { ...user, llmTokensUsed: tokensUsed },
-      estimateTokens(prompt || content || "image") + 1200
+      estimateDepthTokens(
+        estimateTokens(prompt || content || "image") + 1200,
+        depth
+      )
     );
 
     const prior = await prisma.chatMessage.findMany({
@@ -302,6 +320,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
       signal: llmAbort.signal,
       defaultPageId:
         thread.contextKind === "PAGE" ? thread.contextPageId : null,
+      depth,
     })) {
       if (clientGone) break;
       if (ev.type === "status") {

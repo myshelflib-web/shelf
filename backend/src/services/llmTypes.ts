@@ -38,6 +38,8 @@ export type ChatRequestOpts = {
   signal?: AbortSignal;
   maxTokens?: number;
   temperature?: number;
+  /** When set, try this model first (then configured fallbacks). */
+  model?: string;
 };
 
 export type ChatResult = {

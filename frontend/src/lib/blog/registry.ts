@@ -20,10 +20,12 @@ import { examStyleQuiz } from "./posts/exam-style-quiz";
 import { documentSharing } from "./posts/document-sharing";
 import { telegramSavePdfs } from "./posts/telegram-save-pdfs";
 import { studyAiActions } from "./posts/study-ai-actions";
+import { studyAiDepthModes } from "./posts/study-ai-depth-modes";
 import { EXTRA_BLOG_POSTS } from "./posts/extra";
 
 const ALL_POSTS: BlogPost[] = [
   ...EXTRA_BLOG_POSTS,
+  studyAiDepthModes,
   studyAiActions,
   telegramSavePdfs,
   documentSharing,

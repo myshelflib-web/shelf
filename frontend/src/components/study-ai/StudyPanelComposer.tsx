@@ -2,15 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowUp,
-  ImagePlus,
-  ListTree,
-  Network,
-  Square,
-  StickyNote,
-  X,
-} from "lucide-react";
+import { ArrowUp, ImagePlus, Square, X } from "lucide-react";
 import type { useStudyPanelChat } from "@/hooks/useStudyPanelChat";
 import { readFileAsDataUrl } from "@/lib/studyAiWorkspaceUtils";
 import {
@@ -21,16 +13,9 @@ import {
 import { quizSetupHref } from "@/lib/quiz/href";
 import { StudyAiCommandsModal } from "./StudyAiCommandsModal";
 import { StudyAiSuggestChips } from "./StudyAiSuggestChips";
-
-const ACTIONS: Array<{
-  mode: "summarize" | "notes" | "mindmap";
-  label: string;
-  icon: typeof ListTree;
-}> = [
-  { mode: "summarize", label: "Summarize", icon: ListTree },
-  { mode: "notes", label: "Short notes", icon: StickyNote },
-  { mode: "mindmap", label: "Mind map", icon: Network },
-];
+import { StudyAiThinkingMenu } from "./StudyAiThinkingMenu";
+import { StudyAiToolsMenu } from "./StudyAiToolsMenu";
+import type { StudyDepth } from "@/lib/studyDepth";
 
 const lockedChip =
   "opacity-45 cursor-not-allowed saturate-[0.85] hover:!text-[var(--text-secondary)] hover:!border-[var(--border)]";
@@ -46,6 +31,9 @@ export function StudyPanelComposer({
   imageBase64,
   contextImage,
   pageId,
+  depth,
+  onDepthChange,
+  isPremium,
 }: {
   panel: Panel;
   guestLocked?: boolean;
@@ -54,6 +42,9 @@ export function StudyPanelComposer({
   selection?: string | null;
   imageBase64?: string;
   pageId?: string;
+  depth: StudyDepth;
+  onDepthChange: (depth: StudyDepth) => void;
+  isPremium: boolean;
   contextImage: (userImg?: string) => {
     image?: string;
     ephemeral: boolean;
@@ -68,7 +59,7 @@ export function StudyPanelComposer({
   );
 
   const runWithContext = (
-    mode: "ask" | "summarize" | "notes" | "mindmap",
+    mode: "ask" | "summarize" | "notes" | "mindmap" | "deep-summary",
     q?: string,
     userImg?: string,
     opts?: { prompt?: string }
@@ -80,7 +71,6 @@ export function StudyPanelComposer({
     });
   };
 
-  /** Bubble shows slash/chip label; model gets expanded prompt. */
   const runResolved = (raw: string, userImg?: string, label?: string) => {
     const parts = studyAiSendParts(raw, "page", { label });
     if (parts.kind === "help") {
@@ -114,7 +104,11 @@ export function StudyPanelComposer({
       onGuestLockedClick?.("Use Study AI");
       return;
     }
-    if (cmd.slash === "help") return;
+    if (cmd.slash === "help") {
+      setCommandSeed("/");
+      setCommandsOpen(true);
+      return;
+    }
     runResolved(`/${cmd.slash}`);
   };
 
@@ -125,33 +119,14 @@ export function StudyPanelComposer({
           Sign in to save chats, highlights, and progress.
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
-        {ACTIONS.map((a) => (
-          <button
-            key={a.mode}
-            type="button"
-            disabled={panel.busy}
-            aria-disabled={guestLocked}
-            onClick={() => {
-              if (guestLocked) {
-                onGuestLockedClick?.("Use Study AI");
-                return;
-              }
-              runWithContext(a.mode);
-            }}
-            className={`inline-flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-full border border-[var(--border)] bg-[var(--accent-subtle)] text-[var(--text-secondary)] hover:text-[var(--accent)] hover:border-[var(--accent)] disabled:opacity-50 transition-colors ${
-              guestLocked ? lockedChip : ""
-            }`}
-          >
-            <a.icon className="w-3.5 h-3.5" />
-            {a.label}
-          </button>
-        ))}
-      </div>
       {!guestLocked && (
         <StudyAiSuggestChips
           scope="page"
-          mode={panel.turns.some((t) => t.role === "assistant" && t.content) ? "followup" : "suggest"}
+          mode={
+            panel.turns.some((t) => t.role === "assistant" && t.content)
+              ? "followup"
+              : "suggest"
+          }
           count={panel.turns.length > 0 ? 3 : 4}
           onPick={(item) => runResolved(item.insert, undefined, item.label)}
           disabled={panel.busy}
@@ -214,7 +189,7 @@ export function StudyPanelComposer({
           runResolved(q, img);
         }}
       >
-        <div className="flex items-end gap-2 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-1.5 focus-within:border-[var(--accent)] focus-within:shadow-[0_0_0_3px_var(--ring)]">
+        <div className="flex items-end gap-1.5 rounded-2xl border border-[var(--border)] bg-[var(--bg-secondary)] p-1.5 focus-within:border-[var(--accent)] focus-within:shadow-[0_0_0_3px_var(--ring)]">
           <input
             ref={fileRef}
             type="file"
@@ -246,11 +221,12 @@ export function StudyPanelComposer({
           >
             <ImagePlus className="w-4 h-4" />
           </button>
-          <button
-            type="button"
-            aria-label="Commands"
-            title="Commands"
-            onClick={() => {
+          <StudyAiToolsMenu
+            scope="page"
+            compact
+            disabled={panel.busy || guestLocked}
+            onPick={pickCommand}
+            onBrowseAll={() => {
               if (guestLocked) {
                 onGuestLockedClick?.("Use Study AI");
                 return;
@@ -258,12 +234,14 @@ export function StudyPanelComposer({
               setCommandSeed("/");
               setCommandsOpen(true);
             }}
-            className={`shrink-0 h-8 w-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-[var(--accent-subtle)] ${
-              guestLocked ? lockedChip : ""
-            }`}
-          >
-            <span className="text-[13px] font-semibold leading-none">/</span>
-          </button>
+          />
+          <StudyAiThinkingMenu
+            value={depth}
+            onChange={onDepthChange}
+            isPremium={isPremium}
+            compact
+            disabled={panel.busy || guestLocked}
+          />
           <input
             value={panel.question}
             onChange={(e) => {
@@ -287,7 +265,7 @@ export function StudyPanelComposer({
                     ? "Ask about the highlight…"
                     : panel.busy
                       ? "Queue another question…"
-                      : "Ask anything — or set a reminder…"
+                      : "Ask or pick a tool…"
             }
             className={`flex-1 min-w-0 bg-transparent px-1 py-2 text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none ${
               guestLocked ? "cursor-not-allowed opacity-60" : ""

@@ -1342,7 +1342,8 @@ export const api = {
     ask: (data: {
       articleId?: string;
       userTopicId?: string;
-      mode?: "ask" | "summarize" | "notes" | "mindmap";
+      mode?: "ask" | "summarize" | "notes" | "mindmap" | "deep-summary" | "analyze";
+      depth?: "quick" | "standard" | "deep";
       question?: string;
       selection?: string;
       imageBase64?: string;
@@ -1371,7 +1372,8 @@ export const api = {
       data: {
         articleId?: string;
         userTopicId?: string;
-        mode?: "ask" | "summarize" | "notes" | "mindmap";
+        mode?: "ask" | "summarize" | "notes" | "mindmap" | "deep-summary" | "analyze";
+        depth?: "quick" | "standard" | "deep";
         question?: string;
         prompt?: string;
         selection?: string;
@@ -1452,7 +1454,7 @@ export const api = {
     sendChatMessage: (
       id: string,
       content: string,
-      opts?: { imageBase64?: string; prompt?: string }
+      opts?: { imageBase64?: string; prompt?: string; depth?: "quick" | "standard" | "deep" }
     ) =>
       request<{
         userMessage: import("@/types").ChatMessage;
@@ -1466,6 +1468,7 @@ export const api = {
           content,
           prompt: opts?.prompt,
           imageBase64: opts?.imageBase64,
+          depth: opts?.depth,
         }),
       }),
     sendChatMessageStream: async (
@@ -1474,6 +1477,7 @@ export const api = {
       opts: {
         imageBase64?: string;
         prompt?: string;
+        depth?: "quick" | "standard" | "deep";
         signal?: AbortSignal;
         onStatus?: StudySseHandlers["onStatus"];
         onDelta?: StudySseHandlers["onDelta"];
@@ -1484,6 +1488,7 @@ export const api = {
         content,
         prompt: opts.prompt,
         imageBase64: opts.imageBase64,
+        depth: opts.depth,
       };
       const handlers: StudySseHandlers & { signal?: AbortSignal } = {
         onStatus: opts.onStatus,

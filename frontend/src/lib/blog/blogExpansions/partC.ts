@@ -45,4 +45,40 @@ export const BLOG_EXPANSIONS_C: Record<string, BlogSection[]> = {
       ],
     },
   ],
+  "study-ai-depth-modes": [
+    {
+      heading: "Standard vs Quick in practice",
+      paragraphs: [
+        "Quick mode is still the default for everyday questions — define a term, check a formula, or queue a follow-up while a reply streams. Standard is the sweet spot when you want a complete explanation with tables and a recap without waiting for a full-book pass.",
+        "Switch depth before you send; it applies to that message only in the thread (your choice is remembered for the next question). Slash commands like /explain and /compare respect the depth you picked.",
+      ],
+    },
+    {
+      heading: "Deep mode and Premium",
+      paragraphs: [
+        "Deep requires Premium because it runs more model calls and a higher output token ceiling. Free users can still use Standard for noticeably longer answers than Quick.",
+        "Token usage scales with depth — a Deep map-reduce summary on a long textbook may consume several times a Quick reply. Check Settings for your monthly Study AI allowance.",
+      ],
+    },
+    {
+      heading: "Slash commands for long outputs",
+      paragraphs: [
+        "/deep-summary on an open page triggers chapter-wise synthesis when the file is long. /chapter-notes, /analyze, and /mains expand into long-form prompts tuned for revision and exam tracks.",
+        "Combine depth with scope: library chat with Standard can pull across a collection; reader Deep focuses on the indexed chunks of the open PDF.",
+      ],
+      bullets: [
+        "/deep-summary — full document, section by section",
+        "/chapter-notes — one heading per chapter",
+        "/mains — long-form answer skeleton",
+        "/analyze — themes, evidence, gaps",
+      ],
+    },
+    {
+      heading: "What Deep does not replace",
+      paragraphs: [
+        "Study AI still grounds answers in indexed text. Scanned PDFs without OCR remain thin until processing finishes. Deep reads more of what is indexed — it does not invent pages you never uploaded.",
+        "For the hardest judgment or proof work, pair Deep summaries with your own highlights and planner sessions. The depth toggle makes answers longer and more structured; you still choose what to memorize.",
+      ],
+    },
+  ],
 };

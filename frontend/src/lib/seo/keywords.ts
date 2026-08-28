@@ -87,6 +87,12 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "mermaid diagram preview",
     "Google search study AI",
   ],
+  "study-ai-depth-modes": [
+    "long PDF summary AI",
+    "deep study AI analysis",
+    "chapter wise summary",
+    "UPSC mains answer AI",
+  ],
   "exam-style-quiz-from-your-notes": [
     "exam quiz app",
     "MCQ from PDF",

@@ -16,7 +16,15 @@ import {
   type LibraryCitation,
 } from "../utils/ragPack.js";
 
-const MAX_TOOL_ROUNDS = 3;
+export type StudyLlmOpts = {
+  model?: string;
+  maxTokens?: number;
+  temperature?: number;
+};
+
+function maxToolRounds(override?: number): number {
+  return override ?? 3;
+}
 
 function toolsUnsupported(err: unknown): boolean {
   if (
@@ -73,6 +81,8 @@ export async function completeWithStudyTools(
     citations?: LibraryCitation[];
     signal?: AbortSignal;
     enabled?: boolean;
+    llm?: StudyLlmOpts;
+    maxToolRounds?: number;
   }
 ): Promise<ToolChatResult> {
   const enabled = opts?.enabled !== false;
@@ -81,14 +91,19 @@ export async function completeWithStudyTools(
   let tokens = 0;
   let useTools = enabled;
   const initial = messages;
+  const rounds = maxToolRounds(opts?.maxToolRounds);
+  const llmOpts = opts?.llm;
 
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+  for (let round = 0; round < rounds; round++) {
     if (opts?.signal?.aborted) break;
     try {
       const result = await completeChat(working, {
         tools: useTools ? STUDY_TOOLS : undefined,
         toolChoice: useTools ? "auto" : "none",
         signal: opts?.signal,
+        model: llmOpts?.model,
+        maxTokens: llmOpts?.maxTokens,
+        temperature: llmOpts?.temperature,
       });
       tokens += result.tokens;
       if (result.toolCalls?.length && useTools) {
@@ -119,6 +134,9 @@ export async function completeWithStudyTools(
   const fallback = await completeChat(working, {
     toolChoice: "none",
     signal: opts?.signal,
+    model: llmOpts?.model,
+    maxTokens: llmOpts?.maxTokens,
+    temperature: llmOpts?.temperature,
   });
   return {
     text: fallback.text,
@@ -146,6 +164,8 @@ export async function* streamWithStudyTools(
     citations?: LibraryCitation[];
     signal?: AbortSignal;
     enabled?: boolean;
+    llm?: StudyLlmOpts;
+    maxToolRounds?: number;
   }
 ): AsyncGenerator<ToolStreamEvent> {
   const enabled = opts?.enabled !== false;
@@ -156,10 +176,12 @@ export async function* streamWithStudyTools(
   let answer = "";
   let useTools = enabled;
   const initial = messages;
+  const rounds = maxToolRounds(opts?.maxToolRounds);
+  const llmOpts = opts?.llm;
 
-  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+  for (let round = 0; round < rounds; round++) {
     if (opts?.signal?.aborted) break;
-    const lastRound = round === MAX_TOOL_ROUNDS - 1;
+    const lastRound = round === rounds - 1;
 
     let roundText = "";
     let toolCalls: ChatToolCall[] | undefined;
@@ -168,6 +190,9 @@ export async function* streamWithStudyTools(
         tools: useTools && !lastRound ? STUDY_TOOLS : undefined,
         toolChoice: useTools && !lastRound ? "auto" : "none",
         signal: opts?.signal,
+        model: llmOpts?.model,
+        maxTokens: llmOpts?.maxTokens,
+        temperature: llmOpts?.temperature,
       })) {
         if (opts?.signal?.aborted) break;
         if (ev.type === "delta") {

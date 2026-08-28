@@ -5,7 +5,6 @@ import { htmlToPlainText } from "../utils/htmlText.js";
 import { logger, errorFields } from "../utils/logger.js";
 import { extractPageBody } from "./libraryIndex.js";
 import { retrievePageAskContext } from "./ragRetrieve.js";
-import { pageAskSystemPrompt } from "./goalPrompt.js";
 import {
   joinPackedContext,
   packPageAskContext,
@@ -14,8 +13,26 @@ import {
 import { rewriteSearchQuery } from "../utils/queryRewrite.js";
 import { chatHistoryWindow } from "../utils/quotas.js";
 import type { ChatContentPart, ChatMessage } from "./llm.js";
+import { listVectorsForPage } from "./vectorStore.js";
+import { splitIntoSections } from "./mapReduceSummary.js";
+import {
+  assertDepthAllowed,
+  parseStudyDepth,
+  shouldMapReduce,
+  mayPrepareMapReduce,
+  studyDepthConfig,
+  type StudyDepth,
+} from "./studyDepth.js";
+import { promptForMode } from "./pageAskPrompts.js";
 
-const MODES = ["ask", "summarize", "notes", "mindmap"] as const;
+const MODES = [
+  "ask",
+  "summarize",
+  "notes",
+  "mindmap",
+  "deep-summary",
+  "analyze",
+] as const;
 export type PageAskMode = (typeof MODES)[number];
 
 export type PageAskHistoryTurn = {
@@ -31,6 +48,7 @@ export type PageAskInput = {
   question?: string;
   selection?: string;
   mode?: string;
+  depth?: string;
   imageBase64?: string;
   history?: PageAskHistoryTurn[];
 };
@@ -56,81 +74,13 @@ export type PreparedPageAsk = {
     llmTokensResetAt: Date | null;
   };
   estimatePrompt: string;
+  depth: StudyDepth;
+  depthConfig: ReturnType<typeof studyDepthConfig>;
+  useMapReduce: boolean;
+  mapReduceSections: string[];
+  mergeInstruction: string;
+  systemPrompt: string;
 };
-
-function promptForMode(
-  mode: PageAskMode,
-  studyGoal: StudyGoal,
-  learnerName: string | null | undefined,
-  articleTitle: string,
-  packedMaterial: string,
-  question: string | undefined,
-  hasSelection: boolean,
-  withTools: boolean
-): { system: string; user: string } {
-  const system = pageAskSystemPrompt(studyGoal, { name: learnerName }, { withTools });
-
-  const scopeNote = hasSelection
-    ? "Highlight is the primary focus. Still use the file passages and related library notes for full-document and persona context."
-    : "No highlight — answer from the full file when the question is about this document. Retrieved passages cover the whole PDF when text was indexed. If a page image is attached, that is the page the learner is viewing (use it for scanned / image-only files).";
-
-  const material = packedMaterial.trim()
-    ? packedMaterial.trim()
-    : "(No extractable text — use the attached PDF page image as the document when the question is about this file.)";
-
-  if (mode === "summarize") {
-    return {
-      system,
-      user: `Summarize this file for revision. Use ## Summary then ### Key points and ### Recap.\n${scopeNote}\nTitle: ${articleTitle}\n\n${material}`,
-    };
-  }
-  if (mode === "notes") {
-    return {
-      system,
-      user: `Create short revision notes. Use ## Notes, then ### Key terms and ### Must remember.\n${scopeNote}\nTitle: ${articleTitle}\n\n${material}`,
-    };
-  }
-  if (mode === "mindmap") {
-    return {
-      system,
-      user: `Create a Mermaid mind map for this material.
-${scopeNote}
-Title: ${articleTitle}
-
-Output format (strict):
-1. A short ## Mind map heading.
-2. Then a single fenced code block tagged mermaid using the mindmap diagram type.
-3. Put the central topic in root((…)). Keep 3–7 main branches, each with brief child nodes.
-4. Use plain ASCII labels (no quotes, no parentheses inside node text except the root((…)) form).
-5. Optional: one short ### Key takeaways bullet list after the diagram.
-6. Do not use indented markdown trees instead of Mermaid.
-
-Example shape:
-\`\`\`mermaid
-mindmap
-  root((Topic))
-    Branch one
-      Detail
-    Branch two
-\`\`\`
-
-Material:
-
-${material}`,
-    };
-  }
-
-  return {
-    system,
-    user: `Question: ${question?.trim() || "Explain this clearly."}
-${scopeNote}
-If this question is not about the open file, answer generally (and use tools for planner/quiz/app actions when asked). Do not refuse just because the answer is not in the PDF.
-
-File: ${articleTitle}
-
-${material}`,
-  };
-}
 
 export function resolvePageAskMode(mode?: string): PageAskMode {
   return MODES.includes(mode as PageAskMode) ? (mode as PageAskMode) : "ask";
@@ -150,6 +100,7 @@ export async function preparePageAsk(
   onStatus?: (stage: string, detail?: string) => void
 ): Promise<PreparedPageAsk> {
   const resolvedMode = resolvePageAskMode(input.mode);
+  const depth = parseStudyDepth(input.depth);
   const hasSelection = Boolean(input.selection?.trim());
   const userId = input.userId;
 
@@ -279,6 +230,7 @@ export async function preparePageAsk(
     fullFileText,
     pageChunks,
     related,
+    budget: studyDepthConfig(depth).pageContextBudget,
   });
   const packedMaterial = joinPackedContext(packed);
 
@@ -305,6 +257,12 @@ export async function preparePageAsk(
     throw new PageAskPrepareError(404, "User not found");
   }
 
+  assertDepthAllowed(user, depth);
+  const depthConfig = studyDepthConfig(depth);
+
+  const toolsEnabled =
+    resolvedMode === "ask" || resolvedMode === "analyze";
+
   const messages = promptForMode(
     resolvedMode,
     user.studyGoal ?? "GENERAL",
@@ -313,7 +271,8 @@ export async function preparePageAsk(
     packedMaterial,
     input.question,
     hasSelection,
-    resolvedMode === "ask"
+    toolsEnabled,
+    depth
   );
 
   const historyWindow = chatHistoryWindow(user);
@@ -360,13 +319,45 @@ export async function preparePageAsk(
     },
   ];
 
+  const materialChars = Math.max(fullFileText.length, packed.charsUsed);
+  const mapReduceEligible = mayPrepareMapReduce({
+    depth,
+    mode: resolvedMode,
+    materialChars,
+    hasSelection,
+  });
+
+  let mapReduceSections: string[] = [];
+  if (mapReduceEligible && pageIdForVectors) {
+    try {
+      const listed = await listVectorsForPage(userId, pageIdForVectors, 120);
+      mapReduceSections = listed
+        .map((h) => h.payload.text.trim())
+        .filter(Boolean);
+    } catch (err) {
+      logger.error("study.map_reduce.list_vectors_failed", errorFields(err));
+    }
+  }
+  if (mapReduceEligible && mapReduceSections.length === 0 && fullFileText.length > 8_000) {
+    mapReduceSections = splitIntoSections(fullFileText);
+  }
+
+  const useMapReduce =
+    mapReduceEligible &&
+    shouldMapReduce({
+      depth,
+      mode: resolvedMode,
+      materialChars,
+      chunkCount: mapReduceSections.length,
+    });
+
   return {
     resolvedMode,
     title,
     hasSelection,
     needVectors,
     packedChars: packed.charsUsed,
-    toolsEnabled: resolvedMode === "ask",
+    toolsEnabled,
     defaultPageId: pageIdForVectors,
     chatMessages,
     user: {
@@ -379,5 +370,11 @@ export async function preparePageAsk(
       llmTokensResetAt: user.llmTokensResetAt,
     },
     estimatePrompt: messages.system + messages.user,
+    depth,
+    depthConfig,
+    useMapReduce,
+    mapReduceSections: useMapReduce ? mapReduceSections : [],
+    mergeInstruction: messages.mergeInstruction,
+    systemPrompt: messages.system,
   };
 }

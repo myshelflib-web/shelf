@@ -16,6 +16,8 @@ import {
   completeWithStudyTools,
   streamWithStudyTools,
 } from "../services/studyToolLoop.js";
+import { streamMapReduceAnswer } from "../services/mapReduceSummary.js";
+import { estimateDepthTokens } from "../services/studyDepth.js";
 import {
   QuotaError,
   assertLlmRoom,
@@ -40,6 +42,7 @@ type AskBody = {
   prompt?: string;
   selection?: string;
   mode?: string;
+  depth?: string;
   imageBase64?: string;
   /** Save this exchange to Study AI history (reader panel). */
   persist?: boolean;
@@ -96,6 +99,8 @@ function askTurnLabel(body: AskBody, mode: string): string {
   const question = String(body.question ?? "").trim();
   if (question) return question;
   if (mode === "summarize") return "Summarize this";
+  if (mode === "deep-summary") return "Deep summary";
+  if (mode === "analyze") return "Analyze this";
   if (mode === "notes") return "Make short notes";
   if (mode === "mindmap") return "Make a mind map";
   return "Explain the attached image.";
@@ -131,17 +136,44 @@ router.post("/ask", async (req: Request, res: Response) => {
 
     assertLlmRoom(
       { ...prepared.user, llmTokensUsed: tokensUsed },
-      estimateTokens(prepared.estimatePrompt)
+      estimateDepthTokens(estimateTokens(prepared.estimatePrompt), prepared.depth)
     );
 
-    const { text: answer, tokens } = await completeWithStudyTools(
-      prepared.chatMessages,
-      {
-        userId,
-        defaultPageId: prepared.defaultPageId,
-      },
-      { enabled: prepared.toolsEnabled }
-    );
+    let answer = "";
+    let tokens = 0;
+
+    if (prepared.useMapReduce && prepared.mapReduceSections.length > 0) {
+      for await (const ev of streamMapReduceAnswer({
+        depth: prepared.depth,
+        title: prepared.title,
+        mode: prepared.resolvedMode,
+        sections: prepared.mapReduceSections,
+        systemPrompt: prepared.systemPrompt,
+        mergeInstruction: prepared.mergeInstruction,
+      })) {
+        if (ev.type === "delta") answer += ev.text;
+        else if (ev.type === "done") tokens = ev.tokens;
+      }
+    } else {
+      const result = await completeWithStudyTools(
+        prepared.chatMessages,
+        {
+          userId,
+          defaultPageId: prepared.defaultPageId,
+        },
+        {
+          enabled: prepared.toolsEnabled,
+          llm: {
+            model: prepared.depthConfig.model,
+            maxTokens: prepared.depthConfig.maxTokens,
+            temperature: prepared.depthConfig.temperature,
+          },
+          maxToolRounds: prepared.depthConfig.toolRounds,
+        }
+      );
+      answer = result.text;
+      tokens = result.tokens;
+    }
 
     await prisma.user.update({
       where: { id: userId },
@@ -219,6 +251,9 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
     writeSse(res, event, data);
   };
 
+  const llmAbort = new AbortController();
+  req.on("close", () => llmAbort.abort());
+
   try {
     send("status", { stage: "starting", detail: "Starting Study AI…" });
 
@@ -243,32 +278,67 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
 
     assertLlmRoom(
       { ...prepared.user, llmTokensUsed: tokensUsed },
-      estimateTokens(prepared.estimatePrompt)
+      estimateDepthTokens(estimateTokens(prepared.estimatePrompt), prepared.depth)
     );
 
     send("status", { stage: "generating", detail: "Writing answer…" });
 
     let tokens = 0;
     let answer = "";
-    for await (const ev of streamWithStudyTools(
-      prepared.chatMessages,
-      {
-        userId,
-        defaultPageId: prepared.defaultPageId,
-      },
-      { enabled: prepared.toolsEnabled }
-    )) {
-      if (ev.type === "status") {
-        send("status", { stage: "tools", detail: ev.detail });
-      } else if (ev.type === "delta") {
-        answer += ev.text;
-        send("delta", { text: ev.text });
-      } else if (ev.type === "done") {
-        tokens = ev.tokens;
-        send("status", {
-          stage: "finishing",
-          detail: ev.model ? `Done · ${ev.model}` : "Done",
-        });
+
+    if (prepared.useMapReduce && prepared.mapReduceSections.length > 0) {
+      for await (const ev of streamMapReduceAnswer({
+        depth: prepared.depth,
+        title: prepared.title,
+        mode: prepared.resolvedMode,
+        sections: prepared.mapReduceSections,
+        systemPrompt: prepared.systemPrompt,
+        mergeInstruction: prepared.mergeInstruction,
+        signal: llmAbort.signal,
+      })) {
+        if (ev.type === "status") {
+          send("status", { stage: "map_reduce", detail: ev.detail });
+        } else if (ev.type === "delta") {
+          answer += ev.text;
+          send("delta", { text: ev.text });
+        } else if (ev.type === "done") {
+          tokens = ev.tokens;
+          send("status", {
+            stage: "finishing",
+            detail: ev.model ? `Done · ${ev.model}` : "Done",
+          });
+        }
+      }
+    } else {
+      for await (const ev of streamWithStudyTools(
+        prepared.chatMessages,
+        {
+          userId,
+          defaultPageId: prepared.defaultPageId,
+        },
+        {
+          enabled: prepared.toolsEnabled,
+          llm: {
+            model: prepared.depthConfig.model,
+            maxTokens: prepared.depthConfig.maxTokens,
+            temperature: prepared.depthConfig.temperature,
+          },
+          maxToolRounds: prepared.depthConfig.toolRounds,
+          signal: llmAbort.signal,
+        }
+      )) {
+        if (ev.type === "status") {
+          send("status", { stage: "tools", detail: ev.detail });
+        } else if (ev.type === "delta") {
+          answer += ev.text;
+          send("delta", { text: ev.text });
+        } else if (ev.type === "done") {
+          tokens = ev.tokens;
+          send("status", {
+            stage: "finishing",
+            detail: ev.model ? `Done · ${ev.model}` : "Done",
+          });
+        }
       }
     }
 

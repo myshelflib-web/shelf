@@ -1,6 +1,6 @@
 export type StudyAiCommandScope = "library" | "page";
 
-export type StudyAiPageMode = "summarize" | "notes" | "mindmap";
+export type StudyAiPageMode = "summarize" | "notes" | "mindmap" | "deep-summary";
 
 export type StudyAiCommand = {
   slash: string;
@@ -30,6 +30,47 @@ export const STUDY_AI_COMMANDS: StudyAiCommand[] = [
     prompt: (scope, args) =>
       withTopic(
         `Summarize ${fileOrLibrary(scope)} for revision. Use ## Summary, ### Key points, and ### Recap.`,
+        args
+      ),
+  },
+  {
+    slash: "deep-summary",
+    name: "Deep summary",
+    description: "Chapter-by-chapter thorough summary (use Deep mode).",
+    pageMode: "deep-summary",
+    prompt: (scope, args) =>
+      withTopic(
+        `Give a comprehensive deep summary of ${fileOrLibrary(scope)}. Use ## Deep summary, ### per chapter/section with detailed bullets, and ### Cross-cutting themes. Target 2,000+ words.`,
+        args
+      ),
+  },
+  {
+    slash: "analyze",
+    name: "Analyze",
+    description: "Thorough thematic analysis with examples.",
+    prompt: (scope, args) =>
+      withTopic(
+        `Provide a thorough thematic analysis of ${fileOrLibrary(scope)}: core arguments, evidence, implications, and gaps. Use ### per theme with examples.`,
+        args
+      ),
+  },
+  {
+    slash: "chapter-notes",
+    name: "Chapter notes",
+    description: "Detailed notes with one section per chapter.",
+    prompt: (scope, args) =>
+      withTopic(
+        `Create detailed chapter-wise notes from ${fileOrLibrary(scope)}. Use ## Chapter notes and ### per chapter with key terms, facts, and must-remember points.`,
+        args
+      ),
+  },
+  {
+    slash: "mains",
+    name: "Mains answer",
+    description: "Long-form exam answer (UPSC mains style).",
+    prompt: (scope, args) =>
+      withTopic(
+        `Write a long-form mains-style answer from ${fileOrLibrary(scope)} for my study track. Use introduction, structured body with ### headings, examples, and conclusion. Target 800–1,200 words.`,
         args
       ),
   },

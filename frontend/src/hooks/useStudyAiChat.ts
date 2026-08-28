@@ -19,15 +19,18 @@ import {
 } from "@/lib/studyAiWorkspaceUtils";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { studyAiSendParts } from "@/lib/studyAiCommands";
+import type { StudyDepth } from "@/lib/studyDepth";
 
 export function useStudyAiChat({
   threadId,
   userId,
   memoryLimit,
+  depth,
 }: {
   threadId?: string;
   userId?: string;
   memoryLimit: number;
+  depth: StudyDepth;
 }) {
   const router = useRouter();
   const [threads, setThreads] = useState<ChatThreadSummary[]>([]);
@@ -206,6 +209,7 @@ export function useStudyAiChat({
           {
             imageBase64: image,
             prompt: modelPrompt,
+            depth,
             signal: ac.signal,
             onStatus: (_stage, detail, extra) => {
               const line = detail || "Working…";
@@ -310,7 +314,7 @@ export function useStudyAiChat({
         }
       }
     },
-    [memoryLimit, refreshThreads]
+    [memoryLimit, refreshThreads, depth]
   );
 
   useEffect(() => {

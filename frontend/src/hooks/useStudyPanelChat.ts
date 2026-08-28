@@ -8,6 +8,7 @@ import type { StudyAiQueuedPrompt } from "@/lib/studyAiQueue";
 import { enqueuePrompt, takeNextPrompt } from "@/lib/studyAiQueue";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { studyAiSendParts } from "@/lib/studyAiCommands";
+import type { StudyDepth } from "@/lib/studyDepth";
 
 export type StudyPanelTurn = {
   id: string;
@@ -26,6 +27,7 @@ export function useStudyPanelChat({
   onGuestLockedClick,
   memoryLimit,
   userId,
+  depth,
 }: {
   articleId?: string;
   userTopicId?: string;
@@ -35,6 +37,7 @@ export function useStudyPanelChat({
   onGuestLockedClick?: (feature: string) => void;
   memoryLimit: number;
   userId?: string;
+  depth: StudyDepth;
 }) {
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<StudyPanelTurn[]>([]);
@@ -118,7 +121,7 @@ export function useStudyPanelChat({
 
   const run = useCallback(
     async (
-      mode: "ask" | "summarize" | "notes" | "mindmap",
+      mode: "ask" | "summarize" | "notes" | "mindmap" | "deep-summary",
       q?: string,
       imageOverride?: string,
       opts?: { skipHistoryImage?: boolean; prompt?: string }
@@ -132,7 +135,9 @@ export function useStudyPanelChat({
           ? (q ?? "").trim()
           : mode === "summarize"
             ? "Summarize this"
-            : mode === "notes"
+            : mode === "deep-summary"
+              ? "Deep summary"
+              : mode === "notes"
               ? "Make short notes"
               : "Make a mind map";
       const userImage = imageOverride ?? attachImage ?? imageBase64;
@@ -205,6 +210,7 @@ export function useStudyPanelChat({
             history: historyForApi,
             persist: true,
             threadId: threadIdRef.current ?? undefined,
+            depth,
           },
           {
             signal: ac.signal,
@@ -292,6 +298,7 @@ export function useStudyPanelChat({
       guestLocked,
       onGuestLockedClick,
       trimMemory,
+      depth,
     ]
   );
 

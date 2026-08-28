@@ -1,5 +1,6 @@
 import { StudyGoal } from "@prisma/client";
 import { studyGoalLabel } from "../studyGoal.js";
+import type { StudyDepth } from "./studyDepth.js";
 import { EXAM_GROUNDING, GOAL_TUNING } from "./goalTuning.js";
 
 /** Shared formatting contract for every Study AI answer. */
@@ -39,12 +40,24 @@ Policy:
 - After tools return, answer the question. Confirm what you created/updated with links (/planner, /quiz/:id). Do not mention internal tool names to the learner.
 - Skip tools when the excerpts already answer the question and no app action was requested.`;
 
+export function depthResponseRules(depth: StudyDepth = "quick"): string {
+  switch (depth) {
+    case "deep":
+      return `Depth: thorough analysis. Write long, well-structured answers (target 1,500–3,000+ words for summaries and analyses). Use a ### heading per major theme or chapter. Include examples, definitions, and connections. Do not abbreviate lists — cover the material comprehensively.`;
+    case "standard":
+      return `Depth: standard. Give complete answers with clear sections; use bullets and tables. Prefer substance over brevity unless the learner asks for a short version.`;
+    default:
+      return "Be concise unless the learner asks for depth.";
+  }
+}
+
 export function studySystemPrompt(
   goal: StudyGoal,
   opts?: {
     syllabusText?: string | null;
     scopeLabel?: string | null;
     withTools?: boolean;
+    depth?: StudyDepth;
   }
 ): string {
   const label = studyGoalLabel(goal);
@@ -68,14 +81,14 @@ Grounding:
 - When the question is about their files, use retrieved library excerpts as the primary source and cite [1], [2].
 - When the question is general knowledge, not covered by their library, or about using Shelf (planner, quiz, reminders), answer as well as you can${opts?.withTools ? " (use tools when helpful)" : ""}. Do not refuse just because excerpts are missing.
 - Do not invent page titles or quotes that are not in the excerpts or tool results.
-- Be concise unless the learner asks for depth.
+- ${depthResponseRules(opts?.depth)}
 - ${STRUCTURED_RESPONSE_RULES}`;
 }
 
 export function pageAskSystemPrompt(
   goal: StudyGoal,
   persona?: { name?: string | null },
-  opts?: { withTools?: boolean }
+  opts?: { withTools?: boolean; depth?: StudyDepth }
 ): string {
   const label = studyGoalLabel(goal);
   const name = persona?.name?.trim();
@@ -95,6 +108,6 @@ Grounding:
 - Prefer the open file when the question clearly refers to it (this page, the highlight, "explain this", summarize/notes/mind map).
 - If the answer is in the provided material or image, use that and do not invent citations.
 - If the question is general knowledge, study help, or an app action (add a task, reminder, quiz, planner), answer helpfully even when it is not in this PDF${opts?.withTools ? " — use tools when the learner asks you to act" : ""}. Do not refuse solely because it is outside the file.
-- Prefer concise answers to limit token use.
+- ${depthResponseRules(opts?.depth)}
 ${STRUCTURED_RESPONSE_RULES}`;
 }

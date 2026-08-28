@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Download, Layers, MessageSquareText, X } from "lucide-react";
 import { isPremiumUser } from "@/lib/premium";
+import { getStoredStudyDepth, type StudyDepth } from "@/lib/studyDepth";
 import { StudyAIContent } from "@/lib/studyAiMarkdown";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudyPanelChat } from "@/hooks/useStudyPanelChat";
@@ -46,6 +47,7 @@ export function StudyPanel({
 }: StudyPanelProps) {
   const { user } = useAuth();
   const memoryLimit = isPremiumUser(user) ? 300 : 30;
+  const [depth, setDepth] = useState<StudyDepth>(() => getStoredStudyDepth());
   const [pasted, setPasted] = useState("");
   const [attached, setAttached] = useState(false);
   const [saveContent, setSaveContent] = useState<string | null>(null);
@@ -61,6 +63,7 @@ export function StudyPanel({
     onGuestLockedClick,
     memoryLimit,
     userId: user?.id,
+    depth,
   });
 
   useEffect(() => {
@@ -307,6 +310,9 @@ export function StudyPanel({
         imageBase64={imageBase64}
         contextImage={contextImage}
         pageId={userTopicId}
+        depth={depth}
+        onDepthChange={setDepth}
+        isPremium={isPremiumUser(user)}
       />
 
       {flashcardsMd && (
