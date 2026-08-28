@@ -6,6 +6,7 @@ import { PersonalContentArea } from "@/components/my-content/PersonalContentArea
 import { PdfViewer, type PdfViewerCommands } from "@/components/my-content/PdfViewer";
 import { EmbedViewer } from "@/components/my-content/EmbedViewer";
 import { api } from "@/lib/api";
+import { captureVisibleSketchPage } from "@/lib/captureSketchPage";
 import { listHighlights } from "@/lib/offline/highlights";
 import { updatePageProgress } from "@/lib/offline/progress";
 import { requireOnline } from "@/lib/offline/notice";
@@ -247,6 +248,7 @@ export type DocumentPaneHandlers = {
   pdfToggleNight: () => void;
   pdfNextPage: () => void;
   pdfPrevPage: () => void;
+  /** PDF canvas JPEG, or sketch notebook sheet when the open page is ink. */
   capturePdfPage: () => string;
 };
 
@@ -941,7 +943,12 @@ export function DocumentPane({
       pdfToggleNight: () => pdfCommandsRef.current?.toggleNight(),
       pdfNextPage: () => pdfCommandsRef.current?.nextPage(),
       pdfPrevPage: () => pdfCommandsRef.current?.prevPage(),
-      capturePdfPage: () => pdfCommandsRef.current?.captureVisiblePage() ?? "",
+      capturePdfPage: () => {
+        const pdf = pdfCommandsRef.current?.captureVisiblePage() ?? "";
+        if (pdf) return pdf;
+        const host = shellRef.current;
+        return host ? captureVisibleSketchPage(host) : "";
+      },
     });
   }, [
     focused,
@@ -1431,9 +1438,13 @@ export function DocumentPane({
                     userTopicId={pageData.id}
                     selection={fsSelection}
                     imageBase64={fsImage}
-                    getPageImage={() =>
-                      pdfCommandsRef.current?.captureVisiblePage() ?? ""
-                    }
+                    getPageImage={() => {
+                      const pdf =
+                        pdfCommandsRef.current?.captureVisiblePage() ?? "";
+                      if (pdf) return pdf;
+                      const host = shellRef.current;
+                      return host ? captureVisibleSketchPage(host) : "";
+                    }}
                     onClearSelection={() => {
                       setFsSelection(null);
                       setFsImage(undefined);

@@ -23,7 +23,7 @@ interface StudyPanelProps {
   userTopicId?: string;
   selection?: string | null;
   imageBase64?: string;
-  /** Visible PDF page JPEG when the file has little/no text. */
+  /** Visible PDF page or sketch sheet JPEG when the file has little/no text. */
   getPageImage?: () => string;
   onClearSelection?: () => void;
   onAttachNote?: (note: string) => Promise<void> | void;
