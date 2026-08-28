@@ -31,6 +31,8 @@ export type ChatMessage = {
   name?: string;
 };
 
+import type { ApiKeyRoute } from "./apiKeyRoute.js";
+
 export type ChatRequestOpts = {
   stream: boolean;
   tools?: ChatToolDef[];
@@ -40,6 +42,8 @@ export type ChatRequestOpts = {
   temperature?: number;
   /** When set, try this model first (then configured fallbacks). */
   model?: string;
+  /** Paid Gemini key for Premium/admin; free key for Free plan users. */
+  apiKeyRoute?: ApiKeyRoute;
 };
 
 export type ChatResult = {

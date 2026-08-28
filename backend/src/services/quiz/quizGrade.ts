@@ -8,6 +8,8 @@ import { assertLlmBudget, chargeLlmTokens } from "../../utils/llmUsage.js";
 import { parseGradeJson } from "./quizParse.js";
 import { billedQuizTokens } from "./quizTokens.js";
 import { gradeWrittenSystemPrompt } from "./quizPrompt.js";
+import { apiKeyRouteForUser } from "../apiKeyRoute.js";
+import type { ApiKeyRoute } from "../apiKeyRoute.js";
 
 function mcqScore(q: QuizQuestion): { score: number; feedback: string } {
   const picked = (q.userAnswerOption ?? "").trim().toUpperCase();
@@ -36,7 +38,8 @@ async function imageDataUrl(key: string, mime: string | null): Promise<string | 
 
 async function gradeOpenAnswer(
   q: QuizQuestion,
-  goal: StudyGoal
+  goal: StudyGoal,
+  apiKeyRoute: ApiKeyRoute
 ): Promise<{ score: number; feedback: string; tokens: number }> {
   const text = (q.userAnswerText ?? "").trim();
   const hasImage = Boolean(q.userImageKey);
@@ -56,7 +59,7 @@ async function gradeOpenAnswer(
       { role: "system", content: gradeWrittenSystemPrompt(goal) },
       { role: "user", content: parts },
     ],
-    { maxTokens: 512, temperature: 0.1 }
+    { maxTokens: 512, temperature: 0.1, apiKeyRoute }
   );
   const parsed = parseGradeJson(result.text);
   return {
@@ -102,7 +105,11 @@ export async function gradeQuiz(quizId: string, userId: string): Promise<void> {
       continue;
     }
     await assertLlmBudget(userId, 1);
-    const graded = await gradeOpenAnswer(q, user.studyGoal);
+    const graded = await gradeOpenAnswer(
+      q,
+      user.studyGoal,
+      apiKeyRouteForUser(user)
+    );
     billed += graded.tokens;
     await prisma.quizQuestion.update({
       where: { id: q.id },

@@ -3,7 +3,6 @@ import { fetchWithTimeout } from "../utils/timeout.js";
 import { SHELF_GEMINI } from "./shelfGeminiModels.js";
 import {
   apiKeyHint,
-  embeddingApiKey,
   embeddingBaseUrl,
   embeddingConfigSummary,
   embeddingModel,
@@ -15,6 +14,15 @@ import {
   parseProviderError,
   resolveGeminiEmbeddingModel,
 } from "./llmConfig.js";
+import {
+  ApiBillingHandoffError,
+  embeddingApiKeySlots,
+  isPaidKeyExhausted,
+} from "./apiKeyPool.js";
+import {
+  resolveApiKeyRouteForUserId,
+  type ApiKeyRoute,
+} from "./apiKeyRoute.js";
 import {
   acquireGeminiEmbedSlot,
   DEFAULT_GEMINI_EMBED_BATCH,
@@ -56,6 +64,7 @@ async function geminiBatchOnce(
   apiKey: string,
   modelId: string,
   modelSlug: string,
+  route: ApiKeyRoute,
   task?: EmbedTask
 ): Promise<number[][]> {
   const path = `${geminiNativeBaseUrl()}/models/${modelSlug}:batchEmbedContents`;
@@ -130,6 +139,17 @@ async function geminiBatchOnce(
   });
 
   if (response.status === 401 || response.status === 403) {
+    const providerMessage = parseProviderError(errBody);
+    if (
+      isPaidKeyExhausted(response.status, providerMessage) &&
+      route === "paid" &&
+      embeddingApiKeySlots("paid").length > 1
+    ) {
+      throw new ApiBillingHandoffError(
+        response.status,
+        providerMessage || "billing exhausted"
+      );
+    }
     throw new Error(
       "Gemini rejected EMBEDDING_API_KEY. Confirm the key works with " +
         "models/gemini-embedding-001:embedContent and X-goog-api-key."
@@ -141,6 +161,15 @@ async function geminiBatchOnce(
     );
   }
   const providerMessage = parseProviderError(errBody);
+  if (
+    isPaidKeyExhausted(response.status, providerMessage) &&
+    embeddingApiKeySlots().length > 1
+  ) {
+    throw new ApiBillingHandoffError(
+      response.status,
+      providerMessage || "billing exhausted"
+    );
+  }
   if (providerMessage) {
     throw new Error(`Gemini embeddings failed: ${providerMessage}`);
   }
@@ -151,6 +180,7 @@ async function embedTextsGeminiNative(
   texts: string[],
   apiKey: string,
   model: string,
+  route: ApiKeyRoute,
   task?: EmbedTask
 ): Promise<number[][]> {
   const resolved = resolveGeminiEmbeddingModel(model);
@@ -162,7 +192,14 @@ async function embedTextsGeminiNative(
     const slice = texts.slice(i, i + GEMINI_EMBED_BATCH);
     let vectors: number[][];
     try {
-      vectors = await geminiBatchOnce(slice, apiKey, modelId, modelSlug, task);
+      vectors = await geminiBatchOnce(
+        slice,
+        apiKey,
+        modelId,
+        modelSlug,
+        route,
+        task
+      );
     } catch (err) {
       const fallback = SHELF_GEMINI.EMBEDDING;
       const canFallback =
@@ -176,7 +213,14 @@ async function embedTextsGeminiNative(
       });
       const fbId = geminiEmbeddingModelId(fallback);
       const fbSlug = geminiEmbeddingModelSlug(fallback);
-      vectors = await geminiBatchOnce(slice, apiKey, fbId, fbSlug, task);
+      vectors = await geminiBatchOnce(
+        slice,
+        apiKey,
+        fbId,
+        fbSlug,
+        route,
+        task
+      );
     }
     out.push(...vectors);
     if (i + GEMINI_EMBED_BATCH < texts.length) {
@@ -188,14 +232,17 @@ async function embedTextsGeminiNative(
 
 export async function embedTexts(
   texts: string[],
-  opts?: { task?: EmbedTask }
+  opts?: { task?: EmbedTask; apiKeyRoute?: ApiKeyRoute; userId?: string }
 ): Promise<number[][]> {
   if (texts.length === 0) return [];
   const task = opts?.task;
 
   const baseUrl = embeddingBaseUrl();
   const model = embeddingModel();
-  const apiKey = embeddingApiKey();
+  const route =
+    opts?.apiKeyRoute ??
+    (opts?.userId ? await resolveApiKeyRouteForUserId(opts.userId) : "paid");
+  const slots = embeddingApiKeySlots(route);
 
   if (isGroqBaseUrl(baseUrl)) {
     throw new Error(
@@ -205,11 +252,10 @@ export async function embedTexts(
     );
   }
 
-  if (!apiKey) {
+  if (!slots.length) {
     if (isGeminiBaseUrl(baseUrl)) {
       throw new Error(
-        "Set EMBEDDING_API_KEY to your Google AI Studio key (AQ.… / AIza…). " +
-          "Do not reuse LLM_API_KEY when chat is on Groq."
+        "Set EMBEDDING_API_KEY (or LLM_API_KEY) to your Google AI Studio key (AQ.… / AIza…)."
       );
     }
     throw new Error(
@@ -217,6 +263,7 @@ export async function embedTexts(
     );
   }
 
+  const apiKey = slots[0].key;
   if (isGeminiBaseUrl(baseUrl) && apiKey.startsWith("gsk_")) {
     throw new Error(
       "EMBEDDING_API_KEY looks like a Groq key (gsk_). Use a Google AI Studio key instead."
@@ -224,7 +271,29 @@ export async function embedTexts(
   }
 
   if (isGeminiBaseUrl(baseUrl)) {
-    return embedTextsGeminiNative(texts, apiKey, model, task);
+    let lastError: unknown;
+    for (let si = 0; si < slots.length; si++) {
+      const slot = slots[si];
+      try {
+        return await embedTextsGeminiNative(texts, slot.key, model, route, task);
+      } catch (err) {
+        lastError = err;
+        const handoff =
+          si < slots.length - 1 &&
+          slot.tier === "primary" &&
+          err instanceof ApiBillingHandoffError;
+        if (handoff) {
+          logger.warn("embeddings.api_key.fallback_to_free", {
+            primaryHint: apiKeyHint(slot.key),
+            fallbackHint: apiKeyHint(slots[si + 1]?.key),
+            status: err.status,
+          });
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastError;
   }
 
   const timeoutMs = Number(process.env.EMBEDDING_TIMEOUT_MS ?? 45_000);

@@ -4,6 +4,7 @@ import {
   SHELF_GEMINI,
   SHELF_GEMINI_CHAT_FALLBACKS,
 } from "./shelfGeminiModels.js";
+import { apiKeyPoolSummary, FREE_TIER_CHAT_MODELS } from "./apiKeyPool.js";
 
 const RETIRED_GEMINI_EMBEDDING_MODELS: Record<string, string> = {
   "text-embedding-004": SHELF_GEMINI.EMBEDDING,
@@ -114,8 +115,21 @@ function geminiFallbacksFromEnv(): string[] {
 /**
  * Ordered model ids to try for this request (preferred → configured → fallbacks).
  * Deduped. Non-Gemini hosts only get the configured model.
+ * `freeKey` limits to lite models when the fallback (unbilled) API key is active.
  */
-export function chatModelCandidates(): string[] {
+export function chatModelCandidates(opts?: { freeKey?: boolean }): string[] {
+  if (opts?.freeKey) {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const m of FREE_TIER_CHAT_MODELS) {
+      const id = resolveGeminiChatModel(m);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push(id);
+    }
+    return out;
+  }
+
   const base = llmBaseUrl();
   const primary = chatModel();
   const preferred = preferredChatModelByBase.get(base);
@@ -274,6 +288,7 @@ export function embeddingConfigSummary(): Record<string, unknown> {
     embeddingKeyHint: apiKeyHint(key),
     hasEmbeddingApiKey: Boolean(process.env.EMBEDDING_API_KEY?.trim()),
     isGemini: isGeminiBaseUrl(baseUrl),
+    ...apiKeyPoolSummary(),
   };
 }
 
@@ -288,5 +303,6 @@ export function llmConfigSummary(): Record<string, unknown> {
     envModel: process.env.LLM_MODEL?.trim() || null,
     isGemini: isGeminiBaseUrl(baseUrl),
     modelCandidates: chatModelCandidates(),
+    ...apiKeyPoolSummary(),
   };
 }

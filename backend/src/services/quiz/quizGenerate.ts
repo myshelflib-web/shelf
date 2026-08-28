@@ -16,6 +16,8 @@ import {
 import { billedQuizTokens } from "./quizTokens.js";
 import type { DraftQuestion } from "./quizLimits.js";
 import type { ChatMessage, ChatResult } from "../llmTypes.js";
+import { apiKeyRouteForUser } from "../apiKeyRoute.js";
+import type { ApiKeyRoute } from "../apiKeyRoute.js";
 
 const generating = new Set<string>();
 
@@ -64,6 +66,7 @@ async function callQuizModel(input: {
   instruction: string;
   avoid?: string;
   bill: QuizBill;
+  apiKeyRoute: ApiKeyRoute;
 }): Promise<{ questions: DraftQuestion[]; title: string }> {
   const avoid = input.avoid
     ? `\nDo not repeat these stems or topics:\n${input.avoid}`
@@ -84,6 +87,7 @@ async function callQuizModel(input: {
   const result = await completeChat(firstMessages, {
     maxTokens: 2048,
     temperature: 0.45,
+    apiKeyRoute: input.apiKeyRoute,
   });
   await input.bill.charge(firstPrompt, result);
   try {
@@ -103,6 +107,7 @@ async function callQuizModel(input: {
     const retry = await completeChat(retryMessages, {
       maxTokens: 2048,
       temperature: 0.15,
+      apiKeyRoute: input.apiKeyRoute,
     });
     await input.bill.charge(retryPrompt, retry);
     return parseGeneratedQuiz(retry.text);
@@ -151,6 +156,7 @@ export async function generateQuizPaper(quizId: string): Promise<void> {
       syllabusText: packed.syllabusText,
       focusTopic: quiz.focusTopic,
     });
+    const apiKeyRoute = apiKeyRouteForUser(user);
 
     let title = quiz.title;
     let drafts: DraftQuestion[] = [];
@@ -161,6 +167,7 @@ export async function generateQuizPaper(quizId: string): Promise<void> {
         excerpt: packed.excerpt,
         instruction: quizJsonSchemaInstruction(quiz.mcqCount, 0),
         bill,
+        apiKeyRoute,
       });
       title = mcq.title || title;
       drafts.push(...mcq.questions.filter((q) => q.type === "MCQ"));
@@ -177,6 +184,7 @@ export async function generateQuizPaper(quizId: string): Promise<void> {
         instruction: quizJsonSchemaInstruction(0, quiz.writtenCount),
         avoid,
         bill,
+        apiKeyRoute,
       });
       if (!quiz.mcqCount) title = written.title || title;
       drafts.push(

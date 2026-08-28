@@ -5,12 +5,19 @@ import {
   clearWorkingChatModel,
   isGeminiBaseUrl,
   isModelUnavailableError,
-  llmApiKey,
   llmBaseUrl,
   llmMaxOutputTokens,
   parseProviderError,
   rememberWorkingChatModel,
 } from "./llmConfig.js";
+import {
+  type ApiKeySlot,
+  ApiBillingHandoffError,
+  isPaidKeyExhausted,
+  llmApiKeySlots,
+} from "./apiKeyPool.js";
+import type { ApiKeyRoute } from "./apiKeyRoute.js";
+import { SHELF_GEMINI } from "./shelfGeminiModels.js";
 import {
   acquireGeminiChatSlot,
   geminiChatMaxAttempts,
@@ -163,17 +170,71 @@ async function openChatWithFallbacks(
   messages: ChatMessage[],
   opts: ChatRequestOpts
 ): Promise<{ response: Response; model: string; baseUrl: string; apiKey: string }> {
-  const apiKey = llmApiKey();
-  if (!apiKey) {
+  const route = opts.apiKeyRoute ?? "paid";
+  const slots = llmApiKeySlots(route);
+  if (!slots.length) {
     throw new Error(
       "Study AI is not configured. Set LLM_API_KEY (or OPENAI_API_KEY) on the backend."
     );
   }
 
+  let lastError: Error | null = null;
+  for (let si = 0; si < slots.length; si++) {
+    const slot = slots[si];
+    try {
+      return await openChatWithKeySlot(slot, messages, opts, route);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      const hasFallback = si < slots.length - 1;
+      const billingHandoff =
+        hasFallback &&
+        slot.tier === "primary" &&
+        err instanceof ApiBillingHandoffError;
+      if (billingHandoff) {
+        logger.warn("llm.api_key.fallback_to_free", {
+          primaryHint: apiKeyHint(slot.key),
+          fallbackHint: apiKeyHint(slots[si + 1]?.key),
+          status: err.status,
+        });
+        continue;
+      }
+      throw lastError;
+    }
+  }
+
+  throw lastError ?? new Error("Study AI request failed. Try again in a moment.");
+}
+
+function maybeThrowBillingHandoff(
+  slot: ApiKeySlot,
+  route: ApiKeyRoute,
+  status: number,
+  providerMessage: string
+): void {
+  if (route !== "paid" || slot.tier !== "primary") return;
+  if (llmApiKeySlots("paid").length < 2) return;
+  const billing =
+    isPaidKeyExhausted(status, providerMessage) ||
+    (status === 429 && isHardBillingQuotaMessage(providerMessage));
+  if (billing) {
+    throw new ApiBillingHandoffError(status, providerMessage || "billing exhausted");
+  }
+}
+
+async function openChatWithKeySlot(
+  slot: ApiKeySlot,
+  messages: ChatMessage[],
+  opts: ChatRequestOpts,
+  route: ApiKeyRoute
+): Promise<{ response: Response; model: string; baseUrl: string; apiKey: string }> {
+  const apiKey = slot.key;
   const baseUrl = llmBaseUrl();
-  const baseCandidates = chatModelCandidates();
+  const freeKey = route === "free" || slot.tier === "fallback";
+  const baseCandidates = chatModelCandidates({ freeKey });
   const candidates = opts.model
-    ? [...new Set([opts.model, ...baseCandidates])]
+    ? freeKey
+      ? [...new Set([SHELF_GEMINI.FAST, ...baseCandidates])]
+      : [...new Set([opts.model, ...baseCandidates])]
     : baseCandidates;
   let lastFail: { status: number; body: string; model: string } | null = null;
 
@@ -239,6 +300,20 @@ async function openChatWithFallbacks(
       const hardBilling =
         response.status === 429 && isHardBillingQuotaMessage(providerMessage);
 
+      // Upstream overload on one model — try the next candidate immediately.
+      const overloadStatus =
+        response.status === 502 ||
+        response.status === 503 ||
+        response.status === 504;
+      if (overloadStatus && i < candidates.length - 1) {
+        logger.warn("llm.model.overload_trying_next", {
+          model,
+          status: response.status,
+          next: candidates[i + 1],
+        });
+        break;
+      }
+
       // Same-model retries help RPM / transient 5xx — not daily free-tier exhaustion.
       if (
         isTransientStatus(response.status) &&
@@ -299,11 +374,14 @@ async function openChatWithFallbacks(
         break;
       }
 
+      maybeThrowBillingHandoff(slot, route, response.status, providerMessage);
       throwForFailedStatus(response.status, body, model, baseUrl, apiKey);
     }
   }
 
   if (lastFail) {
+    const providerMessage = parseProviderError(lastFail.body);
+    maybeThrowBillingHandoff(slot, route, lastFail.status, providerMessage);
     throwForFailedStatus(
       lastFail.status,
       lastFail.body,

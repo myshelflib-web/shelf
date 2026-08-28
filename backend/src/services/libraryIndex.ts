@@ -7,6 +7,7 @@ import { logger, errorFields } from "../utils/logger.js";
 import { isThinPageText } from "../utils/pageAskContext.js";
 import { MAX_CHUNKS_PER_PAGE, vectorChunkLimit } from "../utils/quotas.js";
 import { embedTexts } from "./embeddings.js";
+import { apiKeyRouteForUser } from "./apiKeyRoute.js";
 import {
   allowedChunkCount,
   chunksToEvict,
@@ -271,7 +272,10 @@ export async function indexUserPage(pageId: string): Promise<void> {
   const labeled = chunks.map((text) =>
     labeledChunk({ title: page.title, notebook, topic }, text)
   );
-  const vectors = await embedTexts(labeled, { task: "document" });
+  const vectors = await embedTexts(labeled, {
+    task: "document",
+    apiKeyRoute: apiKeyRouteForUser(user),
+  });
   await upsertVectors(
     chunks.map((text, i) => ({
       id: chunkPointId(pageId, i),

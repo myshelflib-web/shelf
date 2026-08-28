@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Download, Layers, MessageSquareText, X } from "lucide-react";
 import { isPremiumUser } from "@/lib/premium";
-import { getStoredStudyDepth, type StudyDepth } from "@/lib/studyDepth";
+import { getStoredStudyDepth, resolveStudyDepth, type StudyDepth } from "@/lib/studyDepth";
 import { StudyAIContent } from "@/lib/studyAiMarkdown";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudyPanelChat } from "@/hooks/useStudyPanelChat";
@@ -47,12 +47,18 @@ export function StudyPanel({
 }: StudyPanelProps) {
   const { user } = useAuth();
   const memoryLimit = isPremiumUser(user) ? 300 : 30;
-  const [depth, setDepth] = useState<StudyDepth>(() => getStoredStudyDepth());
+  const [depth, setDepth] = useState<StudyDepth>(() =>
+    getStoredStudyDepth(isPremiumUser(user))
+  );
   const [pasted, setPasted] = useState("");
   const [attached, setAttached] = useState(false);
   const [saveContent, setSaveContent] = useState<string | null>(null);
   const [flashcardsMd, setFlashcardsMd] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setDepth((d) => resolveStudyDepth(d, isPremiumUser(user)));
+  }, [user]);
 
   const panel = useStudyPanelChat({
     articleId,

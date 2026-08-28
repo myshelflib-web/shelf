@@ -17,9 +17,15 @@ type DepthUser = {
 };
 
 export function assertDepthAllowed(user: DepthUser, depth: StudyDepth): void {
-  if (depth === "deep" && user.role !== "ADMIN" && !isPremiumUser(user)) {
+  const premium = user.role === "ADMIN" || isPremiumUser(user);
+  if (depth === "standard" && !premium) {
     throw new QuotaError(
-      "Deep analysis requires Premium. Upgrade for longer, thorough answers — or use Standard mode."
+      "Standard depth requires Premium. Use Quick mode, or upgrade for more detailed answers."
+    );
+  }
+  if (depth === "deep" && !premium) {
+    throw new QuotaError(
+      "Deep analysis requires Premium. Upgrade for longer, thorough answers — or use Quick mode."
     );
   }
 }

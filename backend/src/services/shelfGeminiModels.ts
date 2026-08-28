@@ -8,7 +8,8 @@
  * Quota-aware fallbacks (when a pinned id 404s):
  * - Lite: 15 RPM, 500 RPD — Quick chat, map-reduce sections
  * - Flash: 5 RPM, 20 RPD — Standard depth
- * - 3.7 Flash: Deep / Think longer (Premium)
+ * - Deep / Think longer: same Flash alias as Standard (higher token + context caps).
+ *   Override with LLM_MODEL_DEEP when a newer pinned id is stable on your key.
  */
 export const SHELF_GEMINI = {
   /** Quick chat + map sections — hot-swaps to newest Flash-Lite. */
@@ -17,8 +18,10 @@ export const SHELF_GEMINI = {
   FAST_ALT: "gemini-3.5-flash-lite",
   /** Standard depth — hot-swaps to newest Flash. */
   STANDARD: "gemini-flash-latest",
-  /** Premium deep mode — pinned (cost + quality). */
-  DEEP: "gemini-3.7-flash",
+  /** Think longer — Flash alias; depth differs via tokens/context, not model id. */
+  DEEP: "gemini-flash-latest",
+  /** Opt-in pinned deep model when your key supports it: LLM_MODEL_DEEP=gemini-3.7-flash */
+  DEEP_PINNED: "gemini-3.7-flash",
   /** Extra flash fallback after latest alias. */
   FLASH: "gemini-3.6-flash",
   /** Default embedding — widely available on AI Studio keys (768-dim). */

@@ -9,7 +9,12 @@ export const STUDY_DEPTH_OPTIONS: {
   premium?: boolean;
 }[] = [
   { id: "quick", label: "Quick", hint: "Fastest — flash-lite, minimal prep" },
-  { id: "standard", label: "Standard", hint: "More detail; slower model" },
+  {
+    id: "standard",
+    label: "Standard",
+    hint: "More detail; slower model (Premium)",
+    premium: true,
+  },
   {
     id: "deep",
     label: "Deep",
@@ -23,11 +28,20 @@ export function parseStudyDepth(raw: unknown): StudyDepth {
   return "quick";
 }
 
-export function getStoredStudyDepth(): StudyDepth {
+/** Free accounts only get Quick; premium unlocks Standard and Deep. */
+export function resolveStudyDepth(
+  depth: StudyDepth,
+  isPremium: boolean
+): StudyDepth {
+  if (isPremium || depth === "quick") return depth;
+  return "quick";
+}
+
+export function getStoredStudyDepth(isPremium = false): StudyDepth {
   if (typeof window === "undefined") return "quick";
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    return parseStudyDepth(v);
+    return resolveStudyDepth(parseStudyDepth(v), isPremium);
   } catch {
     return "quick";
   }

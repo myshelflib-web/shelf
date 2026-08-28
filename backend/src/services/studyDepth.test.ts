@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { QuotaError } from "../utils/quotas.js";
 import {
+  assertDepthAllowed,
   mayPrepareMapReduce,
   parseStudyDepth,
   shouldMapReduce,
@@ -21,6 +23,20 @@ describe("studyDepth", () => {
     expect(standard.maxTokens).toBeGreaterThan(quick.maxTokens);
     expect(deep.maxTokens).toBeGreaterThan(standard.maxTokens);
     expect(deep.pageContextBudget).toBeGreaterThan(quick.pageContextBudget);
+  });
+
+  it("requires premium for standard and deep", () => {
+    const free = { plan: "FREE", role: "STUDENT" };
+    expect(() => assertDepthAllowed(free, "quick")).not.toThrow();
+    expect(() => assertDepthAllowed(free, "standard")).toThrow(QuotaError);
+    expect(() => assertDepthAllowed(free, "deep")).toThrow(QuotaError);
+    const premium = {
+      plan: "PREMIUM",
+      role: "STUDENT",
+      subscriptionExpiresAt: new Date(Date.now() + 86_400_000),
+    };
+    expect(() => assertDepthAllowed(premium, "standard")).not.toThrow();
+    expect(() => assertDepthAllowed(premium, "deep")).not.toThrow();
   });
 
   it("only deep-summary on Think longer triggers map-reduce", () => {

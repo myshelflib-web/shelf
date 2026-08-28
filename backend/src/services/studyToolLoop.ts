@@ -17,6 +17,8 @@ import {
 } from "../utils/ragPack.js";
 import { logger, errorFields } from "../utils/logger.js";
 import { logStudyAiEmptyReply } from "../utils/studyAiDiagnostics.js";
+import { resolveApiKeyRouteForUserId } from "./apiKeyRoute.js";
+import type { ApiKeyRoute } from "./apiKeyRoute.js";
 
 export type StudyLlmOpts = {
   model?: string;
@@ -75,6 +77,20 @@ export type ToolChatResult = {
   model?: string;
 };
 
+function llmCallOpts(
+  llmOpts: StudyLlmOpts | undefined,
+  apiKeyRoute: ApiKeyRoute,
+  extra?: { tools?: typeof STUDY_TOOLS; toolChoice?: "auto" | "none"; signal?: AbortSignal }
+) {
+  return {
+    ...extra,
+    model: llmOpts?.model,
+    maxTokens: llmOpts?.maxTokens,
+    temperature: llmOpts?.temperature,
+    apiKeyRoute,
+  };
+}
+
 /** Non-streaming chat with Study AI tools (planner, quiz, library, web). */
 export async function completeWithStudyTools(
   messages: ChatMessage[],
@@ -95,18 +111,19 @@ export async function completeWithStudyTools(
   const initial = messages;
   const rounds = maxToolRounds(opts?.maxToolRounds);
   const llmOpts = opts?.llm;
+  const apiKeyRoute = await resolveApiKeyRouteForUserId(ctx.userId);
 
   for (let round = 0; round < rounds; round++) {
     if (opts?.signal?.aborted) break;
     try {
-      const result = await completeChat(working, {
-        tools: useTools ? STUDY_TOOLS : undefined,
-        toolChoice: useTools ? "auto" : "none",
-        signal: opts?.signal,
-        model: llmOpts?.model,
-        maxTokens: llmOpts?.maxTokens,
-        temperature: llmOpts?.temperature,
-      });
+      const result = await completeChat(
+        working,
+        llmCallOpts(llmOpts, apiKeyRoute, {
+          tools: useTools ? STUDY_TOOLS : undefined,
+          toolChoice: useTools ? "auto" : "none",
+          signal: opts?.signal,
+        })
+      );
       tokens += result.tokens;
       if (result.toolCalls?.length && useTools) {
         working = [
@@ -133,13 +150,13 @@ export async function completeWithStudyTools(
     }
   }
 
-  const fallback = await completeChat(working, {
-    toolChoice: "none",
-    signal: opts?.signal,
-    model: llmOpts?.model,
-    maxTokens: llmOpts?.maxTokens,
-    temperature: llmOpts?.temperature,
-  });
+  const fallback = await completeChat(
+    working,
+    llmCallOpts(llmOpts, apiKeyRoute, {
+      toolChoice: "none",
+      signal: opts?.signal,
+    })
+  );
   return {
     text: fallback.text,
     tokens: tokens + fallback.tokens,
@@ -182,6 +199,7 @@ export async function* streamWithStudyTools(
   const llmOpts = opts?.llm;
   let toolCallsRun = 0;
   let fallbackError: unknown;
+  const apiKeyRoute = await resolveApiKeyRouteForUserId(ctx.userId);
 
   for (let round = 0; round < rounds; round++) {
     if (opts?.signal?.aborted) break;
@@ -189,14 +207,14 @@ export async function* streamWithStudyTools(
     let roundText = "";
     let toolCalls: ChatToolCall[] | undefined;
     try {
-      for await (const ev of streamChat(working, {
-        tools: useTools ? STUDY_TOOLS : undefined,
-        toolChoice: useTools ? "auto" : "none",
-        signal: opts?.signal,
-        model: llmOpts?.model,
-        maxTokens: llmOpts?.maxTokens,
-        temperature: llmOpts?.temperature,
-      })) {
+      for await (const ev of streamChat(
+        working,
+        llmCallOpts(llmOpts, apiKeyRoute, {
+          tools: useTools ? STUDY_TOOLS : undefined,
+          toolChoice: useTools ? "auto" : "none",
+          signal: opts?.signal,
+        })
+      )) {
         if (opts?.signal?.aborted) break;
         if (ev.type === "delta") {
           if (toolCalls?.length) continue;
@@ -252,13 +270,13 @@ export async function* streamWithStudyTools(
   if (!answer.trim() && !opts?.signal?.aborted) {
     yield { type: "status", detail: "Finishing answer…" };
     try {
-      const fallback = await completeChat(working, {
-        toolChoice: "none",
-        signal: opts?.signal,
-        model: llmOpts?.model,
-        maxTokens: llmOpts?.maxTokens,
-        temperature: llmOpts?.temperature,
-      });
+      const fallback = await completeChat(
+        working,
+        llmCallOpts(llmOpts, apiKeyRoute, {
+          toolChoice: "none",
+          signal: opts?.signal,
+        })
+      );
       tokens += fallback.tokens;
       answer = fallback.text;
       if (answer) {

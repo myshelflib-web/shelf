@@ -23,7 +23,7 @@ import { useStudyAiChat } from "@/hooks/useStudyAiChat";
 import { api } from "@/lib/api";
 import { downloadChatPdf } from "@/lib/exportAnswer";
 import { isPremiumUser } from "@/lib/premium";
-import { getStoredStudyDepth, type StudyDepth } from "@/lib/studyDepth";
+import { getStoredStudyDepth, resolveStudyDepth, type StudyDepth } from "@/lib/studyDepth";
 import { normalizeContextKind } from "@/lib/studyAiContextLabel";
 import {
   positionPopover,
@@ -39,7 +39,14 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const memoryLimit = isPremiumUser(user) ? 300 : 30;
-  const [depth, setDepth] = useState<StudyDepth>(() => getStoredStudyDepth());
+  const [depth, setDepth] = useState<StudyDepth>(() =>
+    getStoredStudyDepth(isPremiumUser(user))
+  );
+
+  useEffect(() => {
+    setDepth((d) => resolveStudyDepth(d, isPremiumUser(user)));
+  }, [user]);
+
   const chat = useStudyAiChat({
     threadId,
     userId: user?.id,

@@ -109,6 +109,7 @@ export async function* streamMapReduceAnswer(
             maxTokens: MAP_MAX_TOKENS,
             signal: opts.signal,
             temperature: 0.2,
+            apiKeyRoute: "paid",
           }
         );
         return { i, text: result.text, tokens: result.tokens };
@@ -149,6 +150,7 @@ ${mapSummaries.filter(Boolean).join("\n\n")}`;
       maxTokens: cfg.maxTokens,
       temperature: cfg.temperature,
       signal: opts.signal,
+      apiKeyRoute: "paid",
     }
   )) {
     if (ev.type === "delta") {

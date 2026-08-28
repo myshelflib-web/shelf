@@ -8,7 +8,7 @@ export const PREMIUM_STORAGE_BYTES = 10 * 1024 * 1024 * 1024;
 /** Monthly Study AI pool — hard stop when exhausted (resets each calendar month). */
 export const FREE_LLM_TOKENS = Number(process.env.FREE_LLM_TOKENS ?? 50_000);
 export const PREMIUM_LLM_TOKENS = Number(
-  process.env.PREMIUM_LLM_TOKENS ?? 2_000_000
+  process.env.PREMIUM_LLM_TOKENS ?? 1_000_000
 );
 
 /** Max messages retained per Study AI chat thread (user + assistant). */

@@ -161,7 +161,7 @@ export async function retrieveLibrary(
 
   if (isVectorConfigured()) {
     try {
-      const [vector] = await embedTexts([query], { task: "query" });
+      const [vector] = await embedTexts([query], { task: "query", userId });
       const hits = await searchVectors(vector, userId, VECTOR_HIT_LIMIT, {
         pageIds: pageIds ?? undefined,
       });
@@ -249,7 +249,7 @@ export async function retrievePageAskContext(
   }
 
   try {
-    const [vector] = await embedTexts([query], { task: "query" });
+    const [vector] = await embedTexts([query], { task: "query", userId });
     const pageHits = await searchVectors(vector, userId, pageHitLimit, {
       pageId,
     });
