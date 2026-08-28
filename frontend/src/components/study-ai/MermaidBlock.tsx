@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Maximize2, X } from "lucide-react";
 
 function isDarkTheme(): boolean {
@@ -63,7 +64,11 @@ export function MermaidBlock({
       if (e.key === "Escape") close();
     };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
   }, [open, close]);
 
   if (failed) {
@@ -94,33 +99,36 @@ export function MermaidBlock({
           </button>
         )}
       </div>
-      {open && (
-        <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-4 sm:p-8"
-          onClick={close}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Diagram preview"
-        >
-          <div
-            className="relative w-full max-w-5xl max-h-[90vh] overflow-auto rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 sm:p-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              type="button"
-              aria-label="Close preview"
-              onClick={close}
-              className="absolute top-3 right-3 w-8 h-8 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-            >
-              <X className="w-4 h-4 mx-auto" />
-            </button>
+      {open
+        ? createPortal(
             <div
-              className="study-ai-mermaid study-ai-mermaid-preview pr-8"
-              dangerouslySetInnerHTML={{ __html: svg }}
-            />
-          </div>
-        </div>
-      )}
+              className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-4 sm:p-8"
+              onClick={close}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Diagram preview"
+            >
+              <div
+                className="relative w-full max-w-5xl max-h-[90vh] overflow-auto rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 sm:p-6"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  aria-label="Close preview"
+                  onClick={close}
+                  className="absolute top-3 right-3 w-8 h-8 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                >
+                  <X className="w-4 h-4 mx-auto" />
+                </button>
+                <div
+                  className="study-ai-mermaid study-ai-mermaid-preview pr-8"
+                  dangerouslySetInnerHTML={{ __html: svg }}
+                />
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </>
   );
 }
