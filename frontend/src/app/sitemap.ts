@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { BLOG_POSTS as STATIC_BLOG_POSTS } from "@/lib/blog/registry";
+import { getAllFeatureSlugs, getFeatureBySlug } from "@/lib/seo/featureCatalog";
 import { getSiteUrl } from "@/lib/siteUrl";
 
 const API_URL =
@@ -63,8 +64,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static blog catalog — never block sitemap on a cold backend.
   const blogSlugs = STATIC_BLOG_POSTS.map((p) => p.slug);
 
+  const featureRoutes: MetadataRoute.Sitemap = getAllFeatureSlugs()
+    .filter((slug) => {
+      const f = getFeatureBySlug(slug);
+      return f && !f.canonicalPath;
+    })
+    .map((slug) => ({
+      url: `${siteUrl}/features/${slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    }));
+
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${siteUrl}/`, changeFrequency: "weekly", priority: 1 },
+    { url: `${siteUrl}/features`, changeFrequency: "weekly", priority: 0.88 },
     { url: `${siteUrl}/blog`, changeFrequency: "weekly", priority: 0.85 },
     { url: `${siteUrl}/learn`, changeFrequency: "daily", priority: 0.9 },
     { url: `${siteUrl}/subscribe`, changeFrequency: "monthly", priority: 0.8 },
@@ -77,6 +90,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.75,
     })),
+    ...featureRoutes,
   ];
 
   const learnRoutes = await fetchLearnRoutes(siteUrl);

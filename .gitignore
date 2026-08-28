@@ -51,3 +51,6 @@ postgres_data/
 # Misc
 .cache/
 .turbo/
+
+# Local Medium export (Word docs + art). Repo already has docs/ for deploy notes.
+docs/medium/

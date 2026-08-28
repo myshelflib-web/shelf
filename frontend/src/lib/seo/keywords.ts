@@ -36,6 +36,10 @@ export const SEO_KEYWORDS = {
     "private PDF library",
     "highlight and ask AI on PDF",
     "cross device reading progress",
+    "save Telegram PDF to library",
+    "Spotify while reading PDF",
+    "share PDF with classmates",
+    "exam quiz from your notes",
   ],
 } as const;
 
@@ -224,13 +228,42 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "search PDF library",
     "find notes across collections",
   ],
+  "study-ai-planner-quiz-actions": [
+    "AI study planner",
+    "quiz from chat",
+    "study AI reminders",
+    "create task from Study AI",
+  ],
+  "study-ai-chat-controls": [
+    "stop AI streaming",
+    "queue study AI messages",
+    "study AI diagram preview",
+  ],
 };
 
 export const HOME_TITLE =
   "Shelf — Personal Study Library | PDF Highlights, Study AI & Planner";
 
 export const HOME_DESCRIPTION =
-  "Build a private study library for any goal: upload PDFs, highlight as you read, ask Study AI from your material, and plan work on one calendar. Free curriculum packs available — used by students, professionals, and lifelong learners.";
+  "Build a private study library: upload PDFs, highlight as you read, ask Study AI from your material, import from Telegram, share with classmates, quiz from your notes, and plan on one calendar. Free curriculum on Learn.";
+
+export const FEATURES_HUB_TITLE =
+  "Shelf Features — PDF Library, Study AI, Quiz, Telegram & More";
+
+export const FEATURES_HUB_DESCRIPTION =
+  "Explore every Shelf feature: personal PDF library, highlights, multi-tab reader, Study AI chat, exam quizzes, Telegram PDF import, Spotify focus audio, document sharing, planner, and offline PWA — for UPSC, NEET PG, GATE, and more.";
+
+export const FEATURES_HUB_KEYWORDS = [
+  "Shelf features",
+  "PDF study library",
+  "Study AI features",
+  "Telegram PDF import",
+  "Spotify study reader",
+  "share study PDFs",
+  "exam quiz from notes",
+  "UPSC study app features",
+  "personal study workspace",
+];
 
 export const LEARN_DESCRIPTION =
   "Browse free curriculum packs — syllabus articles, textbooks, and topic guides. Open without signing up; sign in to keep a parallel private library of your own PDFs and notes.";

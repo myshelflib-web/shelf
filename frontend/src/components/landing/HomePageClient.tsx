@@ -101,6 +101,15 @@ export function HomePageClient() {
         </section>
 
         <LandingFeatureGrid title="Everything at a glance" />
+
+        <section className="px-4 sm:px-6 pb-12 max-w-5xl mx-auto text-center">
+          <Link
+            href="/features"
+            className="text-sm text-[var(--accent)] hover:underline"
+          >
+            See all features — Telegram import, Spotify, sharing, Quiz & more →
+          </Link>
+        </section>
       </main>
 
       <MarketingFooter />

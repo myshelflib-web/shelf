@@ -10,6 +10,9 @@ export function MarketingFooter() {
           <span className="font-semibold text-sm">Shelf</span>
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-[var(--text-secondary)]">
+          <Link href="/features" className="nav-link">
+            Features
+          </Link>
           <Link href="/blog" className="nav-link">
             Blog
           </Link>

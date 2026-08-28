@@ -41,6 +41,11 @@ export function SiteJsonLd() {
     hasPart: [
       {
         "@type": "WebPage",
+        name: "Features",
+        url: `${siteUrl}/features`,
+      },
+      {
+        "@type": "WebPage",
         name: "Blog",
         url: `${siteUrl}/blog`,
       },
@@ -87,13 +92,18 @@ export function SiteJsonLd() {
       "Personal study library app: PDF reader with highlights, AI study assistant grounded in your notes, study planner, and optional free curriculum.",
     url: siteUrl,
     featureList: [
+      "Personal PDF library with collections and topics",
       "PDF highlights and annotations",
-      "Study AI from uploaded PDFs",
-      "Personal collections and topics",
+      "Study AI grounded in your uploads",
+      "Telegram PDF import bot",
+      "Spotify focus audio in the reader",
+      "Share study documents with classmates",
+      "Exam-style quiz from your notes",
+      "Multi-tab reader with split view",
       "Study planner and calendar",
       "Cross-device reading sync",
-      "Exam-style quiz from your notes",
-      "Optional free curriculum library",
+      "Offline PWA install",
+      "Optional free curriculum on Learn",
     ],
   };
 

@@ -13,6 +13,8 @@ export default function robots(): MetadataRoute.Robots {
           "/",
           "/blog",
           "/blog/",
+          "/features",
+          "/features/",
           "/learn",
           "/learn/",
           "/about",
