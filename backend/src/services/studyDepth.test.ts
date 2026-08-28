@@ -4,6 +4,7 @@ import {
   parseStudyDepth,
   shouldMapReduce,
   studyDepthConfig,
+  boostQuickDocTokens,
 } from "./studyDepth.js";
 
 describe("studyDepth", () => {
@@ -23,7 +24,7 @@ describe("studyDepth", () => {
     expect(deep.pageContextBudget).toBeGreaterThan(quick.pageContextBudget);
   });
 
-  it("triggers map-reduce for deep-summary and long docs", () => {
+  it("only deep-summary on Think longer triggers map-reduce", () => {
     expect(
       shouldMapReduce({
         depth: "quick",
@@ -31,13 +32,21 @@ describe("studyDepth", () => {
         materialChars: 20_000,
         chunkCount: 3,
       })
-    ).toBe(true);
+    ).toBe(false);
     expect(
       shouldMapReduce({
         depth: "deep",
         mode: "summarize",
-        materialChars: 15_000,
-        chunkCount: 2,
+        materialChars: 50_000,
+        chunkCount: 20,
+      })
+    ).toBe(false);
+    expect(
+      shouldMapReduce({
+        depth: "deep",
+        mode: "deep-summary",
+        materialChars: 20_000,
+        chunkCount: 3,
       })
     ).toBe(true);
     expect(
@@ -67,5 +76,12 @@ describe("studyDepth", () => {
         hasSelection: false,
       })
     ).toBe(false);
+  });
+
+  it("boosts quick doc token cap without changing model", () => {
+    const quick = studyDepthConfig("quick");
+    const boosted = boostQuickDocTokens("quick", "summarize", quick);
+    expect(boosted.model).toBe(quick.model);
+    expect(boosted.maxTokens).toBeGreaterThan(quick.maxTokens);
   });
 });

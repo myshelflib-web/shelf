@@ -17,6 +17,7 @@ import { listVectorsForPage } from "./vectorStore.js";
 import { splitIntoSections } from "./mapReduceSummary.js";
 import {
   assertDepthAllowed,
+  boostQuickDocTokens,
   parseStudyDepth,
   shouldMapReduce,
   mayPrepareMapReduce,
@@ -24,6 +25,10 @@ import {
   type StudyDepth,
 } from "./studyDepth.js";
 import { promptForMode } from "./pageAskPrompts.js";
+import {
+  pageAskRetrieveOpts,
+  shouldRetrievePageVectors,
+} from "./pageAskVectors.js";
 
 const MODES = [
   "ask",
@@ -46,12 +51,20 @@ export type PageAskInput = {
   articleId?: string;
   userTopicId?: string;
   question?: string;
+  /** Expanded slash-command prompt (separate from bubble label). */
+  prompt?: string;
   selection?: string;
   mode?: string;
   depth?: string;
   imageBase64?: string;
   history?: PageAskHistoryTurn[];
 };
+
+export function resolvePageAskQuestion(input: PageAskInput): string {
+  const prompt = String(input.prompt ?? "").trim();
+  const question = String(input.question ?? "").trim();
+  return prompt || question;
+}
 
 export type PreparedPageAsk = {
   resolvedMode: PageAskMode;
@@ -100,17 +113,17 @@ export async function preparePageAsk(
   onStatus?: (stage: string, detail?: string) => void
 ): Promise<PreparedPageAsk> {
   const resolvedMode = resolvePageAskMode(input.mode);
+  const expandedPrompt = String(input.prompt ?? "").trim();
   const depth = parseStudyDepth(input.depth);
+  const userQuestion = resolvePageAskQuestion(input);
   const hasSelection = Boolean(input.selection?.trim());
   const userId = input.userId;
 
   if (!input.articleId && !input.userTopicId) {
     throw new PageAskPrepareError(400, "articleId or userTopicId required");
   }
-  if (resolvedMode === "ask" && !String(input.question ?? "").trim()) {
-    if (!input.imageBase64?.startsWith("data:image/")) {
-      throw new PageAskPrepareError(400, "question required");
-    }
+  if (resolvedMode === "ask" && !userQuestion && !input.imageBase64?.startsWith("data:image/")) {
+    throw new PageAskPrepareError(400, "question required");
   }
 
   onStatus?.("loading_page", "Reading this file…");
@@ -165,7 +178,7 @@ export async function preparePageAsk(
   const thinText = isThinPageText(title, pageBody);
 
   const rewrittenQuestion = rewriteSearchQuery(
-    String(input.question ?? "").trim(),
+    userQuestion,
     (input.history ?? [])
       .filter((h) => h.role === "user" || h.role === "assistant")
       .map((h) => ({
@@ -193,9 +206,22 @@ export async function preparePageAsk(
   }> = [];
 
   const forceVectors = process.env.PAGE_ASK_ALWAYS_VECTORS === "true";
-  const needVectors =
-    Boolean(pageIdForVectors) &&
-    (forceVectors || !hasSelection || thinText || fullFileText.length < 8_000);
+  const mapReduceEligibleEarly = mayPrepareMapReduce({
+    depth,
+    mode: resolvedMode,
+    materialChars: fullFileText.length,
+    hasSelection,
+  });
+  const needVectors = shouldRetrievePageVectors({
+    pageId: pageIdForVectors,
+    forceVectors,
+    depth,
+    hasSelection,
+    thinText,
+    fullFileText,
+    resolvedMode,
+    mapReduceEligible: mapReduceEligibleEarly,
+  });
 
   if (needVectors && pageIdForVectors) {
     onStatus?.("retrieving", "Searching your notes…");
@@ -204,14 +230,13 @@ export async function preparePageAsk(
         userId,
         pageIdForVectors,
         retrievalQuery,
-        {
+        pageAskRetrieveOpts({
+          depth,
           hasSelection,
-          includeRelated: process.env.PAGE_ASK_RELATED === "true",
-          coverWholePage: !hasSelection,
-          questionFocused:
-            resolvedMode === "ask" &&
-            Boolean(String(input.question ?? "").trim()),
-        }
+          resolvedMode,
+          userQuestion,
+          expandedPrompt: expandedPrompt.length > 0,
+        })
       );
       pageChunks = retrieved.pageChunks;
       related = retrieved.relatedExcerpts.map((e) => ({
@@ -258,10 +283,13 @@ export async function preparePageAsk(
   }
 
   assertDepthAllowed(user, depth);
-  const depthConfig = studyDepthConfig(depth);
+  const depthConfig = boostQuickDocTokens(
+    depth,
+    resolvedMode,
+    studyDepthConfig(depth)
+  );
 
-  const toolsEnabled =
-    resolvedMode === "ask" || resolvedMode === "analyze";
+  const toolsEnabled = resolvedMode === "ask" && !expandedPrompt;
 
   const messages = promptForMode(
     resolvedMode,
@@ -269,7 +297,7 @@ export async function preparePageAsk(
     user.name,
     title,
     packedMaterial,
-    input.question,
+    userQuestion,
     hasSelection,
     toolsEnabled,
     depth

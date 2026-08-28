@@ -1,6 +1,6 @@
 export type StudyAiCommandScope = "library" | "page";
 
-export type StudyAiPageMode = "summarize" | "notes" | "mindmap" | "deep-summary";
+export type StudyAiPageMode = "summarize" | "notes" | "mindmap" | "deep-summary" | "analyze";
 
 export type StudyAiCommand = {
   slash: string;
@@ -48,6 +48,7 @@ export const STUDY_AI_COMMANDS: StudyAiCommand[] = [
     slash: "analyze",
     name: "Analyze",
     description: "Thorough thematic analysis with examples.",
+    pageMode: "analyze",
     prompt: (scope, args) =>
       withTopic(
         `Provide a thorough thematic analysis of ${fileOrLibrary(scope)}: core arguments, evidence, implications, and gaps. Use ### per theme with examples.`,

@@ -59,7 +59,7 @@ export function StudyPanelComposer({
   );
 
   const runWithContext = (
-    mode: "ask" | "summarize" | "notes" | "mindmap" | "deep-summary",
+    mode: "ask" | "summarize" | "notes" | "mindmap" | "deep-summary" | "analyze",
     q?: string,
     userImg?: string,
     opts?: { prompt?: string }

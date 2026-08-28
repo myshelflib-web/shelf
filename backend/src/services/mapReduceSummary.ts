@@ -4,6 +4,8 @@ import { studyDepthConfig, type StudyDepth } from "./studyDepth.js";
 
 const SECTION_TARGET = 4_500;
 const MAP_MAX_TOKENS = 1_024;
+/** Cap section map calls so a whole textbook cannot stall or trip rate limits. */
+export const MAX_MAP_REDUCE_SECTIONS = 16;
 
 /** Split long plain text into section-sized chunks on paragraph boundaries. */
 export function splitIntoSections(text: string, target = SECTION_TARGET): string[] {
@@ -46,6 +48,17 @@ function mapModel(): string {
   return process.env.LLM_MODEL_FAST?.trim() || "gemini-flash-lite-latest";
 }
 
+/** Evenly sample sections across the document when there are too many chunks. */
+function sampleSections(sections: string[], max: number): string[] {
+  if (sections.length <= max) return sections;
+  const out: string[] = [];
+  for (let i = 0; i < max; i++) {
+    const idx = Math.floor((i * sections.length) / max);
+    out.push(sections[idx]);
+  }
+  return out;
+}
+
 function sectionMapPrompt(title: string, section: string, i: number, total: number): string {
   return `Summarize this section of "${title}" for a comprehensive revision guide.
 Include key terms, facts, arguments, examples, and definitions. Be thorough — do not omit important points.
@@ -59,40 +72,55 @@ export async function* streamMapReduceAnswer(
   opts: MapReduceOpts
 ): AsyncGenerator<MapReduceStreamEvent> {
   const cfg = studyDepthConfig(opts.depth);
-  const sections = opts.sections.filter((s) => s.trim());
-  if (sections.length === 0) {
+  const all = opts.sections.filter((s) => s.trim());
+  if (all.length === 0) {
     throw new Error("No document sections to summarize.");
   }
+  const sections =
+    all.length <= MAX_MAP_REDUCE_SECTIONS
+      ? all
+      : sampleSections(all, MAX_MAP_REDUCE_SECTIONS);
 
   let tokens = 0;
   const mapSummaries: string[] = [];
+  const MAP_BATCH = 4;
 
-  for (let i = 0; i < sections.length; i++) {
+  for (let start = 0; start < sections.length; start += MAP_BATCH) {
     if (opts.signal?.aborted) break;
-    const detail = `Reading section ${i + 1} of ${sections.length}…`;
-    yield { type: "status", detail };
-
-    const result = await completeChat(
-      [
-        {
-          role: "system",
-          content:
-            "You summarize document sections for later merging. Output Markdown with bullets and short paragraphs. Cover every important point.",
-        },
-        {
-          role: "user",
-          content: sectionMapPrompt(opts.title, sections[i], i, sections.length),
-        },
-      ],
-      {
-        model: mapModel(),
-        maxTokens: MAP_MAX_TOKENS,
-        signal: opts.signal,
-        temperature: 0.2,
-      }
+    const batch = sections.slice(start, start + MAP_BATCH);
+    const batchResults = await Promise.all(
+      batch.map(async (section, batchIdx) => {
+        const i = start + batchIdx;
+        const result = await completeChat(
+          [
+            {
+              role: "system",
+              content:
+                "You summarize document sections for later merging. Output Markdown with bullets and short paragraphs. Cover every important point.",
+            },
+            {
+              role: "user",
+              content: sectionMapPrompt(opts.title, section, i, sections.length),
+            },
+          ],
+          {
+            model: mapModel(),
+            maxTokens: MAP_MAX_TOKENS,
+            signal: opts.signal,
+            temperature: 0.2,
+          }
+        );
+        return { i, text: result.text, tokens: result.tokens };
+      })
     );
-    tokens += result.tokens;
-    mapSummaries.push(`### Part ${i + 1}\n${result.text}`);
+    for (const row of batchResults.sort((a, b) => a.i - b.i)) {
+      tokens += row.tokens;
+      mapSummaries[row.i] = `### Part ${row.i + 1}\n${row.text}`;
+      yield {
+        type: "status",
+        detail: `Reading section ${row.i + 1} of ${sections.length}…`,
+      };
+    }
   }
 
   if (opts.signal?.aborted) {
@@ -107,7 +135,7 @@ export async function* streamMapReduceAnswer(
 Document: ${opts.title}
 Section summaries (${sections.length} parts):
 
-${mapSummaries.join("\n\n")}`;
+${mapSummaries.filter(Boolean).join("\n\n")}`;
 
   let model = cfg.model;
   for await (const ev of streamChat(

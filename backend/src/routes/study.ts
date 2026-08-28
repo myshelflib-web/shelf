@@ -14,10 +14,10 @@ import {
 } from "../services/chatThreads.js";
 import {
   completeWithStudyTools,
-  streamWithStudyTools,
 } from "../services/studyToolLoop.js";
 import { streamMapReduceAnswer } from "../services/mapReduceSummary.js";
 import { estimateDepthTokens } from "../services/studyDepth.js";
+import { runStudyAskStream } from "./studyAskStreamRun.js";
 import {
   QuotaError,
   assertLlmRoom,
@@ -120,9 +120,15 @@ router.post("/ask", async (req: Request, res: Response) => {
   try {
     const prepared = await preparePageAsk({
       userId,
-      ...body,
-      question:
-        String(body.prompt ?? body.question ?? "").trim() || body.question,
+      articleId: body.articleId,
+      userTopicId: body.userTopicId,
+      question: body.question,
+      prompt: body.prompt,
+      selection: body.selection,
+      mode: body.mode,
+      depth: body.depth,
+      imageBase64: body.imageBase64,
+      history: body.history,
     });
 
     let tokensUsed = prepared.user.llmTokensUsed;
@@ -143,16 +149,38 @@ router.post("/ask", async (req: Request, res: Response) => {
     let tokens = 0;
 
     if (prepared.useMapReduce && prepared.mapReduceSections.length > 0) {
-      for await (const ev of streamMapReduceAnswer({
-        depth: prepared.depth,
-        title: prepared.title,
-        mode: prepared.resolvedMode,
-        sections: prepared.mapReduceSections,
-        systemPrompt: prepared.systemPrompt,
-        mergeInstruction: prepared.mergeInstruction,
-      })) {
-        if (ev.type === "delta") answer += ev.text;
-        else if (ev.type === "done") tokens = ev.tokens;
+      try {
+        for await (const ev of streamMapReduceAnswer({
+          depth: prepared.depth,
+          title: prepared.title,
+          mode: prepared.resolvedMode,
+          sections: prepared.mapReduceSections,
+          systemPrompt: prepared.systemPrompt,
+          mergeInstruction: prepared.mergeInstruction,
+        })) {
+          if (ev.type === "delta") answer += ev.text;
+          else if (ev.type === "done") tokens = ev.tokens;
+        }
+      } catch (mapErr) {
+        logger.warn("study.map_reduce.fallback", errorFields(mapErr));
+        const result = await completeWithStudyTools(
+          prepared.chatMessages,
+          {
+            userId,
+            defaultPageId: prepared.defaultPageId,
+          },
+          {
+            enabled: prepared.toolsEnabled,
+            llm: {
+              model: prepared.depthConfig.model,
+              maxTokens: prepared.depthConfig.maxTokens,
+              temperature: prepared.depthConfig.temperature,
+            },
+            maxToolRounds: prepared.depthConfig.toolRounds,
+          }
+        );
+        answer = result.text;
+        tokens = result.tokens;
       }
     } else {
       const result = await completeWithStudyTools(
@@ -260,9 +288,15 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
     const prepared = await preparePageAsk(
       {
         userId,
-        ...body,
-        question:
-          String(body.prompt ?? body.question ?? "").trim() || body.question,
+        articleId: body.articleId,
+        userTopicId: body.userTopicId,
+        question: body.question,
+        prompt: body.prompt,
+        selection: body.selection,
+        mode: body.mode,
+        depth: body.depth,
+        imageBase64: body.imageBase64,
+        history: body.history,
       },
       (stage, detail) => send("status", { stage, detail })
     );
@@ -286,61 +320,22 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
     let tokens = 0;
     let answer = "";
 
-    if (prepared.useMapReduce && prepared.mapReduceSections.length > 0) {
-      for await (const ev of streamMapReduceAnswer({
-        depth: prepared.depth,
-        title: prepared.title,
-        mode: prepared.resolvedMode,
-        sections: prepared.mapReduceSections,
-        systemPrompt: prepared.systemPrompt,
-        mergeInstruction: prepared.mergeInstruction,
+    const streamResult = await runStudyAskStream(
+      {
+        prepared,
+        userId,
         signal: llmAbort.signal,
-      })) {
+      },
+      (ev) => {
         if (ev.type === "status") {
-          send("status", { stage: "map_reduce", detail: ev.detail });
+          send("status", { stage: ev.stage, detail: ev.detail });
         } else if (ev.type === "delta") {
-          answer += ev.text;
           send("delta", { text: ev.text });
-        } else if (ev.type === "done") {
-          tokens = ev.tokens;
-          send("status", {
-            stage: "finishing",
-            detail: ev.model ? `Done · ${ev.model}` : "Done",
-          });
         }
       }
-    } else {
-      for await (const ev of streamWithStudyTools(
-        prepared.chatMessages,
-        {
-          userId,
-          defaultPageId: prepared.defaultPageId,
-        },
-        {
-          enabled: prepared.toolsEnabled,
-          llm: {
-            model: prepared.depthConfig.model,
-            maxTokens: prepared.depthConfig.maxTokens,
-            temperature: prepared.depthConfig.temperature,
-          },
-          maxToolRounds: prepared.depthConfig.toolRounds,
-          signal: llmAbort.signal,
-        }
-      )) {
-        if (ev.type === "status") {
-          send("status", { stage: "tools", detail: ev.detail });
-        } else if (ev.type === "delta") {
-          answer += ev.text;
-          send("delta", { text: ev.text });
-        } else if (ev.type === "done") {
-          tokens = ev.tokens;
-          send("status", {
-            stage: "finishing",
-            detail: ev.model ? `Done · ${ev.model}` : "Done",
-          });
-        }
-      }
-    }
+    );
+    tokens = streamResult.tokens;
+    answer = streamResult.answer;
 
     await prisma.user.update({
       where: { id: userId },

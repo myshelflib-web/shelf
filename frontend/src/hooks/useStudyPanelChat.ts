@@ -121,7 +121,7 @@ export function useStudyPanelChat({
 
   const run = useCallback(
     async (
-      mode: "ask" | "summarize" | "notes" | "mindmap" | "deep-summary",
+      mode: "ask" | "summarize" | "notes" | "mindmap" | "deep-summary" | "analyze",
       q?: string,
       imageOverride?: string,
       opts?: { skipHistoryImage?: boolean; prompt?: string }
@@ -137,6 +137,8 @@ export function useStudyPanelChat({
             ? "Summarize this"
             : mode === "deep-summary"
               ? "Deep summary"
+              : mode === "analyze"
+                ? "Analyze this"
               : mode === "notes"
               ? "Make short notes"
               : "Make a mind map";

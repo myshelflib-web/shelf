@@ -81,7 +81,7 @@ export function studyDepthConfig(depth: StudyDepth): StudyDepthConfig {
         maxTokens: llmMaxOutputTokens(),
         pageContextBudget: envInt("PAGE_ASK_CONTEXT_BUDGET", 6_500),
         libraryContextBudget: envInt("LIBRARY_CONTEXT_BUDGET", 8_000),
-        toolRounds: 3,
+        toolRounds: 2,
         mapReduce: false,
         temperature: 0.2,
         tokenEstimateMultiplier: 1,
@@ -93,42 +93,60 @@ export function estimateDepthTokens(base: number, depth: StudyDepth): number {
   return Math.ceil(base * studyDepthConfig(depth).tokenEstimateMultiplier);
 }
 
-/** Skip expensive vector scroll unless deep / deep-summary may map-reduce. */
+/** Map-reduce only for Deep summary on Think longer — other modes stay single-pass. */
 export function mayPrepareMapReduce(opts: {
   depth: StudyDepth;
   mode: string;
   materialChars: number;
   hasSelection: boolean;
 }): boolean {
-  if (opts.hasSelection) return false;
-  if (opts.mode === "deep-summary") {
-    return opts.materialChars > 8_000;
-  }
-  if (opts.depth !== "deep") return false;
-  return (
-    opts.materialChars > 10_000 ||
-    ["summarize", "notes", "analyze"].includes(opts.mode)
-  );
+  if (opts.hasSelection || opts.depth !== "deep") return false;
+  return opts.mode === "deep-summary" && opts.materialChars > 8_000;
 }
 
-/** Map-reduce for long documents when depth or mode warrants full-file synthesis. */
+/** Map-reduce for long documents (Think longer + Deep summary only). */
 export function shouldMapReduce(opts: {
   depth: StudyDepth;
   mode: string;
   materialChars: number;
   chunkCount: number;
 }): boolean {
-  if (opts.mode === "deep-summary") {
-    return opts.materialChars > 8_000 || opts.chunkCount > 4;
-  }
-  const cfg = studyDepthConfig(opts.depth);
-  if (!cfg.mapReduce) return false;
+  if (opts.depth !== "deep" || opts.mode !== "deep-summary") return false;
+  return opts.materialChars > 8_000 || opts.chunkCount > 4;
+}
+
+/** Slash / long-form doc commands use at least Standard when still on Quick. */
+export function bumpDepthForDocCommand(
+  depth: StudyDepth,
+  mode: string,
+  hasExpandedPrompt: boolean
+): StudyDepth {
+  if (depth !== "quick") return depth;
   if (
-    opts.mode === "summarize" ||
-    opts.mode === "notes" ||
-    opts.mode === "analyze"
+    mode === "deep-summary" ||
+    mode === "analyze" ||
+    hasExpandedPrompt
   ) {
-    return opts.materialChars > 10_000 || opts.chunkCount > 5;
+    return "standard";
   }
-  return false;
+  return depth;
+}
+
+/** Quick doc modes need more output tokens without switching to a slower model. */
+export function boostQuickDocTokens(
+  depth: StudyDepth,
+  mode: string,
+  config: StudyDepthConfig
+): StudyDepthConfig {
+  if (depth !== "quick") return config;
+  if (
+    mode === "summarize" ||
+    mode === "notes" ||
+    mode === "mindmap" ||
+    mode === "deep-summary" ||
+    mode === "analyze"
+  ) {
+    return { ...config, maxTokens: Math.max(config.maxTokens, 2_048) };
+  }
+  return config;
 }

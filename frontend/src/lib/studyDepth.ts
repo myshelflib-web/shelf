@@ -8,12 +8,12 @@ export const STUDY_DEPTH_OPTIONS: {
   hint: string;
   premium?: boolean;
 }[] = [
-  { id: "quick", label: "Quick", hint: "Fast, concise answers" },
-  { id: "standard", label: "Standard", hint: "More detail and context" },
+  { id: "quick", label: "Quick", hint: "Fastest — flash-lite, minimal prep" },
+  { id: "standard", label: "Standard", hint: "More detail; slower model" },
   {
     id: "deep",
     label: "Deep",
-    hint: "Think longer — section-by-section on big PDFs",
+    hint: "Think longer — full book synthesis (Premium)",
     premium: true,
   },
 ];
