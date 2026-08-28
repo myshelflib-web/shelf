@@ -1,6 +1,6 @@
 export type StudyDepth = "quick" | "standard" | "deep";
 
-const STORAGE_KEY = "shelf:study-depth";
+const STORAGE_KEY = "shelf:study-depth:v2";
 
 export const STUDY_DEPTH_OPTIONS: {
   id: StudyDepth;

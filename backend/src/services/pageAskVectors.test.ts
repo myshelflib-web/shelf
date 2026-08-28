@@ -3,6 +3,8 @@ import {
   pageAskRetrieveOpts,
   shouldRetrievePageVectors,
 } from "./pageAskVectors.js";
+import { studyToolLoopOpts } from "./studyToolOpts.js";
+import { studyDepthConfig } from "./studyDepth.js";
 
 describe("shouldRetrievePageVectors", () => {
   const base = {
@@ -16,20 +18,24 @@ describe("shouldRetrievePageVectors", () => {
     mapReduceEligible: false,
   };
 
-  it("skips retrieval for quick summarize on a large file", () => {
+  it("skips retrieval for quick on a large file", () => {
     expect(shouldRetrievePageVectors(base)).toBe(false);
-  });
-
-  it("still retrieves for quick ask on a large file", () => {
     expect(
       shouldRetrievePageVectors({ ...base, resolvedMode: "ask" })
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it("skips when map-reduce will list vectors separately", () => {
+  it("still retrieves for quick when text is thin or highlighted", () => {
+    expect(shouldRetrievePageVectors({ ...base, thinText: true })).toBe(true);
+    expect(shouldRetrievePageVectors({ ...base, hasSelection: true })).toBe(
+      true
+    );
+  });
+
+  it("retrieves for standard on a large file", () => {
     expect(
-      shouldRetrievePageVectors({ ...base, mapReduceEligible: true })
-    ).toBe(false);
+      shouldRetrievePageVectors({ ...base, depth: "standard" })
+    ).toBe(true);
   });
 });
 
@@ -44,5 +50,30 @@ describe("pageAskRetrieveOpts", () => {
         expandedPrompt: false,
       }).coverWholePage
     ).toBe(false);
+  });
+});
+
+describe("studyToolLoopOpts", () => {
+  it("omits llm overrides on quick (legacy fast path)", () => {
+    const cfg = studyDepthConfig("quick");
+    const opts = studyToolLoopOpts({
+      depth: "quick",
+      depthConfig: cfg,
+      toolsEnabled: true,
+    });
+    expect(opts.enabled).toBe(true);
+    expect(opts.llm).toBeUndefined();
+    expect(opts.maxToolRounds).toBeUndefined();
+  });
+
+  it("passes depth llm opts for standard", () => {
+    const cfg = studyDepthConfig("standard");
+    const opts = studyToolLoopOpts({
+      depth: "standard",
+      depthConfig: cfg,
+      toolsEnabled: true,
+    });
+    expect(opts.llm?.model).toBe(cfg.model);
+    expect(opts.maxToolRounds).toBe(cfg.toolRounds);
   });
 });

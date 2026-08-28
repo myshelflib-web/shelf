@@ -17,7 +17,6 @@ import { listVectorsForPage } from "./vectorStore.js";
 import { splitIntoSections } from "./mapReduceSummary.js";
 import {
   assertDepthAllowed,
-  boostQuickDocTokens,
   parseStudyDepth,
   shouldMapReduce,
   mayPrepareMapReduce,
@@ -283,11 +282,7 @@ export async function preparePageAsk(
   }
 
   assertDepthAllowed(user, depth);
-  const depthConfig = boostQuickDocTokens(
-    depth,
-    resolvedMode,
-    studyDepthConfig(depth)
-  );
+  const depthConfig = studyDepthConfig(depth);
 
   const toolsEnabled = resolvedMode === "ask" && !expandedPrompt;
 

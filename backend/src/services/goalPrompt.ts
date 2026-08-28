@@ -47,7 +47,7 @@ export function depthResponseRules(depth: StudyDepth = "quick"): string {
     case "standard":
       return `Depth: standard. Give complete answers with clear sections; use bullets and tables. Prefer substance over brevity unless the learner asks for a short version.`;
     default:
-      return "Be concise unless the learner asks for depth.";
+      return "Be concise. Prefer short answers to limit latency unless the learner asks for depth.";
   }
 }
 

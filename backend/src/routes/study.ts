@@ -18,6 +18,7 @@ import {
 import { streamMapReduceAnswer } from "../services/mapReduceSummary.js";
 import { estimateDepthTokens } from "../services/studyDepth.js";
 import { runStudyAskStream } from "./studyAskStreamRun.js";
+import { studyToolLoopOpts } from "../services/studyToolOpts.js";
 import {
   QuotaError,
   assertLlmRoom,
@@ -169,15 +170,7 @@ router.post("/ask", async (req: Request, res: Response) => {
             userId,
             defaultPageId: prepared.defaultPageId,
           },
-          {
-            enabled: prepared.toolsEnabled,
-            llm: {
-              model: prepared.depthConfig.model,
-              maxTokens: prepared.depthConfig.maxTokens,
-              temperature: prepared.depthConfig.temperature,
-            },
-            maxToolRounds: prepared.depthConfig.toolRounds,
-          }
+          studyToolLoopOpts(prepared)
         );
         answer = result.text;
         tokens = result.tokens;
@@ -189,15 +182,7 @@ router.post("/ask", async (req: Request, res: Response) => {
           userId,
           defaultPageId: prepared.defaultPageId,
         },
-        {
-          enabled: prepared.toolsEnabled,
-          llm: {
-            model: prepared.depthConfig.model,
-            maxTokens: prepared.depthConfig.maxTokens,
-            temperature: prepared.depthConfig.temperature,
-          },
-          maxToolRounds: prepared.depthConfig.toolRounds,
-        }
+        studyToolLoopOpts(prepared)
       );
       answer = result.text;
       tokens = result.tokens;

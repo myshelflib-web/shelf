@@ -23,21 +23,10 @@ export function shouldRetrievePageVectors(opts: {
   if (opts.mapReduceEligible) return false;
   if (opts.forceVectors || opts.thinText || opts.hasSelection) return true;
 
-  const largeFile = opts.fullFileText.length >= 8_000;
+  // Quick: pack from file text — no Qdrant/embed round-trip (matches pre-depth speed).
+  if (opts.depth === "quick") return false;
 
-  // Quick doc tools: pack from file text — skip the vector round-trip.
-  if (
-    opts.depth === "quick" &&
-    largeFile &&
-    opts.resolvedMode !== "ask"
-  ) {
-    return false;
-  }
-
-  if (!largeFile) return true;
-
-  // Large file: Standard/Deep still retrieve; Quick ask uses targeted search only.
-  return opts.depth !== "quick" || opts.resolvedMode === "ask";
+  return true;
 }
 
 export function pageAskRetrieveOpts(opts: {

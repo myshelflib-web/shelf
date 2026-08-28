@@ -14,6 +14,7 @@ export function QuizQuestionCard({
   onOption,
   onText,
   onImage,
+  onFilePickerOpen,
 }: {
   question: QuizQuestion;
   index: number;
@@ -23,6 +24,7 @@ export function QuizQuestionCard({
   onOption: (optionId: string) => void;
   onText: (text: string) => void;
   onImage: (file: File) => void;
+  onFilePickerOpen?: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const kind =
@@ -114,7 +116,10 @@ export function QuizQuestionCard({
             <button
               type="button"
               disabled={disabled || reveal}
-              onClick={() => fileRef.current?.click()}
+              onClick={() => {
+                onFilePickerOpen?.();
+                fileRef.current?.click();
+              }}
               className="h-8 px-2.5 rounded-lg border border-[var(--border)] text-[12px] font-medium text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
             >
               {question.type === "IMAGE" ? "Upload answer photo" : "Upload working"}

@@ -5,6 +5,7 @@ import {
   withShortcut,
   isHotkeysSuppressed,
   isOverlayOpen,
+  isQuizProctorActive,
   isTypingTarget,
   isTouchPrimaryUi,
   matchHotkey,
@@ -116,6 +117,15 @@ describe("overlays and suppressed tools", () => {
       })
     ).toBe(true);
     expect(isOverlayOpen({ querySelector: () => null })).toBe(false);
+  });
+
+  it("detects an active proctored quiz sitting", () => {
+    expect(isQuizProctorActive({ documentElement: { getAttribute: () => "on" } })).toBe(
+      true
+    );
+    expect(isQuizProctorActive({ documentElement: { getAttribute: () => null } })).toBe(
+      false
+    );
   });
 
   it("ignores hidden (aria-hidden) tool surfaces", () => {

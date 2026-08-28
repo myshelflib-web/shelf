@@ -27,6 +27,7 @@ export function QuizWorkspace({
   const [history, setHistory] = useState<QuizSummary[]>([]);
   const [error, setError] = useState("");
   const [retrying, setRetrying] = useState(false);
+  const [proctorNotice, setProctorNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
@@ -88,11 +89,18 @@ export function QuizWorkspace({
   const generating = quiz?.status === "GENERATING";
   const failed = quiz?.status === "FAILED";
   const graded = quiz?.status === "GRADED" || quiz?.status === "SUBMITTED";
+  const taking = Boolean(quizId && quiz && !generating && !failed && !graded);
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <Header />
-      <main className="flex-1 min-h-0 px-5 sm:px-6 py-5 max-w-[52rem] mx-auto w-full flex flex-col">
+      {!taking && <Header />}
+      <main
+        className={
+          taking
+            ? "flex-1 min-h-0"
+            : "flex-1 min-h-0 px-5 sm:px-6 py-5 max-w-[52rem] mx-auto w-full flex flex-col"
+        }
+      >
         {!quizId ? (
           <>
             <div className="shrink-0 mb-4">
@@ -148,9 +156,23 @@ export function QuizWorkspace({
           </div>
         ) : quiz ? (
           graded ? (
-            <QuizResults quiz={quiz} onQuiz={applyQuiz} />
+            <QuizResults
+              quiz={quiz}
+              onQuiz={applyQuiz}
+              notice={proctorNotice}
+            />
           ) : (
-            <QuizTake quiz={quiz} onQuiz={applyQuiz} />
+            <QuizTake
+              quiz={quiz}
+              onQuiz={applyQuiz}
+              onProctorEnd={(reason) =>
+                setProctorNotice(
+                  reason === "tab"
+                    ? "This sitting ended because you switched away from the quiz."
+                    : "This sitting ended because you left fullscreen."
+                )
+              }
+            />
           )
         ) : (
           <div className="flex-1 flex items-center justify-center">

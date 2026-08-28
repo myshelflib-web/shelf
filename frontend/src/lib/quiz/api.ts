@@ -109,8 +109,11 @@ export const quizApi = {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
-  submit: (id: string) =>
-    request<{ quiz: Quiz }>(`/api/quiz/${id}/submit`, { method: "POST" }),
+  submit: (id: string, opts?: { keepalive?: boolean }) =>
+    request<{ quiz: Quiz }>(`/api/quiz/${id}/submit`, {
+      method: "POST",
+      keepalive: opts?.keepalive,
+    }),
   uploadAnswerImage: async (quizId: string, questionId: string, file: File) => {
     const fd = new FormData();
     fd.append("file", await compressUploadFile(file));

@@ -4,7 +4,6 @@ import {
   parseStudyDepth,
   shouldMapReduce,
   studyDepthConfig,
-  boostQuickDocTokens,
 } from "./studyDepth.js";
 
 describe("studyDepth", () => {
@@ -76,12 +75,5 @@ describe("studyDepth", () => {
         hasSelection: false,
       })
     ).toBe(false);
-  });
-
-  it("boosts quick doc token cap without changing model", () => {
-    const quick = studyDepthConfig("quick");
-    const boosted = boostQuickDocTokens("quick", "summarize", quick);
-    expect(boosted.model).toBe(quick.model);
-    expect(boosted.maxTokens).toBeGreaterThan(quick.maxTokens);
   });
 });

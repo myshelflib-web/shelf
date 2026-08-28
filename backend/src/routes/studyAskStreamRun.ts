@@ -1,6 +1,7 @@
 import type { PreparedPageAsk } from "../services/pageAskPrepare.js";
 import { streamMapReduceAnswer } from "../services/mapReduceSummary.js";
 import { streamWithStudyTools } from "../services/studyToolLoop.js";
+import { studyToolLoopOpts } from "../services/studyToolOpts.js";
 import { logger, errorFields } from "../utils/logger.js";
 
 export type StudyAskStreamEvent =
@@ -20,16 +21,7 @@ export async function runStudyAskStream(
   let tokens = 0;
   let answer = "";
 
-  const toolOpts = {
-    enabled: prepared.toolsEnabled,
-    llm: {
-      model: prepared.depthConfig.model,
-      maxTokens: prepared.depthConfig.maxTokens,
-      temperature: prepared.depthConfig.temperature,
-    },
-    maxToolRounds: prepared.depthConfig.toolRounds,
-    signal,
-  };
+  const toolOpts = studyToolLoopOpts(prepared, signal);
 
   const consumeToolStream = async () => {
     for await (const ev of streamWithStudyTools(

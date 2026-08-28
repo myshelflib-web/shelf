@@ -15,6 +15,7 @@ import {
   isTypingTarget,
   isHotkeysSuppressed,
   isOverlayOpen,
+  isQuizProctorActive,
   SEQUENCE_MS,
   type HotkeyBinding,
 } from "@/lib/hotkeys";
@@ -67,6 +68,7 @@ export function HotkeysProvider({ children }: { children: ReactNode }) {
     }
 
     const onKey = (e: KeyboardEvent) => {
+      if (isQuizProctorActive()) return;
       const typing =
         isTypingTarget(e.target) || isTypingTarget(document.activeElement);
       const suppressed = isHotkeysSuppressed();

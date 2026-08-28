@@ -7,8 +7,9 @@ export const examStyleQuiz = buildPost(
     description:
       "Sit MCQ, written, and photo-answer quizzes on Shelf: scoped to a document or collection, an uploaded syllabus, or preloaded PYQ-style papers at your exam track.",
     excerpt:
-      "Quiz is a first-class Shelf workspace. Generate exam-level papers from a page, topic, or collection; upload notes plus a syllabus; or drill PYQs and standard questions. Timed MCQs, typed answers, and photos of working — with math.",
+      "Quiz is a first-class Shelf workspace. Generate exam-level papers from a page, topic, or collection; upload notes plus a syllabus; or drill PYQs and standard questions. Timed, proctored MCQs, typed answers, and photos of working — with math.",
     publishedAt: "2026-08-26",
+    updatedAt: "2026-08-28",
     tags: ["quiz", "exam practice", "MCQ", "study ai", "PYQ"],
     readingMinutes: 6,
   },
@@ -47,6 +48,7 @@ export const examStyleQuiz = buildPost(
     {
       heading: "What a sitting feels like",
       paragraphs: [
+        "Sittings are proctored. You enter fullscreen to start; each question sits in the center of the paper. Switching browser tabs or apps, or leaving fullscreen, ends the quiz and submits whatever you have answered — the same as the timer hitting zero.",
         "The paper is one question at a time with a navigator for skipped items. A countdown (if you set one) submits when it hits zero. After submit, MCQs show the key and why traps fail; written and photo answers return a mark fraction plus examiner notes against the scheme. You can walk the whole paper again in review without regenerating it.",
         "Mathematical and non-mathematical stems share the same chrome: KaTeX in the question, typed $...$ in your answer, or a photo of the derivation. That is the point of a dedicated quiz — not a chat dump of five questions with answers listed underneath.",
       ],

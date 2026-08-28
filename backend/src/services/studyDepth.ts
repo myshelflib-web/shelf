@@ -81,7 +81,7 @@ export function studyDepthConfig(depth: StudyDepth): StudyDepthConfig {
         maxTokens: llmMaxOutputTokens(),
         pageContextBudget: envInt("PAGE_ASK_CONTEXT_BUDGET", 6_500),
         libraryContextBudget: envInt("LIBRARY_CONTEXT_BUDGET", 8_000),
-        toolRounds: 2,
+        toolRounds: 3,
         mapReduce: false,
         temperature: 0.2,
         tokenEstimateMultiplier: 1,
@@ -130,23 +130,4 @@ export function bumpDepthForDocCommand(
     return "standard";
   }
   return depth;
-}
-
-/** Quick doc modes need more output tokens without switching to a slower model. */
-export function boostQuickDocTokens(
-  depth: StudyDepth,
-  mode: string,
-  config: StudyDepthConfig
-): StudyDepthConfig {
-  if (depth !== "quick") return config;
-  if (
-    mode === "summarize" ||
-    mode === "notes" ||
-    mode === "mindmap" ||
-    mode === "deep-summary" ||
-    mode === "analyze"
-  ) {
-    return { ...config, maxTokens: Math.max(config.maxTokens, 2_048) };
-  }
-  return config;
 }

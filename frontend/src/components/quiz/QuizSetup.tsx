@@ -257,7 +257,11 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
       {error && (
         <p className="mt-3 text-[12px] text-red-400">{error}</p>
       )}
-      <div className="mt-4 flex justify-end">
+      <p className="mt-4 text-[12px] text-[var(--text-muted)]">
+        Sittings are proctored: the paper opens in fullscreen, questions sit in
+        the center, and switching tabs ends the quiz.
+      </p>
+      <div className="mt-3 flex justify-end">
         <button type="button" className={quizBtnPrimary} disabled={busy} onClick={() => void start()}>
           {busy ? "Starting…" : "Generate quiz"}
         </button>

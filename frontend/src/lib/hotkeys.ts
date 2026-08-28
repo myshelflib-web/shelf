@@ -76,6 +76,17 @@ export function isOverlayOpen(
   return Boolean(root.querySelector('[role="dialog"], [aria-modal="true"]'));
 }
 
+/** Set on <html> while a proctored quiz sitting is live — blocks app hotkeys. */
+export const QUIZ_PROCTOR_ATTR = "data-shelf-quiz-proctor";
+
+export function isQuizProctorActive(
+  root: { documentElement?: { getAttribute?: (name: string) => string | null } } | null = typeof document !== "undefined"
+    ? document
+    : null
+): boolean {
+  return root?.documentElement?.getAttribute?.(QUIZ_PROCTOR_ATTR) === "on";
+}
+
 /**
  * Pen / draw / clip tools set `data-shelf-hotkeys="off"` on the active surface.
  * Hidden (warm) tabs are `aria-hidden` so they do not suppress shortcuts.
