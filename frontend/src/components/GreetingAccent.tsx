@@ -24,6 +24,21 @@ export function GreetingAccent({
   );
 }
 
+/** Round ellipsis on the same line as the headline. */
+export function GreetingDots({
+  className = "",
+}: {
+  className?: string;
+}) {
+  return (
+    <span className={`greeting-dots ${className}`} aria-hidden>
+      <span />
+      <span />
+      <span />
+    </span>
+  );
+}
+
 /** Subtle waveform bars for AI thinking / loading states. */
 export function ThinkingIndicator({
   label = "Thinking",

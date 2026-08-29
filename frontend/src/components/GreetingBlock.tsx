@@ -3,20 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { getDisplayFirstName } from "@/lib/greeting";
 import { useLivelyGreeting } from "@/hooks/useLivelyCopy";
-import { GreetingAccent } from "./GreetingAccent";
-
-function GreetingDots({ large = false }: { large?: boolean }) {
-  return (
-    <span
-      className={`greeting-dots shrink-0 text-[var(--text-muted)] ${large ? "greeting-dots-lg" : ""}`}
-      aria-hidden
-    >
-      <span>.</span>
-      <span>.</span>
-      <span>.</span>
-    </span>
-  );
-}
+import { GreetingAccent, GreetingDots } from "./GreetingAccent";
 
 interface GreetingBlockProps {
   name: string;
@@ -87,10 +74,10 @@ export function GreetingBlock({
             {shownSalutation},
           </span>{" "}
           <span className="greeting-name">{firstName}</span>
+          {animatedDots && (
+            <GreetingDots className="text-[var(--text-muted)]" />
+          )}
         </p>
-        {animatedDots && (
-          <GreetingDots large={size === "lg" || size === "hero"} />
-        )}
         {showAccent && !animatedDots && (
           <GreetingAccent
             size={size === "lg" || size === "hero" ? "lg" : "md"}
@@ -99,7 +86,7 @@ export function GreetingBlock({
         )}
       </div>
       {showSubtitle && (
-        <p className="text-sm text-[var(--text-muted)] lively-line lively-line-in">
+        <p className="text-[13px] text-[var(--text-muted)] lively-line lively-line-in">
           {subtitle}
         </p>
       )}

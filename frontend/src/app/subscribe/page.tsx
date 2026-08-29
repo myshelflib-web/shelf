@@ -12,7 +12,7 @@ import {
   formatCoinsAsInr,
   getStoredAffiliateRef,
 } from "@/lib/affiliateRef";
-import { Check, Heart, Loader2 } from "lucide-react";
+import { GreetingDots } from "@/components/GreetingAccent";
 
 declare global {
   interface Window {
@@ -177,12 +177,8 @@ function SubscribePageInner() {
               {SHELF_PLANS.page.kicker}
             </div>
             <h1 className="plans-hero-title">
-              <span>{SHELF_PLANS.page.title}</span>
-              <span className="greeting-dots greeting-dots-lg" aria-hidden>
-                <span>.</span>
-                <span>.</span>
-                <span>.</span>
-              </span>
+              {SHELF_PLANS.page.title}
+              <GreetingDots />
             </h1>
             <p className="plans-lead">{SHELF_PLANS.page.intro}</p>
           </header>
