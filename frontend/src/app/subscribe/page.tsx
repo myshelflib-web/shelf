@@ -173,10 +173,17 @@ function SubscribePageInner() {
         <div className="plans-page-inner">
           <header className="plans-hero">
             <div className="plans-kicker">
-              <Heart className="w-3 h-3" strokeWidth={2.25} aria-hidden />
+              <Heart className="w-3.5 h-3.5" strokeWidth={2.25} aria-hidden />
               {SHELF_PLANS.page.kicker}
             </div>
-            <h1>{SHELF_PLANS.page.title}</h1>
+            <h1 className="plans-hero-title">
+              <span>{SHELF_PLANS.page.title}</span>
+              <span className="greeting-dots greeting-dots-lg" aria-hidden>
+                <span>.</span>
+                <span>.</span>
+                <span>.</span>
+              </span>
+            </h1>
             <p className="plans-lead">{SHELF_PLANS.page.intro}</p>
           </header>
 
