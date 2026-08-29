@@ -61,6 +61,9 @@ export function LandingProductPreview() {
             />
           ))}
         </div>
+        <div className="landing-preview-progress" aria-hidden>
+          <span />
+        </div>
       </div>
     </div>
   );

@@ -9,7 +9,7 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { LandingShowcases } from "@/components/landing/LandingShowcases";
 import { BlogPreviewSection } from "@/components/blog/BlogPreviewSection";
-import { LandingHeroMockup } from "@/components/landing/LandingHeroMockup";
+import { LandingProductPreview } from "@/components/landing/LandingProductPreview";
 import { LandingValueSteps } from "@/components/landing/LandingValueSteps";
 import { LandingGoalSection } from "@/components/landing/LandingGoalSection";
 import { LandingCtaBanner } from "@/components/landing/LandingCtaBanner";
@@ -104,7 +104,7 @@ export function HomePageClient() {
           </RevealOnScroll>
 
           <RevealOnScroll delay={100}>
-            <LandingHeroMockup />
+            <LandingProductPreview />
           </RevealOnScroll>
         </section>
 
