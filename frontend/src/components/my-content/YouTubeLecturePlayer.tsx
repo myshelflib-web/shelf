@@ -5,6 +5,14 @@ import { loadYoutubeIframeApi, type YtPlayer } from "@/lib/youtubeIframeApi";
 
 const SPEEDS = [1, 1.25, 1.5, 1.75, 2] as const;
 
+function pauseQuietly(player: YtPlayer | null | undefined) {
+  try {
+    player?.pauseVideo();
+  } catch {
+    /* player tearing down */
+  }
+}
+
 type YouTubeLecturePlayerProps = {
   videoId: string;
   title: string;
@@ -54,31 +62,32 @@ export function YouTubeLecturePlayer({
       mount.style.width = "100%";
       mount.style.height = "100%";
       hostRef.current.appendChild(mount);
+      const startAt = Math.max(0, Math.floor(initialRef.current));
       player = new window.YT.Player(mount, {
         videoId,
         width: "100%",
         height: "100%",
         host: "https://www.youtube-nocookie.com",
         playerVars: {
+          autoplay: 0,
           rel: 0,
           modestbranding: 1,
           playsinline: 1,
           origin: window.location.origin,
+          ...(startAt > 1 ? { start: startAt } : {}),
         },
         events: {
           onReady: (e) => {
             playerRef.current = e.target;
-            const startAt = initialRef.current;
-            if (startAt > 1) {
-              e.target.seekTo(startAt, true);
-            }
+            // Cue at resume position without starting playback.
+            pauseQuietly(e.target);
             try {
               e.target.setPlaybackRate(speedRef.current);
             } catch {
               /* rate not available yet */
             }
             onTimeRef.current(
-              e.target.getCurrentTime() || 0,
+              e.target.getCurrentTime() || startAt,
               e.target.getDuration() || 0
             );
           },

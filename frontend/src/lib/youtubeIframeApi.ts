@@ -5,6 +5,9 @@ type YtPlayer = {
   getDuration: () => number;
   setPlaybackRate: (rate: number) => void;
   getPlaybackRate: () => number;
+  playVideo: () => void;
+  pauseVideo: () => void;
+  stopVideo: () => void;
 };
 
 type YtPlayerOptions = {
