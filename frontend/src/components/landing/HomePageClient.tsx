@@ -17,15 +17,9 @@ import { LandingQuizSection } from "@/components/landing/LandingQuizSection";
 import { LandingIntegrationsSection } from "@/components/landing/LandingIntegrationsSection";
 import { LandingLearnSection } from "@/components/landing/LandingLearnSection";
 import { LandingGuestAccessSection } from "@/components/landing/LandingGuestAccessSection";
+import { LandingHeroHighlights } from "@/components/landing/LandingHeroHighlights";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  CalendarDays,
-  FolderOpen,
-  Layers,
-  ListChecks,
-  NotebookPen,
-  Sparkles,
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 
 export function HomePageClient() {
@@ -70,36 +64,11 @@ export function HomePageClient() {
                   Browse free library
                 </Link>
               </div>
-              <p className="landing-micro">
-                Learn and feature guides are open without sign-in. Your private
-                library starts when you create an account.
+              <p className="landing-hero-note">
+                <Link href="/learn">Learn guides</Link> are open without sign-in.
+                Your private library starts when you create an account.
               </p>
-              <div className="landing-featureline">
-                <span className="landing-featurepill">
-                  <FolderOpen strokeWidth={1.8} />
-                  Library
-                </span>
-                <span className="landing-featurepill">
-                  <NotebookPen strokeWidth={1.8} />
-                  Notebooks
-                </span>
-                <span className="landing-featurepill">
-                  <Layers strokeWidth={1.8} />
-                  Tabs &amp; split
-                </span>
-                <span className="landing-featurepill">
-                  <Sparkles strokeWidth={1.8} />
-                  Study AI
-                </span>
-                <span className="landing-featurepill">
-                  <ListChecks strokeWidth={1.8} />
-                  Quiz
-                </span>
-                <span className="landing-featurepill">
-                  <CalendarDays strokeWidth={1.8} />
-                  Planner
-                </span>
-              </div>
+              <LandingHeroHighlights />
             </div>
           </RevealOnScroll>
 

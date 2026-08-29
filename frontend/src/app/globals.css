@@ -1942,6 +1942,120 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   width: min(240px, 72%);
   z-index: 2;
   box-shadow: 0 16px 40px rgb(var(--shadow-color) / 0.16);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.landing-dual-windows {
+  position: relative;
+  min-height: 220px;
+  padding-bottom: 1.25rem;
+}
+
+.landing-dual-windows-back {
+  position: relative;
+  z-index: 1;
+}
+
+.landing-dual-windows-front-wide {
+  width: min(260px, 78%);
+}
+
+.landing-morph-wrap {
+  width: 100%;
+}
+
+.landing-morph-stage {
+  position: relative;
+  min-height: 240px;
+}
+
+.landing-morph-layer {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.15s ease-in-out;
+  pointer-events: none;
+}
+
+.landing-morph-layer-active {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.landing-morph-layer-active .landing-floating-panel {
+  transform: translateY(0);
+}
+
+.landing-notebook-reader {
+  display: flex;
+  flex-direction: column;
+  min-height: 168px;
+  background: var(--bg-primary);
+}
+
+.landing-notebook-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.landing-notebook-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+}
+
+.landing-notebook-tool-active {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.landing-notebook-sheet {
+  position: relative;
+  flex: 1;
+  min-height: 130px;
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.landing-notebook-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 17px,
+    color-mix(in srgb, var(--border) 70%, transparent) 17px,
+    color-mix(in srgb, var(--border) 70%, transparent) 18px
+  );
+  opacity: 0.65;
+}
+
+.landing-notebook-margin {
+  position: absolute;
+  left: 1.75rem;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--accent) 25%, var(--border));
+}
+
+.landing-notebook-ink {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--accent);
+  padding: 0.5rem;
 }
 
 @media (min-width: 640px) {

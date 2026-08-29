@@ -12,7 +12,7 @@ import {
   WorkspaceMockup,
 } from "./LandingShowcaseMockups";
 
-const ROTATE_MS = 4000;
+const ROTATE_MS = 6500;
 
 type ShowcaseSlide = {
   title: string;
@@ -20,7 +20,6 @@ type ShowcaseSlide = {
   linkHref: string;
   linkLabel: string;
   visual: ReactNode;
-  reverse?: boolean;
 };
 
 const SLIDES: ShowcaseSlide[] = [
@@ -37,7 +36,6 @@ const SLIDES: ShowcaseSlide[] = [
     linkHref: "/features/sketch-notes",
     linkLabel: "Notebooks & doc pages",
     visual: <NotebooksMockup />,
-    reverse: true,
   },
   {
     title: "Open multiple pages — tabs and split view",
@@ -52,7 +50,6 @@ const SLIDES: ShowcaseSlide[] = [
     linkHref: "/about",
     linkLabel: "How Study AI works",
     visual: <StudyAIMockup />,
-    reverse: true,
   },
   {
     title: "Plan revision on your planner",
@@ -67,13 +64,13 @@ const SLIDES: ShowcaseSlide[] = [
     linkHref: "/login",
     linkLabel: "See your dashboard",
     visual: <DashboardMockup />,
-    reverse: true,
   },
 ];
 
 export function LandingShowcaseCarousel() {
   const [current, setCurrent] = useState(0);
   const count = SLIDES.length;
+  const slide = SLIDES[current];
 
   const showSlide = useCallback((index: number) => {
     setCurrent((index + count) % count);
@@ -98,66 +95,54 @@ export function LandingShowcaseCarousel() {
             See how Shelf fits your study flow
           </h2>
         </div>
-        <p className="landing-showcase-carousel-meta">
-          Auto-advancing preview · {current + 1} / {count}
-        </p>
       </div>
 
       <div className="landing-showcase-carousel">
         <div className="landing-showcase-carousel-body">
-          {SLIDES.map((slide, index) => (
-            <div
-              key={slide.title}
-              className={`landing-showcase-slide${
-                index === current ? " landing-showcase-slide-active" : ""
-              }`}
-              aria-hidden={index !== current}
-            >
-              <div
-                className={`landing-showcase-slide-grid ${
-                  slide.reverse ? "landing-showcase-slide-grid-reverse" : ""
-                }`}
-              >
-                <div className="landing-showcase-slide-copy">
-                  <h3>{slide.title}</h3>
-                  <p>{slide.body}</p>
-                  <Link href={slide.linkHref} className="landing-showcase-link">
-                    {slide.linkLabel}
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-                <div className="landing-showcase-slide-visual">{slide.visual}</div>
-              </div>
+          <div className="landing-showcase-slide-grid">
+            <div className="landing-showcase-slide-copy">
+              <h3>{slide.title}</h3>
+              <p>{slide.body}</p>
+              <Link href={slide.linkHref} className="landing-showcase-link">
+                {slide.linkLabel}
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
-          ))}
+
+            <div className="landing-showcase-visual-stage">
+              {SLIDES.map((item, index) => (
+                <div
+                  key={item.title}
+                  className={`landing-showcase-visual-layer${
+                    index === current ? " landing-showcase-visual-layer-active" : ""
+                  }`}
+                  aria-hidden={index !== current}
+                >
+                  {item.visual}
+                </div>
+              ))}
+            </div>
+          </div>
 
           <div
             className="landing-step-nav landing-showcase-step-nav"
             role="tablist"
             aria-label="Feature showcase slides"
           >
-            {SLIDES.map((slide, index) => (
+            {SLIDES.map((item, index) => (
               <button
-                key={slide.title}
+                key={item.title}
                 type="button"
                 role="tab"
                 aria-selected={index === current}
-                aria-label={slide.title}
-                title={slide.title}
+                aria-label={item.title}
+                title={item.title}
                 className={`landing-step-dot${
                   index === current ? " landing-step-dot-active" : ""
                 }`}
                 onClick={() => showSlide(index)}
               />
             ))}
-          </div>
-
-          <div className="landing-preview-progress" aria-hidden>
-            <span
-              key={current}
-              className="landing-showcase-progress-bar"
-              style={{ animationDuration: `${ROTATE_MS / 1000}s` }}
-            />
           </div>
         </div>
       </div>
