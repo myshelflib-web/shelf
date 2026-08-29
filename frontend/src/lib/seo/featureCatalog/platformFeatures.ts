@@ -130,10 +130,10 @@ slug: "pwa-offline",
     subhead:
       "Premium is for students who keep a large PDF library and use Study AI every day — more storage headroom, deeper AI, and advanced answer modes.",
     bullets: [
-      "Expanded library for full subjects & coaching sets",
-      "Higher Study AI usage for daily workflows",
-      "Standard & Deep answer modes for long PDFs",
-      "Longer threads and more syllabus context docs",
+      "Everything included in Free plan",
+      "10× more library storage",
+      "20× more Study AI usage each month",
+      "Standard & Deep answer modes",
       "Coupons, affiliate coins, and UPI Autopay",
     ],
     paragraphs: [

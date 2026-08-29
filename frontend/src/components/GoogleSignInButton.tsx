@@ -94,12 +94,12 @@ export function GoogleSignInButton({ onError, redirectTo = "/my-content" }: Goog
   }
 
   return (
-    <div ref={containerRef} className="w-full">
+    <div ref={containerRef} className="w-full h-10">
       {loading ? (
-        <div className="w-full py-2.5 text-center text-sm text-[var(--text-muted)]">
+        <div className="w-full h-10 flex items-center justify-center text-sm text-[var(--text-muted)]">
           Signing in with Google...
         </div>
-      ) : (
+      ) : buttonWidth > 0 ? (
         <div className="flex w-full h-10 [&>div]:!w-full [&>div>div]:!w-full">
           <GoogleLogin
             onSuccess={handleSuccess}
@@ -111,7 +111,7 @@ export function GoogleSignInButton({ onError, redirectTo = "/my-content" }: Goog
             shape="rectangular"
           />
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

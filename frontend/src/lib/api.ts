@@ -408,6 +408,8 @@ export const api = {
   },
 
   telegram: {
+    loginWidget: () =>
+      request<{ botUsername: string | null }>("/api/telegram/login-widget"),
     status: () =>
       request<{
         configured: boolean;

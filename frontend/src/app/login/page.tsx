@@ -1,15 +1,14 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useLayoutEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { useAuth } from "@/hooks/useAuth";
 import { GoogleSignInButton, isGoogleSignInConfigured } from "@/components/GoogleSignInButton";
 import { useGoogleClientId } from "@/components/GoogleAuthProvider";
-import { TelegramSignInButton, isTelegramSignInConfigured } from "@/components/TelegramSignInButton";
+import { TelegramSignInButton } from "@/components/TelegramSignInButton";
 import { isDevEnvironment } from "@/lib/userFacingError";
 import { ShelfLogo } from "@/components/ShelfLogo";
-import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { api } from "@/lib/api";
 import { OtpDigitInput } from "@/components/OtpDigitInput";
 
@@ -20,9 +19,8 @@ function safeNextPath(raw: string | null): string {
 
 function LoginForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const nextPath = safeNextPath(searchParams.get("next"));
-  const { login, register, user, loading: authLoading } = useAuth();
+  const [nextPath, setNextPath] = useState("/my-content");
+  const { login, register, user } = useAuth();
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,19 +31,19 @@ function LoginForm() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [telegramVisible, setTelegramVisible] = useState(false);
   const googleClientId = useGoogleClientId();
   const googleFromServer =
     Boolean(googleClientId) && !googleClientId.includes("your-google-client-id");
 
-  if (authLoading) {
-    return <ThinkingIndicator label="Loading" />;
-  }
+  useLayoutEffect(() => {
+    setNextPath(
+      safeNextPath(new URLSearchParams(window.location.search).get("next"))
+    );
+  }, []);
 
-  if (user) {
-    router.replace(nextPath);
-    return null;
-  }
+  useLayoutEffect(() => {
+    if (user) router.replace(nextPath);
+  }, [user, nextPath, router]);
 
   const resetRegisterOtp = () => {
     setOtp("");
@@ -105,10 +103,6 @@ function LoginForm() {
 
   const showGoogleSignIn =
     isGoogleSignInConfigured() || googleFromServer || isDevEnvironment();
-  const telegramConfigured = isTelegramSignInConfigured();
-  const showTelegramSignIn =
-    telegramConfigured && (isDevEnvironment() || telegramVisible);
-  const showSocialSignIn = showGoogleSignIn || showTelegramSignIn;
 
   return (
     <div className="w-full max-w-md">
@@ -232,40 +226,25 @@ function LoginForm() {
           </p>
         )}
 
-        {showSocialSignIn ? (
-          <>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[var(--border)]" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[var(--bg-secondary)] px-2 text-[var(--text-muted)]">
-                  or continue with
-                </span>
-              </div>
+        <>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[var(--border)]" />
             </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-[var(--bg-secondary)] px-2 text-[var(--text-muted)]">
+                or continue with
+              </span>
+            </div>
+          </div>
 
-            <div className="space-y-3 w-full">
-              {showGoogleSignIn ? (
-                <GoogleSignInButton onError={setError} redirectTo={nextPath} />
-              ) : null}
-              {telegramConfigured && !showTelegramSignIn ? (
-                <TelegramSignInButton
-                  probeOnly
-                  onAvailabilityChange={setTelegramVisible}
-                  redirectTo={nextPath}
-                />
-              ) : null}
-              {showTelegramSignIn ? (
-                <TelegramSignInButton
-                  onError={setError}
-                  onAvailabilityChange={setTelegramVisible}
-                  redirectTo={nextPath}
-                />
-              ) : null}
-            </div>
-          </>
-        ) : null}
+          <div className="space-y-3 w-full">
+            {showGoogleSignIn ? (
+              <GoogleSignInButton onError={setError} redirectTo={nextPath} />
+            ) : null}
+            <TelegramSignInButton onError={setError} redirectTo={nextPath} />
+          </div>
+        </>
       </div>
 
       <p className="text-center text-sm text-[var(--text-secondary)] mt-4">
@@ -291,9 +270,7 @@ export default function LoginPage() {
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
       <main className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center px-4">
-        <Suspense fallback={<ThinkingIndicator label="Loading" />}>
-          <LoginForm />
-        </Suspense>
+        <LoginForm />
       </main>
     </div>
   );

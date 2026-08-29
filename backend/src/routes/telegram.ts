@@ -24,6 +24,11 @@ import {
 
 const router = Router();
 
+/** Public bot username for the Login Widget (not a secret). */
+router.get("/login-widget", (_req: Request, res: Response) => {
+  res.json({ botUsername: telegramBotUsername() });
+});
+
 function webhookSecretOk(req: Request): boolean {
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
   if (!expected) {

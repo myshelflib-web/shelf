@@ -6,3 +6,12 @@ export function resolveGoogleClientId(): string {
     ""
   ).trim();
 }
+
+/** Bot username is public (not the token). Prefer TELEGRAM_BOT_USERNAME like GOOGLE_CLIENT_ID. */
+export function resolveTelegramBotUsername(): string {
+  return (
+    process.env.TELEGRAM_BOT_USERNAME ??
+    process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME ??
+    ""
+  ).trim();
+}

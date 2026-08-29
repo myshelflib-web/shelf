@@ -5,7 +5,11 @@ import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { GoogleAuthProvider } from "@/components/GoogleAuthProvider";
-import { resolveGoogleClientId } from "@/lib/publicConfig";
+import { TelegramAuthProvider } from "@/components/TelegramAuthProvider";
+import {
+  resolveGoogleClientId,
+  resolveTelegramBotUsername,
+} from "@/lib/publicConfig";
 import { HotkeysProvider } from "@/hooks/useHotkeys";
 import { AppDialogProvider } from "@/hooks/useAppDialog";
 import { AppHotkeys } from "@/components/AppHotkeys";
@@ -52,25 +56,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const googleClientId = resolveGoogleClientId();
+  const telegramBotUsername = resolveTelegramBotUsername();
 
   return (
     <html lang="en-IN" className={`dark h-full ${sans.variable} ${serif.variable} ${display.variable}`} suppressHydrationWarning>
       <body className="h-full antialiased" suppressHydrationWarning>
         <ThemeProvider>
           <GoogleAuthProvider clientId={googleClientId}>
-            <AuthProvider>
-              <HotkeysProvider>
-                <AppDialogProvider>
-                  <PwaRegister />
-                  <CompactPortraitSync />
-                  <OfflineSyncProvider />
-                  <OfflineNotice />
-                  <AppHotkeys />
-                  {children}
-                  <PwaInstallHint />
-                </AppDialogProvider>
-              </HotkeysProvider>
-            </AuthProvider>
+            <TelegramAuthProvider botUsername={telegramBotUsername}>
+              <AuthProvider>
+                <HotkeysProvider>
+                  <AppDialogProvider>
+                    <PwaRegister />
+                    <CompactPortraitSync />
+                    <OfflineSyncProvider />
+                    <OfflineNotice />
+                    <AppHotkeys />
+                    {children}
+                    <PwaInstallHint />
+                  </AppDialogProvider>
+                </HotkeysProvider>
+              </AuthProvider>
+            </TelegramAuthProvider>
           </GoogleAuthProvider>
         </ThemeProvider>
       </body>

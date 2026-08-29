@@ -6,19 +6,44 @@ export function isTelegramWidgetError(text: string): boolean {
   return WIDGET_ERROR.test(text.replace(/\s+/g, " ").trim());
 }
 
+export function normalizeTelegramBotUsername(
+  raw: string | null | undefined
+): string | null {
+  const value = (raw ?? "").trim().replace(/^@/, "");
+  if (!value || /your-telegram|changeme|example/i.test(value)) return null;
+  return value;
+}
+
+function hostAliases(hostname: string): string[] {
+  const h = hostname.toLowerCase();
+  if (h === "localhost" || h === "127.0.0.1" || h === "[::1]" || h === "::1") {
+    return ["localhost", "127.0.0.1", "[::1]", "::1"];
+  }
+  return [h];
+}
+
+export function isHostnameAllowedForTelegramLogin(
+  hostname: string,
+  allowlistCsv: string | undefined
+): boolean {
+  const listed = allowlistCsv
+    ?.split(",")
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+  if (!listed?.length) return true;
+  return hostAliases(hostname).some((h) => listed.includes(h));
+}
+
 /**
  * Optional allowlist via NEXT_PUBLIC_TELEGRAM_LOGIN_HOSTS only.
  * When unset, every host may load the widget (BotFather /setdomain is the source of truth).
  */
 export function isTelegramLoginHostAllowed(): boolean {
   if (typeof window === "undefined") return true;
-
-  const listed = process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_HOSTS?.split(",")
-    .map((h) => h.trim().toLowerCase())
-    .filter(Boolean);
-  if (!listed?.length) return true;
-
-  return listed.includes(window.location.hostname.toLowerCase());
+  return isHostnameAllowedForTelegramLogin(
+    window.location.hostname,
+    process.env.NEXT_PUBLIC_TELEGRAM_LOGIN_HOSTS
+  );
 }
 
 export function readTelegramWidgetError(root: HTMLElement | null): string | null {
