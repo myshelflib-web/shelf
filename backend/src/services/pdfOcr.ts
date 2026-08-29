@@ -13,7 +13,7 @@ import {
   embeddingApiKey,
 } from "./llmConfig.js";
 
-const MAX_JPEG_BYTES = Number(process.env.PDF_OCR_JPEG_MAX_BYTES ?? 1.5 * 1024 * 1024);
+const MAX_JPEG_BYTES = Number(process.env.PDF_OCR_JPEG_MAX_BYTES ?? 400 * 1024);
 
 export function pdfOcrEnabled(): boolean {
   return process.env.PDF_OCR !== "false";
@@ -62,7 +62,7 @@ export function pdfPageNeedsOcr(pageText: string): boolean {
 /** Transcribe one page JPEG — never a full PDF. */
 export async function ocrJpegBuffer(jpeg: Buffer): Promise<string | null> {
   if (!pdfOcrEnabled()) return null;
-  if (jpeg.length < 80 || jpeg.length > envPositive(MAX_JPEG_BYTES, 1.5 * 1024 * 1024)) {
+  if (jpeg.length < 80 || jpeg.length > envPositive(MAX_JPEG_BYTES, 400 * 1024)) {
     return null;
   }
   const key = ocrKey();

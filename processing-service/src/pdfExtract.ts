@@ -39,6 +39,13 @@ function pageItemsToLines(items: PdfTextItem[]): string[] {
   return pageLines;
 }
 
+export function shouldAbortEmptyPdfExtract(
+  pagesRead: number,
+  chars: number
+): boolean {
+  return pagesRead >= 6 && chars < 40;
+}
+
 export async function extractPdfText(buffer: Buffer): Promise<{
   text: string;
   numpages: number;
@@ -48,12 +55,14 @@ export async function extractPdfText(buffer: Buffer): Promise<{
     useSystemFonts: true,
     isEvalSupported: false,
     verbosity: 0,
+    disableAutoFetch: true,
   }).promise;
 
   const pageLines: string[] = [];
+  const maxPages = Math.min(doc.numPages, 80);
 
   try {
-    for (let pageNum = 1; pageNum <= doc.numPages; pageNum++) {
+    for (let pageNum = 1; pageNum <= maxPages; pageNum++) {
       const page = await doc.getPage(pageNum);
       try {
         const content = await page.getTextContent();
@@ -61,6 +70,8 @@ export async function extractPdfText(buffer: Buffer): Promise<{
       } finally {
         page.cleanup();
       }
+      const chars = pageLines.reduce((n, l) => n + l.length, 0);
+      if (shouldAbortEmptyPdfExtract(pageNum, chars)) break;
       await yieldEventLoop();
     }
   } finally {

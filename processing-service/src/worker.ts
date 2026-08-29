@@ -18,11 +18,8 @@ const inFlight = new Set<string>();
 let pollRunning = false;
 let jobTail: Promise<void> = Promise.resolve();
 
-const DEFAULT_JOBS_PER_POLL = 1;
-
 function jobsPerPoll(): number {
-  const n = Number(process.env.PROCESS_JOBS_PER_POLL ?? DEFAULT_JOBS_PER_POLL);
-  return Number.isFinite(n) && n > 0 ? Math.min(n, 5) : DEFAULT_JOBS_PER_POLL;
+  return 1;
 }
 
 /** One PDF at a time — overlapping polls on Render OOMed (exit 137). */

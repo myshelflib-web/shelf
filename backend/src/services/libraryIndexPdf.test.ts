@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   pdfIndexFileTooLarge,
   pdfIndexRangeTooLarge,
+  PDF_INDEX_HARD_MAX_BYTES,
   pdfTextItemsToLines,
 } from "./libraryIndexPdf.js";
 
@@ -25,12 +26,13 @@ describe("pdfTextItemsToLines", () => {
 describe("pdf index size caps", () => {
   it("refuses a Range GET that would buffer the whole file", () => {
     expect(pdfIndexRangeTooLarge(64 * 1024)).toBe(false);
-    expect(pdfIndexRangeTooLarge(3 * 1024 * 1024)).toBe(true);
+    expect(pdfIndexRangeTooLarge(2 * 1024 * 1024)).toBe(true);
   });
 
-  it("only skips enormous files (pdf.js still maps file length)", () => {
+  it("hard-caps pdf.js file mapping at 24MB on 512MB hosts", () => {
     expect(pdfIndexFileTooLarge(1024)).toBe(false);
     expect(pdfIndexFileTooLarge(20 * 1024 * 1024)).toBe(false);
+    expect(pdfIndexFileTooLarge(PDF_INDEX_HARD_MAX_BYTES + 1)).toBe(true);
     expect(pdfIndexFileTooLarge(80 * 1024 * 1024)).toBe(true);
   });
 });

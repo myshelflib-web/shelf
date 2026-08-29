@@ -94,7 +94,7 @@ export async function indexUserPage(pageId: string): Promise<void> {
     },
   });
 
-  const fileText = await extractPageBody(page);
+  const fileText = await extractPageBody(page, { ocr: true });
 
   const notebook = page.userSubject?.name ?? "Library";
   const topic = page.userTopicGroup?.title ?? "";

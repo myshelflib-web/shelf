@@ -73,13 +73,14 @@ async function loadS3Text(key: string): Promise<string> {
     if (!raw) return "";
     const trimmed = raw.trim();
     if (!trimmed || trimmed.startsWith("%PDF")) return "";
+    const slice = trimmed.length > 600_000 ? trimmed.slice(0, 600_000) : trimmed;
     if (
-      trimmed.startsWith("<") ||
-      /<\/?[a-z][\s\S]*>/i.test(trimmed.slice(0, 400))
+      slice.startsWith("<") ||
+      /<\/?[a-z][\s\S]*>/i.test(slice.slice(0, 400))
     ) {
-      return htmlToPlainText(raw);
+      return htmlToPlainText(slice);
     }
-    return trimmed;
+    return slice;
   } catch (err) {
     logger.debug("library_index.fetch_miss", { key, ...errorFields(err) });
     return "";
@@ -87,13 +88,16 @@ async function loadS3Text(key: string): Promise<string> {
 }
 
 /** Plain text for indexing / Study AI from every supported page format. */
-export async function extractPageBody(page: {
-  title: string;
-  contentType: string;
-  contentUrl: string | null;
-  sourceUrl: string | null;
-  pdfKey: string | null;
-}): Promise<string> {
+export async function extractPageBody(
+  page: {
+    title: string;
+    contentType: string;
+    contentUrl: string | null;
+    sourceUrl: string | null;
+    pdfKey: string | null;
+  },
+  opts?: { ocr?: boolean }
+): Promise<string> {
   if (page.contentType === "LINK" && page.sourceUrl) {
     const snap = page.contentUrl ? await loadS3Text(page.contentUrl) : "";
     return [page.title, page.sourceUrl, snap].filter(Boolean).join("\n");
@@ -116,7 +120,9 @@ export async function extractPageBody(page: {
   }
 
   if (page.pdfKey && (page.contentType === "PDF" || page.pdfKey.endsWith(".pdf"))) {
-    const fromPdf = await extractPdfTextByRanges(page.pdfKey);
+    const fromPdf = await extractPdfTextByRanges(page.pdfKey, {
+      ocr: opts?.ocr === true,
+    });
     if (fromPdf) return fromPdf;
   }
 

@@ -2,6 +2,7 @@ import {
   GetObjectCommand,
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
+import type { Readable } from "node:stream";
 import { contentKeyFromPdfKey, getS3Bucket } from "./docPaths.js";
 import { buildHtmlFromPdfText, extractPdfText } from "./pdfExtract.js";
 import { createS3Client } from "./s3Config.js";
@@ -10,6 +11,8 @@ import { metrics } from "./utils/metrics.js";
 import { withRetry } from "./utils/retry.js";
 
 const s3 = createS3Client();
+/** pdf.js maps the full file — stay well under 512MB instance RAM. */
+const MAX_PDF_BYTES = 24 * 1024 * 1024;
 
 interface ProcessRequest {
   topicId: string;
@@ -20,7 +23,7 @@ interface ProcessRequest {
   type?: "admin" | "user";
 }
 
-async function downloadPdf(key: string): Promise<Buffer> {
+async function downloadPdf(key: string): Promise<Buffer | null> {
   const response = await withRetry(
     () =>
       s3.send(
@@ -36,8 +39,30 @@ async function downloadPdf(key: string): Promise<Buffer> {
       onRetry: () => metrics.inc("s3_retries_total", { op: "get" }),
     }
   );
-  const bytes = await response.Body?.transformToByteArray();
-  return Buffer.from(bytes!);
+  const length = response.ContentLength;
+    if (length && length > MAX_PDF_BYTES) {
+      const body = response.Body as Readable | undefined;
+      try {
+        body?.destroy?.();
+      } catch {
+        /* ignore */
+      }
+      return null;
+    }
+  const body = response.Body as Readable | undefined;
+  if (!body) return Buffer.alloc(0);
+  const parts: Buffer[] = [];
+  let total = 0;
+  for await (const chunk of body) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array);
+    total += buf.length;
+    if (total > MAX_PDF_BYTES) {
+      body.destroy?.();
+      return null;
+    }
+    parts.push(buf);
+  }
+  return Buffer.concat(parts, total);
 }
 
 async function downloadHtmlIfExists(key: string): Promise<string | null> {
@@ -109,11 +134,17 @@ export async function processPdf(request: ProcessRequest): Promise<{
   log.debug("processor.start");
 
   try {
-    const pdfBuffer = await downloadPdf(request.pdfKey);
+    let pdfBuffer = await downloadPdf(request.pdfKey);
+    if (!pdfBuffer) {
+      log.info("processor.skip_large_pdf", { maxBytes: MAX_PDF_BYTES });
+      const contentKey = contentKeyFromPdfKey(request.pdfKey);
+      return { html: "", toc: [], contentKey };
+    }
     metrics.inc("s3_ops_total", { op: "get", ok: true });
     log.debug("processor.pdf_downloaded", { bytes: pdfBuffer.length });
 
     const parsed = await extractPdfText(pdfBuffer);
+    pdfBuffer = Buffer.alloc(0);
     const { html: indexedHtml, toc } = buildHtmlFromPdfText(parsed.text);
 
     const contentKey = contentKeyFromPdfKey(request.pdfKey);

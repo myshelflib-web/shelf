@@ -7,6 +7,7 @@ import { contentKeyFromPdfKey } from "../utils/docPaths.js";
 import { getObjectStream, headObjectMeta, uploadToS3 } from "./s3.js";
 import { logger, errorFields } from "../utils/logger.js";
 import { renderPdfPageToJpeg } from "./libraryIndexPdfRender.js";
+import { withPdfIndexLock } from "./pdfIndexLock.js";
 import {
   buildShelfOcrHtml,
   ocrJpegBuffer,
@@ -15,29 +16,36 @@ import {
 } from "./pdfOcr.js";
 
 const RANGE_CHUNK_SIZE = 64 * 1024;
-/** Abort a single Range GET bigger than this so we never buffer a whole PDF. */
-const MAX_RANGE_BYTES = Number(process.env.VECTOR_INDEX_PDF_RANGE_MAX ?? 2 * 1024 * 1024);
-/**
- * pdf.js still allocates a Uint8Array(fileLength) while we Range-GET page chunks.
- * 64MB is a last-resort cap on 512MB hosts — not a 12MB skip of normal textbooks.
- */
-const MAX_PDF_FILE_BYTES = Number(
-  process.env.VECTOR_INDEX_PDF_MAX_BYTES ?? 64 * 1024 * 1024
+/** Hard caps — env can only go lower. pdf.js allocates Uint8Array(fileLength). */
+export const PDF_INDEX_HARD_MAX_BYTES = 24 * 1024 * 1024;
+export const PDF_INDEX_HARD_MAX_RANGE = 1024 * 1024;
+export const PDF_INDEX_HARD_MAX_OCR_PAGES = 6;
+
+const MAX_RANGE_BYTES = Math.min(
+  Number(process.env.VECTOR_INDEX_PDF_RANGE_MAX ?? PDF_INDEX_HARD_MAX_RANGE),
+  PDF_INDEX_HARD_MAX_RANGE
 );
-const MAX_PDF_PAGES = Number(process.env.VECTOR_INDEX_PDF_PAGES ?? 40);
-const MAX_PDF_CHARS = Number(process.env.VECTOR_INDEX_PDF_CHARS ?? 80_000);
-const MAX_OCR_PAGES = Number(process.env.VECTOR_INDEX_OCR_PAGES ?? 12);
+const MAX_PDF_FILE_BYTES = Math.min(
+  Number(process.env.VECTOR_INDEX_PDF_MAX_BYTES ?? PDF_INDEX_HARD_MAX_BYTES),
+  PDF_INDEX_HARD_MAX_BYTES
+);
+const MAX_PDF_PAGES = Math.min(Number(process.env.VECTOR_INDEX_PDF_PAGES ?? 24), 24);
+const MAX_PDF_CHARS = Math.min(Number(process.env.VECTOR_INDEX_PDF_CHARS ?? 60_000), 60_000);
+const MAX_OCR_PAGES = Math.min(
+  Number(process.env.VECTOR_INDEX_OCR_PAGES ?? PDF_INDEX_HARD_MAX_OCR_PAGES),
+  PDF_INDEX_HARD_MAX_OCR_PAGES
+);
 
 function envPositive(n: number, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
 export function pdfIndexRangeTooLarge(byteCount: number): boolean {
-  return byteCount > envPositive(MAX_RANGE_BYTES, 2 * 1024 * 1024);
+  return byteCount > envPositive(MAX_RANGE_BYTES, PDF_INDEX_HARD_MAX_RANGE);
 }
 
 export function pdfIndexFileTooLarge(contentLength: number): boolean {
-  return contentLength > envPositive(MAX_PDF_FILE_BYTES, 64 * 1024 * 1024);
+  return contentLength > envPositive(MAX_PDF_FILE_BYTES, PDF_INDEX_HARD_MAX_BYTES);
 }
 
 export type PdfTextItem = { str?: string; transform?: number[] };
@@ -153,12 +161,22 @@ async function persistOcrHtml(pdfKey: string, text: string): Promise<void> {
 
 /**
  * Pull text from `source.pdf` via S3 Range GETs + pdf.js page-at-a-time.
- * Does not `GetObject` the whole file. Stops after enough chars/pages for embed.
+ * OCR is opt-in (index worker only) so Ask AI never rasterizes pages.
  */
-export async function extractPdfTextByRanges(pdfKey: string): Promise<string> {
-  const maxPages = envPositive(MAX_PDF_PAGES, 40);
-  const maxChars = envPositive(MAX_PDF_CHARS, 80_000);
-  const maxOcr = envPositive(MAX_OCR_PAGES, 12);
+export async function extractPdfTextByRanges(
+  pdfKey: string,
+  opts?: { ocr?: boolean }
+): Promise<string> {
+  return withPdfIndexLock(() => extractPdfTextByRangesLocked(pdfKey, opts));
+}
+
+async function extractPdfTextByRangesLocked(
+  pdfKey: string,
+  opts?: { ocr?: boolean }
+): Promise<string> {
+  const maxPages = envPositive(MAX_PDF_PAGES, 24);
+  const maxChars = envPositive(MAX_PDF_CHARS, 60_000);
+  const maxOcr = opts?.ocr ? envPositive(MAX_OCR_PAGES, PDF_INDEX_HARD_MAX_OCR_PAGES) : 0;
 
   let meta;
   try {
@@ -214,13 +232,17 @@ export async function extractPdfTextByRanges(pdfKey: string): Promise<string> {
           pdfOcrEnabled()
         ) {
           try {
-            const jpeg = await renderPdfPageToJpeg(
+            let jpeg: Buffer | null = await renderPdfPageToJpeg(
               page as unknown as Parameters<typeof renderPdfPageToJpeg>[0]
             );
-            const ocr = jpeg ? await ocrJpegBuffer(jpeg) : null;
-            if (ocr) {
-              pageText = ocr;
-              ocrPages += 1;
+            try {
+              const ocr = jpeg ? await ocrJpegBuffer(jpeg) : null;
+              if (ocr) {
+                pageText = ocr;
+                ocrPages += 1;
+              }
+            } finally {
+              jpeg = null;
             }
           } catch (err) {
             logger.warn("library_index.pdf_ocr_page_failed", {

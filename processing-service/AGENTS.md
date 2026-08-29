@@ -5,7 +5,7 @@ Async worker that turns uploaded PDFs into HTML for Shelf. Express health server
 ## Runtime
 
 - `src/index.ts` — `/health`, `/metrics`, `POST /process` (kick a job).
-- `src/worker.ts` — `startWorker()` polls pending jobs (~15s), `runJob()` extracts text/layout and writes HTML. Polls do **not** overlap: one PDF at a time (`PROCESS_JOBS_PER_POLL`, default 1). Empty pdf.js extracts do **not** PutObject a 0-byte `content.html` (that triggered the AWS “Stream of unknown length” warning and could clobber OCR). `pdfExtract.ts` sets pdf.js verbosity 0, `page.cleanup()`, and `doc.destroy()` so font warnings and leaked documents do not accumulate toward exit 137.
+- `src/worker.ts` — `startWorker()` polls pending jobs (~15s), `runJob()` extracts text/layout and writes HTML. Polls do **not** overlap: **one PDF at a time**. Downloads abort over 24MB. Empty pdf.js extracts do **not** PutObject a 0-byte `content.html`. Scanned PDFs abort after 6 empty pages. `pdfExtract.ts` sets pdf.js verbosity 0, `page.cleanup()`, and `doc.destroy()`.
 
 Env aligns with backend S3 + database (see `.env.example`). Internal calls from backend use a shared secret (`/api/internal` on the API).
 
