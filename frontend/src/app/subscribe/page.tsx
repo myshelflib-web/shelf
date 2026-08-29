@@ -181,7 +181,6 @@ function SubscribePageInner() {
               {SHELF_PLANS.page.title}
               <GreetingDots />
             </h1>
-            <p className="plans-lead">{SHELF_PLANS.page.intro}</p>
           </header>
 
           {isPremium && user ? (
@@ -214,7 +213,6 @@ function SubscribePageInner() {
                 <span className="plans-price-amount">{SHELF_PLANS.free.priceLabel}</span>
                 <span className="plans-price-period">{SHELF_PLANS.free.periodLabel}</span>
               </div>
-              <p className="plans-card-desc">{SHELF_PLANS.free.description}</p>
               <ul className="plans-features">
                 {SHELF_PLANS.free.features.map((f) => (
                   <li key={f}>
@@ -264,10 +262,6 @@ function SubscribePageInner() {
                 <span className="plans-price-amount">₹{displayPrice}</span>
                 <span className="plans-price-period">/ {periodLabel}</span>
               </div>
-              <p className="plans-billing-note">
-                UPI Autopay — cancel anytime from Settings
-              </p>
-              <p className="plans-card-desc">{SHELF_PLANS.premium.description}</p>
               <ul className="plans-features">
                 {SHELF_PLANS.premium.features.map((f) => (
                   <li key={f}>

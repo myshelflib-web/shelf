@@ -88,15 +88,6 @@
   color: var(--accent);
 }
 
-.plans-lead {
-  margin: 0.7rem auto 0;
-  max-width: 28rem;
-  font-size: 0.8125rem;
-  line-height: 1.55;
-  font-weight: 450;
-  color: var(--text-muted);
-}
-
 .plans-status {
   flex-shrink: 0;
   padding: 0.75rem 1rem;
@@ -194,13 +185,6 @@
   color: var(--text-muted);
 }
 
-.plans-card-desc {
-  margin-top: 0.5rem;
-  font-size: 0.875rem;
-  line-height: 1.5;
-  color: var(--text-secondary);
-}
-
 .plans-billing {
   margin-top: 0.7rem;
   display: flex;
@@ -228,13 +212,6 @@
 .plans-billing button[aria-pressed="true"] {
   background: var(--accent);
   color: #fff;
-}
-
-.plans-billing-note {
-  margin-top: 0.4rem;
-  font-size: 0.75rem;
-  line-height: 1.4;
-  color: var(--text-muted);
 }
 
 .plans-features {
@@ -306,14 +283,6 @@
 }
 
 @media (max-height: 760px) {
-  .plans-lead {
-    font-size: 0.75rem;
-  }
-
-  .plans-card-desc {
-    display: none;
-  }
-
   .plans-features {
     gap: 0.35rem;
   }

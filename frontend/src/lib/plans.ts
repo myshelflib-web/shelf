@@ -9,8 +9,6 @@ export const SHELF_PLANS = {
   page: {
     kicker: "Simple, honest pricing",
     title: "Start free. Upgrade when Shelf becomes home",
-    intro:
-      "Bring your notes in, study at your pace, and only pay when you need more room and deeper Study AI — no pressure, no fine print surprises.",
     footnote:
       "Fair-use limits reset monthly · Razorpay UPI Autopay · Cancel anytime in Settings",
   },
@@ -18,8 +16,6 @@ export const SHELF_PLANS = {
     id: "FREE" as const,
     name: "Free",
     tagline: "Everything you need to begin",
-    description:
-      "Your private library — read, highlight, ask, quiz, and plan. No card required.",
     priceLabel: "₹0",
     periodLabel: "forever",
     features: [
@@ -37,8 +33,6 @@ export const SHELF_PLANS = {
     id: "PREMIUM" as const,
     name: "Premium",
     tagline: "When you study here every day",
-    description:
-      "More space and Study AI headroom for full subjects, long PDFs, and daily workflows.",
     priceInr: PRICING_FALLBACK.yearlyInr,
     monthlyInr: PRICING_FALLBACK.monthlyInr,
     planDays: PRICING_FALLBACK.planDays,

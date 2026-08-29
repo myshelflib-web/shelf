@@ -59,11 +59,6 @@ export function LandingValueSteps() {
               The product story, in five clear steps
             </h2>
           </div>
-          <p className="landing-value-copy">
-            Collect material, organize it, ask Study AI, sit exam-style quizzes,
-            and plan revision on one calendar — the loop serious students repeat
-            every week.
-          </p>
         </div>
       </RevealOnScroll>
       <div className="landing-value-grid landing-value-grid-steps">

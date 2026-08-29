@@ -48,11 +48,6 @@ export function LandingLearnSection() {
               <span>No account needed</span>
             </div>
             <div className="landing-goal-body text-sm">
-              <p className="text-[var(--text-secondary)] leading-relaxed mb-4">
-                Guests can read curriculum articles, open linked PDFs where
-                published, and discover how Shelf organizes serious study material
-                before creating a library.
-              </p>
               <div className="landing-cta-grid">
                 <div className="landing-cta-card">
                   <strong>Read articles</strong>
