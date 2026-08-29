@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LearnArticleJsonLd } from "@/components/seo/LearnArticleJsonLd";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { fetchLearnArticle, fetchLearnTopic } from "@/lib/seo/learnFetch";
 
@@ -30,6 +31,31 @@ export async function generateMetadata({
   });
 }
 
-export default function LearnArticleLayout({ children }: LayoutProps) {
-  return children;
+export default async function LearnArticleLayout({
+  children,
+  params,
+}: LayoutProps) {
+  const { subject, topic, article } = await params;
+  const [articleData, topicData] = await Promise.all([
+    fetchLearnArticle(subject, topic, article),
+    fetchLearnTopic(subject, topic),
+  ]);
+
+  const subjectName = topicData?.subject?.name ?? subject;
+  const topicTitle = topicData?.title ?? topic;
+  const articleTitle = articleData?.title ?? article;
+  const description = `Read ${articleTitle} — ${topicTitle} in ${subjectName} on Shelf Learn. Free curriculum article with reader highlights when signed in.`;
+
+  return (
+    <>
+      <LearnArticleJsonLd
+        title={articleTitle}
+        description={description.slice(0, 160)}
+        path={`/learn/${subject}/${topic}/${article}`}
+        subjectName={subjectName}
+        topicName={topicTitle}
+      />
+      {children}
+    </>
+  );
 }

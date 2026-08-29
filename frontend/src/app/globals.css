@@ -2,6 +2,9 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 @import "katex/dist/katex.min.css";
+@import "./landing-page.css";
+@import "./learn-page.css";
+@import "./onboarding-page.css";
 
 :root {
   --bg-primary: #f7f7f5;

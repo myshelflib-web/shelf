@@ -4,19 +4,20 @@ import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import {
   GUEST_STUDY_GOAL_CHANGED,
-  readGuestStudyGoal,
-  writeGuestStudyGoal,
-  learnCatalogGoal,
+  readLearnCatalogFilter,
+  writeLearnCatalogFilter,
 } from "@/lib/guestStudyGoal";
 import { normalizeStudyGoal } from "@/lib/studyGoal";
 import { StudyGoal } from "@/types";
 
 export function useLearnStudyGoal() {
   const { user } = useAuth();
-  const [guestGoal, setGuestGoal] = useState<StudyGoal>(() => readGuestStudyGoal());
+  const [filterGoal, setFilterGoal] = useState<StudyGoal>(() =>
+    readLearnCatalogFilter()
+  );
 
   useEffect(() => {
-    const sync = () => setGuestGoal(readGuestStudyGoal());
+    const sync = () => setFilterGoal(readLearnCatalogFilter());
     window.addEventListener("storage", sync);
     window.addEventListener(GUEST_STUDY_GOAL_CHANGED, sync);
     return () => {
@@ -26,19 +27,18 @@ export function useLearnStudyGoal() {
   }, []);
 
   const accountGoal = user ? normalizeStudyGoal(user.studyGoal) : null;
-  const goal = learnCatalogGoal(accountGoal, guestGoal);
 
-  const setGuestGoalChoice = useCallback((next: StudyGoal) => {
-    writeGuestStudyGoal(next);
-    setGuestGoal(next);
+  const setFilterGoalChoice = useCallback((next: StudyGoal) => {
+    writeLearnCatalogFilter(next);
+    setFilterGoal(next);
   }, []);
 
   return {
-    goal,
-    guestGoal,
-    setGuestGoal: setGuestGoalChoice,
-    /** Guests pick a track; signed-in users follow profile goal. */
-    showGoalPicker: !user,
+    goal: filterGoal,
+    guestGoal: filterGoal,
+    setGuestGoal: setFilterGoalChoice,
+    /** Optional track filter — never pre-applied from profile goal. */
+    showGoalPicker: true,
     accountGoal,
   };
 }

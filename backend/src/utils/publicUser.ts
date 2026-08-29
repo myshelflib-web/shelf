@@ -79,5 +79,9 @@ export function toPublicUser(user: DbUser) {
     coinBalance: user.coinBalance ?? 0,
     telegramLinked: Boolean(user.telegramId),
     telegramUsername: user.telegramUsername ?? null,
+    createdAt:
+      user.createdAt instanceof Date
+        ? user.createdAt.toISOString()
+        : user.createdAt ?? undefined,
   };
 }

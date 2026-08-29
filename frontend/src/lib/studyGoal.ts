@@ -15,6 +15,12 @@ export type StudyGoalGroup = {
   options: StudyGoal[];
 };
 
+/** Labels for the public /learn catalog filter (GENERAL = show all tracks). */
+export const LEARN_CATALOG_GOAL_LABELS: Record<StudyGoal, string> = {
+  ...STUDY_GOAL_LABELS,
+  GENERAL: "All tracks",
+};
+
 export const STUDY_GOAL_GROUPS: StudyGoalGroup[] = [
   { label: "General", options: ["GENERAL"] },
   {
@@ -25,6 +31,12 @@ export const STUDY_GOAL_GROUPS: StudyGoalGroup[] = [
     label: "Professional / PG",
     options: ["CA", "NEET_PG", "GATE"],
   },
+];
+
+/** Goal groups for the /learn catalog filter dropdown. */
+export const LEARN_CATALOG_GOAL_GROUPS: StudyGoalGroup[] = [
+  { label: "All tracks", options: ["GENERAL"] },
+  ...STUDY_GOAL_GROUPS.slice(1),
 ];
 
 /** Flat list kept for callers that need every goal. */

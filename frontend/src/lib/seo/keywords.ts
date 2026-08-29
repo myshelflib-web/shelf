@@ -245,7 +245,20 @@ export const HOME_TITLE =
   "Shelf — Personal Study Library | PDF Highlights, Study AI & Planner";
 
 export const HOME_DESCRIPTION =
-  "Build a private study library: upload PDFs, highlight as you read, ask Study AI from your material, import from Telegram, share with classmates, quiz from your notes, and plan on one calendar. Free curriculum on Learn.";
+  "Build a private study library: upload PDFs, highlight as you read, ask Study AI from your material, import from Telegram, Spotify focus audio, share with classmates, exam-style quiz from your notes, and plan on one calendar. Browse free curriculum on Learn without sign-in.";
+
+/** Homepage meta keywords — product surfaces + integrations + guest access. */
+export const HOME_PAGE_KEYWORDS: string[] = [
+  ...DEFAULT_KEYWORDS,
+  "Telegram PDF import",
+  "Spotify study reader",
+  "exam quiz from notes",
+  "free study curriculum",
+  "read PDF without login",
+  "personal study workspace",
+  "document sharing students",
+  "offline PDF reader PWA",
+];
 
 export const FEATURES_HUB_TITLE =
   "Shelf Features — PDF Library, Study AI, Quiz, Telegram & More";

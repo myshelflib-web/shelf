@@ -54,3 +54,6 @@ postgres_data/
 
 # Local Medium export (Word docs + art). Repo already has docs/ for deploy notes.
 docs/medium/
+
+# Private strategy / cost models (not for public repo)
+docs/private/

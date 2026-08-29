@@ -13,11 +13,21 @@ import {
   sourcePdfKey,
   contentKeyFromPdfKey,
 } from "../utils/docPaths.js";
+import { isStudyGoal } from "../studyGoal.js";
+import {
+  applyBulkImportManifest,
+  bulkImportCsvTemplate,
+  parseBulkImportCsv,
+} from "../services/adminBulkImport.js";
 
 const router = Router();
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 50 * 1024 * 1024 },
+});
+const bulkPdfUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024, files: 40 },
 });
 
 router.get(
@@ -115,12 +125,19 @@ router.get(
 async function resolveSubject(body: {
   subjectId?: string;
   subjectName?: string;
+  studyGoal?: string;
 }) {
   if (body.subjectId) {
     const subject = await prisma.subject.findUnique({
       where: { id: body.subjectId },
     });
     if (!subject) throw new Error("Subject not found");
+    if (body.studyGoal && isStudyGoal(body.studyGoal)) {
+      return prisma.subject.update({
+        where: { id: subject.id },
+        data: { studyGoal: body.studyGoal },
+      });
+    }
     return subject;
   }
 
@@ -130,12 +147,16 @@ async function resolveSubject(body: {
   const slug = slugify(name);
   if (!slug) throw new Error("Invalid subject name");
 
+  const goal =
+    body.studyGoal && isStudyGoal(body.studyGoal) ? body.studyGoal : "UPSC";
+
   return prisma.subject.upsert({
     where: { slug },
-    update: {},
+    update: { studyGoal: goal },
     create: {
       name,
       slug,
+      studyGoal: goal,
       order: (await prisma.subject.count()) + 1,
       icon: "📚",
     },
@@ -181,6 +202,7 @@ router.post(
     const {
       subjectId,
       subjectName,
+      studyGoal,
       topicId,
       topicName,
       articleId,
@@ -201,7 +223,7 @@ router.post(
     }
 
     try {
-      const subject = await resolveSubject({ subjectId, subjectName });
+      const subject = await resolveSubject({ subjectId, subjectName, studyGoal });
       const topic = await resolveTopic(subject.id, { topicId, topicName });
 
       let article;
@@ -491,6 +513,135 @@ router.delete(
 
     await prisma.article.delete({ where: { id } });
     res.json({ success: true });
+  }
+);
+
+router.get(
+  "/bulk-import/template",
+  authMiddleware,
+  adminMiddleware,
+  (_req: Request, res: Response) => {
+    res.type("text/csv").send(bulkImportCsvTemplate());
+  }
+);
+
+router.post(
+  "/bulk-import",
+  authMiddleware,
+  adminMiddleware,
+  upload.single("manifest"),
+  async (req: Request, res: Response) => {
+    const file = req.file;
+    const rawText =
+      file?.buffer?.toString("utf8") ??
+      (typeof req.body.csv === "string" ? req.body.csv : "");
+
+    if (!rawText.trim()) {
+      res.status(400).json({ error: "manifest CSV file or csv body required" });
+      return;
+    }
+
+    const { rows, errors: parseErrors } = parseBulkImportCsv(rawText);
+    if (rows.length === 0) {
+      res.status(400).json({
+        error: "No valid rows in manifest",
+        parseErrors,
+      });
+      return;
+    }
+
+    const result = await applyBulkImportManifest(rows);
+    res.json({
+      ...result,
+      parseErrors,
+      rowCount: rows.length,
+      message:
+        "Hierarchy created. Upload PDFs per article from Manage Articles or bulk PDF upload.",
+    });
+  }
+);
+
+router.post(
+  "/bulk-upload-pdfs",
+  authMiddleware,
+  adminMiddleware,
+  bulkPdfUpload.array("pdfs", 40),
+  async (req: Request, res: Response) => {
+    const files = req.files as Express.Multer.File[] | undefined;
+    if (!files?.length) {
+      res.status(400).json({ error: "pdfs[] files required" });
+      return;
+    }
+
+    const uploaded: string[] = [];
+    const errors: Array<{ file: string; message: string }> = [];
+
+    for (const file of files) {
+      const base = file.originalname.replace(/\.pdf$/i, "");
+      const parts = base.split("--");
+      if (parts.length !== 3) {
+        errors.push({
+          file: file.originalname,
+          message: "Name as subjectSlug--topicSlug--articleSlug.pdf",
+        });
+        continue;
+      }
+      const [subjectSlug, topicSlug, articleSlug] = parts.map((p) =>
+        slugify(p)
+      );
+      if (!subjectSlug || !topicSlug || !articleSlug) {
+        errors.push({ file: file.originalname, message: "Invalid slug parts" });
+        continue;
+      }
+
+      try {
+        const subject = await prisma.subject.findUnique({
+          where: { slug: subjectSlug },
+        });
+        if (!subject) throw new Error("Subject not found");
+        const topic = await prisma.topic.findUnique({
+          where: { subjectId_slug: { subjectId: subject.id, slug: topicSlug } },
+        });
+        if (!topic) throw new Error("Topic not found");
+        let article = await prisma.article.findUnique({
+          where: { topicId_slug: { topicId: topic.id, slug: articleSlug } },
+        });
+        if (!article) {
+          article = await prisma.article.create({
+            data: {
+              topicId: topic.id,
+              title: articleSlug.replace(/-/g, " "),
+              slug: articleSlug,
+              status: "PROCESSING",
+              order:
+                (await prisma.article.count({ where: { topicId: topic.id } })) +
+                1,
+            },
+          });
+        }
+
+        const docPrefix = adminDocPrefix(subject.slug, topic.slug, article.slug);
+        const pdfKey = sourcePdfKey(docPrefix);
+        await compressAndUploadToS3(
+          pdfKey,
+          file.buffer,
+          "application/pdf",
+          file.originalname
+        );
+        await prisma.article.update({
+          where: { id: article.id },
+          data: { pdfKey, status: "PROCESSING", contentUrl: null },
+        });
+        uploaded.push(file.originalname);
+      } catch (err) {
+        errors.push({
+          file: file.originalname,
+          message: err instanceof Error ? err.message : "Upload failed",
+        });
+      }
+    }
+
+    res.json({ uploaded, errors, count: uploaded.length });
   }
 );
 

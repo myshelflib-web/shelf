@@ -29,6 +29,7 @@ export interface User {
   coinBalance?: number;
   telegramLinked?: boolean;
   telegramUsername?: string | null;
+  createdAt?: string;
 }
 
 export interface ArticleSummary {

@@ -574,6 +574,31 @@ export const api = {
       request<{ success: boolean }>(`/api/admin/topics/${id}`, {
         method: "DELETE",
       }),
+    bulkImport: async (file: File) => {
+      const formData = new FormData();
+      formData.append("manifest", file);
+      return request<{
+        subjectsCreated: number;
+        topicsCreated: number;
+        articlesCreated: number;
+        articlesUpdated: number;
+        rowCount: number;
+        parseErrors: Array<{ line: number; message: string }>;
+        errors: Array<{ line: number; message: string }>;
+        message: string;
+      }>("/api/admin/bulk-import", { method: "POST", body: formData });
+    },
+    bulkUploadPdfs: async (files: File[]) => {
+      const formData = new FormData();
+      for (const f of files) {
+        formData.append("pdfs", await compressUploadFile(f));
+      }
+      return request<{
+        uploaded: string[];
+        errors: Array<{ file: string; message: string }>;
+        count: number;
+      }>("/api/admin/bulk-upload-pdfs", { method: "POST", body: formData });
+    },
     listBlogPosts: () =>
       request<{ posts: import("@/types").AdminBlogPostRow[] }>(
         "/api/admin/blog"

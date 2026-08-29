@@ -10,11 +10,13 @@ import {
   BookOpen,
   Ticket,
   ArrowLeft,
+  Files,
 } from "lucide-react";
 
 const links = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/admin/upload", label: "Upload PDFs", icon: Upload },
+  { href: "/admin/bulk-upload", label: "Bulk import", icon: Files },
   { href: "/admin/topics", label: "Manage Articles", icon: FileText },
   { href: "/admin/blog", label: "Blog", icon: BookOpen },
   { href: "/admin/coupons", label: "Coupons", icon: Ticket },

@@ -7,11 +7,25 @@ import { Header } from "@/components/Header";
 import { LandingFeatureGrid } from "@/components/LandingFeatureGrid";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
-import { LandingHeroMockup } from "@/components/landing/LandingHeroMockup";
 import { LandingShowcases } from "@/components/landing/LandingShowcases";
 import { BlogPreviewSection } from "@/components/blog/BlogPreviewSection";
+import { LandingProductPreview } from "@/components/landing/LandingProductPreview";
+import { LandingValueSteps } from "@/components/landing/LandingValueSteps";
+import { LandingGoalSection } from "@/components/landing/LandingGoalSection";
+import { LandingCtaBanner } from "@/components/landing/LandingCtaBanner";
+import { LandingQuizSection } from "@/components/landing/LandingQuizSection";
+import { LandingIntegrationsSection } from "@/components/landing/LandingIntegrationsSection";
+import { LandingLearnSection } from "@/components/landing/LandingLearnSection";
+import { LandingGuestAccessSection } from "@/components/landing/LandingGuestAccessSection";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowRight, Sparkles } from "lucide-react";
+import {
+  CalendarDays,
+  FolderOpen,
+  Layers,
+  ListChecks,
+  NotebookPen,
+  Sparkles,
+} from "lucide-react";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 
 export function HomePageClient() {
@@ -34,85 +48,120 @@ export function HomePageClient() {
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
 
-      <main className="flex-1 min-h-0 overflow-y-auto">
-        <section className="relative px-4 sm:px-6 pt-14 sm:pt-20 pb-6 max-w-6xl mx-auto overflow-hidden">
-          <div className="hero-glow" aria-hidden />
+      <main className="landing-page flex-1 min-h-0 overflow-y-auto">
+        <section className="landing-hero" aria-labelledby="landing-hero-heading">
           <RevealOnScroll>
-            <div className="text-center max-w-3xl mx-auto">
-              <h1 className="text-3xl sm:text-4xl md:text-[3.25rem] font-bold mb-5 tracking-tight">
-                <span className="block leading-[1.2] sm:leading-[1.15]">
-                  Your personal study library
-                </span>
-                <span className="block mt-2 sm:mt-3 leading-[1.2] text-[var(--accent)]">
-                  for any material you own
-                </span>
+            <div>
+              <div className="landing-eyebrow">Your personal study library</div>
+              <h1 id="landing-hero-heading">
+                Your material. One reader, Study AI, planner, and quiz.
               </h1>
-              <p className="text-base sm:text-lg text-[var(--text-secondary)] mb-8 leading-relaxed">
-                Upload PDFs and notes, highlight as you read, ask Study AI from
-                your files, and plan work on one calm calendar — for college,
-                exams, research, or professional reading.
+              <p className="landing-lead">
+                Upload PDFs, create sketch notebooks and typed doc pages, and keep
+                everything in collections you control. Open multiple pages in tabs,
+                split view two sources side by side, highlight as you read, ask Study
+                AI from your files, and plan revision on a calendar.
               </p>
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <Link href="/learn" className="btn-primary">
-                  Browse free library
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-                <Link href="/login" className="btn-secondary">
+              <div className="landing-hero-actions">
+                <Link href="/login" className="landing-btn landing-btn-primary">
                   Create your library
-                  <ArrowRight className="w-4 h-4" />
                 </Link>
+                <Link href="/learn" className="landing-btn">
+                  Browse free library
+                </Link>
+              </div>
+              <p className="landing-micro">
+                Learn and feature guides are open without sign-in. Your private
+                library starts when you create an account.
+              </p>
+              <div className="landing-featureline">
+                <span className="landing-featurepill">
+                  <FolderOpen strokeWidth={1.8} />
+                  Library
+                </span>
+                <span className="landing-featurepill">
+                  <NotebookPen strokeWidth={1.8} />
+                  Notebooks
+                </span>
+                <span className="landing-featurepill">
+                  <Layers strokeWidth={1.8} />
+                  Tabs &amp; split
+                </span>
+                <span className="landing-featurepill">
+                  <Sparkles strokeWidth={1.8} />
+                  Study AI
+                </span>
+                <span className="landing-featurepill">
+                  <ListChecks strokeWidth={1.8} />
+                  Quiz
+                </span>
+                <span className="landing-featurepill">
+                  <CalendarDays strokeWidth={1.8} />
+                  Planner
+                </span>
               </div>
             </div>
           </RevealOnScroll>
 
-          <RevealOnScroll delay={120}>
-            <LandingHeroMockup />
+          <RevealOnScroll delay={100}>
+            <LandingProductPreview />
           </RevealOnScroll>
         </section>
 
+        <LandingValueSteps />
+
         <LandingShowcases />
 
-        <BlogPreviewSection />
+        <LandingQuizSection />
 
-        <section className="px-4 sm:px-6 py-6">
-          <div className="max-w-6xl mx-auto landing-showcase text-center py-12 sm:py-16">
+        <LandingIntegrationsSection />
+
+        <LandingLearnSection />
+
+        <BlogPreviewSection variant="landing" />
+
+        <section className="landing-mid-cta" aria-labelledby="landing-mid-cta-heading">
+          <div className="landing-mid-cta-inner">
             <RevealOnScroll>
-              <Sparkles className="w-6 h-6 text-[var(--accent)] mx-auto mb-4 greeting-sparkle" />
-              <h2 className="text-2xl sm:text-3xl font-semibold mb-3">
-                Built for focused reading and study
-              </h2>
-              <p className="text-[var(--text-secondary)] mb-8 max-w-xl mx-auto leading-relaxed">
-                Free curriculum packs are open to everyone. Sign in for your
-                own PDF library, highlights, planner, and Study AI grounded in
-                what you uploaded.
+              <Sparkles className="w-6 h-6 text-[var(--accent)] mx-auto mb-4" />
+              <h2 id="landing-mid-cta-heading">Built for focused reading and study</h2>
+              <p>
+                Free curriculum packs are open to everyone on Learn. Sign in for
+                your own PDF library, highlights, planner, Study AI grounded in
+                what you uploaded, Telegram import, Spotify focus audio, and
+                exam-style quiz from your notes.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-3">
-                <Link href="/learn" className="btn-secondary">
+                <Link href="/learn" className="landing-btn">
                   Browse free study material
-                  <ArrowRight className="w-4 h-4" />
                 </Link>
-                <Link href="/login" className="btn-primary">
+                <Link href="/login" className="landing-btn landing-btn-primary">
                   Start free
-                  <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
             </RevealOnScroll>
           </div>
         </section>
 
-        <LandingFeatureGrid title="Everything at a glance" />
+        <LandingFeatureGrid title="Everything at a glance" variant="landing" />
 
-        <section className="px-4 sm:px-6 pb-12 max-w-5xl mx-auto text-center">
-          <Link
-            href="/features"
-            className="text-sm text-[var(--accent)] hover:underline"
-          >
-            See all features — Telegram import, Spotify, sharing, Quiz & more →
+        <LandingGuestAccessSection />
+
+        <section className="landing-features-link">
+          <Link href="/features">
+            See all features — reader workspace, sharing, offline PWA, Premium &amp; more →
           </Link>
         </section>
-      </main>
 
-      <MarketingFooter />
+        <LandingGoalSection />
+
+        <LandingCtaBanner
+          title="Start with your material. Shape Shelf around your workflow."
+          copy="Use it for learning, research, exam prep, professional reading, or anything else you keep building over time."
+        />
+
+        <MarketingFooter variant="landing" />
+      </main>
     </div>
   );
 }

@@ -5,6 +5,8 @@ import { Subject } from "@/types";
 import { api } from "@/lib/api";
 import { Upload, Loader2, FileUp, X } from "lucide-react";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
+import { STUDY_GOAL_GROUPS, STUDY_GOAL_LABELS } from "@/lib/studyGoal";
+import { StudyGoal } from "@/types";
 
 interface UploadFormProps {
   subjects: Subject[];
@@ -16,6 +18,7 @@ const NEW = "__new__";
 export function UploadForm({ subjects: initialSubjects, onSuccess }: UploadFormProps) {
   const [subjects, setSubjects] = useState(initialSubjects);
   const [subjectChoice, setSubjectChoice] = useState(initialSubjects[0]?.id ?? NEW);
+  const [studyGoal, setStudyGoal] = useState<StudyGoal>("UPSC");
   const [customSubject, setCustomSubject] = useState("");
   const [topicChoice, setTopicChoice] = useState(NEW);
   const [customTopic, setCustomTopic] = useState("");
@@ -80,6 +83,7 @@ export function UploadForm({ subjects: initialSubjects, onSuccess }: UploadFormP
       formData.append("subjectId", subjectChoice);
     } else {
       formData.append("subjectName", customSubject.trim());
+      formData.append("studyGoal", studyGoal);
     }
 
     if (topicChoice !== NEW) {
@@ -145,6 +149,26 @@ export function UploadForm({ subjects: initialSubjects, onSuccess }: UploadFormP
             placeholder="e.g. Ethics"
             className="mt-2 w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
           />
+        )}
+        {subjectChoice === NEW && (
+          <div className="mt-3">
+            <label className="block text-sm font-medium mb-1.5">Exam track</label>
+            <ShelfSelect
+              value={studyGoal}
+              groups={STUDY_GOAL_GROUPS.filter((g) => g.options[0] !== "GENERAL").map(
+                (group) => ({
+                  label: group.label,
+                  options: group.options.map((goal) => ({
+                    value: goal,
+                    label: STUDY_GOAL_LABELS[goal],
+                  })),
+                })
+              )}
+              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)]"
+              aria-label="Exam track"
+              onChange={(v) => setStudyGoal(v as StudyGoal)}
+            />
+          </div>
         )}
       </div>
 

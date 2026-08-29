@@ -2,12 +2,14 @@ import type { LucideIcon } from "lucide-react";
 import {
   BookOpen,
   CalendarDays,
+  Columns2,
   FileUp,
   Highlighter,
   LayoutDashboard,
   ListChecks,
   Map,
   MessageSquareText,
+  NotebookPen,
   Target,
 } from "lucide-react";
 
@@ -22,6 +24,16 @@ export const MARKETING_FEATURES: MarketingFeature[] = [
     icon: FileUp,
     title: "Upload notes and PDFs",
     body: "Bring your own files into private sections. Free accounts get 100 MB; paid plans add more storage and Study AI tokens.",
+  },
+  {
+    icon: NotebookPen,
+    title: "Sketch notebooks & doc pages",
+    body: "Create multi-sheet sketch notebooks or typed doc pages in the same collection as your PDFs — not a separate notes app.",
+  },
+  {
+    icon: Columns2,
+    title: "Tabs and split view",
+    body: "Open up to 15 pages in tabs, compare two documents side by side, and resize library and Study AI panels.",
   },
   {
     icon: Highlighter,

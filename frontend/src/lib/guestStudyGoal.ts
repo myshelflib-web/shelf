@@ -1,35 +1,40 @@
 import { StudyGoal } from "@/types";
-import { isStudyGoal, normalizeStudyGoal } from "@/lib/studyGoal";
+import { isStudyGoal } from "@/lib/studyGoal";
 
+export const LEARN_CATALOG_FILTER_KEY = "shelf:learn-catalog-filter";
+export const GUEST_STUDY_GOAL_CHANGED = "shelf:learn-catalog-filter-changed";
+
+/** @deprecated use LEARN_CATALOG_FILTER_KEY */
 export const GUEST_STUDY_GOAL_KEY = "shelf:guest-study-goal";
-export const GUEST_STUDY_GOAL_CHANGED = "shelf:guest-study-goal-changed";
 
-export function readGuestStudyGoal(): StudyGoal {
-  if (typeof window === "undefined") return "UPSC";
+/** Catalog filter for /learn — defaults to all tracks (GENERAL). */
+export function readLearnCatalogFilter(): StudyGoal {
+  if (typeof window === "undefined") return "GENERAL";
   try {
-    const raw = localStorage.getItem(GUEST_STUDY_GOAL_KEY);
+    const raw = localStorage.getItem(LEARN_CATALOG_FILTER_KEY);
     if (isStudyGoal(raw)) return raw;
   } catch {
     /* ignore */
   }
-  return "UPSC";
+  return "GENERAL";
 }
 
-export function writeGuestStudyGoal(goal: StudyGoal) {
+export function writeLearnCatalogFilter(goal: StudyGoal) {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(GUEST_STUDY_GOAL_KEY, goal);
+    localStorage.setItem(LEARN_CATALOG_FILTER_KEY, goal);
     window.dispatchEvent(new Event(GUEST_STUDY_GOAL_CHANGED));
   } catch {
     /* ignore quota */
   }
 }
 
-/** Goal used to filter public /learn catalog (guest picker or signed-in profile). */
-export function learnCatalogGoal(
-  userGoal: StudyGoal | null | undefined,
-  guestGoal: StudyGoal
-): StudyGoal {
-  if (userGoal) return normalizeStudyGoal(userGoal);
-  return guestGoal;
+/** @deprecated use readLearnCatalogFilter */
+export function readGuestStudyGoal(): StudyGoal {
+  return readLearnCatalogFilter();
+}
+
+/** @deprecated use writeLearnCatalogFilter */
+export function writeGuestStudyGoal(goal: StudyGoal) {
+  writeLearnCatalogFilter(goal);
 }

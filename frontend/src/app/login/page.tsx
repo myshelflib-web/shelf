@@ -92,7 +92,10 @@ function LoginForm() {
       } else {
         await login(email, password);
       }
-      router.push(nextPath);
+      const dest = isRegister
+        ? `/onboarding?next=${encodeURIComponent(nextPath)}`
+        : nextPath;
+      router.push(dest);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {

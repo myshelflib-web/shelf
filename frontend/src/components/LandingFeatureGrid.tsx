@@ -1,7 +1,39 @@
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { MARKETING_FEATURES } from "@/lib/marketing";
 
-export function LandingFeatureGrid({ title = "Everything in one place" }: { title?: string }) {
+export function LandingFeatureGrid({
+  title = "Everything in one place",
+  variant,
+}: {
+  title?: string;
+  variant?: "landing";
+}) {
+  if (variant === "landing") {
+    return (
+      <section className="landing-features-section">
+        <RevealOnScroll>
+          <div className="landing-kicker">Full feature set</div>
+          <div className="landing-value-title">{title}</div>
+          <p className="landing-value-copy mt-2">
+            A calm workspace for your own material — upload, read, ask, quiz, and
+            plan without switching apps.
+          </p>
+        </RevealOnScroll>
+        <div className="landing-feature-grid">
+          {MARKETING_FEATURES.map((feature, index) => (
+            <RevealOnScroll key={feature.title} delay={index * 40}>
+              <article className="landing-feature-card h-full">
+                <feature.icon />
+                <h3>{feature.title}</h3>
+                <p>{feature.body}</p>
+              </article>
+            </RevealOnScroll>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="px-4 sm:px-6 pb-20 max-w-5xl mx-auto">
       <RevealOnScroll>
