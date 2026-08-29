@@ -8,7 +8,7 @@ export const PRICING_FALLBACK = {
 export const SHELF_PLANS = {
   page: {
     kicker: "Simple, honest pricing",
-    title: "Start free. Upgrade when Shelf becomes home.",
+    title: "Start free. Upgrade when Shelf becomes home",
     intro:
       "Bring your notes in, study at your pace, and only pay when you need more room and deeper Study AI — no pressure, no fine print surprises.",
     footnote:
