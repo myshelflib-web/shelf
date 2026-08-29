@@ -37,4 +37,4 @@ When a feature ** materially changes** behavior documented in an existing articl
 
 - Index: `/blog` — `frontend/src/app/blog/page.tsx`
 - Post template: copy structure from `frontend/src/lib/blog/posts/personal-study-library.ts`
-- Landing preview: `BlogPreviewSection` on `/` shows the three newest posts
+- Index `/blog` lists posts; do not add a landing-page preview unless asked

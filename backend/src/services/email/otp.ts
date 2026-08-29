@@ -14,6 +14,7 @@ const OTP_TTL_MS = 10 * 60 * 1000;
 const MAX_VERIFY_ATTEMPTS = 5;
 const MAX_SENDS_PER_WINDOW = 3;
 const SEND_WINDOW_MS = 15 * 60 * 1000;
+export const OTP_RESEND_COOLDOWN_MS = 30 * 1000;
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
@@ -39,12 +40,39 @@ function verifyOtpHash(code: string, codeHash: string): boolean {
 }
 
 async function assertSendRateLimit(email: string, purpose: EmailOtpPurpose) {
+  const latest = await prisma.emailOtp.findFirst({
+    where: { email, purpose },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+  if (latest) {
+    const elapsed = Date.now() - latest.createdAt.getTime();
+    if (elapsed < OTP_RESEND_COOLDOWN_MS) {
+      const retryAfterSec = Math.max(
+        1,
+        Math.ceil((OTP_RESEND_COOLDOWN_MS - elapsed) / 1000)
+      );
+      throw new OtpCooldownError(retryAfterSec);
+    }
+  }
+
   const since = new Date(Date.now() - SEND_WINDOW_MS);
   const recent = await prisma.emailOtp.count({
     where: { email, purpose, createdAt: { gte: since } },
   });
   if (recent >= MAX_SENDS_PER_WINDOW) {
     throw new OtpRateLimitError();
+  }
+}
+
+export class OtpCooldownError extends Error {
+  retryAfterSec: number;
+  constructor(retryAfterSec: number) {
+    super(
+      `Please wait ${retryAfterSec}s before requesting another code`
+    );
+    this.name = "OtpCooldownError";
+    this.retryAfterSec = retryAfterSec;
   }
 }
 

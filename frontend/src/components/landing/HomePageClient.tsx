@@ -8,15 +8,12 @@ import { LandingFeatureGrid } from "@/components/LandingFeatureGrid";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { LandingShowcases } from "@/components/landing/LandingShowcases";
-import { BlogPreviewSection } from "@/components/blog/BlogPreviewSection";
 import { LandingProductPreview } from "@/components/landing/LandingProductPreview";
 import { LandingValueSteps } from "@/components/landing/LandingValueSteps";
 import { LandingGoalSection } from "@/components/landing/LandingGoalSection";
 import { LandingCtaBanner } from "@/components/landing/LandingCtaBanner";
 import { LandingQuizSection } from "@/components/landing/LandingQuizSection";
 import { LandingIntegrationsSection } from "@/components/landing/LandingIntegrationsSection";
-import { LandingLearnSection } from "@/components/landing/LandingLearnSection";
-import { LandingGuestAccessSection } from "@/components/landing/LandingGuestAccessSection";
 import { useAuth } from "@/hooks/useAuth";
 import {
   CalendarDays,
@@ -116,19 +113,14 @@ export function HomePageClient() {
 
         <LandingIntegrationsSection />
 
-        <LandingLearnSection />
-
-        <BlogPreviewSection variant="landing" />
-
         <LandingFeatureGrid title="Everything at a glance" variant="landing" />
 
         <section className="landing-features-link">
           <Link href="/features">
-            See all features — reader workspace, sharing, offline PWA, Premium &amp; more →
+            See all features — reader workspace, Telegram import and send,
+            sharing, offline PWA, Premium &amp; more →
           </Link>
         </section>
-
-        <LandingGuestAccessSection />
 
         <LandingGoalSection />
 

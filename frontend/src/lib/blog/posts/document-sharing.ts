@@ -9,6 +9,7 @@ export const documentSharing = buildPost(
     excerpt:
       "Share a page with classmates by email, control view vs edit, open items from Shared with me, and save an independent copy to your library.",
     publishedAt: "2026-08-26",
+    updatedAt: "2026-08-29",
     tags: ["library", "sharing", "collaboration", "pdf"],
     readingMinutes: 5,
   },
@@ -31,6 +32,7 @@ export const documentSharing = buildPost(
       heading: "Restricted by default, optional view link",
       paragraphs: [
         "General access defaults to Restricted: only people you add can open the file. You can switch to Anyone with link · Can view for a signed-in Shelf link. Link access is view-only; named collaborators can still be editors.",
+        "Need the actual PDF in a Telegram group? Share includes Send to Telegram — the file lands in your Shelf bot chat so you can forward it. Anyone with link also has Share link in Telegram for a view-only Shelf URL.",
         "Annotations stay per person. Viewers read the document; editors can highlight and mark up with their own strokes. Delete, rename, and replace remain owner-only.",
       ],
     },

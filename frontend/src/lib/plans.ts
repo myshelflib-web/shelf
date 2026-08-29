@@ -25,7 +25,7 @@ export const SHELF_PLANS = {
       "Study AI grounded in your uploads",
       "Exam-style quiz from your notes",
       "Planner, calendar & reading streaks",
-      "Telegram import & document sharing",
+      "Telegram import & send, plus document sharing",
       "Browse free curriculum on Learn",
     ],
   },

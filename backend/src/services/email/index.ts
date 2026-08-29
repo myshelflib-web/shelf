@@ -6,7 +6,14 @@ export {
   generateOtpCode,
   OtpInvalidError,
   OtpRateLimitError,
+  OtpCooldownError,
+  OTP_RESEND_COOLDOWN_MS,
 } from "./otp.js";
+export {
+  assertDeliverableEmail,
+  isValidEmailFormat,
+  InvalidEmailError,
+} from "./validateEmail.js";
 export {
   welcomeEmail,
   subscriptionThankYouEmail,

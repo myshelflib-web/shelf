@@ -1,23 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   AlignLeft,
   Bold,
   Highlighter,
   Italic,
+  Palette,
   Redo2,
   Strikethrough,
+  Type,
   Underline,
   Undo2,
 } from "lucide-react";
 import {
   EditorToolbarShell,
   ToolBtn,
+  ToolChip,
   ToolGroup,
   ToolSep,
 } from "./EditorToolbarChrome";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
+import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
 
 const FONTS = [
   { id: "default", label: "Default", value: "" },
@@ -58,6 +62,12 @@ interface DocToolbarProps {
 export function DocToolbar({ onCommand }: DocToolbarProps) {
   const [fontValue, setFontValue] = useState("");
   const [fontSize, setFontSize] = useState("16px");
+  const [sizeOpen, setSizeOpen] = useState(false);
+  const [colorOpen, setColorOpen] = useState(false);
+  const [highlightOpen, setHighlightOpen] = useState(false);
+  const sizeBtnRef = useRef<HTMLButtonElement>(null);
+  const colorBtnRef = useRef<HTMLButtonElement>(null);
+  const highlightBtnRef = useRef<HTMLButtonElement>(null);
 
   return (
     <EditorToolbarShell>
@@ -133,19 +143,43 @@ export function DocToolbar({ onCommand }: DocToolbarProps) {
             onCommand("fontName", v);
           }}
         />
-        <ShelfSelect
-          compact
-          className="h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
-          value={fontSize}
-          options={FONT_SIZES.map((s) => ({ value: s.px, label: s.label }))}
-          aria-label="Font size"
-          onTriggerMouseDown={(e) => e.stopPropagation()}
-          onChange={(v) => {
-            setFontSize(v);
-            onCommand("fontSizePx", v);
+        <ToolBtn
+          ref={sizeBtnRef}
+          label="Text size"
+          active={sizeOpen}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            setColorOpen(false);
+            setHighlightOpen(false);
+            setSizeOpen((v) => !v);
           }}
-        />
+        >
+          <Type className="w-[17px] h-[17px]" />
+        </ToolBtn>
       </ToolGroup>
+
+      <ToolPopover
+        open={sizeOpen}
+        onClose={() => setSizeOpen(false)}
+        anchorEl={sizeBtnRef.current}
+        title="Text size"
+      >
+        <div className="grid grid-cols-3 gap-1.5">
+          {FONT_SIZES.map((s) => (
+            <ToolChip
+              key={s.px}
+              label={`${s.label}px`}
+              active={fontSize === s.px}
+              onClick={() => {
+                setFontSize(s.px);
+                onCommand("fontSizePx", s.px);
+              }}
+            >
+              {s.label}
+            </ToolChip>
+          ))}
+        </div>
+      </ToolPopover>
 
       <ToolSep />
 
@@ -187,32 +221,69 @@ export function DocToolbar({ onCommand }: DocToolbarProps) {
       <ToolSep />
 
       <ToolGroup>
-        {TEXT_COLORS.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className="w-5 h-5 rounded-full border border-black/15"
-            style={{ background: c.color || "var(--text-primary)" }}
-            title={`Text ${c.label}`}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onCommand("foreColor", c.color || "")}
-          />
-        ))}
-        <span className="flex items-center gap-1 ml-1" title="Highlight">
-          <Highlighter className="w-3.5 h-3.5 text-[var(--text-muted)]" />
-          {HIGHLIGHT_COLORS.map((c) => (
-            <button
+        <ToolBtn
+          ref={colorBtnRef}
+          label="Pen / text color"
+          active={colorOpen}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            setSizeOpen(false);
+            setHighlightOpen(false);
+            setColorOpen((v) => !v);
+          }}
+        >
+          <Palette className="w-[17px] h-[17px]" />
+        </ToolBtn>
+        <ToolBtn
+          ref={highlightBtnRef}
+          label="Highlighter"
+          active={highlightOpen}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => {
+            setSizeOpen(false);
+            setColorOpen(false);
+            setHighlightOpen((v) => !v);
+          }}
+        >
+          <Highlighter className="w-[17px] h-[17px]" />
+        </ToolBtn>
+      </ToolGroup>
+
+      <ToolPopover
+        open={colorOpen}
+        onClose={() => setColorOpen(false)}
+        anchorEl={colorBtnRef.current}
+        title="Pen / text color"
+      >
+        <ColorSwatchGrid>
+          {TEXT_COLORS.map((c) => (
+            <ColorSwatch
               key={c.id}
-              type="button"
-              className="w-3.5 h-3.5 rounded-sm border border-black/15"
-              style={{ background: c.color || "transparent" }}
-              title={c.label}
-              onMouseDown={(e) => e.preventDefault()}
+              color={c.color || "#e8e8ea"}
+              label={`Text ${c.label}`}
+              onClick={() => onCommand("foreColor", c.color || "")}
+            />
+          ))}
+        </ColorSwatchGrid>
+      </ToolPopover>
+
+      <ToolPopover
+        open={highlightOpen}
+        onClose={() => setHighlightOpen(false)}
+        anchorEl={highlightBtnRef.current}
+        title="Highlighter"
+      >
+        <ColorSwatchGrid>
+          {HIGHLIGHT_COLORS.map((c) => (
+            <ColorSwatch
+              key={c.id}
+              color={c.color || "#ffffff"}
+              label={c.label}
               onClick={() => onCommand("hiliteColor", c.color || "transparent")}
             />
           ))}
-        </span>
-      </ToolGroup>
+        </ColorSwatchGrid>
+      </ToolPopover>
     </EditorToolbarShell>
   );
 }

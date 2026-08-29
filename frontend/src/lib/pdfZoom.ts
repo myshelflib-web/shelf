@@ -66,3 +66,40 @@ export function applyPdfZoomAnchor(
   root.scrollLeft = anchor.contentX * anchor.ratio - anchor.cursorX;
   root.scrollTop = anchor.contentY * anchor.ratio - anchor.cursorY;
 }
+
+/** Wait until a pinch burst settles before re-rendering PDF.js canvases. */
+export const PDF_ZOOM_COMMIT_MS = 100;
+
+export function pdfZoomContentEl(root: HTMLElement): HTMLElement | null {
+  const marked = root.querySelector("[data-pdf-zoom-content]");
+  if (marked instanceof HTMLElement) return marked;
+  return root.firstElementChild instanceof HTMLElement
+    ? root.firstElementChild
+    : null;
+}
+
+/** Untransformed content-local point under the cursor (capture before CSS scale). */
+export function pdfVisualZoomOrigin(
+  content: Pick<HTMLElement, "getBoundingClientRect">,
+  clientX: number,
+  clientY: number
+): { x: number; y: number } {
+  const rect = content.getBoundingClientRect();
+  return { x: clientX - rect.left, y: clientY - rect.top };
+}
+
+export function applyPdfVisualZoom(
+  content: HTMLElement,
+  originX: number,
+  originY: number,
+  ratio: number
+) {
+  const safe = Number.isFinite(ratio) && ratio > 0 ? ratio : 1;
+  content.style.transformOrigin = `${originX}px ${originY}px`;
+  content.style.transform = Math.abs(safe - 1) < 0.0001 ? "none" : `scale(${safe})`;
+}
+
+export function clearPdfVisualZoom(content: HTMLElement) {
+  content.style.transform = "";
+  content.style.transformOrigin = "";
+}

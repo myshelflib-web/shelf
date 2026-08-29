@@ -5,6 +5,7 @@ import { Search, Share2, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { avatarSrc } from "@/lib/avatar";
 import { ShareGeneralAccess } from "@/components/my-content/ShareGeneralAccess";
+import { ShareTelegramSend } from "@/components/my-content/ShareTelegramSend";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
 export type ShareRole = "view" | "edit";
@@ -224,7 +225,8 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
               Share “{pageTitle}”
             </h2>
             <p className="text-xs text-[var(--text-muted)] mt-1">
-              Invite Shelf users by name or email, or enable a view-only link.
+              Invite Shelf users by name or email, enable a view-only link, or
+              send the file to Telegram.
             </p>
           </div>
           <button
@@ -237,7 +239,7 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
           </button>
         </div>
 
-        <div className="px-5 py-4 space-y-4">
+        <div className="px-5 py-4 space-y-4 max-h-[min(70vh,36rem)] overflow-y-auto">
           <div>
             <p className="text-[10px] uppercase tracking-wide font-semibold text-[var(--text-muted)] mb-2">
               People
@@ -427,6 +429,14 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
               setDirty(true);
             }}
             onCopyLink={() => void copyLink()}
+          />
+
+          <div className="h-px bg-[var(--border)]" />
+
+          <ShareTelegramSend
+            pageId={pageId}
+            pageTitle={pageTitle}
+            linkPath={generalAccess === "link" ? linkPath : null}
           />
         </div>
 

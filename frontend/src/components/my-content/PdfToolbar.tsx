@@ -1,6 +1,6 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useRef, useState, type RefObject } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import {
   Columns2,
@@ -13,14 +13,13 @@ import {
   MousePointer2,
   MousePointerClick,
   PenLine,
-  Settings2,
   Sun,
   Undo2,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
 import { withShortcut } from "@/lib/hotkeys";
-import { INK_WIDTHS, PEN_WIDTHS } from "@/lib/straightenStroke";
+import { INK_WIDTHS } from "@/lib/straightenStroke";
 import { PEN_COLORS } from "./BlankEditorToolbar";
 import {
   EditorToolbarShell,
@@ -31,6 +30,7 @@ import {
   ToolSep,
 } from "./EditorToolbarChrome";
 import { PdfPageNav } from "./PdfPageNav";
+import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
 
 export type PdfToolbarMode = "text" | "pen" | "ink" | "erase" | "clip";
 
@@ -51,8 +51,6 @@ type Props = {
   blocked: (feature: string) => boolean;
   penCursorHide: () => void;
   downloadPdf: () => void | Promise<void>;
-  penWidth: number;
-  setPenWidth: (w: number) => void;
   penSettingsOpen: boolean;
   setPenSettingsOpen: (v: boolean | ((p: boolean) => boolean)) => void;
   penSettingsBtnRef: RefObject<HTMLButtonElement | null>;
@@ -89,9 +87,6 @@ export function PdfToolbar(props: Props) {
     blocked,
     penCursorHide,
     downloadPdf,
-    penWidth,
-    setPenWidth,
-    penSettingsOpen,
     setPenSettingsOpen,
     penSettingsBtnRef,
     inkWidth,
@@ -110,6 +105,17 @@ export function PdfToolbar(props: Props) {
     darkPdf,
     toggleDarkPdf,
   } = props;
+
+  const inkBtnRef = useRef<HTMLButtonElement>(null);
+  const eraseBtnRef = useRef<HTMLButtonElement>(null);
+  const [inkOpen, setInkOpen] = useState(false);
+  const [eraseOpen, setEraseOpen] = useState(false);
+
+  const closeExtras = () => {
+    setInkOpen(false);
+    setEraseOpen(false);
+    setPenSettingsOpen(false);
+  };
 
   return (
     <EditorToolbarShell>
@@ -138,13 +144,14 @@ export function PdfToolbar(props: Props) {
           active={mode === "text"}
           onClick={() => {
             setMode("text");
-            setPenSettingsOpen(false);
+            closeExtras();
             penCursorHide();
           }}
         >
           <MousePointer2 className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolBtn
+          ref={inkBtnRef}
           label={
             guestLocked
               ? "Sign in to write on the page"
@@ -155,13 +162,20 @@ export function PdfToolbar(props: Props) {
           aria-disabled={guestLocked}
           onClick={() => {
             if (blocked("Highlight and annotate")) return;
+            if (mode === "ink") {
+              setInkOpen((v) => !v);
+              return;
+            }
             setMode("ink");
             setPenSettingsOpen(false);
+            setEraseOpen(false);
+            setInkOpen(true);
           }}
         >
           <PenLine className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolBtn
+          ref={penSettingsBtnRef}
           label={
             guestLocked
               ? "Sign in to highlight with pen"
@@ -172,21 +186,34 @@ export function PdfToolbar(props: Props) {
           aria-disabled={guestLocked}
           onClick={() => {
             if (blocked("Highlight and annotate")) return;
+            if (mode === "pen") {
+              setPenSettingsOpen((v) => !v);
+              return;
+            }
             setMode("pen");
+            setInkOpen(false);
+            setEraseOpen(false);
             setPenSettingsOpen(true);
           }}
         >
           <Highlighter className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolBtn
+          ref={eraseBtnRef}
           label={guestLocked ? "Sign in to erase highlights" : "Eraser"}
           active={mode === "erase"}
           className={lockedTool}
           aria-disabled={guestLocked}
           onClick={() => {
             if (blocked("Highlight and annotate")) return;
+            if (mode === "erase") {
+              setEraseOpen((v) => !v);
+              return;
+            }
             setMode("erase");
             setPenSettingsOpen(false);
+            setInkOpen(false);
+            setEraseOpen(true);
             penCursorHide();
           }}
         >
@@ -204,7 +231,7 @@ export function PdfToolbar(props: Props) {
             aria-disabled={guestLocked}
             onClick={() => {
               if (blocked("Save clips")) return;
-              setPenSettingsOpen(false);
+              closeExtras();
               penCursorHide();
               setMode((m) => (m === "clip" ? "text" : "clip"));
             }}
@@ -217,91 +244,62 @@ export function PdfToolbar(props: Props) {
         </ToolBtn>
       </ToolGroup>
 
-      {mode === "pen" && (
-        <>
-          <ToolSep />
-          <ToolGroup>
-            {PEN_WIDTHS.map((s) => (
-              <ToolChip
-                key={s.id}
-                label={s.title}
-                active={Math.abs(penWidth - s.width) < 0.00015}
-                onClick={() => setPenWidth(s.width)}
-              >
-                {s.label}
-              </ToolChip>
-            ))}
-            <ToolBtn
-              ref={penSettingsBtnRef}
-              label="Thickness and opacity"
-              active={penSettingsOpen}
-              onClick={() => setPenSettingsOpen((v) => !v)}
-            >
-              <Settings2 className="w-[17px] h-[17px]" />
-            </ToolBtn>
-          </ToolGroup>
-        </>
-      )}
-
-      {mode === "ink" && (
-        <>
-          <ToolSep />
-          <ToolGroup>
-            {INK_WIDTHS.map((s) => (
-              <ToolChip
-                key={s.id}
-                label={`Pen ${s.title}`}
-                active={Math.abs(inkWidth - s.width) < 0.00015}
-                onClick={() => setInkWidth(s.width)}
-              >
-                {s.label}
-              </ToolChip>
-            ))}
-            {PEN_COLORS.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className={`w-5 h-5 rounded-full border-2 hover:scale-110 transition-transform ${
-                  inkColor === c.color
-                    ? "border-[var(--accent)] scale-110"
-                    : c.id === "white"
-                      ? "border-[var(--border)]"
-                      : "border-transparent"
-                }`}
-                style={{ background: c.color }}
-                title={c.label}
-                aria-label={`Pen ${c.label}`}
-                aria-pressed={inkColor === c.color}
-                onClick={() => setInkColor(c.color)}
-              />
-            ))}
-          </ToolGroup>
-        </>
-      )}
-
-      {mode === "erase" && (
-        <>
-          <ToolSep />
-          <ToolGroup>
+      <ToolPopover
+        open={inkOpen && mode === "ink"}
+        onClose={() => setInkOpen(false)}
+        anchorEl={inkBtnRef.current}
+        title="Pen / text color"
+      >
+        <div className="flex items-center gap-1 mb-3">
+          {INK_WIDTHS.map((s) => (
             <ToolChip
-              label="Stroke eraser — drag over ink"
-              active={eraseKind === "stroke"}
-              onClick={() => setEraseKind("stroke")}
+              key={s.id}
+              label={`Pen ${s.title}`}
+              active={Math.abs(inkWidth - s.width) < 0.00015}
+              onClick={() => setInkWidth(s.width)}
             >
-              <Eraser className="w-3 h-3" />
-              Stroke
+              {s.label}
             </ToolChip>
-            <ToolChip
-              label="Object eraser — click a mark to delete it"
-              active={eraseKind === "object"}
-              onClick={() => setEraseKind("object")}
-            >
-              <MousePointerClick className="w-3 h-3" />
-              Object
-            </ToolChip>
-          </ToolGroup>
-        </>
-      )}
+          ))}
+        </div>
+        <ColorSwatchGrid>
+          {PEN_COLORS.map((c) => (
+            <ColorSwatch
+              key={c.id}
+              color={c.color}
+              label={`Pen ${c.label}`}
+              selected={inkColor === c.color}
+              onClick={() => setInkColor(c.color)}
+            />
+          ))}
+        </ColorSwatchGrid>
+      </ToolPopover>
+
+      <ToolPopover
+        open={eraseOpen && mode === "erase"}
+        onClose={() => setEraseOpen(false)}
+        anchorEl={eraseBtnRef.current}
+        title="Eraser"
+      >
+        <div className="flex flex-col gap-1.5">
+          <ToolChip
+            label="Stroke eraser — drag over ink"
+            active={eraseKind === "stroke"}
+            onClick={() => setEraseKind("stroke")}
+          >
+            <Eraser className="w-3 h-3" />
+            Stroke
+          </ToolChip>
+          <ToolChip
+            label="Object eraser — click a mark to delete it"
+            active={eraseKind === "object"}
+            onClick={() => setEraseKind("object")}
+          >
+            <MousePointerClick className="w-3 h-3" />
+            Object
+          </ToolChip>
+        </div>
+      </ToolPopover>
 
       <ToolSep />
 

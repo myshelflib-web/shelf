@@ -94,7 +94,8 @@ export function TelegramSettingsCard() {
       <p className="text-xs text-[var(--text-muted)]">
         Works with Google, email, or Telegram login. Connect the bot to forward
         PDFs into My Content (library root, PDFs only, max 20 MB via the bot).
-        You can also connect from the Telegram icon beside Spotify in the
+        Send a library PDF back from Share on the document (bot chat, max 50
+        MB). You can also connect from the Telegram icon beside Spotify in the
         reader.
       </p>
       {error && <p className="text-sm text-red-500">{error}</p>}

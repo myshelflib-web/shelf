@@ -33,6 +33,7 @@ import { StreakPopover } from "@/components/StreakPopover";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { NotificationsPopover } from "@/components/NotificationsPopover";
 import { OfflineStatusBadge } from "@/components/OfflineStatusBadge";
+import { FocusMediaToolbarButtons } from "@/components/my-content/reader/ReaderFocusDocks";
 
 function NavItem({
   href,
@@ -198,6 +199,7 @@ export function Header() {
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {user && (
             <>
+            <FocusMediaToolbarButtons />
             <button
               type="button"
               onClick={openSearch}

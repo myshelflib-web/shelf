@@ -582,11 +582,7 @@ export function LearnReaderWorkspace({
                         }
                       : null
                   }
-                  starred={pageData.starred}
                   completed={pageData.completed}
-                  onToggleStar={() =>
-                    void focusedHandlers.handleToggleStar()
-                  }
                   onToggleComplete={() =>
                     void focusedHandlers.handleToggleComplete()
                   }

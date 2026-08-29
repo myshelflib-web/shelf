@@ -39,15 +39,12 @@ import {
 import Link from "next/link";
 import { DocumentPane, DocumentPaneHandlers, DocumentPaneSnapshot, LoadedPage } from "./DocumentPane";
 import { ReaderTabStrip } from "./ReaderTabStrip";
-import {
-  ReaderFocusDockSlot,
-  ReaderFocusToolbarButtons,
-} from "./ReaderFocusDocks";
 import { useReaderWorkspace } from "./useReaderWorkspace";
 import { useHotkey } from "@/hooks/useHotkeys";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { getSelectedText, withShortcut } from "@/lib/hotkeys";
+import { emitFocusNotebook } from "@/lib/shelfEvents";
 import {
   OpenTab,
   PersonalPageReaderScope,
@@ -105,8 +102,6 @@ export function ReaderWorkspace({
     focusedTab,
     setLibraryCollapsed,
     setStudyAICollapsed,
-    setSpotifyCollapsed,
-    setTelegramCollapsed,
     focusPane,
     activateTab,
     updateTabMeta,
@@ -250,6 +245,15 @@ export function ReaderWorkspace({
     });
   }, [focusedTab?.href, focusedTab?.title, focusedTab?.pageId, focusedTab]);
 
+  useEffect(() => {
+    emitFocusNotebook(
+      notebook
+        ? { id: notebook.id, name: notebook.name }
+        : { id: null, name: null }
+    );
+    return () => emitFocusNotebook({ id: null, name: null });
+  }, [notebook]);
+
   // Keep active (+ previous) tabs warm so switching doesn't remount DocumentPane/PdfViewer.
   useEffect(() => {
     setWarmKeys((prev) => {
@@ -331,22 +335,6 @@ export function ReaderWorkspace({
     setAskImage(undefined);
     setAttachNote(undefined);
   }, [setStudyAICollapsed, studyAIPanelRef]);
-
-  const openSpotifyPanel = useCallback(() => {
-    setSpotifyCollapsed(false);
-  }, [setSpotifyCollapsed]);
-
-  const closeSpotifyPanel = useCallback(() => {
-    setSpotifyCollapsed(true);
-  }, [setSpotifyCollapsed]);
-
-  const openTelegramPanel = useCallback(() => {
-    setTelegramCollapsed(false);
-  }, [setTelegramCollapsed]);
-
-  const closeTelegramPanel = useCallback(() => {
-    setTelegramCollapsed(true);
-  }, [setTelegramCollapsed]);
 
   const syncReaderUrl = useCallback((href: string) => {
     if (href === scopeHref(routeScope)) return;
@@ -501,16 +489,6 @@ export function ReaderWorkspace({
     else closeStudyAIPanel();
   }, [state.studyAICollapsed, openStudyAIPanel, closeStudyAIPanel]);
 
-  const toggleSpotify = useCallback(() => {
-    if (state.spotifyCollapsed) openSpotifyPanel();
-    else closeSpotifyPanel();
-  }, [state.spotifyCollapsed, openSpotifyPanel, closeSpotifyPanel]);
-
-  const toggleTelegram = useCallback(() => {
-    if (state.telegramCollapsed) openTelegramPanel();
-    else closeTelegramPanel();
-  }, [state.telegramCollapsed, openTelegramPanel, closeTelegramPanel]);
-
   const cycleTab = useCallback(
     (dir: 1 | -1) => {
       if (!focusedPane) return;
@@ -552,7 +530,6 @@ export function ReaderWorkspace({
     allowInInput: true,
     enabled: readerReady,
   });
-  useHotkey("\\", toggleSpotify, { enabled: readerReady && !modalEditing });
   useHotkey("mod+\\", () => {
     if (isSplit) unsplitFocused();
     else splitFocused();
@@ -833,14 +810,6 @@ export function ReaderWorkspace({
                 )}
 
                 <div className="flex items-center gap-1 shrink-0 pl-1">
-                  <ReaderFocusToolbarButtons
-                    spotifyCollapsed={state.spotifyCollapsed}
-                    telegramCollapsed={state.telegramCollapsed}
-                    telegramLinked={user?.telegramLinked}
-                    onToggleSpotify={toggleSpotify}
-                    onToggleTelegram={toggleTelegram}
-                  />
-
                   <button
                     type="button"
                     className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
@@ -973,18 +942,6 @@ export function ReaderWorkspace({
                   );
                 })}
                 </div>
-
-                <ReaderFocusDockSlot
-                  layoutCompact={layoutCompact}
-                  notebookId={notebook?.id}
-                  notebookName={notebook?.name}
-                  spotifyCollapsed={state.spotifyCollapsed}
-                  telegramCollapsed={state.telegramCollapsed}
-                  onSpotifyMinimize={closeSpotifyPanel}
-                  onSpotifyExpand={openSpotifyPanel}
-                  onTelegramMinimize={closeTelegramPanel}
-                  onTelegramExpand={openTelegramPanel}
-                />
               </div>
 
               {pageData && focusedHandlers && (
@@ -1001,9 +958,7 @@ export function ReaderWorkspace({
                         }
                       : null
                   }
-                  starred={pageData.starred}
                   completed={pageData.completed}
-                  onToggleStar={focusedHandlers.handleToggleStar}
                   onToggleComplete={focusedHandlers.handleToggleComplete}
                   onOpenStudyAI={() => {
                     askWithSelection();

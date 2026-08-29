@@ -10,6 +10,7 @@ import {
   Map,
   MessageSquareText,
   NotebookPen,
+  Send,
   Target,
 } from "lucide-react";
 
@@ -24,6 +25,11 @@ export const MARKETING_FEATURES: MarketingFeature[] = [
     icon: FileUp,
     title: "Upload notes and PDFs",
     body: "Bring your own files into private sections. Free accounts get 100 MB; paid plans add more storage and Study AI tokens.",
+  },
+  {
+    icon: Send,
+    title: "Telegram import and send",
+    body: "Forward coaching PDFs to the Shelf bot, then send a library PDF back from Share — same reader, highlights, and Study AI as in-app uploads.",
   },
   {
     icon: NotebookPen,

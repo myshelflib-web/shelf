@@ -177,7 +177,10 @@ export function navHref(
     return `/learn/${scope.subjectSlug}/${scope.topicSlug}/${pageSlug}`;
   }
   if (scope.kind === "shared") {
-    return `/my-content/shared/${scope.pageId}`;
+    const t = scope.linkToken
+      ? `?t=${encodeURIComponent(scope.linkToken)}`
+      : "";
+    return `/my-content/shared/${scope.pageId}${t}`;
   }
   if (scope.kind === "root-file") return pageHref(null, null, pageSlug);
   if (scope.kind === "notebook-file")
@@ -232,6 +235,24 @@ export function scopeFromHref(href: string): PersonalPageReaderScope | null {
   return null;
 }
 
+export function mergeReaderScope(
+  fromPath: PersonalPageReaderScope | null,
+  routeScope: PersonalPageReaderScope
+): PersonalPageReaderScope {
+  if (!fromPath) return routeScope;
+  if (
+    fromPath.kind === "shared" &&
+    routeScope.kind === "shared" &&
+    fromPath.pageId === routeScope.pageId
+  ) {
+    return {
+      ...fromPath,
+      linkToken: fromPath.linkToken ?? routeScope.linkToken,
+    };
+  }
+  return fromPath;
+}
+
 export function tabFromScope(
   scope: PersonalPageReaderScope,
   title = "Untitled",
@@ -263,8 +284,8 @@ export function emptyPanesWorkspace(): ReaderWorkspaceState {
   };
 }
 
-/** Active reader tab href from persisted workspace, or null if none open. */
-export function getFocusedWorkspaceHref(): string | null {
+/** Active reader tab from persisted workspace, or null if none open. */
+export function getFocusedOpenTab(): OpenTab | null {
   if (typeof window === "undefined") return null;
   try {
     const stored = readOwnedWorkspace();
@@ -273,13 +294,19 @@ export function getFocusedWorkspaceHref(): string | null {
       stored.panes.find((p) => p?.id === stored.focusedPaneId) ??
       stored.panes[0];
     if (!focused?.tabs?.length) return null;
-    const tab =
+    return (
       focused.tabs.find((t) => t?.key === focused.activeTabKey) ??
-      focused.tabs[0];
-    return tab?.href ?? null;
+      focused.tabs[0] ??
+      null
+    );
   } catch {
     return null;
   }
+}
+
+/** Active reader tab href from persisted workspace, or null if none open. */
+export function getFocusedWorkspaceHref(): string | null {
+  return getFocusedOpenTab()?.href ?? null;
 }
 
 export function emptyWorkspace(scope: PersonalPageReaderScope): ReaderWorkspaceState {

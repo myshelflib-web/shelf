@@ -1357,12 +1357,6 @@
   line-height: 1.55;
 }
 
-/* Blog section on landing */
-.landing-blog-section {
-  padding: 72px 64px;
-  border-top: 1px solid var(--border-subtle);
-}
-
 .landing-mid-cta {
   padding: 0 64px 48px;
 }
@@ -1438,6 +1432,29 @@
   color: var(--text-primary);
 }
 
+.landing-footer-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.landing-footer-social {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.landing-footer-social-link {
+  display: inline-flex;
+  padding: 6px;
+  border-radius: 8px;
+  color: var(--text-muted);
+}
+
+.landing-footer-social-link:hover {
+  color: var(--text-primary);
+}
+
 .landing-footer-copy {
   font-size: 12px;
   color: #9c978f;
@@ -1454,7 +1471,6 @@
   .landing-showcase-section,
   .landing-showcase-carousel-section,
   .landing-features-section,
-  .landing-blog-section,
   .landing-mid-cta,
   .landing-features-link,
   .landing-footer {
@@ -1493,7 +1509,6 @@
   .landing-showcase-section,
   .landing-showcase-carousel-section,
   .landing-features-section,
-  .landing-blog-section,
   .landing-mid-cta,
   .landing-features-link,
   .landing-footer {

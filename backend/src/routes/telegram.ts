@@ -21,6 +21,10 @@ import {
   ingestTelegramPdf,
   TelegramIngestError,
 } from "../services/telegramIngest.js";
+import {
+  sharePageToTelegram,
+  TelegramShareError,
+} from "../services/telegramShare.js";
 
 const router = Router();
 
@@ -90,6 +94,35 @@ router.delete("/link", authMiddleware, async (req: Request, res: Response) => {
   }
 });
 
+router.post(
+  "/share-page",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    const pageId =
+      typeof req.body?.pageId === "string" ? req.body.pageId.trim() : "";
+    if (!pageId) {
+      res.status(400).json({ error: "pageId is required" });
+      return;
+    }
+    try {
+      const result = await sharePageToTelegram({
+        userId: req.user!.userId,
+        pageId,
+      });
+      res.json({ ok: true, ...result });
+    } catch (err) {
+      if (err instanceof TelegramShareError) {
+        res.status(err.status).json({
+          error: toUserFacingError(err.message, "Could not send to Telegram"),
+        });
+        return;
+      }
+      req.log?.error("telegram.share_failed", errorFields(err));
+      res.status(500).json({ error: "Could not send to Telegram" });
+    }
+  }
+);
+
 async function handleStart(
   chatId: number,
   telegramUserId: string,
@@ -105,7 +138,7 @@ async function handleStart(
     if (linked) {
       await sendTelegramMessage(
         chatId,
-        "Your Telegram is linked to Shelf. Forward a PDF here to save it to My Content."
+        "Your Telegram is linked to Shelf. Forward a PDF here to save it to My Content, or send one from Shelf → Share."
       );
       return;
     }
@@ -160,7 +193,7 @@ async function handleStart(
 
   await sendTelegramMessage(
     chatId,
-    "Linked. Forward or send a PDF here and I’ll save it to your Shelf library (My Content)."
+    "Linked. Forward or send a PDF here and I’ll save it to your Shelf library (My Content). You can also send library PDFs back from Shelf → Share."
   );
 }
 
@@ -255,7 +288,7 @@ router.post("/webhook", async (req: Request, res: Response) => {
     if (message.text) {
       await sendTelegramMessage(
         chatId,
-        "Send or forward a PDF to save it to Shelf. Use /start after linking from Settings."
+        "Send or forward a PDF to save it to Shelf. Use Share in Shelf to send a library PDF back here."
       );
     }
   } catch (err) {

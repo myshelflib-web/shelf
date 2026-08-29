@@ -78,7 +78,7 @@ export function FeaturesHubJsonLd({
     "@type": "ItemList",
     name: "Shelf features",
     description:
-      "PDF library, Study AI, Quiz, Telegram import, Spotify focus audio, document sharing, planner, and more.",
+      "PDF library, Study AI, Quiz, Telegram import and send, Spotify focus audio, document sharing, planner, and more.",
     url: `${siteUrl}/features`,
     numberOfItems: features.length,
     itemListElement: features.map((f, i) => ({

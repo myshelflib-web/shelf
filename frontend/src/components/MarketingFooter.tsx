@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ShelfLogo } from "@/components/ShelfLogo";
+import { SocialLinks } from "@/components/SocialLinks";
 
 export function MarketingFooter({ variant }: { variant?: "landing" }) {
   if (variant === "landing") {
@@ -20,7 +21,10 @@ export function MarketingFooter({ variant }: { variant?: "landing" }) {
             <Link href="/contact">Contact</Link>
             <Link href="/login">Sign in</Link>
           </nav>
-          <p className="landing-footer-copy">© {new Date().getFullYear()} Shelf</p>
+          <div className="landing-footer-meta">
+            <SocialLinks variant="landing" />
+            <p className="landing-footer-copy">© {new Date().getFullYear()} Shelf</p>
+          </div>
         </div>
       </footer>
     );
@@ -29,9 +33,12 @@ export function MarketingFooter({ variant }: { variant?: "landing" }) {
   return (
     <footer className="border-t border-[var(--border)] mt-auto">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-        <div className="flex items-center gap-2.5">
-          <ShelfLogo size={22} />
-          <span className="font-semibold text-sm">Shelf</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <ShelfLogo size={22} />
+            <span className="font-semibold text-sm">Shelf</span>
+          </div>
+          <SocialLinks />
         </div>
         <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-[var(--text-secondary)]">
           <Link href="/features" className="nav-link">

@@ -385,7 +385,7 @@ export const BLOG_EXPANSIONS_B: Record<string, BlogSection[]> = {
     {
       heading: "Study group workflows",
       paragraphs: [
-        "Seminar: share one judgment PDF as Can view with the cohort and keep your personal outline private. Group project: grant Can edit on a shared sketch notebook, then Save a copy of the final version into each member's library.",
+        "Seminar: share one judgment PDF as Can view with the cohort and keep your personal outline private. Group project: grant Can edit on a shared sketch notebook, then Save a copy of the final version into each member's library. Telegram groups: Send to Telegram from Share, then forward the file from the bot chat — or paste a Shelf link with Share link in Telegram.",
         "Exam buddies: use Anyone with link for a weekly reading pack, revoke when the week ends, and pin your own saved copies under the subject collection for revision.",
       ],
     },
@@ -429,8 +429,15 @@ export const BLOG_EXPANSIONS_B: Record<string, BlogSection[]> = {
     {
       heading: "Study groups on Telegram",
       paragraphs: [
-        "Forward a classmate’s handout from a Telegram study group into the Shelf bot, then keep your annotated copy private in your library. Share from Shelf when you want controlled view or edit access instead of another chat dump.",
-        "WhatsApp Business ingest is a separate roadmap item. For now, Telegram is the supported messaging path into Shelf.",
+        "Forward a classmate’s handout from a Telegram study group into the Shelf bot, then keep your annotated copy private in your library. Send the file back from Share → Send to Telegram (it lands in the bot chat so you can forward it), or enable Anyone with link and Share link in Telegram for a view-only Shelf URL.",
+        "WhatsApp Business ingest is a separate roadmap item. For now, Telegram is the supported messaging path into and out of Shelf.",
+      ],
+    },
+    {
+      heading: "Send PDFs back from Share",
+      paragraphs: [
+        "Share on a page includes Send to Telegram for the linked bot chat (PDFs up to ~50 MB). The bot cannot post into arbitrary groups on its own — you forward from that chat, or you share a Shelf link with Telegram’s picker.",
+        "If send fails with a Start hint, open the Shelf bot once so it is allowed to message you, then retry.",
       ],
     },
   ],

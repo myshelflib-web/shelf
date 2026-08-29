@@ -7,7 +7,7 @@ Express + TypeScript (`"type": "module"`), Prisma 6, PostgreSQL. Entry: `src/ind
 | Prefix | File | Notes |
 |---|---|---|
 | `/api/auth` | `routes/auth.ts` | Register, login, Google, Telegram Login Widget, `PATCH /me`, `DELETE /me` |
-| `/api/telegram` | `routes/telegram.ts` | Bot webhook (PDF ingest), link/unlink/status for Settings |
+| `/api/telegram` | `routes/telegram.ts` | Bot webhook (PDF ingest), `POST /share-page` (send a library PDF back), link/unlink/status for Settings |
 | `/api/my-content` | `routes/myContent.ts` | Collections, topics, pages, uploads, highlights, clips; library files use `POST /uploads/init` (presigned S3 PUT) then `POST /uploads/complete`; PDF reads use `GET …/pages/:id/pdf-url` (presigned S3 GET, browser Range); `GET/HEAD …/pages/:id/pdf` remains as a fallback stream; `GET /last-read` + `PATCH …/pages/:id/progress` `{ view }` sync reading position across devices |
 | `/api/study` | `routes/study.ts`, `routes/studyChats.ts` | Page Ask + `library-ask` RAG; chat threads |
 | `/api/quiz` | `routes/quiz.ts` | Generate/take/grade quizzes (library, upload, exam bank); MCQ auto-grade; written/image via vision LLM |

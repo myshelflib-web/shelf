@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { HIGHLIGHT_COLORS } from "../HighlightToolbar";
 import {
   PEN_WIDTHS,
@@ -8,6 +7,7 @@ import {
   penStrokeWidthPx,
   type PenWidthId,
 } from "@/lib/straightenStroke";
+import { ColorSwatch, ToolPopover } from "./ToolPopover";
 
 interface PenSettingsPanelProps {
   width: number;
@@ -32,62 +32,16 @@ export function PenSettingsPanel({
   onColorChange,
   onClose,
 }: PenSettingsPanelProps) {
-  const panelRef = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
-
   const activeId =
     PEN_WIDTHS.find((s) => Math.abs(s.width - width) < 0.00015)?.id ?? null;
 
-  useLayoutEffect(() => {
-    if (!anchorEl) return;
-    const place = () => {
-      const r = anchorEl.getBoundingClientRect();
-      const panelW = 224;
-      const left = Math.min(
-        Math.max(8, r.right - panelW),
-        window.innerWidth - panelW - 8
-      );
-      const top = Math.min(r.bottom + 8, window.innerHeight - 340);
-      setPos({ top, left });
-    };
-    place();
-    window.addEventListener("resize", place);
-    window.addEventListener("scroll", place, true);
-    return () => {
-      window.removeEventListener("resize", place);
-      window.removeEventListener("scroll", place, true);
-    };
-  }, [anchorEl]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    // No blocking backdrop: it swallowed the next click, so switching to the
-    // eraser (or drawing) took two clicks. Close on any outside press instead.
-    const onDown = (e: Event) => {
-      const target = e.target as Node;
-      if (panelRef.current?.contains(target)) return;
-      if (anchorEl?.contains(target)) return;
-      onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("pointerdown", onDown, true);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("pointerdown", onDown, true);
-    };
-  }, [onClose, anchorEl]);
-
-  if (!pos) return null;
-
   return (
-    <div
-      ref={panelRef}
-      role="dialog"
-      aria-label="Highlighter settings"
-      className="fixed z-[91] w-56 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl p-3"
-      style={{ top: pos.top, left: pos.left }}
+    <ToolPopover
+      open={Boolean(anchorEl)}
+      onClose={onClose}
+      anchorEl={anchorEl}
+      title="Pen / highlighter"
+      widthClass="w-56"
     >
       <div
         className="h-10 rounded-lg mb-3 flex items-center justify-center overflow-hidden"
@@ -106,26 +60,16 @@ export function PenSettingsPanel({
         </svg>
       </div>
 
-      <label className="block text-[11px] font-medium text-[var(--text-secondary)] mb-1.5">
+      <p className="text-[11px] font-medium text-[var(--text-secondary)] mb-2">
         Color
-      </label>
-      <div className="flex items-center justify-between gap-1.5 mb-3">
+      </p>
+      <div className="grid grid-cols-6 gap-2 mb-3">
         {HIGHLIGHT_COLORS.map((c) => (
-          <button
+          <ColorSwatch
             key={c.id}
-            type="button"
-            className={`w-6 h-6 rounded-full hover:scale-110 transition-transform ${
-              colorId === c.id
-                ? "ring-2 ring-[var(--accent)] ring-offset-2 ring-offset-[var(--bg-elevated)]"
-                : ""
-            }`}
-            style={{
-              background: c.hex,
-              boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.12)",
-            }}
-            title={c.id}
-            aria-label={`Highlight color ${c.id}`}
-            aria-pressed={colorId === c.id}
+            color={c.hex}
+            label={`Highlight ${c.id}`}
+            selected={colorId === c.id}
             onClick={() => onColorChange(c.id)}
           />
         ))}
@@ -186,6 +130,6 @@ export function PenSettingsPanel({
         <span>Faint</span>
         <span>Solid</span>
       </div>
-    </div>
+    </ToolPopover>
   );
 }

@@ -1611,8 +1611,6 @@ export function PdfViewer({
         blocked={blocked}
         penCursorHide={penCursor.hide}
         downloadPdf={downloadPdf}
-        penWidth={penWidth}
-        setPenWidth={setPenWidth}
         penSettingsOpen={penSettingsOpen}
         setPenSettingsOpen={setPenSettingsOpen}
         penSettingsBtnRef={penSettingsBtnRef}
@@ -1664,6 +1662,7 @@ export function PdfViewer({
         onPointerLeave={penCursor.hide}
       >
         <div
+          data-pdf-zoom-content
           className={`mx-auto max-w-full ${
             pageLayout === "spread"
               ? "flex flex-col items-center gap-5"

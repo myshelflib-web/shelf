@@ -37,6 +37,7 @@ export const SEO_KEYWORDS = {
     "highlight and ask AI on PDF",
     "cross device reading progress",
     "save Telegram PDF to library",
+    "send PDF back to Telegram",
     "Spotify while reading PDF",
     "share PDF with classmates",
     "exam quiz from your notes",
@@ -155,6 +156,7 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "save Telegram PDF to library",
     "Telegram study notes import",
     "forward PDF to study app",
+    "send PDF to Telegram",
   ],
   "keyboard-shortcuts-command-search": [
     "study app shortcuts",
@@ -245,12 +247,12 @@ export const HOME_TITLE =
   "Shelf — Personal Study Library | PDF Highlights, Study AI & Planner";
 
 export const HOME_DESCRIPTION =
-  "Build a private study library: upload PDFs, highlight as you read, ask Study AI from your material, import from Telegram, Spotify focus audio, share with classmates, exam-style quiz from your notes, and plan on one calendar. Browse free curriculum on Learn without sign-in.";
+  "Build a private study library: upload PDFs, highlight as you read, ask Study AI from your material, import from Telegram and send PDFs back, Spotify focus audio, share with classmates, exam-style quiz from your notes, and plan on one calendar. Browse free curriculum on Learn without sign-in.";
 
 /** Homepage meta keywords — product surfaces + integrations + guest access. */
 export const HOME_PAGE_KEYWORDS: string[] = [
   ...DEFAULT_KEYWORDS,
-  "Telegram PDF import",
+  "Telegram PDF import and send",
   "Spotify study reader",
   "exam quiz from notes",
   "free study curriculum",
@@ -264,13 +266,13 @@ export const FEATURES_HUB_TITLE =
   "Shelf Features — PDF Library, Study AI, Quiz, Telegram & More";
 
 export const FEATURES_HUB_DESCRIPTION =
-  "Explore every Shelf feature: personal PDF library, highlights, multi-tab reader, Study AI chat, exam quizzes, Telegram PDF import, Spotify focus audio, document sharing, planner, and offline PWA — for UPSC, NEET PG, GATE, and more.";
+  "Explore every Shelf feature: personal PDF library, highlights, multi-tab reader, Study AI chat, exam quizzes, Telegram PDF import and send, Spotify focus audio, document sharing, planner, and offline PWA — for UPSC, NEET PG, GATE, and more.";
 
 export const FEATURES_HUB_KEYWORDS = [
   "Shelf features",
   "PDF study library",
   "Study AI features",
-  "Telegram PDF import",
+  "Telegram PDF import and send",
   "Spotify study reader",
   "share study PDFs",
   "exam quiz from notes",

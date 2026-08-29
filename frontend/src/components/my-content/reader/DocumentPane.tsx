@@ -17,18 +17,17 @@ import {
   UserContentHighlight,
   UserContentType,
 } from "@/types";
-import { Crop, Trash2, Lock, ChevronRight, Sparkles, X } from "lucide-react";
+import { Lock, ChevronRight, Sparkles, X } from "lucide-react";
 import { PaywallBanner } from "@/components/PaywallBanner";
 import { RenameButton } from "@/components/my-content/RenameButton";
 import { ReadProgressBar } from "@/components/my-content/ReadProgressBar";
 import { SharePageModal } from "@/components/my-content/SharePageModal";
 import {
   AccessDeniedState,
-  ShareChromeButton,
+  DocumentChromeActions,
   SharedByBanner,
 } from "./SharedDocChrome";
 import { ApiError } from "@/lib/api";
-import { FullscreenButton } from "@/components/FullscreenButton";
 import { StudyPanel } from "@/components/StudyPanel";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useAppDialog } from "@/hooks/useAppDialog";
@@ -518,7 +517,10 @@ export function DocumentPane({
           } catch {
             try {
               const { highlights: serverHl } =
-                await api.myContent.listHighlights(page.id);
+                await api.myContent.listHighlights(
+                  page.id,
+                  scope.kind === "shared" ? scope.linkToken : undefined
+                );
               if (gen !== pageLoadGen.current) return;
               setHighlights(serverHl);
             } catch {
@@ -894,6 +896,10 @@ export function DocumentPane({
             scope.articleSlug
           )
       : undefined;
+  const sharedPdfSource =
+    scope.kind === "shared" && scope.linkToken && pageData
+      ? () => api.myContent.getPdfUrl(pageData.id, scope.linkToken)
+      : undefined;
   const guestLocked =
     Boolean(signInGate?.active) ||
     Boolean(pageData?.access && !pageData.access.canAnnotate);
@@ -1202,58 +1208,27 @@ export function DocumentPane({
                   className="justify-self-center max-w-[11rem] w-full"
                 />
               )}
-              <div className="flex items-center justify-end gap-0.5 shrink-0 justify-self-end">
-                {isFullscreen && (
-                  <button
-                    type="button"
-                    className={`p-2 rounded-lg ${
-                      fsAiOpen
-                        ? "bg-[var(--accent-light)] text-[var(--accent)]"
-                        : "text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-                    }`}
-                    title={
-                      fsAiOpen
-                        ? "Hide Study AI"
-                        : "Open Study AI beside this document"
-                    }
-                    aria-label={fsAiOpen ? "Hide Study AI" : "Show Study AI"}
-                    aria-pressed={fsAiOpen}
-                    onClick={() => setFsAiOpen((open) => !open)}
-                  >
-                    <Sparkles className="w-4 h-4" />
-                  </button>
-                )}
-                <FullscreenButton
-                  isFullscreen={isFullscreen}
-                  onToggle={() => void toggleFullscreen()}
-                />
-                {!isPdf && !isPreloadedDoc && !liveBlank && (
-                  <button
-                    type="button"
-                    className={`p-2 rounded-lg ${htmlClip ? "bg-[var(--accent-light)] text-[var(--accent)]" : "text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]"}`}
-                    title="Clip a region of the page as an image"
-                    aria-label="Clip region"
-                    onClick={() => setHtmlClip((v) => !v)}
-                  >
-                    <Crop className="w-4 h-4" />
-                  </button>
-                )}
-                {!isPreloadedDoc &&
-                  (!pageData.access || pageData.access.isOwner) && (
-                  <ShareChromeButton onClick={() => setShareOpen(true)} />
-                )}
-                {!isPreloadedDoc &&
-                  (!pageData.access || pageData.access.isOwner) && (
-                <button
-                  onClick={handleDelete}
-                  className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-500"
-                  title="Delete this page permanently"
-                  aria-label="Delete page"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-                )}
-              </div>
+              <DocumentChromeActions
+                isFullscreen={isFullscreen}
+                fsAiOpen={fsAiOpen}
+                onToggleFsAi={() => setFsAiOpen((open) => !open)}
+                onToggleFullscreen={() => void toggleFullscreen()}
+                showClip={!isPdf && !isPreloadedDoc && !liveBlank}
+                htmlClip={htmlClip}
+                onToggleClip={() => setHtmlClip((v) => !v)}
+                showShare={
+                  !isPreloadedDoc &&
+                  (!pageData.access || pageData.access.isOwner)
+                }
+                onShare={() => setShareOpen(true)}
+                starred={pageData.starred}
+                onToggleStar={() => void handleToggleStar()}
+                showDelete={
+                  !isPreloadedDoc &&
+                  (!pageData.access || pageData.access.isOwner)
+                }
+                onDelete={() => void handleDelete()}
+              />
             </div>
           )}
 
@@ -1293,7 +1268,7 @@ export function DocumentPane({
               {isPdf ? (
                 <PdfViewer
                   userTopicId={pageData.id}
-                  getPdfSource={curriculumPdfSource}
+                  getPdfSource={curriculumPdfSource ?? sharedPdfSource}
                   canEditPdf={
                     !curriculumPdfSource &&
                     !guestLocked &&

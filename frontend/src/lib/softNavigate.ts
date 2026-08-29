@@ -25,10 +25,12 @@ export function softPush(href: string) {
 
 /** True when both hrefs are page readers (personal or public curriculum). */
 export function isReaderHref(href: string): boolean {
+  const path = href.split("?")[0] ?? href;
   return Boolean(
-    href.match(/^\/learn\/[^/]+\/[^/]+\/[^/]+$/) ||
-      href.match(/^\/my-content\/file\/[^/]+$/) ||
-      href.match(/^\/my-content\/[^/]+\/file\/[^/]+$/) ||
-      href.match(/^\/my-content\/[^/]+\/[^/]+\/[^/]+$/)
+    path.match(/^\/learn\/[^/]+\/[^/]+\/[^/]+$/) ||
+      path.match(/^\/my-content\/shared\/[^/]+$/) ||
+      path.match(/^\/my-content\/file\/[^/]+$/) ||
+      path.match(/^\/my-content\/[^/]+\/file\/[^/]+$/) ||
+      path.match(/^\/my-content\/[^/]+\/[^/]+\/[^/]+$/)
   );
 }

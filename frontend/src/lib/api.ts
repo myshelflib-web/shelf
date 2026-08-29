@@ -8,11 +8,13 @@ export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000
 
 export class ApiError extends Error {
   readonly status: number;
+  readonly retryAfterSec?: number;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, retryAfterSec?: number) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.retryAfterSec = retryAfterSec;
   }
 }
 
@@ -58,9 +60,12 @@ async function request<T>(
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: "Request failed" }));
+    const retryAfterSec =
+      typeof error.retryAfterSec === "number" ? error.retryAfterSec : undefined;
     throw new ApiError(
       toUserFacingError(error.error ?? "Request failed"),
-      res.status
+      res.status,
+      retryAfterSec
     );
   }
 
@@ -424,6 +429,11 @@ export const api = {
       }),
     unlink: () =>
       request<{ ok: boolean }>("/api/telegram/link", { method: "DELETE" }),
+    sharePage: (pageId: string) =>
+      request<{ ok: boolean; kind: "document" | "message"; title: string }>(
+        "/api/telegram/share-page",
+        { method: "POST", body: JSON.stringify({ pageId }) }
+      ),
   },
 
   subjects: {
@@ -1246,10 +1256,14 @@ export const api = {
       request<{ embeddable: boolean; finalUrl: string | null }>(
         `/api/my-content/pages/${id}/embed-status`
       ),
-    getPdfUrl: (id: string) =>
-      request<PresignedPdf>(`/api/my-content/pages/${id}/pdf-url`),
-    getPdfBlob: async (id: string) => {
-      const { url } = await api.myContent.getPdfUrl(id);
+    getPdfUrl: (id: string, linkToken?: string | null) => {
+      const qs = linkToken ? `?t=${encodeURIComponent(linkToken)}` : "";
+      return request<PresignedPdf>(
+        `/api/my-content/pages/${id}/pdf-url${qs}`
+      );
+    },
+    getPdfBlob: async (id: string, linkToken?: string | null) => {
+      const { url } = await api.myContent.getPdfUrl(id, linkToken);
       return fetchStorageBlob(url);
     },
     /** Overwrite a library PDF after client-side page deletes. */
@@ -1327,10 +1341,12 @@ export const api = {
         }),
       });
     },
-    listHighlights: (topicId: string) =>
-      request<{ highlights: import("@/types").UserContentHighlight[] }>(
-        `/api/my-content/pages/${topicId}/highlights`
-      ),
+    listHighlights: (topicId: string, linkToken?: string | null) => {
+      const qs = linkToken ? `?t=${encodeURIComponent(linkToken)}` : "";
+      return request<{ highlights: import("@/types").UserContentHighlight[] }>(
+        `/api/my-content/pages/${topicId}/highlights${qs}`
+      );
+    },
     createHighlight: (data: {
       userTopicId: string;
       text: string;

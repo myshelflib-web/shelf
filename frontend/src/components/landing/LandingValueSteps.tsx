@@ -12,7 +12,7 @@ const STEPS = [
   {
     icon: FileText,
     title: "Collect",
-    body: "Bring together PDFs, notes, links and coaching material that usually stay scattered across different apps.",
+    body: "Bring together PDFs, notes, links and coaching material that usually stay scattered — including Telegram forwards you can send back from Share.",
     mini: "One place for all your material",
   },
   {

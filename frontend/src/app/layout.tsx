@@ -10,6 +10,7 @@ import {
   resolveGoogleClientId,
   resolveTelegramBotUsername,
 } from "@/lib/publicConfig";
+import { FocusMediaProvider } from "@/hooks/useFocusMedia";
 import { HotkeysProvider } from "@/hooks/useHotkeys";
 import { AppDialogProvider } from "@/hooks/useAppDialog";
 import { AppHotkeys } from "@/components/AppHotkeys";
@@ -66,6 +67,7 @@ export default function RootLayout({
             <TelegramAuthProvider botUsername={telegramBotUsername}>
               <AuthProvider>
                 <HotkeysProvider>
+                  <FocusMediaProvider>
                   <AppDialogProvider>
                     <PwaRegister />
                     <CompactPortraitSync />
@@ -75,6 +77,7 @@ export default function RootLayout({
                     {children}
                     <PwaInstallHint />
                   </AppDialogProvider>
+                  </FocusMediaProvider>
                 </HotkeysProvider>
               </AuthProvider>
             </TelegramAuthProvider>

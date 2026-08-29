@@ -188,7 +188,7 @@ router.get("/pages/:id/shares", async (req: Request, res: Response) => {
     generalAccess: page.linkShareEnabled ? "link" : "restricted",
     linkToken: page.linkShareToken,
     linkPath: page.linkShareToken
-      ? `/my-content/shared/${page.id}?t=${page.linkShareToken}`
+      ? `/my-content/shared/${page.id}?t=${encodeURIComponent(page.linkShareToken)}`
       : null,
   });
 });
@@ -300,7 +300,7 @@ router.put("/pages/:id/shares", async (req: Request, res: Response) => {
     linkToken: generalAccess === "link" ? linkShareToken : null,
     linkPath:
       generalAccess === "link" && linkShareToken
-        ? `/my-content/shared/${page.id}?t=${linkShareToken}`
+        ? `/my-content/shared/${page.id}?t=${encodeURIComponent(linkShareToken)}`
         : null,
   });
 });

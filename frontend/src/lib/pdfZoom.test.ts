@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   PDF_SCALE_MAX,
   PDF_SCALE_MIN,
+  applyPdfVisualZoom,
   applyPdfZoomAnchor,
   capturePdfZoomAnchor,
+  clearPdfVisualZoom,
   clampPdfScale,
   isPdfZoomWheel,
   nextPdfWheelScale,
+  pdfVisualZoomOrigin,
 } from "./pdfZoom";
 
 describe("clampPdfScale", () => {
@@ -60,5 +63,25 @@ describe("pdf zoom scroll anchor", () => {
     applyPdfZoomAnchor(next, anchor);
     expect(next.scrollLeft).toBe(480);
     expect(next.scrollTop).toBe(880);
+  });
+});
+
+describe("pdf visual zoom", () => {
+  it("captures origin relative to the content box", () => {
+    const content = {
+      getBoundingClientRect: () => ({ left: 40, top: 20 }) as DOMRect,
+    };
+    expect(pdfVisualZoomOrigin(content, 90, 70)).toEqual({ x: 50, y: 50 });
+  });
+
+  it("applies a CSS scale around the origin and clears it", () => {
+    const style = { transform: "", transformOrigin: "" };
+    const el = { style } as unknown as HTMLElement;
+    applyPdfVisualZoom(el, 12, 24, 1.5);
+    expect(style.transformOrigin).toBe("12px 24px");
+    expect(style.transform).toBe("scale(1.5)");
+    clearPdfVisualZoom(el);
+    expect(style.transform).toBe("");
+    expect(style.transformOrigin).toBe("");
   });
 });

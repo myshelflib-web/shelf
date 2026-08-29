@@ -1,10 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ExternalLink, Link2, Unlink, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Check, ExternalLink, Link2, Send, Unlink, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
 import { isDevEnvironment, toUserFacingError } from "@/lib/userFacingError";
+import {
+  telegramShareLinkUrl,
+  telegramShareTarget,
+} from "@/lib/telegramShare";
+import { getFocusedOpenTab } from "./types";
 
 /** Full-bleed circular mark — same optical fill as Spotify (viewBox 0–24). */
 function TelegramMark({ className }: { className?: string }) {
@@ -144,7 +150,7 @@ export function TelegramDockPanel({
                 ? tgName
                   ? `Connected as @${tgName}`
                   : "Connected to Telegram"
-                : "Connect any Shelf account · save PDFs from chats"}
+                : "Share a file, chat, or quiz · connect to send PDFs"}
             </p>
           </div>
         </div>
@@ -160,6 +166,7 @@ export function TelegramDockPanel({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
+        <TelegramShareCard linked={linked} />
         {error ? <p className="text-[11px] text-red-400">{error}</p> : null}
         {hint ? (
           <p className="text-[11px] text-[var(--accent)] leading-relaxed">{hint}</p>
@@ -189,8 +196,9 @@ export function TelegramDockPanel({
                 ) : null}
               </p>
               <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-                Forward or send a PDF to the Shelf bot. It lands in My Content
-                (library root). Max ~20 MB via the bot.
+                Forward a PDF to the Shelf bot to import it. From this panel you
+                can share the open file, Study AI chat, or quiz to any Telegram
+                chat.
               </p>
             </div>
 
@@ -226,9 +234,9 @@ export function TelegramDockPanel({
         ) : (
           <>
             <p className="text-[11px] leading-relaxed text-[var(--text-muted)]">
-              Signed in with Google or email? Connect still works — we link
-              Telegram to this Shelf account so forwarded PDFs land in your
-              library.
+              Connect Telegram to this Shelf account to import forwarded PDFs
+              and send a library file to your bot chat. You can still share a
+              file, chat, or quiz link in any Telegram chat without connecting.
             </p>
 
             <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-[var(--text-secondary)] leading-relaxed">
@@ -259,6 +267,105 @@ export function TelegramDockPanel({
             </button>
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function TelegramShareCard({ linked }: { linked: boolean }) {
+  const pathname = usePathname();
+  const tab = getFocusedOpenTab();
+  const target = telegramShareTarget(
+    pathname,
+    tab ? { title: tab.title, pageId: tab.pageId } : null
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [sent, setSent] = useState(false);
+
+  useEffect(() => {
+    setSent(false);
+    setError("");
+  }, [target?.path, target?.pageId]);
+
+  if (!target) {
+    return (
+      <div className="rounded-[10px] border border-dashed border-[var(--border)] px-3 py-3">
+        <p className="text-[12px] font-medium text-[var(--text-primary)] mb-1">
+          Share on Telegram
+        </p>
+        <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
+          Open a library file, Study AI chat, or quiz — then share it here.
+        </p>
+      </div>
+    );
+  }
+
+  const fullUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${target.path}`
+      : target.path;
+
+  const sendFile = async () => {
+    if (!target.pageId) return;
+    setError("");
+    setSent(false);
+    setBusy(true);
+    try {
+      await api.telegram.sharePage(target.pageId);
+      setSent(true);
+    } catch (err) {
+      setError(
+        toUserFacingError(
+          err instanceof Error ? err.message : "Could not send to Telegram"
+        )
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-[10px] border border-[var(--border)] bg-[var(--bg-primary)] px-3 py-3 space-y-2">
+      <p className="text-[12px] font-medium text-[var(--text-primary)]">
+        {target.label}
+      </p>
+      <p className="text-[11px] text-[var(--text-muted)] truncate">
+        {target.title}
+      </p>
+      {error ? <p className="text-[11px] text-red-400">{error}</p> : null}
+      {sent ? (
+        <p className="text-[11px] text-[var(--accent)]">
+          Sent. Open the Shelf bot chat in Telegram.
+        </p>
+      ) : null}
+      <div className="flex flex-col gap-1.5">
+        <a
+          href={telegramShareLinkUrl(fullUrl, target.title)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-2 text-[12px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+        >
+          Share link in Telegram
+          <ExternalLink className="w-3.5 h-3.5" />
+        </a>
+        {target.kind === "file" && target.pageId ? (
+          linked ? (
+            <button
+              type="button"
+              onClick={() => void sendFile()}
+              disabled={busy}
+              className="inline-flex items-center justify-center gap-1.5 w-full rounded-lg bg-[var(--accent-subtle)] border border-[var(--border)] px-3 py-2 text-[12px] font-medium text-[var(--accent)] disabled:opacity-50"
+            >
+              <Send className="w-3.5 h-3.5" />
+              {busy ? "Sending…" : "Send file to Telegram"}
+            </button>
+          ) : (
+            <p className="text-[10px] text-[var(--text-muted)] leading-relaxed">
+              Connect below to send the PDF file to your bot chat.
+            </p>
+          )
+        ) : null}
       </div>
     </div>
   );

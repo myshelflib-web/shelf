@@ -282,6 +282,7 @@ export const HOTKEY_HELP: Array<{
       { keys: ["g s"], label: "Go to Settings" },
       { keys: ["g p"], label: "Go to Profile" },
       { keys: ["escape"], label: "Close dialog" },
+      { keys: ["\\"], label: "Toggle Spotify" },
     ],
   },
   {
@@ -298,7 +299,6 @@ export const HOTKEY_HELP: Array<{
       { keys: ["mod+l"], label: "Ask Study AI (uses selected text)" },
       { keys: ["mod+b", "["], label: "Toggle library sidebar" },
       { keys: ["mod+j", "]"], label: "Toggle Study AI panel" },
-      { keys: ["\\"], label: "Toggle Spotify" },
       { keys: ["mod+\\", "|"], label: "Split editor" },
       { keys: ["{", "}"], label: "Previous / next tab" },
       { keys: ["w"], label: "Close tab" },

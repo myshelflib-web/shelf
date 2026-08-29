@@ -1,4 +1,5 @@
 import { getSiteUrl } from "@/lib/siteUrl";
+import { SOCIAL_SAME_AS } from "@/lib/socialLinks";
 
 export function SiteJsonLd() {
   const siteUrl = getSiteUrl();
@@ -19,6 +20,7 @@ export function SiteJsonLd() {
     image: `${siteUrl}/icons/shelf-icon-2048.png`,
     description:
       "Personal study library with PDF highlights, Study AI, and a planner — for students, professionals, researchers, and lifelong learners.",
+    sameAs: SOCIAL_SAME_AS,
   };
 
   const website = {
@@ -95,7 +97,7 @@ export function SiteJsonLd() {
       "Personal PDF library with collections and topics",
       "PDF highlights and annotations",
       "Study AI grounded in your uploads",
-      "Telegram PDF import bot",
+      "Telegram PDF import and send",
       "Spotify focus audio in the reader",
       "Share study documents with classmates",
       "Exam-style quiz from your notes",

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
-import { Mail, MessageSquare } from "lucide-react";
+import { SocialLinks } from "@/components/SocialLinks";
+import { Mail, MessageSquare, Share2 } from "lucide-react";
 
 export default function ContactPage() {
   const [sent, setSent] = useState(false);
@@ -41,7 +42,7 @@ export default function ContactPage() {
           </p>
         </RevealOnScroll>
 
-        <div className="grid sm:grid-cols-2 gap-4 mb-10">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
           <RevealOnScroll delay={60}>
             <div className="feature-card p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
               <Mail className="w-5 h-5 text-[var(--accent)] mb-2" />
@@ -63,9 +64,19 @@ export default function ContactPage() {
               </p>
             </div>
           </RevealOnScroll>
+          <RevealOnScroll delay={180}>
+            <div className="feature-card p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+              <Share2 className="w-5 h-5 text-[var(--accent)] mb-2" />
+              <p className="font-medium mb-1">Follow</p>
+              <p className="text-sm text-[var(--text-secondary)] mb-3">
+                Instagram, YouTube, and LinkedIn.
+              </p>
+              <SocialLinks />
+            </div>
+          </RevealOnScroll>
         </div>
 
-        <RevealOnScroll delay={180}>
+        <RevealOnScroll delay={240}>
           <form
             onSubmit={onSubmit}
             className="space-y-4 p-6 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]"

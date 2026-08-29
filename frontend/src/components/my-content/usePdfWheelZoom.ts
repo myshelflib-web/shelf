@@ -7,12 +7,18 @@ import {
   type Dispatch,
   type SetStateAction,
 } from "react";
+import { flushSync } from "react-dom";
 import {
+  applyPdfVisualZoom,
   applyPdfZoomAnchor,
   capturePdfZoomAnchor,
+  clearPdfVisualZoom,
   clampPdfScale,
   isPdfZoomWheel,
   nextPdfWheelScale,
+  pdfVisualZoomOrigin,
+  pdfZoomContentEl,
+  PDF_ZOOM_COMMIT_MS,
   type PdfZoomAnchor,
 } from "@/lib/pdfZoom";
 
@@ -24,7 +30,7 @@ type GestureLike = Event & {
 
 /**
  * Zoom the PDF with trackpad pinch or Ctrl/Cmd + mouse wheel.
- * Anchors the point under the cursor so the page does not jump.
+ * CSS-scales during the gesture; PDF.js canvases re-render after it settles.
  */
 export function usePdfWheelZoom(
   root: HTMLElement | null,
@@ -46,10 +52,15 @@ export function usePdfWheelZoom(
   const anchorRef = useRef<PdfZoomAnchor | null>(null);
   const gestureOriginRef = useRef(1);
   const gestureActiveRef = useRef(false);
-  const rafRef = useRef(0);
+  const liveOriginRef = useRef<{ x: number; y: number } | null>(null);
+  const lastClientRef = useRef({ x: 0, y: 0 });
+  const commitTimerRef = useRef(0);
 
   useLayoutEffect(() => {
     const el = rootRef.current;
+    const content = el ? pdfZoomContentEl(el) : null;
+    if (content) clearPdfVisualZoom(content);
+    liveOriginRef.current = null;
     const anchor = anchorRef.current;
     if (!el || !anchor) return;
     anchorRef.current = null;
@@ -59,24 +70,47 @@ export function usePdfWheelZoom(
   useEffect(() => {
     if (!root) return;
 
-    const commitScale = (next: number, clientX: number, clientY: number) => {
-      const clamped = clampPdfScale(next);
+    const paintVisual = (next: number, clientX: number, clientY: number) => {
+      const content = pdfZoomContentEl(root);
+      if (!content) return;
       const from = laidOutScaleRef.current;
-      if (clamped === from) return;
-      anchorRef.current = capturePdfZoomAnchor(
-        root,
-        clientX,
-        clientY,
-        clamped / from
-      );
+      const clamped = clampPdfScale(next);
       scaleRef.current = clamped;
       pendingScaleRef.current = clamped;
-      if (rafRef.current) return;
-      rafRef.current = window.requestAnimationFrame(() => {
-        rafRef.current = 0;
-        const pending = pendingScaleRef.current;
-        if (pending != null) setScaleRef.current(pending);
-      });
+      lastClientRef.current = { x: clientX, y: clientY };
+      if (!liveOriginRef.current) {
+        liveOriginRef.current = pdfVisualZoomOrigin(content, clientX, clientY);
+      }
+      const origin = liveOriginRef.current;
+      applyPdfVisualZoom(content, origin.x, origin.y, clamped / from);
+    };
+
+    const commit = (sync: boolean) => {
+      window.clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = 0;
+      const pending = pendingScaleRef.current;
+      if (pending == null) return;
+      const from = laidOutScaleRef.current;
+      if (pending === from) {
+        const content = pdfZoomContentEl(root);
+        if (content) clearPdfVisualZoom(content);
+        liveOriginRef.current = null;
+        pendingScaleRef.current = null;
+        return;
+      }
+      const { x, y } = lastClientRef.current;
+      anchorRef.current = capturePdfZoomAnchor(root, x, y, pending / from);
+      const apply = () => setScaleRef.current(pending);
+      if (sync) flushSync(apply);
+      else apply();
+    };
+
+    const scheduleCommit = () => {
+      window.clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = window.setTimeout(
+        () => commit(false),
+        PDF_ZOOM_COMMIT_MS
+      );
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -84,11 +118,12 @@ export function usePdfWheelZoom(
       e.preventDefault();
       if (root.dataset.inkDrawing === "1") return;
       if (gestureActiveRef.current) return;
-      commitScale(
+      paintVisual(
         nextPdfWheelScale(scaleRef.current, e.deltaY, e.deltaMode),
         e.clientX,
         e.clientY
       );
+      scheduleCommit();
     };
 
     const onGestureStart = (e: Event) => {
@@ -102,16 +137,25 @@ export function usePdfWheelZoom(
       if (root.dataset.inkDrawing === "1") return;
       const ge = e as GestureLike;
       if (typeof ge.scale !== "number" || !Number.isFinite(ge.scale)) return;
-      commitScale(
+      paintVisual(
         gestureOriginRef.current * ge.scale,
-        ge.clientX ?? 0,
-        ge.clientY ?? 0
+        ge.clientX ?? lastClientRef.current.x,
+        ge.clientY ?? lastClientRef.current.y
       );
+      scheduleCommit();
     };
 
     const onGestureEnd = (e: Event) => {
       e.preventDefault();
       gestureActiveRef.current = false;
+      commit(false);
+    };
+
+    const onPointerDown = () => {
+      if (gestureActiveRef.current) return;
+      if (pendingScaleRef.current == null) return;
+      if (pendingScaleRef.current === laidOutScaleRef.current) return;
+      commit(true);
     };
 
     const gestureOpts: AddEventListenerOptions = { passive: false };
@@ -119,12 +163,14 @@ export function usePdfWheelZoom(
     root.addEventListener("gesturestart", onGestureStart, gestureOpts);
     root.addEventListener("gesturechange", onGestureChange, gestureOpts);
     root.addEventListener("gestureend", onGestureEnd, gestureOpts);
+    root.addEventListener("pointerdown", onPointerDown, { capture: true });
     return () => {
-      if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
+      window.clearTimeout(commitTimerRef.current);
       root.removeEventListener("wheel", onWheel);
       root.removeEventListener("gesturestart", onGestureStart);
       root.removeEventListener("gesturechange", onGestureChange);
       root.removeEventListener("gestureend", onGestureEnd);
+      root.removeEventListener("pointerdown", onPointerDown, true);
     };
   }, [root]);
 }

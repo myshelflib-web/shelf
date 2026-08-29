@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Bold,
   Italic,
@@ -11,6 +11,8 @@ import {
   Highlighter,
   Eraser,
   MousePointerClick,
+  Palette,
+  ALargeSmall,
 } from "lucide-react";
 import { CANVAS_BACKGROUNDS } from "@/lib/blankCanvas";
 import {
@@ -22,6 +24,7 @@ import {
   ToolSep,
 } from "./EditorToolbarChrome";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
+import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
 
 export type DrawTool = "pen" | "stroke-erase" | "object-erase";
 
@@ -119,6 +122,14 @@ export function BlankEditorToolbar({
 }: BlankEditorToolbarProps) {
   const [fontValue, setFontValue] = useState("");
   const [fontSize, setFontSize] = useState("14px");
+  const [sizeOpen, setSizeOpen] = useState(false);
+  const [colorOpen, setColorOpen] = useState(false);
+  const [highlightOpen, setHighlightOpen] = useState(false);
+  const [penOpen, setPenOpen] = useState(false);
+  const sizeBtnRef = useRef<HTMLButtonElement>(null);
+  const colorBtnRef = useRef<HTMLButtonElement>(null);
+  const highlightBtnRef = useRef<HTMLButtonElement>(null);
+  const penBtnRef = useRef<HTMLButtonElement>(null);
 
   return (
     <EditorToolbarShell>
@@ -126,14 +137,22 @@ export function BlankEditorToolbar({
         <ToolBtn
           label="Type text"
           active={!drawMode}
-          onClick={() => onDrawModeChange(false)}
+          onClick={() => {
+            setPenOpen(false);
+            onDrawModeChange(false);
+          }}
         >
           <Type className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolBtn
           label="Draw"
           active={drawMode}
-          onClick={() => onDrawModeChange(true)}
+          onClick={() => {
+            setSizeOpen(false);
+            setColorOpen(false);
+            setHighlightOpen(false);
+            onDrawModeChange(true);
+          }}
         >
           <PenLine className="w-[17px] h-[17px]" />
         </ToolBtn>
@@ -157,19 +176,43 @@ export function BlankEditorToolbar({
                 else onCommand("fontName", v);
               }}
             />
-            <ShelfSelect
-              compact
-              className="h-[34px] w-14 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1"
-              value={fontSize}
-              options={FONT_SIZES.map((s) => ({ value: s.px, label: s.label }))}
-              aria-label="Font size"
-              onTriggerMouseDown={(e) => e.stopPropagation()}
-              onChange={(v) => {
-                setFontSize(v);
-                onCommand("fontSizePx", v);
+            <ToolBtn
+              ref={sizeBtnRef}
+              label="Text size"
+              active={sizeOpen}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setColorOpen(false);
+                setHighlightOpen(false);
+                setSizeOpen((v) => !v);
               }}
-            />
+            >
+              <ALargeSmall className="w-[17px] h-[17px]" />
+            </ToolBtn>
           </ToolGroup>
+
+          <ToolPopover
+            open={sizeOpen}
+            onClose={() => setSizeOpen(false)}
+            anchorEl={sizeBtnRef.current}
+            title="Text size"
+          >
+            <div className="grid grid-cols-4 gap-1.5">
+              {FONT_SIZES.map((s) => (
+                <ToolChip
+                  key={s.px}
+                  label={`${s.label}px`}
+                  active={fontSize === s.px}
+                  onClick={() => {
+                    setFontSize(s.px);
+                    onCommand("fontSizePx", s.px);
+                  }}
+                >
+                  {s.label}
+                </ToolChip>
+              ))}
+            </div>
+          </ToolPopover>
 
           <ToolSep />
 
@@ -207,74 +250,119 @@ export function BlankEditorToolbar({
           <ToolSep />
 
           <ToolGroup>
-            <ToolMuted>A</ToolMuted>
-            {TEXT_COLORS.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className={`w-3.5 h-3.5 rounded-full hover:scale-110 transition-transform border ${
-                  c.id === "white" || c.id === "default"
-                    ? "border-[var(--border)]"
-                    : "border-black/20"
-                }`}
-                style={{ background: c.color || "var(--text-primary)" }}
-                title={c.label}
-                aria-label={`Text color ${c.label}`}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => {
-                  if (!c.color) onCommand("foreColor", "inherit");
-                  else onCommand("foreColor", c.color);
-                }}
-              />
-            ))}
-            <Highlighter className="w-3.5 h-3.5 text-[var(--text-muted)] ml-1" />
-            {HIGHLIGHT_COLORS.map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                className="w-3.5 h-3.5 rounded-sm border border-black/15 hover:scale-110 transition-transform"
-                style={{ background: c.color || "transparent" }}
-                title={c.label}
-                aria-label={`Highlight ${c.label}`}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() =>
-                  onCommand("hiliteColor", c.color || "transparent")
-                }
-              />
-            ))}
+            <ToolBtn
+              ref={colorBtnRef}
+              label="Pen / text color"
+              active={colorOpen}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setSizeOpen(false);
+                setHighlightOpen(false);
+                setColorOpen((v) => !v);
+              }}
+            >
+              <Palette className="w-[17px] h-[17px]" />
+            </ToolBtn>
+            <ToolBtn
+              ref={highlightBtnRef}
+              label="Highlighter"
+              active={highlightOpen}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setSizeOpen(false);
+                setColorOpen(false);
+                setHighlightOpen((v) => !v);
+              }}
+            >
+              <Highlighter className="w-[17px] h-[17px]" />
+            </ToolBtn>
           </ToolGroup>
+
+          <ToolPopover
+            open={colorOpen}
+            onClose={() => setColorOpen(false)}
+            anchorEl={colorBtnRef.current}
+            title="Pen / text color"
+          >
+            <ColorSwatchGrid>
+              {TEXT_COLORS.map((c) => (
+                <ColorSwatch
+                  key={c.id}
+                  color={c.color || "#e8e8ea"}
+                  label={c.label}
+                  onClick={() => {
+                    if (!c.color) onCommand("foreColor", "inherit");
+                    else onCommand("foreColor", c.color);
+                  }}
+                />
+              ))}
+            </ColorSwatchGrid>
+          </ToolPopover>
+
+          <ToolPopover
+            open={highlightOpen}
+            onClose={() => setHighlightOpen(false)}
+            anchorEl={highlightBtnRef.current}
+            title="Highlighter"
+          >
+            <ColorSwatchGrid>
+              {HIGHLIGHT_COLORS.map((c) => (
+                <ColorSwatch
+                  key={c.id}
+                  color={c.color || "#ffffff"}
+                  label={c.label}
+                  onClick={() =>
+                    onCommand("hiliteColor", c.color || "transparent")
+                  }
+                />
+              ))}
+            </ColorSwatchGrid>
+          </ToolPopover>
         </>
       ) : (
         <>
           <ToolGroup>
             <ToolBtn
+              ref={penBtnRef}
               label="Pen"
               active={drawTool === "pen"}
-              onClick={() => onDrawToolChange("pen")}
+              onClick={() => {
+                onDrawToolChange("pen");
+                setPenOpen((v) => (drawTool === "pen" ? !v : true));
+              }}
             >
               <PenLine className="w-[17px] h-[17px]" />
             </ToolBtn>
             <ToolBtn
               label="Stroke eraser"
               active={drawTool === "stroke-erase"}
-              onClick={() => onDrawToolChange("stroke-erase")}
+              onClick={() => {
+                setPenOpen(false);
+                onDrawToolChange("stroke-erase");
+              }}
             >
               <Eraser className="w-[17px] h-[17px]" />
             </ToolBtn>
             <ToolBtn
               label="Object eraser"
               active={drawTool === "object-erase"}
-              onClick={() => onDrawToolChange("object-erase")}
+              onClick={() => {
+                setPenOpen(false);
+                onDrawToolChange("object-erase");
+              }}
             >
               <MousePointerClick className="w-[17px] h-[17px]" />
             </ToolBtn>
           </ToolGroup>
 
           {drawTool === "pen" ? (
-            <>
-              <ToolSep />
-              <ToolGroup>
-                <ToolMuted>Size</ToolMuted>
+            <ToolPopover
+              open={penOpen}
+              onClose={() => setPenOpen(false)}
+              anchorEl={penBtnRef.current}
+              title="Pen / text color"
+            >
+              <div className="flex items-center gap-1 mb-3">
                 {PEN_SIZES.map((s) => (
                   <ToolChip
                     key={s.id}
@@ -285,25 +373,19 @@ export function BlankEditorToolbar({
                     {s.label}
                   </ToolChip>
                 ))}
+              </div>
+              <ColorSwatchGrid>
                 {PEN_COLORS.map((c) => (
-                  <button
+                  <ColorSwatch
                     key={c.id}
-                    type="button"
-                    className={`w-5 h-5 rounded-full border-2 hover:scale-110 transition-transform ${
-                      penColor === c.color
-                        ? "border-[var(--accent)] scale-110"
-                        : c.id === "white"
-                          ? "border-[var(--border)]"
-                          : "border-transparent"
-                    }`}
-                    style={{ background: c.color }}
-                    title={c.label}
-                    aria-pressed={penColor === c.color}
+                    color={c.color}
+                    label={c.label}
+                    selected={penColor === c.color}
                     onClick={() => onPenColorChange(c.color)}
                   />
                 ))}
-              </ToolGroup>
-            </>
+              </ColorSwatchGrid>
+            </ToolPopover>
           ) : null}
 
           <ToolSep />

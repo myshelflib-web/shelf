@@ -7,6 +7,11 @@ const FETCH_MS = 25_000;
 /** Bot API download limit for getFile. */
 export const TELEGRAM_BOT_MAX_FILE_BYTES = 20 * 1024 * 1024;
 
+/** Bot API upload limit for sendDocument (multipart). */
+export const TELEGRAM_BOT_MAX_SEND_BYTES = 50 * 1024 * 1024;
+
+const SEND_MS = 90_000;
+
 export type TelegramUser = {
   id: number;
   is_bot?: boolean;
@@ -78,7 +83,7 @@ async function callApi<T>(
 export async function sendTelegramMessage(
   chatId: number | string,
   text: string,
-  opts?: { parseMode?: "HTML" | "Markdown" }
+  opts?: { parseMode?: "HTML" | "Markdown"; throwOnError?: boolean }
 ): Promise<void> {
   try {
     await callApi("sendMessage", {
@@ -90,12 +95,46 @@ export async function sendTelegramMessage(
   } catch (err) {
     if (err instanceof TimeoutError) {
       logger.warn("telegram.send_timeout", { chatId: String(chatId) });
+      if (opts?.throwOnError) throw err;
       return;
     }
     logger.warn("telegram.send_failed", {
       chatId: String(chatId),
       error: err instanceof Error ? err.message : String(err),
     });
+    if (opts?.throwOnError) throw err;
+  }
+}
+
+export async function sendTelegramDocument(opts: {
+  chatId: number | string;
+  buffer: Buffer;
+  filename: string;
+  caption?: string;
+}): Promise<void> {
+  const token = botToken();
+  if (!token) throw new Error("TELEGRAM_BOT_TOKEN is not set");
+
+  const form = new FormData();
+  form.append("chat_id", String(opts.chatId));
+  form.append(
+    "document",
+    new File([new Uint8Array(opts.buffer)], opts.filename, {
+      type: "application/pdf",
+    })
+  );
+  if (opts.caption) {
+    form.append("caption", opts.caption.slice(0, 1024));
+  }
+
+  const res = await fetchWithTimeout(`${API_BASE}/bot${token}/sendDocument`, {
+    method: "POST",
+    body: form,
+    timeoutMs: SEND_MS,
+  });
+  const json = (await res.json()) as { ok: boolean; description?: string };
+  if (!res.ok || !json.ok) {
+    throw new Error(json.description || "Telegram sendDocument failed");
   }
 }
 

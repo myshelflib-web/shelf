@@ -4,7 +4,6 @@ import Link from "next/link";
 import {
   ChevronLeft,
   ChevronRight,
-  Star,
   CheckCircle2,
   Sparkles,
   Pencil,
@@ -31,9 +30,7 @@ interface ReaderBottomBarProps {
   prev?: NavItem | null;
   next?: NavItem | null;
   pdf?: PdfNav | null;
-  starred: boolean;
   completed: boolean;
-  onToggleStar: () => void;
   onToggleComplete: () => void;
   onOpenStudyAI: () => void;
   onScheduleRead?: () => void;
@@ -54,9 +51,7 @@ export function ReaderBottomBar({
   prev = null,
   next = null,
   pdf = null,
-  starred,
   completed,
-  onToggleStar,
   onToggleComplete,
   onOpenStudyAI,
   onScheduleRead,
@@ -83,15 +78,17 @@ export function ReaderBottomBar({
     : "";
   const pdfPrev = pdf && pdf.page > 1;
   const pdfNext = pdf && pdf.page < pdf.numPages;
+  const pillBtn =
+    "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition";
 
   return (
-    <div className="reader-bottom-bar border-t border-[var(--border)] bg-[var(--bg-primary)]/90 backdrop-blur-sm px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2 shrink-0">
+    <div className="reader-bottom-bar relative shrink-0 min-h-[56px] px-3 sm:px-4 py-2 flex items-center justify-between gap-2">
       {pdf ? (
         pdfPrev ? (
           <button
             type="button"
             onClick={pdf.onPrev}
-            className="flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--accent)] transition min-w-0 max-w-[28%] sm:max-w-[30%]"
+            className="relative z-[1] flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--accent)] transition min-w-0 max-w-[22%] sm:max-w-[28%]"
             title={withShortcut(
               `Previous page (${pdf.page - 1} of ${pdf.numPages})`,
               "left"
@@ -101,175 +98,157 @@ export function ReaderBottomBar({
             <span className="truncate tabular-nums">Page {pdf.page - 1}</span>
           </button>
         ) : (
-          <div className="w-[28%]" />
+          <div className="w-[22%] sm:w-[28%]" />
         )
       ) : prev ? (
         <Link
           href={prev.href}
-          className="flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--accent)] transition min-w-0 max-w-[28%] sm:max-w-[30%]"
+          className="relative z-[1] flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--accent)] transition min-w-0 max-w-[22%] sm:max-w-[28%]"
           title={`Previous: ${prev.title}`}
         >
           <ChevronLeft className="w-4 h-4 shrink-0" />
           <span className="truncate">{prev.title}</span>
         </Link>
       ) : (
-        <div className="w-[28%]" />
+        <div className="w-[22%] sm:w-[28%]" />
       )}
 
-      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        {editing ? (
-          autosave ? (
-            <button
-              type="button"
-              onClick={onSave}
-              disabled={saving}
-              title={withShortcut("Done editing", "escape")}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50 transition"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span className="hidden sm:inline">
-                {saving ? "Saving…" : "Done"}
-              </span>
-            </button>
-          ) : (
-            <>
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-16 sm:px-28">
+        <div className="pointer-events-auto flex items-center gap-0.5 sm:gap-1 px-1.5 py-1 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] shadow-[0_8px_28px_rgba(0,0,0,0.14)]">
+          {editing ? (
+            autosave ? (
               <button
                 type="button"
                 onClick={onSave}
                 disabled={saving}
-                title={withShortcut("Save changes", "mod+s")}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-sm font-medium bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-50 transition"
+                title={withShortcut("Done editing", "escape")}
+                className={clsx(
+                  pillBtn,
+                  "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] disabled:opacity-50"
+                )}
               >
-                <Save className="w-4 h-4" />
-                <span className="hidden sm:inline">
+                <CheckCircle2 className="w-4 h-4" />
+                {saving ? "Saving…" : "Done"}
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onSave}
+                  disabled={saving}
+                  title={withShortcut("Save changes", "mod+s")}
+                  className={clsx(
+                    pillBtn,
+                    "bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-50"
+                  )}
+                >
+                  <Save className="w-4 h-4" />
                   {saving ? "Saving…" : "Save"}
-                </span>
-              </button>
+                </button>
+                <button
+                  type="button"
+                  onClick={onCancelEdit}
+                  disabled={saving}
+                  title={withShortcut("Discard edits", "escape")}
+                  className={clsx(
+                    pillBtn,
+                    "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50"
+                  )}
+                >
+                  <X className="w-4 h-4" />
+                  Cancel
+                </button>
+              </>
+            )
+          ) : (
+            <>
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={onEdit}
+                  title={withShortcut("Edit this page", "e")}
+                  className={clsx(
+                    pillBtn,
+                    "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                  )}
+                >
+                  <Pencil className="w-4 h-4" />
+                  <span className="hidden sm:inline">Edit</span>
+                </button>
+              )}
+              {showStudyAI && (
+                <button
+                  type="button"
+                  onClick={() => guard(onOpenStudyAI, "Use Study AI")}
+                  title={
+                    guestLocked
+                      ? "Sign in to use Study AI"
+                      : withShortcut(
+                          "Ask Study AI — uses selected text if any",
+                          "mod+l"
+                        )
+                  }
+                  aria-disabled={guestLocked}
+                  className={clsx(
+                    pillBtn,
+                    "text-[var(--accent)] bg-[var(--accent-light)] hover:opacity-90",
+                    lockedBtn
+                  )}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Study AI
+                </button>
+              )}
+              {onScheduleRead && (
+                <button
+                  type="button"
+                  onClick={onScheduleRead}
+                  className={clsx(
+                    pillBtn,
+                    scheduled
+                      ? "text-[var(--accent)] bg-[var(--accent-light)]"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                  )}
+                  title={withShortcut(
+                    scheduled
+                      ? "Already scheduled — add another reading time"
+                      : "Add this page to the planner",
+                    "s"
+                  )}
+                >
+                  <CalendarDays className="w-4 h-4" />
+                  Add to Planner
+                </button>
+              )}
               <button
                 type="button"
-                onClick={onCancelEdit}
-                disabled={saving}
-                title={withShortcut("Discard edits", "escape")}
-                className="flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-sm text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] disabled:opacity-50 transition"
-              >
-                <X className="w-4 h-4" />
-                <span className="hidden sm:inline">Cancel</span>
-              </button>
-            </>
-          )
-        ) : (
-          <>
-            {onEdit && (
-              <button
-                type="button"
-                onClick={onEdit}
-                title={withShortcut("Edit this page", "e")}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-sm transition text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-              >
-                <Pencil className="w-4 h-4" />
-                <span className="hidden sm:inline">Edit</span>
-              </button>
-            )}
-            {showStudyAI && (
-              <button
-                type="button"
-                onClick={() => guard(onOpenStudyAI, "Use Study AI")}
-                title={
-                  guestLocked
-                    ? "Sign in to use Study AI"
-                    : withShortcut(
-                        "Ask Study AI — uses selected text if any",
-                        "mod+l"
-                      )
-                }
+                onClick={() => guard(onToggleComplete, "Mark as complete")}
                 aria-disabled={guestLocked}
                 className={clsx(
-                  "flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-sm transition text-[var(--accent)] bg-[var(--accent-light)] hover:opacity-90",
-                  lockedBtn
+                  pillBtn,
+                  lockedBtn,
+                  !guestLocked &&
+                    (completed
+                      ? "text-[var(--accent)] bg-[var(--accent-light)]"
+                      : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]")
                 )}
+                title={
+                  guestLocked
+                    ? "Sign in to track progress"
+                    : withShortcut(
+                        completed
+                          ? "Mark as not done"
+                          : "Mark this page as done",
+                        "x"
+                      )
+                }
               >
-                <Sparkles className="w-4 h-4" />
-                <span className="hidden sm:inline">Study AI</span>
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => guard(onToggleStar, "Star articles")}
-              aria-disabled={guestLocked}
-              className={clsx(
-                "flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-sm transition",
-                lockedBtn,
-                !guestLocked &&
-                  (starred
-                    ? "text-amber-400 bg-amber-400/15"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]")
-              )}
-              title={
-                guestLocked
-                  ? "Sign in to star pages"
-                  : withShortcut(
-                      starred ? "Remove star" : "Star this page",
-                      "*"
-                    )
-              }
-            >
-              <Star
-                className={clsx(
-                  "w-4 h-4",
-                  starred && "fill-amber-400 text-amber-400"
-                )}
-              />
-              <span className="hidden md:inline">Star</span>
-            </button>
-            {onScheduleRead && (
-              <button
-                type="button"
-                onClick={onScheduleRead}
-                className={clsx(
-                  "flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-sm transition",
-                  scheduled
-                    ? "text-[var(--accent)] bg-[var(--accent-light)]"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]"
-                )}
-                title={withShortcut(
-                  scheduled
-                    ? "Already scheduled — add another reading time"
-                    : "Schedule this page for reading",
-                  "s"
-                )}
-              >
-                <CalendarDays className="w-4 h-4" />
-                <span className="hidden md:inline">Schedule</span>
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => guard(onToggleComplete, "Mark as complete")}
-              aria-disabled={guestLocked}
-              className={clsx(
-                "flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-sm transition",
-                lockedBtn,
-                !guestLocked &&
-                  (completed
-                    ? "text-[var(--accent)] bg-[var(--accent-light)]"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)]")
-              )}
-              title={
-                guestLocked
-                  ? "Sign in to track progress"
-                  : withShortcut(
-                      completed ? "Mark as not done" : "Mark this page as done",
-                      "x"
-                    )
-              }
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span className="hidden md:inline">
+                <CheckCircle2 className="w-4 h-4" />
                 {completed ? "Done" : "Mark done"}
-              </span>
-            </button>
-          </>
-        )}
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {pdf ? (
@@ -277,7 +256,7 @@ export function ReaderBottomBar({
           <button
             type="button"
             onClick={pdf.onNext}
-            className="flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--accent)] transition min-w-0 max-w-[28%] sm:max-w-[30%] justify-end"
+            className="relative z-[1] flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--accent)] transition min-w-0 max-w-[22%] sm:max-w-[28%] justify-end"
             title={withShortcut(
               `Next page (${pdf.page + 1} of ${pdf.numPages})`,
               "right"
@@ -287,19 +266,19 @@ export function ReaderBottomBar({
             <ChevronRight className="w-4 h-4 shrink-0" />
           </button>
         ) : (
-          <div className="w-[28%]" />
+          <div className="w-[22%] sm:w-[28%]" />
         )
       ) : next ? (
         <Link
           href={next.href}
-          className="flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--accent)] transition min-w-0 max-w-[28%] sm:max-w-[30%] justify-end"
+          className="relative z-[1] flex items-center gap-1 text-sm text-[var(--text-secondary)] hover:text-[var(--accent)] transition min-w-0 max-w-[22%] sm:max-w-[28%] justify-end"
           title={`Next: ${next.title}`}
         >
           <span className="truncate">{next.title}</span>
           <ChevronRight className="w-4 h-4 shrink-0" />
         </Link>
       ) : (
-        <div className="w-[28%]" />
+        <div className="w-[22%] sm:w-[28%]" />
       )}
     </div>
   );

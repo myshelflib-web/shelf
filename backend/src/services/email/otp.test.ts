@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateOtpCode, normalizeEmail } from "./otp.js";
+import { generateOtpCode, normalizeEmail, OtpCooldownError } from "./otp.js";
 
 describe("email otp helpers", () => {
   it("normalizes email to lowercase trimmed", () => {
@@ -11,5 +11,11 @@ describe("email otp helpers", () => {
       const code = generateOtpCode();
       expect(code).toMatch(/^\d{6}$/);
     }
+  });
+
+  it("cooldown error includes remaining seconds", () => {
+    const err = new OtpCooldownError(17);
+    expect(err.retryAfterSec).toBe(17);
+    expect(err.message).toBe("Please wait 17s before requesting another code");
   });
 });

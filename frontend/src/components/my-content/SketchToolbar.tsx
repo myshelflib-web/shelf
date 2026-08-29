@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -28,6 +29,7 @@ import {
   ToolMuted,
   ToolSep,
 } from "./EditorToolbarChrome";
+import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
 
 interface SketchToolbarProps {
   drawTool: DrawTool;
@@ -72,6 +74,9 @@ export function SketchToolbar({
   onUndo,
   onRedo,
 }: SketchToolbarProps) {
+  const penBtnRef = useRef<HTMLButtonElement>(null);
+  const [penOpen, setPenOpen] = useState(false);
+
   return (
     <EditorToolbarShell>
       <ToolGroup>
@@ -103,33 +108,46 @@ export function SketchToolbar({
 
       <ToolGroup>
         <ToolBtn
+          ref={penBtnRef}
           label="Pen"
           active={drawTool === "pen"}
-          onClick={() => onDrawToolChange("pen")}
+          onClick={() => {
+            onDrawToolChange("pen");
+            setPenOpen((v) => (drawTool === "pen" ? !v : true));
+          }}
         >
           <PenLine className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolBtn
           label="Stroke eraser"
           active={drawTool === "stroke-erase"}
-          onClick={() => onDrawToolChange("stroke-erase")}
+          onClick={() => {
+            setPenOpen(false);
+            onDrawToolChange("stroke-erase");
+          }}
         >
           <Eraser className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolBtn
           label="Object eraser"
           active={drawTool === "object-erase"}
-          onClick={() => onDrawToolChange("object-erase")}
+          onClick={() => {
+            setPenOpen(false);
+            onDrawToolChange("object-erase");
+          }}
         >
           <MousePointerClick className="w-[17px] h-[17px]" />
         </ToolBtn>
       </ToolGroup>
 
       {drawTool === "pen" && (
-        <>
-          <ToolSep />
-          <ToolGroup>
-            <ToolMuted>Size</ToolMuted>
+        <ToolPopover
+          open={penOpen}
+          onClose={() => setPenOpen(false)}
+          anchorEl={penBtnRef.current}
+          title="Pen / text color"
+        >
+          <div className="flex items-center gap-1 mb-3">
             {PEN_SIZES.map((s) => (
               <ToolChip
                 key={s.id}
@@ -140,25 +158,19 @@ export function SketchToolbar({
                 {s.label}
               </ToolChip>
             ))}
+          </div>
+          <ColorSwatchGrid>
             {PEN_COLORS.map((c) => (
-              <button
+              <ColorSwatch
                 key={c.id}
-                type="button"
-                className={`w-5 h-5 rounded-full border-2 hover:scale-110 transition-transform ${
-                  penColor === c.color
-                    ? "border-[var(--accent)] scale-110"
-                    : c.id === "white"
-                      ? "border-[var(--border)]"
-                      : "border-transparent"
-                }`}
-                style={{ background: c.color }}
-                title={c.label}
-                aria-pressed={penColor === c.color}
+                color={c.color}
+                label={c.label}
+                selected={penColor === c.color}
                 onClick={() => onPenColorChange(c.color)}
               />
             ))}
-          </ToolGroup>
-        </>
+          </ColorSwatchGrid>
+        </ToolPopover>
       )}
 
       <ToolSep />

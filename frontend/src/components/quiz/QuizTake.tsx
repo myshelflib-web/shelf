@@ -8,6 +8,7 @@ import { useQuizProctor, type QuizProctorReason } from "@/hooks/useQuizProctor";
 import { QuizProctorGate } from "./QuizProctorGate";
 import { QuizQuestionCard } from "./QuizQuestionCard";
 import { QuizTakeChrome } from "./QuizTakeChrome";
+import { emitQuizStarted } from "@/lib/shelfEvents";
 
 function isProctored(quiz: Quiz): boolean {
   return quiz.proctored !== false;
@@ -31,6 +32,14 @@ export function QuizTake({
   const saveTimer = useRef<number | null>(null);
   const beginningRef = useRef(false);
   const q = quiz.questions[index];
+
+  useEffect(() => {
+    emitQuizStarted();
+    document.documentElement.dataset.shelfQuizTaking = "";
+    return () => {
+      delete document.documentElement.dataset.shelfQuizTaking;
+    };
+  }, []);
 
   useEffect(() => {
     return () => {

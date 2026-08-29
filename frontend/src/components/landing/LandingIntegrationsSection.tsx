@@ -5,11 +5,11 @@ import { RevealOnScroll } from "@/components/RevealOnScroll";
 const INTEGRATIONS = [
   {
     icon: Send,
-    title: "Telegram PDF import",
-    body: "Forward coaching PDFs from Telegram to the Shelf bot. Files land in your library with the same reader, highlights, and Study AI as in-app uploads.",
+    title: "Telegram import & send",
+    body: "Forward coaching PDFs from Telegram to the Shelf bot, then send a library PDF back from Share. Same reader, highlights, and Study AI as in-app uploads.",
     href: "/features/telegram-pdf-import",
     blogHref: "/blog/telegram-save-pdfs",
-    cta: "Telegram import guide",
+    cta: "Telegram PDF guide",
   },
   {
     icon: Music,
@@ -22,7 +22,7 @@ const INTEGRATIONS = [
   {
     icon: Share2,
     title: "Document sharing",
-    body: "Share pages with classmates by email — view or edit access, Shared with me in the sidebar, and save an independent copy to your library.",
+    body: "Share pages with classmates by email — view or edit access, Shared with me in the sidebar, and send a PDF back to Telegram from Share.",
     href: "/features/document-sharing",
     blogHref: "/blog/share-study-documents",
     cta: "Sharing guide",
@@ -45,9 +45,9 @@ export function LandingIntegrationsSection() {
             </h2>
           </div>
           <p className="landing-value-copy">
-            Shelf meets you where files and focus already live. Import from chat,
-            play focus audio beside the PDF, and share pages without losing your
-            private highlights.
+            Shelf meets you where files and focus already live. Import from
+            Telegram, send a PDF back, play focus audio beside the reader, and
+            share pages without losing your private highlights.
           </p>
         </div>
       </RevealOnScroll>

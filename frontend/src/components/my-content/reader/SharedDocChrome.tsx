@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Share2 } from "lucide-react";
+import clsx from "clsx";
+import { Crop, Share2, Sparkles, Star, Trash2 } from "lucide-react";
 import type { PageAccessInfo } from "@/types";
+import { FullscreenButton } from "@/components/FullscreenButton";
+import { withShortcut } from "@/lib/hotkeys";
 
 export function AccessDeniedState() {
   return (
@@ -68,5 +71,114 @@ export function ShareChromeButton({ onClick }: { onClick: () => void }) {
       <Share2 className="w-3.5 h-3.5" />
       Share
     </button>
+  );
+}
+
+export function StarChromeButton({
+  starred,
+  onClick,
+}: {
+  starred: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={clsx(
+        "p-2 rounded-lg",
+        starred
+          ? "text-amber-400"
+          : "text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+      )}
+      title={withShortcut(starred ? "Remove star" : "Star this page", "*")}
+      aria-label={starred ? "Remove star" : "Star this page"}
+      aria-pressed={starred}
+    >
+      <Star className={clsx("w-4 h-4", starred && "fill-amber-400")} />
+    </button>
+  );
+}
+
+export function DocumentChromeActions({
+  isFullscreen,
+  fsAiOpen,
+  onToggleFsAi,
+  onToggleFullscreen,
+  showClip,
+  htmlClip,
+  onToggleClip,
+  showShare,
+  onShare,
+  starred,
+  onToggleStar,
+  showDelete,
+  onDelete,
+}: {
+  isFullscreen: boolean;
+  fsAiOpen: boolean;
+  onToggleFsAi: () => void;
+  onToggleFullscreen: () => void;
+  showClip: boolean;
+  htmlClip: boolean;
+  onToggleClip: () => void;
+  showShare: boolean;
+  onShare: () => void;
+  starred: boolean;
+  onToggleStar: () => void;
+  showDelete: boolean;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-end gap-0.5 shrink-0 justify-self-end">
+      {isFullscreen && (
+        <button
+          type="button"
+          className={`p-2 rounded-lg ${
+            fsAiOpen
+              ? "bg-[var(--accent-light)] text-[var(--accent)]"
+              : "text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+          }`}
+          title={
+            fsAiOpen
+              ? "Hide Study AI"
+              : "Open Study AI beside this document"
+          }
+          aria-label={fsAiOpen ? "Hide Study AI" : "Show Study AI"}
+          aria-pressed={fsAiOpen}
+          onClick={onToggleFsAi}
+        >
+          <Sparkles className="w-4 h-4" />
+        </button>
+      )}
+      <FullscreenButton
+        isFullscreen={isFullscreen}
+        onToggle={onToggleFullscreen}
+      />
+      {showClip && (
+        <button
+          type="button"
+          className={`p-2 rounded-lg ${htmlClip ? "bg-[var(--accent-light)] text-[var(--accent)]" : "text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]"}`}
+          title="Clip a region of the page as an image"
+          aria-label="Clip region"
+          onClick={onToggleClip}
+        >
+          <Crop className="w-4 h-4" />
+        </button>
+      )}
+      {showShare && <ShareChromeButton onClick={onShare} />}
+      <StarChromeButton starred={starred} onClick={onToggleStar} />
+      {showDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-500"
+          title="Delete this page permanently"
+          aria-label="Delete page"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+    </div>
   );
 }

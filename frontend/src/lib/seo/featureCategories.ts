@@ -23,7 +23,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
     id: "integrations",
     label: "Integrations",
     description:
-      "Import PDFs from Telegram, play Spotify beside your reader, and share documents with classmates.",
+      "Import PDFs from Telegram and send them back, play Spotify beside your reader, and share documents with classmates.",
   },
   {
     id: "platform",

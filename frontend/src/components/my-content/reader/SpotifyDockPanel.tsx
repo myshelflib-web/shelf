@@ -15,6 +15,7 @@ import {
   setNotebookSpotifyUrl,
   setSpotifyUrl,
 } from "@/lib/spotifyPrefs";
+import { SHELF_QUIZ_STARTED } from "@/lib/shelfEvents";
 
 function SpotifyMark({ className }: { className?: string }) {
   return (
@@ -124,6 +125,15 @@ export function SpotifyDockPanel({
     setDraft("");
     onMinimize();
   };
+
+  useEffect(() => {
+    const onQuiz = () => {
+      setActiveUrl("");
+      onMinimize();
+    };
+    window.addEventListener(SHELF_QUIZ_STARTED, onQuiz);
+    return () => window.removeEventListener(SHELF_QUIZ_STARTED, onQuiz);
+  }, [onMinimize]);
 
   const focusLabel =
     target?.kind === "playlist"

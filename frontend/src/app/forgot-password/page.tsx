@@ -6,8 +6,13 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { ShelfLogo } from "@/components/ShelfLogo";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { OtpDigitInput } from "@/components/OtpDigitInput";
+import { isValidEmailFormat } from "@/lib/email";
+import {
+  otpResendLabel,
+  useOtpResendCooldown,
+} from "@/hooks/useOtpResendCooldown";
 
 type Step = "email" | "reset";
 
@@ -21,23 +26,34 @@ function ForgotPasswordForm() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const { remaining, coolingDown, start } = useOtpResendCooldown();
 
   const sendCode = async () => {
+    if (step === "reset" && coolingDown) return;
     setError("");
     setMessage("");
     if (!email.trim()) {
       setError("Enter your email address");
       return;
     }
-    setLoading(true);
+    if (!isValidEmailFormat(email)) {
+      setError("Enter a valid email address");
+      return;
+    }
+    setSendingOtp(true);
     try {
       const res = await api.auth.sendPasswordResetOtp(email.trim());
       setMessage(res.message);
       setStep("reset");
+      start();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not send code");
+      if (err instanceof ApiError && err.retryAfterSec) {
+        start(err.retryAfterSec);
+      }
     } finally {
-      setLoading(false);
+      setSendingOtp(false);
     }
   };
 
@@ -113,10 +129,10 @@ function ForgotPasswordForm() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={sendingOtp}
               className="w-full py-2.5 rounded-lg bg-[var(--accent)] text-white font-medium hover:bg-[var(--accent-hover)] transition disabled:opacity-50"
             >
-              {loading ? "Sending…" : "Send reset code"}
+              {sendingOtp ? "Sending…" : "Send reset code"}
             </button>
           </form>
         ) : (
@@ -128,16 +144,16 @@ function ForgotPasswordForm() {
               <OtpDigitInput
                 value={otp}
                 onChange={setOtp}
-                disabled={loading}
+                disabled={loading || sendingOtp}
                 autoFocus
               />
               <button
                 type="button"
                 onClick={() => void sendCode()}
-                disabled={loading}
-                className="mt-2 text-sm text-[var(--accent)] hover:underline disabled:opacity-50"
+                disabled={loading || sendingOtp || coolingDown}
+                className="mt-2 text-sm text-[var(--accent)] hover:underline disabled:opacity-50 disabled:no-underline"
               >
-                Resend code
+                {otpResendLabel(sendingOtp, remaining)}
               </button>
             </div>
 

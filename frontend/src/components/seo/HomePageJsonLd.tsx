@@ -22,6 +22,11 @@ const FAQ = [
       "Yes. Connect the Shelf Telegram bot from Settings, then forward PDFs from chats or channels. Files appear in your library with the same reader, highlights, and Study AI as in-app uploads.",
   },
   {
+    question: "Can I send PDFs back to Telegram?",
+    answer:
+      "Yes. Share on a page includes Send to Telegram. The PDF arrives in your Shelf bot chat (up to ~50 MB) so you can forward it into a study group. You can also enable Anyone with link and use Share link in Telegram.",
+  },
+  {
     question: "Can I listen to Spotify while reading?",
     answer:
       "Yes. Paste a Spotify track, playlist, or podcast URL into the reader focus-audio dock. Playback continues when you hide the panel or enter document fullscreen.",
@@ -59,7 +64,7 @@ export function HomePageJsonLd() {
       { name: "Study AI", url: `${siteUrl}/features/study-ai` },
       { name: "Exam-style quiz", url: `${siteUrl}/quiz` },
       { name: "Study planner", url: `${siteUrl}/features/planner-calendar` },
-      { name: "Telegram PDF import", url: `${siteUrl}/features/telegram-pdf-import` },
+      { name: "Telegram import and send", url: `${siteUrl}/features/telegram-pdf-import` },
       { name: "Spotify focus audio", url: `${siteUrl}/features/spotify-focus-audio` },
       { name: "Free Learn curriculum", url: `${siteUrl}/learn` },
       { name: "Document sharing", url: `${siteUrl}/features/document-sharing` },
