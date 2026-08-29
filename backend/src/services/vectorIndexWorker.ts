@@ -1,19 +1,28 @@
 import prisma from "../utils/prisma.js";
-import { INDEX_CONTENT_VERSION, indexUserPage } from "./libraryIndex.js";
+import {
+  INDEX_CONTENT_VERSION,
+  INDEX_LEASE_PREFIX,
+  indexUserPage,
+} from "./libraryIndex.js";
+import { isFreshIndexLease } from "./libraryIndexText.js";
 import { isVectorConfigured } from "./vectorStore.js";
 import { logger, errorFields } from "../utils/logger.js";
 import { isTransientError, withRetry } from "../utils/retry.js";
 import { TimeoutError, withTimeout } from "../utils/timeout.js";
 
 const DEFAULT_INTERVAL_MS = 120_000;
-/** Keep at 1 on Gemini free tier — shares embed quota with Study AI (Standard/Deep). */
+/** Keep at 1 on small Render instances — PDF OCR + embed of two pages OOMs 512MB. */
 const DEFAULT_BATCH_SIZE = 1;
+const MAX_BATCH_SIZE = 1;
 const DEFAULT_PAGE_TIMEOUT_MS = 120_000;
 const DEFAULT_BATCH_TIMEOUT_MS = 300_000;
 const DEFAULT_STUCK_MS = 360_000;
 const DEFAULT_PAGE_ATTEMPTS = 3;
+const DEFAULT_START_DELAY_MS = 120_000;
+const DEFAULT_LEASE_MS = 15 * 60 * 1000;
 
 let timer: ReturnType<typeof setInterval> | null = null;
+let startTimer: ReturnType<typeof setTimeout> | null = null;
 let running = false;
 let runStartedAt = 0;
 let pauseUntil = 0;
@@ -28,6 +37,21 @@ function envNum(name: string, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+function batchLimit(requested?: number): number {
+  const configured = requested ?? envNum("VECTOR_INDEX_BATCH_SIZE", DEFAULT_BATCH_SIZE);
+  if (configured > MAX_BATCH_SIZE) {
+    logger.warn("vector_worker.batch_capped", {
+      configured,
+      cap: MAX_BATCH_SIZE,
+    });
+  }
+  return Math.min(configured, MAX_BATCH_SIZE);
+}
+
+function leaseTtlMs(): number {
+  return envNum("VECTOR_INDEX_LEASE_MS", DEFAULT_LEASE_MS);
+}
+
 function isRateLimitError(err: unknown): boolean {
   const message = err instanceof Error ? err.message : String(err);
   return /rate limited|quota exceeded|\b429\b/i.test(message);
@@ -38,6 +62,13 @@ function rateLimitWaitSec(err: unknown): number {
   const retryMatch = message.match(/retry in ([0-9.]+)\s*s/i);
   if (retryMatch) return Math.min(120, Math.ceil(Number(retryMatch[1]) + 2));
   return 60;
+}
+
+function isFreshLeaseRow(hash: string, updatedAt: Date): boolean {
+  return (
+    hash.startsWith(INDEX_LEASE_PREFIX) &&
+    isFreshIndexLease(updatedAt, Date.now(), leaseTtlMs())
+  );
 }
 
 export async function findPagesNeedingIndex(batchSize: number): Promise<string[]> {
@@ -53,6 +84,24 @@ export async function findPagesNeedingIndex(batchSize: number): Promise<string[]
 
   let remaining = batchSize - neverIndexed.length;
   const taken = new Set(neverIndexed.map((p) => p.id));
+  const leaseCutoff = new Date(Date.now() - leaseTtlMs());
+
+  const expiredLeases = await prisma.pageVectorIndex.findMany({
+    where: {
+      page: { status: "PUBLISHED" },
+      contentHash: { startsWith: INDEX_LEASE_PREFIX },
+      updatedAt: { lt: leaseCutoff },
+      pageId: { notIn: [...taken] },
+    },
+    select: { pageId: true },
+    orderBy: { updatedAt: "asc" },
+    take: remaining,
+  });
+  for (const row of expiredLeases) taken.add(row.pageId);
+  remaining = batchSize - taken.size;
+  if (remaining <= 0) {
+    return [...neverIndexed.map((p) => p.id), ...expiredLeases.map((r) => r.pageId)];
+  }
 
   // Refresh rows indexed before INDEX_CONTENT_VERSION (e.g. title-only v2).
   const outdated = await prisma.pageVectorIndex.findMany({
@@ -79,7 +128,7 @@ export async function findPagesNeedingIndex(batchSize: number): Promise<string[]
           select: {
             id: true,
             updatedAt: true,
-            vectorIndex: { select: { updatedAt: true } },
+            vectorIndex: { select: { updatedAt: true, contentHash: true } },
           },
           orderBy: { updatedAt: "asc" },
           take: remaining * 10,
@@ -87,11 +136,22 @@ export async function findPagesNeedingIndex(batchSize: number): Promise<string[]
       : [];
 
   const stale = maybeStale
-    .filter((p) => p.vectorIndex && p.updatedAt > p.vectorIndex.updatedAt)
+    .filter((p) => {
+      if (!p.vectorIndex) return false;
+      if (isFreshLeaseRow(p.vectorIndex.contentHash, p.vectorIndex.updatedAt)) {
+        return false;
+      }
+      return p.updatedAt > p.vectorIndex.updatedAt;
+    })
     .slice(0, remaining)
     .map((p) => p.id);
 
-  return [...neverIndexed.map((p) => p.id), ...outdated.map((p) => p.pageId), ...stale];
+  return [
+    ...neverIndexed.map((p) => p.id),
+    ...expiredLeases.map((r) => r.pageId),
+    ...outdated.map((r) => r.pageId),
+    ...stale,
+  ];
 }
 
 async function indexPageWithReliability(pageId: string): Promise<void> {
@@ -128,7 +188,7 @@ export async function runVectorIndexBatch(batchSize?: number): Promise<number> {
     return 0;
   }
 
-  const limit = batchSize ?? envNum("VECTOR_INDEX_BATCH_SIZE", DEFAULT_BATCH_SIZE);
+  const limit = batchLimit(batchSize);
   const batchTimeoutMs = envNum("VECTOR_INDEX_BATCH_TIMEOUT_MS", DEFAULT_BATCH_TIMEOUT_MS);
 
   const pageIds = await withTimeout(
@@ -239,25 +299,34 @@ async function tick(): Promise<void> {
 export function startVectorIndexWorker(): void {
   if (!isVectorConfigured()) return;
   if (process.env.VECTOR_INDEX_WORKER === "false") return;
-  if (timer) return;
+  if (timer || startTimer) return;
 
   const intervalMs = envNum("VECTOR_INDEX_WORKER_INTERVAL_MS", DEFAULT_INTERVAL_MS);
+  const startDelayMs = envNum("VECTOR_INDEX_START_DELAY_MS", DEFAULT_START_DELAY_MS);
 
   logger.info("vector_worker.started", {
     intervalMs,
-    batchSize: envNum("VECTOR_INDEX_BATCH_SIZE", DEFAULT_BATCH_SIZE),
+    startDelayMs,
+    batchSize: batchLimit(),
     pageTimeoutMs: envNum("VECTOR_INDEX_PAGE_TIMEOUT_MS", DEFAULT_PAGE_TIMEOUT_MS),
     batchTimeoutMs: envNum("VECTOR_INDEX_BATCH_TIMEOUT_MS", DEFAULT_BATCH_TIMEOUT_MS),
     stuckMs: envNum("VECTOR_INDEX_STUCK_MS", DEFAULT_STUCK_MS),
   });
 
-  void tick();
-  timer = setInterval(() => {
+  startTimer = setTimeout(() => {
+    startTimer = null;
     void tick();
-  }, intervalMs);
+    timer = setInterval(() => {
+      void tick();
+    }, intervalMs);
+  }, startDelayMs);
 }
 
 export function stopVectorIndexWorker(): void {
+  if (startTimer) {
+    clearTimeout(startTimer);
+    startTimer = null;
+  }
   if (timer) {
     clearInterval(timer);
     timer = null;

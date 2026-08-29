@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assembleIndexText } from "./libraryIndexText.js";
+import { assembleIndexText, isIndexableTextKey } from "./libraryIndexText.js";
 
 describe("assembleIndexText", () => {
   it("indexes catalog metadata even when the file body is title-only", () => {
@@ -27,5 +27,13 @@ describe("assembleIndexText", () => {
     expect(text).toContain("Content:");
     expect(text).toContain("Union List");
     expect(text).toContain("Note: revise");
+  });
+});
+
+describe("isIndexableTextKey", () => {
+  it("refuses PDF object keys so the indexer never buffers source.pdf", () => {
+    expect(isIndexableTextKey("users/a/_file/p/content.html")).toBe(true);
+    expect(isIndexableTextKey("users/a/_file/p/source.pdf")).toBe(false);
+    expect(isIndexableTextKey("notes.pdf")).toBe(false);
   });
 });

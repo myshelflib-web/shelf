@@ -19,6 +19,14 @@ import { errorFields, logger } from "../utils/logger.js";
 const s3 = createS3Client();
 const browserS3 = createS3Client(browserS3Endpoint());
 
+function isMissingObject(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const name = "name" in err ? String((err as { name: string }).name) : "";
+  const http = (err as { $metadata?: { httpStatusCode?: number } }).$metadata
+    ?.httpStatusCode;
+  return name === "NoSuchKey" || name === "NotFound" || http === 404;
+}
+
 /** Single bucket for all doc folders (PDF + HTML). Falls back to legacy env vars. */
 export function getS3Bucket(): string {
   return (
@@ -101,7 +109,11 @@ export async function getFromS3(
       op: "get",
       ok: false,
     });
-    logger.error("s3.get.failed", { key, bucket, ...errorFields(err) });
+    if (isMissingObject(err)) {
+      logger.debug("s3.get.miss", { key, bucket });
+    } else {
+      logger.error("s3.get.failed", { key, bucket, ...errorFields(err) });
+    }
     throw err;
   }
 }
@@ -139,7 +151,11 @@ export async function getObjectBuffer(
       op: "get",
       ok: false,
     });
-    logger.error("s3.get_buffer.failed", { key, bucket, ...errorFields(err) });
+    if (isMissingObject(err)) {
+      logger.debug("s3.get_buffer.miss", { key, bucket });
+    } else {
+      logger.error("s3.get_buffer.failed", { key, bucket, ...errorFields(err) });
+    }
     throw err;
   }
 }
@@ -175,7 +191,11 @@ export async function headObjectMeta(
       op: "head",
       ok: false,
     });
-    logger.error("s3.head.failed", { key, bucket, ...errorFields(err) });
+    if (isMissingObject(err)) {
+      logger.debug("s3.head.miss", { key, bucket });
+    } else {
+      logger.error("s3.head.failed", { key, bucket, ...errorFields(err) });
+    }
     throw err;
   }
 }

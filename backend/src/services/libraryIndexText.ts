@@ -7,6 +7,21 @@ import { isThinPageText } from "../utils/pageAskContext.js";
 /** Bump when extract/assemble logic changes so the worker refreshes old rows. */
 export const INDEX_CONTENT_VERSION = "v3";
 
+/** Written before embed so an OOM skip-loop does not retry the same page. */
+export const INDEX_LEASE_PREFIX = `${INDEX_CONTENT_VERSION}:lease:`;
+
+export function isIndexLeaseHash(hash: string): boolean {
+  return hash.startsWith(INDEX_LEASE_PREFIX);
+}
+
+export function isFreshIndexLease(
+  updatedAt: Date,
+  now = Date.now(),
+  ttlMs = 15 * 60 * 1000
+): boolean {
+  return now - updatedAt.getTime() < ttlMs;
+}
+
 export type IndexHighlight = { text: string; note: string | null };
 
 export function assembleIndexText(opts: {
@@ -46,12 +61,17 @@ export function assembleIndexText(opts: {
   return lines.join("\n");
 }
 
+export function isIndexableTextKey(key: string): boolean {
+  return Boolean(key) && !/\.pdf$/i.test(key);
+}
+
 async function loadS3Text(key: string): Promise<string> {
+  if (!isIndexableTextKey(key)) return "";
   try {
     const raw = await getFromS3(key);
     if (!raw) return "";
     const trimmed = raw.trim();
-    if (!trimmed) return "";
+    if (!trimmed || trimmed.startsWith("%PDF")) return "";
     if (
       trimmed.startsWith("<") ||
       /<\/?[a-z][\s\S]*>/i.test(trimmed.slice(0, 400))
@@ -88,6 +108,7 @@ export async function extractPageBody(page: {
   }
 
   for (const key of keys) {
+    if (!isIndexableTextKey(key)) continue;
     const text = await loadS3Text(key);
     if (text) return text;
   }

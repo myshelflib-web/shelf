@@ -13,7 +13,10 @@ import {
   embeddingApiKey,
 } from "./llmConfig.js";
 
-const MAX_OCR_BYTES = Number(process.env.PDF_OCR_MAX_BYTES ?? 8 * 1024 * 1024);
+export function pdfOcrMaxBytes(): number {
+  const n = Number(process.env.PDF_OCR_MAX_BYTES ?? 8 * 1024 * 1024);
+  return Number.isFinite(n) && n > 0 ? n : 8 * 1024 * 1024;
+}
 
 export function pdfOcrEnabled(): boolean {
   return process.env.PDF_OCR !== "false";
@@ -26,7 +29,7 @@ function ocrKey(): string | undefined {
 /** Transcribe a scanned / image PDF when pdf.js left little text. */
 export async function ocrPdfBuffer(pdf: Buffer): Promise<string | null> {
   if (!pdfOcrEnabled()) return null;
-  if (pdf.length < 80 || pdf.length > MAX_OCR_BYTES) return null;
+  if (pdf.length < 80 || pdf.length > pdfOcrMaxBytes()) return null;
   const key = ocrKey();
   if (!key) return null;
   if (!chatModel().toLowerCase().includes("gemini") && !isGeminiBaseUrl(llmBaseUrl())) {

@@ -21,11 +21,11 @@ jobs:
       - name: Resolve backend URL
         id: url
         env:
-          BACKEND_URL: ${{ vars.RENDER_BACKEND_URL || vars.NEXT_PUBLIC_API_URL }}
-          PROCESSOR_URL: ${{ vars.RENDER_PROCESSOR_URL }}
+          BACKEND_URL: ${{ vars.RENDER_BACKEND_URL || vars.NEXT_PUBLIC_API_URL || 'https://shelf-main-1.onrender.com' }}
+          PROCESSOR_URL: ${{ vars.RENDER_PROCESSOR_URL || 'https://shelf-processor-main.onrender.com' }}
         run: |
           if [ -z "$BACKEND_URL" ]; then
-            echo "::error::Set repo variable RENDER_BACKEND_URL (or NEXT_PUBLIC_API_URL) to your Render API origin, e.g. https://your-api.onrender.com"
+            echo "::error::Set repo variable RENDER_BACKEND_URL (or NEXT_PUBLIC_API_URL) to your Render API origin, e.g. https://shelf-main-1.onrender.com"
             exit 1
           fi
           # Strip trailing slash
