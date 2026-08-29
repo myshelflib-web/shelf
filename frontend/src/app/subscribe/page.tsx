@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/Header";
@@ -23,7 +23,7 @@ declare global {
   }
 }
 
-type BillingChoice = "ONCE" | "MONTHLY" | "YEARLY";
+type BillingChoice = "MONTHLY" | "YEARLY";
 
 export default function SubscribePage() {
   return (
@@ -58,13 +58,6 @@ function SubscribePageInner() {
   } | null>(null);
   const [billing, setBilling] = useState<BillingChoice>("YEARLY");
   const [couponCode, setCouponCode] = useState("");
-  const [applyCoins, setApplyCoins] = useState(true);
-  const [preview, setPreview] = useState<{
-    chargeAmount: number;
-    couponDiscount: number;
-    coinsApplied: number;
-    listAmount: number;
-  } | null>(null);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
   const [scriptLoaded, setScriptLoaded] = useState(false);
@@ -95,32 +88,6 @@ function SubscribePageInner() {
     document.body.appendChild(script);
   }, []);
 
-  const refreshPreview = useCallback(() => {
-    if (!user || billing !== "ONCE") {
-      setPreview(null);
-      return;
-    }
-    api.subscription
-      .preview({
-        interval: "ONCE",
-        couponCode: couponCode.trim() || undefined,
-        applyCoins,
-      })
-      .then((p) =>
-        setPreview({
-          chargeAmount: p.chargeAmount,
-          couponDiscount: p.couponDiscount,
-          coinsApplied: p.coinsApplied,
-          listAmount: p.listAmount,
-        })
-      )
-      .catch(() => setPreview(null));
-  }, [user, billing, couponCode, applyCoins]);
-
-  useEffect(() => {
-    refreshPreview();
-  }, [refreshPreview]);
-
   const finishSuccess = async () => {
     await refreshUser();
     router.push("/my-content");
@@ -140,78 +107,26 @@ function SubscribePageInner() {
         throw new Error("Payment gateway failed to load");
       }
 
-      if (billing === "MONTHLY" || billing === "YEARLY") {
-        const sub = await api.subscription.createSubscription({
-          interval: billing,
-          couponCode: couponCode.trim() || undefined,
-          affiliateCode: affiliateCode ?? undefined,
-        });
-        const rzp = new window.Razorpay({
-          key: sub.keyId,
-          subscription_id: sub.subscriptionId,
-          name: sub.name,
-          description: sub.description,
-          prefill: sub.prefill,
-          theme: { color: "#6b8cae" },
-          handler: async (response: {
-            razorpay_payment_id: string;
-            razorpay_subscription_id: string;
-            razorpay_signature: string;
-          }) => {
-            try {
-              await api.subscription.verifySubscription({
-                subscriptionId: response.razorpay_subscription_id,
-                paymentId: response.razorpay_payment_id,
-                signature: response.razorpay_signature,
-              });
-              await finishSuccess();
-            } catch (err) {
-              setError(
-                err instanceof Error ? err.message : "Payment verification failed"
-              );
-            } finally {
-              setPaying(false);
-            }
-          },
-          modal: { ondismiss: () => setPaying(false) },
-        });
-        rzp.open();
-        return;
-      }
-
-      const order = await api.subscription.createOrder({
+      const sub = await api.subscription.createSubscription({
+        interval: billing,
         couponCode: couponCode.trim() || undefined,
         affiliateCode: affiliateCode ?? undefined,
-        applyCoins,
       });
-
-      if (order.freeActivation) {
-        await finishSuccess();
-        setPaying(false);
-        return;
-      }
-
-      if (!order.orderId || !order.keyId) {
-        throw new Error("Could not start payment");
-      }
-
       const rzp = new window.Razorpay({
-        key: order.keyId,
-        amount: order.amount,
-        currency: order.currency,
-        name: order.name,
-        description: order.description,
-        order_id: order.orderId,
-        prefill: order.prefill,
+        key: sub.keyId,
+        subscription_id: sub.subscriptionId,
+        name: sub.name,
+        description: sub.description,
+        prefill: sub.prefill,
         theme: { color: "#6b8cae" },
         handler: async (response: {
-          razorpay_order_id: string;
           razorpay_payment_id: string;
+          razorpay_subscription_id: string;
           razorpay_signature: string;
         }) => {
           try {
-            await api.subscription.verify({
-              orderId: response.razorpay_order_id,
+            await api.subscription.verifySubscription({
+              subscriptionId: response.razorpay_subscription_id,
               paymentId: response.razorpay_payment_id,
               signature: response.razorpay_signature,
             });
@@ -226,7 +141,6 @@ function SubscribePageInner() {
         },
         modal: { ondismiss: () => setPaying(false) },
       });
-
       rzp.open();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start payment");
@@ -235,23 +149,15 @@ function SubscribePageInner() {
   };
 
   const plans = status?.plans;
-  const oncePrice = plans?.once.priceInr ?? status?.priceInr ?? SHELF_PLANS.premium.priceInr;
+  const yearlyFallback =
+    plans?.yearly.priceInr ??
+    plans?.once.priceInr ??
+    status?.priceInr ??
+    SHELF_PLANS.premium.priceInr;
   const monthlyPrice = plans?.monthly.priceInr ?? PRICING_FALLBACK.monthlyInr;
-  const yearlyPrice = plans?.yearly.priceInr ?? oncePrice;
-  const displayPrice =
-    billing === "MONTHLY"
-      ? monthlyPrice
-      : billing === "YEARLY"
-        ? yearlyPrice
-        : preview
-          ? preview.chargeAmount / 100
-          : oncePrice;
-  const periodLabel =
-    billing === "MONTHLY"
-      ? "month"
-      : billing === "YEARLY"
-        ? "year"
-        : `${status?.planDays ?? SHELF_PLANS.premium.planDays} days`;
+  const yearlyPrice = yearlyFallback;
+  const displayPrice = billing === "MONTHLY" ? monthlyPrice : yearlyPrice;
+  const periodLabel = billing === "MONTHLY" ? "month" : "year";
   const isPremium = status?.isPremium ?? user?.plan === "PREMIUM";
   const coinBalance = status?.coinBalance ?? user?.coinBalance ?? 0;
 
@@ -347,7 +253,6 @@ function SubscribePageInner() {
                   [
                     ["MONTHLY", "Monthly"],
                     ["YEARLY", "Yearly"],
-                    ["ONCE", "One-time"],
                   ] as const
                 ).map(([id, label]) => (
                   <button
@@ -365,22 +270,13 @@ function SubscribePageInner() {
                 ))}
               </div>
               <div className="mb-4">
-                <span className="text-3xl font-bold">
-                  ₹{Number(displayPrice).toFixed(displayPrice % 1 ? 2 : 0)}
-                </span>
+                <span className="text-3xl font-bold">₹{displayPrice}</span>
                 <span className="text-[var(--text-muted)] text-sm ml-1">
                   / {periodLabel}
                 </span>
-                {billing !== "ONCE" && (
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                    UPI Autopay mandate — cancel anytime from Settings later.
-                  </p>
-                )}
-                {billing === "ONCE" && (
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                    Single checkout — no auto-renew. Coupons &amp; coins apply.
-                  </p>
-                )}
+                <p className="text-[11px] text-[var(--text-muted)] mt-1">
+                  UPI Autopay — cancel anytime from Settings later.
+                </p>
               </div>
               <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">
                 {SHELF_PLANS.premium.description}
@@ -401,34 +297,10 @@ function SubscribePageInner() {
                     <input
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      onBlur={refreshPreview}
                       placeholder="Optional"
                       className="mt-1 w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] font-mono"
                     />
                   </label>
-                  {billing === "ONCE" && coinBalance > 0 && (
-                    <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                      <input
-                        type="checkbox"
-                        checked={applyCoins}
-                        onChange={(e) => setApplyCoins(e.target.checked)}
-                      />
-                      Apply coin credit ({formatCoinsAsInr(coinBalance)})
-                    </label>
-                  )}
-                  {preview &&
-                    billing === "ONCE" &&
-                    (preview.couponDiscount > 0 || preview.coinsApplied > 0) && (
-                      <p className="text-[11px] text-[var(--text-muted)]">
-                        List ₹{(preview.listAmount / 100).toFixed(0)}
-                        {preview.couponDiscount > 0
-                          ? ` − coupon ₹${(preview.couponDiscount / 100).toFixed(2)}`
-                          : ""}
-                        {preview.coinsApplied > 0
-                          ? ` − coins ₹${(preview.coinsApplied / 100).toFixed(2)}`
-                          : ""}
-                      </p>
-                    )}
                   {affiliateCode && (
                     <p className="text-[11px] text-[var(--text-muted)]">
                       Referral: {affiliateCode}
@@ -464,9 +336,9 @@ function SubscribePageInner() {
           </div>
 
           <p className="text-xs text-center text-[var(--text-muted)]">
-            {SHELF_PLANS.page.footnote} Secure payment via Razorpay. One-time or UPI
-            Autopay (monthly/yearly). Share your affiliate link from Settings to earn
-            coin credit.
+            {SHELF_PLANS.page.footnote} Secure payment via Razorpay UPI Autopay
+            (monthly or yearly). Share your affiliate link from Settings to earn coin
+            credit.
           </p>
         </div>
       </main>
