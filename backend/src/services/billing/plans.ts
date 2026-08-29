@@ -17,9 +17,9 @@ function envInt(name: string, fallback: number): number {
 
 /** One-time / yearly list prices — monthly & yearly recurring use separate env. */
 export function getBillingPlans(): Record<PlanInterval, BillingPlan> {
-  const onceAmount = envInt("SUBSCRIPTION_AMOUNT_PAISE", 99900);
+  const onceAmount = envInt("SUBSCRIPTION_AMOUNT_PAISE", 129900);
   const onceDays = envInt("SUBSCRIPTION_DAYS", 365);
-  const monthlyAmount = envInt("SUBSCRIPTION_MONTHLY_AMOUNT_PAISE", 9900);
+  const monthlyAmount = envInt("SUBSCRIPTION_MONTHLY_AMOUNT_PAISE", 14900);
   const yearlyAmount = envInt("SUBSCRIPTION_YEARLY_AMOUNT_PAISE", onceAmount);
 
   return {

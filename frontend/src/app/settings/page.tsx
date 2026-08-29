@@ -153,8 +153,8 @@ export default function SettingsPage() {
             <h2 className="text-sm font-semibold">Plan usage</h2>
             <p className="text-xs text-[var(--text-muted)]">
               {user.plan === "PREMIUM" || user.role === "ADMIN"
-                ? "Your paid plan limits."
-                : "Free plan limits — upgrade for more."}
+                ? "Your Premium allowance."
+                : "Free plan allowance — upgrade for expanded library and AI."}
             </p>
             <UsageMeter
               label="Upload storage"
@@ -168,7 +168,7 @@ export default function SettingsPage() {
             />
             {!(user.plan === "PREMIUM" || user.role === "ADMIN") && (
               <Link href="/subscribe" className="text-sm text-[var(--accent)] inline-block">
-                Upgrade for more storage and tokens
+                Upgrade to Premium
               </Link>
             )}
           </section>

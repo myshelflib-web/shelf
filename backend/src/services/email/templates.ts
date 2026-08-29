@@ -88,8 +88,8 @@ ${bulletList([
   "Ask Study AI questions grounded in your own library",
 ])}
 ${detailCard([
-  { label: "Plan", value: "Free — 100 MB storage" },
-  { label: "Study AI", value: "50k tokens / month" },
+  { label: "Plan", value: "Free" },
+  { label: "Includes", value: "Library, reader, Study AI, quiz & planner" },
   { label: "Next step", value: "Add your first PDF or note" },
 ])}
 ${blogLinksHtml(WELCOME_BLOG_LINKS, "Guides to get started")}
@@ -134,10 +134,10 @@ ${detailCard([
 ])}
 ${sectionLabel("Premium includes")}
 ${bulletList([
-  "1 GB storage for PDFs and notes",
-  "1 million Study AI tokens per month",
-  "10,000 indexed library chunks for deeper search",
-  "300 chat messages per Study AI thread",
+  "Expanded library for full subjects & coaching sets",
+  "Higher Study AI usage with Standard & Deep modes",
+  "Longer threads and more syllabus context docs",
+  "Deeper search across a larger indexed library",
 ])}
 ${blogLinksHtml(PREMIUM_BLOG_LINKS, "Make the most of Premium")}
 <p style="margin: 0; color: #9b9ba0; font-size: 14px;">Thank you for supporting Shelf — it means a lot to us.</p>`,

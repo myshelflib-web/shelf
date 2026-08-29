@@ -26,7 +26,7 @@ slug: "study-ai",
     ],
     paragraphs: [
       "Generic chatbots answer from the internet. Shelf Study AI answers from your coaching PDFs, marked notes, and papers — the material you actually revise.",
-      "Free accounts get 50,000 tokens per month; Premium expands to 1 million with deeper indexing and longer chat threads.",
+      "Free includes Study AI for everyday questions. Premium adds higher usage, Standard & Deep modes, and more headroom for large libraries.",
     ],
     relatedBlogSlug: "study-ai-ask-from-your-pdfs",
     ctaHref: "/login?next=/study-ai",

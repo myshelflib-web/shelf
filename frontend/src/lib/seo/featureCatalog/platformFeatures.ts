@@ -117,23 +117,23 @@ slug: "pwa-offline",
 {
     slug: "shelf-premium",
     category: "platform",
-    title: "Shelf Premium — 1 GB Storage & 1M Study AI Tokens | Shelf",
+    title: "Shelf Premium — Expanded Library & Study AI | Shelf",
     metaDescription:
-      "Upgrade to Shelf Premium: 1 GB upload storage, 1 million Study AI tokens per month, Standard & Deep modes, 10k vector chunks, and longer chat threads. Razorpay UPI.",
+      "Upgrade to Shelf Premium for a larger personal library, heavier daily Study AI use, Standard & Deep answer modes, longer threads, and deeper search. Razorpay UPI.",
     keywords: [
       "study app premium India",
       "AI study subscription",
       "PDF library premium",
       "Shelf Premium pricing",
     ],
-    headline: "More space and deeper AI",
+    headline: "More room for serious study",
     subhead:
-      "Premium expands storage to 1 GB, Study AI to 1M tokens/month, indexing to 10k chunks, and unlocks Standard & Deep answer modes.",
+      "Premium is for students who keep a large PDF library and use Study AI every day — more storage headroom, deeper AI, and advanced answer modes.",
     bullets: [
-      "1 GB upload storage (10× free)",
-      "1,000,000 Study AI tokens per month",
-      "10,000 indexed vector chunks",
-      "300 chat messages per thread",
+      "Expanded library for full subjects & coaching sets",
+      "Higher Study AI usage for daily workflows",
+      "Standard & Deep answer modes for long PDFs",
+      "Longer threads and more syllabus context docs",
       "Coupons, affiliate coins, and UPI Autopay",
     ],
     paragraphs: [

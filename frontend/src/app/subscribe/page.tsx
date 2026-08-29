@@ -5,15 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { MarketingFooter } from "@/components/MarketingFooter";
+import { SubscribePremiumCard } from "@/components/subscribe/SubscribePremiumCard";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
-import { SHELF_PLANS } from "@/lib/plans";
+import { SHELF_PLANS, PRICING_FALLBACK } from "@/lib/plans";
 import {
   captureAffiliateRefFromSearch,
   formatCoinsAsInr,
   getStoredAffiliateRef,
 } from "@/lib/affiliateRef";
-import { Check, Sparkles, Loader2 } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 
 declare global {
   interface Window {
@@ -56,7 +57,6 @@ function SubscribePageInner() {
     };
     recurring?: { interval: string; cancelAtPeriodEnd: boolean } | null;
   } | null>(null);
-  const [billing, setBilling] = useState<BillingChoice>("ONCE");
   const [couponCode, setCouponCode] = useState("");
   const [applyCoins, setApplyCoins] = useState(true);
   const [preview, setPreview] = useState<{
@@ -65,7 +65,7 @@ function SubscribePageInner() {
     coinsApplied: number;
     listAmount: number;
   } | null>(null);
-  const [paying, setPaying] = useState(false);
+  const [payingInterval, setPayingInterval] = useState<BillingChoice | null>(null);
   const [error, setError] = useState("");
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [affiliateCode, setAffiliateCode] = useState<string | null>(null);
@@ -96,7 +96,7 @@ function SubscribePageInner() {
   }, []);
 
   const refreshPreview = useCallback(() => {
-    if (!user || billing !== "ONCE") {
+    if (!user) {
       setPreview(null);
       return;
     }
@@ -115,7 +115,7 @@ function SubscribePageInner() {
         })
       )
       .catch(() => setPreview(null));
-  }, [user, billing, couponCode, applyCoins]);
+  }, [user, couponCode, applyCoins]);
 
   useEffect(() => {
     refreshPreview();
@@ -126,14 +126,14 @@ function SubscribePageInner() {
     router.push("/my-content");
   };
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (billing: BillingChoice) => {
     if (!user) {
       router.push("/login");
       return;
     }
 
     setError("");
-    setPaying(true);
+    setPayingInterval(billing);
 
     try {
       if (!window.Razorpay) {
@@ -170,10 +170,10 @@ function SubscribePageInner() {
                 err instanceof Error ? err.message : "Payment verification failed"
               );
             } finally {
-              setPaying(false);
+              setPayingInterval(null);
             }
           },
-          modal: { ondismiss: () => setPaying(false) },
+          modal: { ondismiss: () => setPayingInterval(null) },
         });
         rzp.open();
         return;
@@ -187,7 +187,7 @@ function SubscribePageInner() {
 
       if (order.freeActivation) {
         await finishSuccess();
-        setPaying(false);
+        setPayingInterval(null);
         return;
       }
 
@@ -221,50 +221,82 @@ function SubscribePageInner() {
               err instanceof Error ? err.message : "Payment verification failed"
             );
           } finally {
-            setPaying(false);
+            setPayingInterval(null);
           }
         },
-        modal: { ondismiss: () => setPaying(false) },
+        modal: { ondismiss: () => setPayingInterval(null) },
       });
 
       rzp.open();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not start payment");
-      setPaying(false);
+      setPayingInterval(null);
     }
   };
 
   const plans = status?.plans;
   const oncePrice = plans?.once.priceInr ?? status?.priceInr ?? SHELF_PLANS.premium.priceInr;
-  const monthlyPrice = plans?.monthly.priceInr ?? 99;
+  const monthlyPrice = plans?.monthly.priceInr ?? PRICING_FALLBACK.monthlyInr;
   const yearlyPrice = plans?.yearly.priceInr ?? oncePrice;
-  const displayPrice =
-    billing === "MONTHLY"
-      ? monthlyPrice
-      : billing === "YEARLY"
-        ? yearlyPrice
-        : preview
-          ? preview.chargeAmount / 100
-          : oncePrice;
-  const periodLabel =
-    billing === "MONTHLY" ? "month" : billing === "YEARLY" ? "year" : `${status?.planDays ?? SHELF_PLANS.premium.planDays} days`;
+  const onceDisplayPrice = preview ? preview.chargeAmount / 100 : oncePrice;
   const isPremium = status?.isPremium ?? user?.plan === "PREMIUM";
   const coinBalance = status?.coinBalance ?? user?.coinBalance ?? 0;
+  const premiumFeatures = SHELF_PLANS.premium.features;
+  const billingMeta = SHELF_PLANS.premium.billingOptions;
+
+  const paidCards: {
+    interval: BillingChoice;
+    name: string;
+    tagline: string;
+    priceLabel: string;
+    periodLabel: string;
+    note: string;
+    badge?: string;
+    buttonLabel: string;
+  }[] = [
+    {
+      interval: "MONTHLY",
+      name: billingMeta.monthly.name,
+      tagline: billingMeta.monthly.tagline,
+      priceLabel: `₹${monthlyPrice}`,
+      periodLabel: billingMeta.monthly.periodLabel,
+      note: billingMeta.monthly.note,
+      buttonLabel: user ? (isPremium ? "Switch to monthly" : "Subscribe monthly") : "Sign in to subscribe",
+    },
+    {
+      interval: "YEARLY",
+      name: billingMeta.yearly.name,
+      tagline: billingMeta.yearly.tagline,
+      priceLabel: `₹${yearlyPrice}`,
+      periodLabel: billingMeta.yearly.periodLabel,
+      note: billingMeta.yearly.note,
+      badge: billingMeta.yearly.badge,
+      buttonLabel: user ? (isPremium ? "Switch to yearly" : "Subscribe yearly") : "Sign in to subscribe",
+    },
+    {
+      interval: "ONCE",
+      name: billingMeta.once.name,
+      tagline: billingMeta.once.tagline,
+      priceLabel: `₹${Number(onceDisplayPrice).toFixed(onceDisplayPrice % 1 ? 2 : 0)}`,
+      periodLabel: `${status?.planDays ?? SHELF_PLANS.premium.planDays} days`,
+      note: billingMeta.once.note,
+      buttonLabel: user ? (isPremium ? "Extend one year" : "Pay once") : "Sign in to upgrade",
+    },
+  ];
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
 
       <main className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-12 sm:py-16">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <div className="text-center mb-10">
             <Sparkles className="w-9 h-9 text-[var(--accent)] mx-auto mb-3" />
             <h1 className="text-3xl sm:text-4xl font-bold mb-3 tracking-tight">
-              Plans
+              {SHELF_PLANS.page.title}
             </h1>
             <p className="text-[var(--text-secondary)] max-w-xl mx-auto">
-              Start free with your own library. Upgrade when you need more storage
-              and Study AI tokens.
+              {SHELF_PLANS.page.intro}
             </p>
           </div>
 
@@ -282,182 +314,123 @@ function SubscribePageInner() {
                   : ""}
               </p>
               <p className="text-xs text-[var(--text-muted)] mt-2">
-                You can renew below to extend your access. Coin credit:{" "}
-                {formatCoinsAsInr(coinBalance)}.
+                Renew or switch billing below. Coin credit: {formatCoinsAsInr(coinBalance)}.
               </p>
             </div>
           )}
 
-          <div className="grid md:grid-cols-2 gap-5 mb-8">
-            <div className="p-6 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] flex flex-col">
-              <p className="text-sm font-medium text-[var(--text-muted)] mb-1">
-                {SHELF_PLANS.free.name}
-              </p>
-              <div className="mb-4">
-                <span className="text-3xl font-bold">{SHELF_PLANS.free.priceLabel}</span>
-                <span className="text-[var(--text-muted)] text-sm ml-1">
-                  {SHELF_PLANS.free.periodLabel}
-                </span>
-              </div>
-              <ul className="space-y-2.5 mb-6 flex-1">
-                <li className="text-sm text-[var(--text-secondary)]">
-                  <span className="font-medium text-[var(--text-primary)]">Storage:</span>{" "}
-                  {SHELF_PLANS.free.storageLabel}
-                </li>
-                <li className="text-sm text-[var(--text-secondary)]">
-                  <span className="font-medium text-[var(--text-primary)]">Study AI:</span>{" "}
-                  {SHELF_PLANS.free.tokensLabel}
-                </li>
-                {SHELF_PLANS.free.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <Check className="w-4 h-4 text-[var(--accent)] shrink-0 mt-0.5" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              {user && !isPremium ? (
-                <p className="text-sm text-center text-[var(--text-muted)] py-2.5 rounded-full border border-[var(--border)]">
-                  Your current plan
-                </p>
-              ) : (
-                <Link
-                  href={user ? "/my-content" : "/login"}
-                  className="btn-secondary w-full justify-center"
-                >
-                  {user ? "Continue on Free" : "Sign in to start free"}
-                </Link>
-              )}
+          <div className="mb-8 p-6 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
+            <p className="text-sm font-medium text-[var(--text-muted)] mb-1">
+              {SHELF_PLANS.free.name}
+            </p>
+            <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">
+              {SHELF_PLANS.free.tagline}
+            </p>
+            <div className="mb-3">
+              <span className="text-3xl font-bold">{SHELF_PLANS.free.priceLabel}</span>
+              <span className="text-[var(--text-muted)] text-sm ml-1">
+                {SHELF_PLANS.free.periodLabel}
+              </span>
             </div>
-
-            <div className="p-6 rounded-xl border border-[var(--accent)] bg-[var(--bg-secondary)] flex flex-col relative overflow-hidden">
-              <div className="absolute top-0 right-0 px-3 py-1 text-[11px] font-medium bg-[var(--accent)] text-white rounded-bl-lg">
-                Popular
-              </div>
-              <p className="text-sm font-medium text-[var(--accent)] mb-1">
-                {SHELF_PLANS.premium.name}
+            <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-5 max-w-3xl">
+              {SHELF_PLANS.free.description}
+            </p>
+            <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-2.5 mb-6">
+              {SHELF_PLANS.free.features.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm">
+                  <Check className="w-4 h-4 text-[var(--accent)] shrink-0 mt-0.5" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            {user && !isPremium ? (
+              <p className="text-sm text-center text-[var(--text-muted)] py-2.5 rounded-full border border-[var(--border)] max-w-xs">
+                Your current plan
               </p>
-              <div className="mb-3 flex gap-1 p-1 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)]">
-                {(
-                  [
-                    ["ONCE", "One-time"],
-                    ["MONTHLY", "Monthly"],
-                    ["YEARLY", "Yearly"],
-                  ] as const
-                ).map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setBilling(id)}
-                    className={`flex-1 text-xs py-1.5 rounded-md transition ${
-                      billing === id
-                        ? "bg-[var(--accent)] text-white"
-                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <div className="mb-4">
-                <span className="text-3xl font-bold">
-                  ₹{Number(displayPrice).toFixed(displayPrice % 1 ? 2 : 0)}
-                </span>
-                <span className="text-[var(--text-muted)] text-sm ml-1">
-                  / {periodLabel}
-                </span>
-                {billing !== "ONCE" && (
-                  <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                    UPI Autopay mandate — cancel anytime from Settings later.
-                  </p>
-                )}
-              </div>
-              <ul className="space-y-2.5 mb-4 flex-1">
-                <li className="text-sm text-[var(--text-secondary)]">
-                  <span className="font-medium text-[var(--text-primary)]">Storage:</span>{" "}
-                  {SHELF_PLANS.premium.storageLabel}
-                </li>
-                <li className="text-sm text-[var(--text-secondary)]">
-                  <span className="font-medium text-[var(--text-primary)]">Study AI:</span>{" "}
-                  {SHELF_PLANS.premium.tokensLabel}
-                </li>
-                {SHELF_PLANS.premium.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <Check className="w-4 h-4 text-[var(--accent)] shrink-0 mt-0.5" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              {user && (
-                <div className="space-y-2 mb-4">
-                  <label className="block text-xs text-[var(--text-muted)]">
-                    Coupon code
-                    <input
-                      value={couponCode}
-                      onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                      onBlur={refreshPreview}
-                      placeholder="Optional"
-                      className="mt-1 w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] font-mono"
-                    />
-                  </label>
-                  {billing === "ONCE" && coinBalance > 0 && (
-                    <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-                      <input
-                        type="checkbox"
-                        checked={applyCoins}
-                        onChange={(e) => setApplyCoins(e.target.checked)}
-                      />
-                      Apply coin credit ({formatCoinsAsInr(coinBalance)})
-                    </label>
-                  )}
-                  {preview && billing === "ONCE" && (preview.couponDiscount > 0 || preview.coinsApplied > 0) && (
-                    <p className="text-[11px] text-[var(--text-muted)]">
-                      List ₹{(preview.listAmount / 100).toFixed(0)}
-                      {preview.couponDiscount > 0
-                        ? ` − coupon ₹${(preview.couponDiscount / 100).toFixed(2)}`
-                        : ""}
-                      {preview.coinsApplied > 0
-                        ? ` − coins ₹${(preview.coinsApplied / 100).toFixed(2)}`
-                        : ""}
-                    </p>
-                  )}
-                  {affiliateCode && (
-                    <p className="text-[11px] text-[var(--text-muted)]">
-                      Referral: {affiliateCode}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {error && (
-                <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg mb-3">
-                  {error}
-                </p>
-              )}
-
-              <button
-                type="button"
-                onClick={handleSubscribe}
-                disabled={paying || (user ? !scriptLoaded : false)}
-                className="btn-primary w-full justify-center disabled:opacity-50"
+            ) : (
+              <Link
+                href={user ? "/my-content" : "/login"}
+                className="btn-secondary inline-flex justify-center max-w-xs"
               >
-                {paying ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing…
-                  </>
-                ) : user ? (
-                  isPremium ? "Extend Premium" : "Upgrade to Premium"
-                ) : (
-                  "Sign in to upgrade"
-                )}
-              </button>
-            </div>
+                {user ? "Continue on Free" : "Sign in to start free"}
+              </Link>
+            )}
           </div>
 
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold mb-1">{SHELF_PLANS.premium.name}</h2>
+            <p className="text-sm text-[var(--text-secondary)] max-w-3xl">
+              {SHELF_PLANS.premium.description}
+            </p>
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg mb-4">
+              {error}
+            </p>
+          )}
+
+          <div className="grid md:grid-cols-3 gap-5 mb-6">
+            {paidCards.map((card) => (
+              <SubscribePremiumCard
+                key={card.interval}
+                name={card.name}
+                tagline={card.tagline}
+                priceLabel={card.priceLabel}
+                periodLabel={card.periodLabel}
+                note={card.note}
+                badge={card.badge}
+                features={premiumFeatures}
+                buttonLabel={card.buttonLabel}
+                paying={payingInterval === card.interval}
+                disabled={payingInterval !== null || (user ? !scriptLoaded : false)}
+                onSubscribe={() => handleSubscribe(card.interval)}
+              />
+            ))}
+          </div>
+
+          {user && (
+            <div className="mb-6 p-4 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] space-y-2 max-w-xl">
+              <label className="block text-xs text-[var(--text-muted)]">
+                Coupon code (all paid plans)
+                <input
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                  onBlur={refreshPreview}
+                  placeholder="Optional"
+                  className="mt-1 w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] font-mono"
+                />
+              </label>
+              {coinBalance > 0 && (
+                <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
+                  <input
+                    type="checkbox"
+                    checked={applyCoins}
+                    onChange={(e) => setApplyCoins(e.target.checked)}
+                  />
+                  Apply coin credit on one-time plan ({formatCoinsAsInr(coinBalance)})
+                </label>
+              )}
+              {preview && (preview.couponDiscount > 0 || preview.coinsApplied > 0) && (
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  One-time list ₹{(preview.listAmount / 100).toFixed(0)}
+                  {preview.couponDiscount > 0
+                    ? ` − coupon ₹${(preview.couponDiscount / 100).toFixed(2)}`
+                    : ""}
+                  {preview.coinsApplied > 0
+                    ? ` − coins ₹${(preview.coinsApplied / 100).toFixed(2)}`
+                    : ""}
+                </p>
+              )}
+              {affiliateCode && (
+                <p className="text-[11px] text-[var(--text-muted)]">Referral: {affiliateCode}</p>
+              )}
+            </div>
+          )}
+
           <p className="text-xs text-center text-[var(--text-muted)]">
-            Secure payment via Razorpay. One-time or UPI Autopay (monthly/yearly).
-            Share your affiliate link from Settings to earn coin credit.
+            {SHELF_PLANS.page.footnote} Secure payment via Razorpay. Monthly and yearly use
+            UPI Autopay. Share your affiliate link from Settings to earn coin credit.
           </p>
         </div>
       </main>

@@ -8,7 +8,7 @@ interface PaywallBannerProps {
   priceInr?: number;
 }
 
-export function PaywallBanner({ previewPercent, priceInr = 999 }: PaywallBannerProps) {
+export function PaywallBanner({ previewPercent, priceInr = 1299 }: PaywallBannerProps) {
   return (
     <div className="mx-8 mb-6 -mt-2">
       <div className="relative rounded-xl border border-[var(--accent)]/30 bg-gradient-to-b from-[var(--accent-light)] to-[var(--bg-secondary)] p-6 text-center overflow-hidden">
