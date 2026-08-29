@@ -4,6 +4,7 @@ import prisma from "../utils/prisma.js";
 import {
   assertDeliverableEmail,
   createAndSendOtp,
+  EmailSendError,
   InvalidEmailError,
   normalizeEmail,
   OtpCooldownError,
@@ -33,6 +34,10 @@ function jsonOtpSendError(res: Response, err: unknown): boolean {
   }
   if (err instanceof OtpRateLimitError) {
     res.status(429).json({ error: err.message });
+    return true;
+  }
+  if (err instanceof EmailSendError) {
+    res.status(502).json({ error: err.message });
     return true;
   }
   return false;

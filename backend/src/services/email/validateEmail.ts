@@ -115,11 +115,14 @@ function isTransient(err: unknown): boolean {
 type MailLookup = "yes" | "no" | "unknown";
 
 async function lookupMxOrA(domain: string): Promise<MailLookup> {
+  let sawSuccessfulEmpty = false;
+
   try {
     const mx = await withTimeout(dns.resolveMx(domain), DNS_TIMEOUT_MS);
     const usable = mx.filter((row) => row.exchange && row.exchange !== ".");
     if (usable.length > 0) return "yes";
     if (mx.length > 0) return "no";
+    sawSuccessfulEmpty = true;
   } catch (err) {
     if (isTransient(err)) return "unknown";
     if (!isNoData(err)) return "unknown";
@@ -128,6 +131,7 @@ async function lookupMxOrA(domain: string): Promise<MailLookup> {
   try {
     const a = await withTimeout(dns.resolve4(domain), DNS_TIMEOUT_MS);
     if (a.length > 0) return "yes";
+    sawSuccessfulEmpty = true;
   } catch (err) {
     if (isTransient(err)) return "unknown";
     if (!isNoData(err)) return "unknown";
@@ -135,11 +139,30 @@ async function lookupMxOrA(domain: string): Promise<MailLookup> {
 
   try {
     const aaaa = await withTimeout(dns.resolve6(domain), DNS_TIMEOUT_MS);
-    return aaaa.length > 0 ? "yes" : "no";
+    if (aaaa.length > 0) return "yes";
+    sawSuccessfulEmpty = true;
   } catch (err) {
     if (isTransient(err)) return "unknown";
-    return "no";
+    if (!isNoData(err)) return "unknown";
   }
+
+  // getaddrinfo is more reliable than c-ares on Alpine/Docker (Render).
+  try {
+    const lookedUp = await withTimeout(dns.lookup(domain), DNS_TIMEOUT_MS);
+    if (lookedUp.address) return "yes";
+  } catch (err) {
+    if (sawSuccessfulEmpty) {
+      // Name existed for MX/A/AAAA but has no mail hosts.
+      return "no";
+    }
+    if (isTransient(err)) return "unknown";
+    if (!isNoData(err)) return "unknown";
+    // ENOTFOUND on every lookup can be NXDOMAIN *or* a cold-start DNS miss.
+    // Fail open so a flaky resolver cannot block real signups.
+    return "unknown";
+  }
+
+  return sawSuccessfulEmpty ? "no" : "unknown";
 }
 
 export async function domainCanReceiveMail(domain: string): Promise<boolean> {
@@ -149,7 +172,7 @@ export async function domainCanReceiveMail(domain: string): Promise<boolean> {
 
   const result = await lookupMxOrA(key);
   if (result === "unknown") {
-    // Transient DNS failure — don't block a real address or cache a miss.
+    // Transient / ambiguous DNS — don't block a real address or cache a miss.
     return true;
   }
 

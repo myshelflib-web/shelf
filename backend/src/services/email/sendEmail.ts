@@ -9,6 +9,34 @@ export type SendEmailInput = {
   text?: string;
 };
 
+export class EmailSendError extends Error {
+  constructor(message = "Could not send email. Please try again in a moment.") {
+    super(message);
+    this.name = "EmailSendError";
+  }
+}
+
+type ResendSendPayload = {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+  attachments?: Array<{
+    filename: string;
+    content: string;
+    contentId: string;
+    contentType: string;
+  }>;
+};
+
+async function sendViaResend(payload: ResendSendPayload): Promise<void> {
+  const { error } = await getResendClient().emails.send(payload);
+  if (error) {
+    throw new Error(error.message || "Resend send failed");
+  }
+}
+
 export async function sendEmail(input: SendEmailInput): Promise<void> {
   const from = getEmailFrom();
   if (!from || !isEmailConfigured()) {
@@ -20,30 +48,40 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
     return;
   }
 
-  try {
-    const logo = getEmailLogoAttachment();
-    const { error } = await getResendClient().emails.send({
-      from,
-      to: input.to,
-      subject: input.subject,
-      html: input.html,
-      ...(input.text ? { text: input.text } : {}),
-      ...(logo
-        ? {
-            attachments: [
-              {
-                filename: logo.filename,
-                content: logo.content,
-                contentId: logo.contentId,
-                contentType: logo.contentType,
-              },
-            ],
-          }
-        : {}),
-    });
+  const logo = getEmailLogoAttachment();
+  const base = {
+    from,
+    to: input.to,
+    subject: input.subject,
+    html: input.html,
+    ...(input.text ? { text: input.text } : {}),
+  };
 
-    if (error) {
-      throw new Error(error.message || "Resend send failed");
+  try {
+    try {
+      await sendViaResend({
+        ...base,
+        ...(logo
+          ? {
+              attachments: [
+                {
+                  filename: logo.filename,
+                  content: logo.content,
+                  contentId: logo.contentId,
+                  contentType: logo.contentType,
+                },
+              ],
+            }
+          : {}),
+      });
+    } catch (err) {
+      if (!logo) throw err;
+      logger.warn("email.retry_without_logo", {
+        to: input.to,
+        subject: input.subject,
+        ...errorFields(err),
+      });
+      await sendViaResend(base);
     }
 
     logger.info("email.sent", { to: input.to, subject: input.subject });
@@ -53,7 +91,7 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
       subject: input.subject,
       ...errorFields(err),
     });
-    throw err;
+    throw new EmailSendError();
   }
 }
 

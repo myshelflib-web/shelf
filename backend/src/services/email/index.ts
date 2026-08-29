@@ -1,4 +1,4 @@
-export { sendEmail, sendEmailInBackground } from "./sendEmail.js";
+export { sendEmail, sendEmailInBackground, EmailSendError } from "./sendEmail.js";
 export {
   createAndSendOtp,
   verifyOtp,
