@@ -5,7 +5,13 @@ import Link from "next/link";
 import { PersonalContentArea } from "@/components/my-content/PersonalContentArea";
 import { PdfViewer, type PdfViewerCommands } from "@/components/my-content/PdfViewer";
 import { EmbedViewer } from "@/components/my-content/EmbedViewer";
-import { api } from "@/lib/api";
+import { api, getStoredUser } from "@/lib/api";
+import {
+  AnalyticsEvents,
+  AnalyticsFirstTimeFlags,
+  track,
+  trackOncePerUser,
+} from "@/lib/analytics";
 import { captureVisibleSketchPage } from "@/lib/captureSketchPage";
 import { listHighlights } from "@/lib/offline/highlights";
 import { updatePageProgress } from "@/lib/offline/progress";
@@ -478,6 +484,27 @@ export function DocumentPane({
         setLiveReadPercent(loaded.readPercent);
         lastPersistedPercent.current = loaded.readPercent;
         pageIdRef.current = loaded.id;
+        if (!isPreloaded && scope.kind !== "learn") {
+          const contentType = loaded.contentType ?? "HTML";
+          track(AnalyticsEvents.readerOpened, {
+            contentType,
+            scopeKind: scope.kind,
+            pageId: loaded.id,
+          });
+          const userId = getStoredUser()?.id;
+          if (userId) {
+            trackOncePerUser(userId, AnalyticsFirstTimeFlags.pageOpened, AnalyticsEvents.firstPageOpened, {
+              contentType,
+              scopeKind: scope.kind,
+            });
+          }
+          if (page.status === "FAILED") {
+            track(AnalyticsEvents.pdfProcessingFailed, {
+              pageId: loaded.id,
+              contentType,
+            });
+          }
+        }
         const merged = pickNewerView(
           getTabViewState(currentHref),
           isPreloaded ? undefined : viewStateFromPage(page.view)

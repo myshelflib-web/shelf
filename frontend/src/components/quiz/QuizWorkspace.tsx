@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { LivelyLine } from "@/components/LivelyLine";
@@ -14,6 +14,7 @@ import { QuizHomeTabs } from "./QuizHomeTabs";
 import { QuizResults } from "./QuizResults";
 import { QuizSetup } from "./QuizSetup";
 import { QuizTake } from "./QuizTake";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 
 export function QuizWorkspace({
   quizId,
@@ -31,6 +32,7 @@ export function QuizWorkspace({
   const [error, setError] = useState("");
   const [retrying, setRetrying] = useState(false);
   const [proctorNotice, setProctorNotice] = useState<string | null>(null);
+  const failedTrackedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
@@ -80,6 +82,18 @@ export function QuizWorkspace({
     const id = window.setInterval(load, 1600);
     return () => window.clearInterval(id);
   }, [quizId, quiz?.status, load]);
+
+  useEffect(() => {
+    if (quiz?.status !== "FAILED" || !quiz.id) return;
+    if (failedTrackedRef.current === quiz.id) return;
+    failedTrackedRef.current = quiz.id;
+    track(AnalyticsEvents.quizGenerationFailed, {
+      quizId: quiz.id,
+      phase: "poll",
+      error: quiz.errorMessage ?? "unknown",
+      sourceKind: quiz.sourceKind,
+    });
+  }, [quiz]);
 
   if (authLoading || !user) {
     return (

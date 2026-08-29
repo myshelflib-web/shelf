@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Sparkles } from "lucide-react";
@@ -9,6 +9,7 @@ import { ShelfLogo } from "@/components/ShelfLogo";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 import { markOnboardingComplete } from "@/lib/onboarding";
 import { getReadingGoalMinutes, setReadingGoalMinutes } from "@/lib/readingStats";
 import { STUDY_GOAL_GROUPS, STUDY_GOAL_LABELS } from "@/lib/studyGoal";
@@ -35,8 +36,28 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
   const [studyGoal, setStudyGoal] = useState<StudyGoal>("GENERAL");
   const [readingGoalMin, setReadingGoalMin] = useState(() => getReadingGoalMinutes());
   const [saving, setSaving] = useState(false);
+  const completedRef = useRef(false);
 
   const firstName = user?.name?.trim().split(/\s+/)[0] ?? "there";
+
+  useEffect(() => {
+    track(AnalyticsEvents.onboardingStepViewed, {
+      step: STEPS[step] ?? String(step),
+      stepIndex: step,
+    });
+  }, [step]);
+
+  useEffect(() => {
+    const onLeave = () => {
+      if (completedRef.current || step === 0) return;
+      track(AnalyticsEvents.onboardingAbandoned, {
+        step: STEPS[step] ?? String(step),
+        stepIndex: step,
+      });
+    };
+    window.addEventListener("beforeunload", onLeave);
+    return () => window.removeEventListener("beforeunload", onLeave);
+  }, [step]);
 
   const finish = async (opts?: { saveOptional?: boolean }) => {
     if (!user) return;
@@ -50,9 +71,20 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
       }
       await refreshUser();
       markOnboardingComplete(user.id);
+      completedRef.current = true;
+      track(AnalyticsEvents.onboardingCompleted, {
+        studyGoal,
+        chosePremium: false,
+      });
       router.replace(nextPath);
     } catch {
       markOnboardingComplete(user.id);
+      completedRef.current = true;
+      track(AnalyticsEvents.onboardingCompleted, {
+        studyGoal,
+        chosePremium: false,
+        hadError: true,
+      });
       router.replace(nextPath);
     } finally {
       setSaving(false);
@@ -62,6 +94,11 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
   const skipAll = () => {
     if (!user || saving) return;
     markOnboardingComplete(user.id);
+    completedRef.current = true;
+    track(AnalyticsEvents.onboardingSkipped, {
+      step: STEPS[step] ?? String(step),
+      stepIndex: step,
+    });
     router.replace(nextPath);
   };
 
@@ -75,9 +112,20 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
       setReadingGoalMinutes(readingGoalMin);
       await refreshUser();
       markOnboardingComplete(user.id);
+      completedRef.current = true;
+      track(AnalyticsEvents.onboardingCompleted, {
+        studyGoal,
+        chosePremium: true,
+      });
       router.replace(`/subscribe?next=${encodeURIComponent(nextPath)}`);
     } catch {
       markOnboardingComplete(user.id);
+      completedRef.current = true;
+      track(AnalyticsEvents.onboardingCompleted, {
+        studyGoal,
+        chosePremium: true,
+        hadError: true,
+      });
       router.replace(`/subscribe?next=${encodeURIComponent(nextPath)}`);
     } finally {
       setSaving(false);

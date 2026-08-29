@@ -20,6 +20,7 @@ import {
 } from "@/lib/shelfEvents";
 import { SpotifyDockPanel } from "@/components/my-content/reader/SpotifyDockPanel";
 import { TelegramDockPanel } from "@/components/my-content/reader/TelegramDockPanel";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 
 const STORAGE_KEY = "shelf:focus-media";
 
@@ -97,6 +98,7 @@ export function FocusMediaProvider({ children }: { children: ReactNode }) {
   const openSpotify = useCallback(() => {
     setSpotifyOpen(true);
     setTelegramOpen(false);
+    track(AnalyticsEvents.spotifyDockOpened);
   }, []);
   const closeSpotify = useCallback(() => setSpotifyOpen(false), []);
   const openTelegram = useCallback(() => {

@@ -16,6 +16,7 @@ import { SHARE_CARD, type ShareCardFormat } from "@/lib/studyShare/cardTheme";
 import { getReadingStats } from "@/lib/readingStats";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 
 type StudyShareSheetProps = {
   open: boolean;
@@ -115,13 +116,18 @@ export function StudyShareSheet({ open, onClose }: StudyShareSheetProps) {
           filename,
         });
         if (!shared) await downloadShareCardBlob(blob, filename);
+        track(AnalyticsEvents.shareStreakExported, {
+          mode,
+          format,
+          streakDays: data.streak,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not share card");
       } finally {
         setBusy(false);
       }
     },
-    [affiliateCode, capture, data.streak, data.todayLabel, shareText]
+    [affiliateCode, capture, data.streak, data.todayLabel, format, shareText]
   );
 
   if (!open) return null;

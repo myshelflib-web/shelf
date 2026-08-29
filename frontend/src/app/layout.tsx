@@ -19,6 +19,7 @@ import { PwaRegister } from "@/components/PwaRegister";
 import { OfflineSyncProvider } from "@/components/OfflineSyncProvider";
 import { OfflineNotice } from "@/components/OfflineNotice";
 import { CompactPortraitSync } from "@/components/CompactPortraitSync";
+import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 import { rootLayoutMetadata } from "@/lib/seo/metadata";
 
 const sans = Plus_Jakarta_Sans({
@@ -66,6 +67,7 @@ export default function RootLayout({
           <GoogleAuthProvider clientId={googleClientId}>
             <TelegramAuthProvider botUsername={telegramBotUsername}>
               <AuthProvider>
+                <AnalyticsProvider>
                 <HotkeysProvider>
                   <FocusMediaProvider>
                   <AppDialogProvider>
@@ -79,6 +81,7 @@ export default function RootLayout({
                   </AppDialogProvider>
                   </FocusMediaProvider>
                 </HotkeysProvider>
+                </AnalyticsProvider>
               </AuthProvider>
             </TelegramAuthProvider>
           </GoogleAuthProvider>

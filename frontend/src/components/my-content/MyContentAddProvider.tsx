@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import { api, type UploadProgress, type UploadProgressHandler } from "@/lib/api";
+import { api, type UploadProgress, type UploadProgressHandler, getStoredUser } from "@/lib/api";
 import { shouldCompressUpload } from "@/lib/compressUploadFile";
 import { requireOnline } from "@/lib/offline/notice";
 import { getTopicGroups } from "@/lib/myContentTree";
@@ -28,6 +28,12 @@ import {
   emitContentChanged,
   emitOpenPage,
 } from "@/lib/contentEvents";
+import {
+  AnalyticsEvents,
+  AnalyticsFirstTimeFlags,
+  track,
+  trackOncePerUser,
+} from "@/lib/analytics";
 import { isReaderHref } from "@/lib/softNavigate";
 import { scopeFromHref } from "@/components/my-content/reader/types";
 import type { SketchTemplate } from "@/lib/sketchNotebook";
@@ -56,6 +62,42 @@ interface AddContextValue {
 }
 
 const AddContext = createContext<AddContextValue | null>(null);
+
+function trackUploadAnalytics(
+  phase: "started" | "completed" | "failed",
+  props: {
+    addMode: string;
+    contentType?: string;
+    error?: string;
+  }
+) {
+  const userId = getStoredUser()?.id;
+  if (phase === "failed") {
+    track(AnalyticsEvents.uploadError, {
+      addMode: props.addMode,
+      contentType: props.contentType,
+      error: props.error,
+    });
+    if (userId) {
+      trackOncePerUser(userId, AnalyticsFirstTimeFlags.uploadFailed, AnalyticsEvents.firstUploadFailed, {
+        addMode: props.addMode,
+        error: props.error,
+      });
+    }
+    return;
+  }
+  if (!userId) return;
+  if (phase === "started") {
+    trackOncePerUser(userId, AnalyticsFirstTimeFlags.uploadStarted, AnalyticsEvents.firstUploadStarted, {
+      addMode: props.addMode,
+    });
+    return;
+  }
+  trackOncePerUser(userId, AnalyticsFirstTimeFlags.uploadCompleted, AnalyticsEvents.firstUploadCompleted, {
+    addMode: props.addMode,
+    contentType: props.contentType,
+  });
+}
 
 export function useAddContent() {
   const ctx = useContext(AddContext);
@@ -256,6 +298,7 @@ export function MyContentAddProvider({
       setSubmitting(true);
       setMessage("");
       setBulkProgress({ done: 0, total: bulkFiles.length, label: "Starting…" });
+      trackUploadAnalytics("started", { addMode: "bulk" });
       try {
         const result = await submitBulkFolderImport({
           bulkFiles,
@@ -265,9 +308,17 @@ export function MyContentAddProvider({
           onProgress: setBulkProgress,
         });
         close();
-        if (result) openCreatedPage(result.href, result.page);
+        if (result) {
+          trackUploadAnalytics("completed", {
+            addMode: "bulk",
+            contentType: result.page.contentType,
+          });
+          openCreatedPage(result.href, result.page);
+        }
       } catch (err) {
-        setMessage(err instanceof Error ? err.message : "Folder import failed");
+        const message = err instanceof Error ? err.message : "Folder import failed";
+        setMessage(message);
+        trackUploadAnalytics("failed", { addMode: "bulk", error: message });
       } finally {
         setSubmitting(false);
         setBulkProgress(null);
@@ -279,8 +330,12 @@ export function MyContentAddProvider({
     if (!requireOnline("Add pages")) return;
     setSubmitting(true);
     setMessage("");
+    const isFileUpload = addMode === "file" && Boolean(uploadFile);
+    if (isFileUpload) {
+      trackUploadAnalytics("started", { addMode });
+    }
     try {
-      if (addMode === "file" && uploadFile) {
+      if (isFileUpload && uploadFile) {
         setUploadProgress({
           loaded: 0,
           total: uploadFile.size,
@@ -300,9 +355,21 @@ export function MyContentAddProvider({
         reportUploadProgress,
       });
       close();
+      if (isFileUpload) {
+        trackUploadAnalytics("completed", {
+          addMode,
+          contentType: page.contentType,
+        });
+      }
       openCreatedPage(href, page);
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Failed to add page");
+      const message = err instanceof Error ? err.message : "Failed to add page";
+      setMessage(message);
+      if (isFileUpload) {
+        trackUploadAnalytics("failed", { addMode, error: message });
+      } else {
+        track(AnalyticsEvents.uploadError, { addMode, error: message });
+      }
     } finally {
       setSubmitting(false);
       setUploadProgress(null);

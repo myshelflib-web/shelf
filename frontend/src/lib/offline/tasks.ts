@@ -15,6 +15,7 @@ import {
   removeOutbox,
 } from "./outbox";
 import { isOnline, dispatchOfflineSync } from "./network";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 import {
   masterTaskId,
   mergeTaskLists,
@@ -141,6 +142,11 @@ export async function createTask(data: TaskWriteInput): Promise<StudyTask> {
         recurUntil: data.recurUntil,
       });
       await putLocalTask(userId, toLocalTask(task));
+      track(AnalyticsEvents.plannerTaskCreated, {
+        kind: task.kind ?? "TASK",
+        hasDueAt: Boolean(task.dueAt),
+        hasHref: Boolean(task.href),
+      });
       return task;
     } catch (err) {
       if (!isNetworkError(err)) throw err;
@@ -167,6 +173,12 @@ export async function createTask(data: TaskWriteInput): Promise<StudyTask> {
   await putLocalTask(userId, task);
   await enqueueOutbox(userId, "task", "create", id, { ...data });
   dispatchOfflineSync();
+  track(AnalyticsEvents.plannerTaskCreated, {
+    kind: task.kind ?? "TASK",
+    hasDueAt: Boolean(task.dueAt),
+    hasHref: Boolean(task.href),
+    offline: true,
+  });
   return stripLocalMeta(task);
 }
 

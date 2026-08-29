@@ -9,6 +9,7 @@ import { enqueuePrompt, takeNextPrompt } from "@/lib/studyAiQueue";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { studyAiSendParts } from "@/lib/studyAiCommands";
 import type { StudyDepth } from "@/lib/studyDepth";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 
 export type StudyPanelTurn = {
   id: string;
@@ -196,6 +197,13 @@ export function useStudyPanelChat({
       setQuestion("");
       setAttachImage(undefined);
 
+      track(AnalyticsEvents.studyAiMessageSent, {
+        surface: "reader",
+        mode,
+        hasImage: Boolean(userImage),
+        hasSelection: Boolean(selection?.trim()),
+      });
+
       try {
         await api.study.askStream(
           {
@@ -261,7 +269,13 @@ export function useStudyPanelChat({
             );
           });
         } else {
-          setError(toUserStudyAiError(err));
+          const errMsg = toUserStudyAiError(err);
+          setError(errMsg);
+          track(AnalyticsEvents.studyAiStreamError, {
+            surface: "reader",
+            mode,
+            error: errMsg,
+          });
           setTurns((prev) =>
             prev.map((t) =>
               t.id === assistantId

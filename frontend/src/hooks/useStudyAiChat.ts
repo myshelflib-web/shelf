@@ -20,6 +20,7 @@ import {
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { studyAiSendParts } from "@/lib/studyAiCommands";
 import type { StudyDepth } from "@/lib/studyDepth";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 
 export function useStudyAiChat({
   threadId,
@@ -192,6 +193,12 @@ export function useStudyAiChat({
         },
       ]);
 
+      track(AnalyticsEvents.studyAiMessageSent, {
+        surface: "library",
+        hasImage: Boolean(image),
+        hasThread: Boolean(activeIdRef.current),
+      });
+
       try {
         let chatId = activeIdRef.current;
         if (!chatId) {
@@ -283,7 +290,12 @@ export function useStudyAiChat({
             );
           });
         } else {
-          setError(toUserStudyAiError(err));
+          const errMsg = toUserStudyAiError(err);
+          setError(errMsg);
+          track(AnalyticsEvents.studyAiStreamError, {
+            surface: "library",
+            error: errMsg,
+          });
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantTmpId

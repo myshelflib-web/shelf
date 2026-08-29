@@ -11,6 +11,13 @@ import {
 import { User } from "@/types";
 import { api, getStoredUser, clearAuth, isNetworkError } from "@/lib/api";
 import { bindAccountLocalState, clearAccountLocalState } from "@/lib/accountLocalState";
+import {
+  AnalyticsEvents,
+  identifyFromUser,
+  isFreshSignup,
+  resetAnalytics,
+  track,
+} from "@/lib/analytics";
 
 interface AuthContextType {
   user: User | null;
@@ -63,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(user));
     setUser(user);
+    identifyFromUser(user);
   }, []);
 
   const register = useCallback(
@@ -72,6 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
       setUser(user);
+      identifyFromUser(user);
+      track(AnalyticsEvents.signupCompleted, { method: "email" });
     },
     []
   );
@@ -82,6 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(user));
     setUser(user);
+    identifyFromUser(user);
+    if (isFreshSignup(user)) {
+      track(AnalyticsEvents.signupCompleted, { method: "google" });
+    }
   }, []);
 
   const loginWithTelegram = useCallback(async (payload: Record<string, unknown>) => {
@@ -90,10 +104,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(user));
     setUser(user);
+    identifyFromUser(user);
+    if (isFreshSignup(user)) {
+      track(AnalyticsEvents.signupCompleted, { method: "telegram" });
+    }
   }, []);
 
   const logout = useCallback(() => {
     setUser(null);
+    resetAnalytics();
     void clearAccountLocalState().finally(() => {
       window.location.replace("/login");
     });

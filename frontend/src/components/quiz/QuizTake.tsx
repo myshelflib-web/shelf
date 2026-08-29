@@ -9,6 +9,7 @@ import { QuizProctorGate } from "./QuizProctorGate";
 import { QuizQuestionCard } from "./QuizQuestionCard";
 import { QuizTakeChrome } from "./QuizTakeChrome";
 import { emitQuizStarted } from "@/lib/shelfEvents";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 
 function isProctored(quiz: Quiz): boolean {
   return quiz.proctored !== false;
@@ -93,6 +94,12 @@ export function QuizTake({
         release();
         await exit();
         onQuiz(next);
+        track(AnalyticsEvents.quizSubmitted, {
+          quizId: quiz.id,
+          endedReason: opts?.endedReason ?? "SUBMIT",
+          proctored,
+          questionCount: quiz.questions.length,
+        });
       } catch (err) {
         submittingRef.current = false;
         setError(err instanceof Error ? err.message : "Could not submit");
@@ -100,7 +107,7 @@ export function QuizTake({
         setBusy(false);
       }
     },
-    [quiz.id, onQuiz, release, exit]
+    [quiz.id, quiz.questions.length, proctored, onQuiz, release, exit]
   );
   submitRef.current = submit;
 

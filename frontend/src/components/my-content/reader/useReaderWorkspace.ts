@@ -15,6 +15,7 @@ import {
   writeOwnedWorkspace,
   PersonalPageReaderScope,
 } from "./types";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 
 function totalTabs(panes: ReaderPane[]): number {
   return panes.reduce((n, p) => n + p.tabs.length, 0);
@@ -500,6 +501,7 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
           // Would empty left — pull another tab from right if possible
           return prev;
         }
+        track(AnalyticsEvents.readerSplitEnabled, { action: "move_tab" });
         return {
           ...prev,
           focusedPaneId: right.id,
@@ -524,6 +526,7 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
       if (!leftTabs.length) return prev;
 
       const rightId = newPaneId();
+      track(AnalyticsEvents.readerSplitEnabled, { action: "new_pane" });
       return {
         ...prev,
         focusedPaneId: rightId,

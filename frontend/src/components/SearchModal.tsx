@@ -8,6 +8,7 @@ import { listSubjects, peekCachedLibrary } from "@/lib/offline/library";
 import { CircleLoader } from "@/components/CircleLoader";
 import { UserSubject, UserPageSummary } from "@/types";
 import { searchLibrary, LibrarySearchHit } from "@/lib/librarySearch";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 
 type Result = LibrarySearchHit & { kind: "PAGE" | "NOTEBOOK" };
 
@@ -42,6 +43,7 @@ export function SearchModal({
 
   useEffect(() => {
     if (!open) return;
+    track(AnalyticsEvents.searchOpened);
     setQuery("");
     setDebounced("");
     setActive(0);
@@ -101,6 +103,18 @@ export function SearchModal({
 
   const selected = results[active];
 
+  const openResult = useCallback(
+    (hit: Result) => {
+      track(AnalyticsEvents.searchResultClicked, {
+        kind: hit.kind,
+        hasQuery: Boolean(debounced),
+      });
+      router.push(hit.href);
+      onClose();
+    },
+    [debounced, onClose, router]
+  );
+
   const askAi = useCallback(async (text?: string) => {
     const q = (text ?? query).trim();
     if (!q || aiLoading) return;
@@ -135,8 +149,7 @@ export function SearchModal({
       if (e.key === "Enter") {
         e.preventDefault();
         if (selected) {
-          router.push(selected.href);
-          onClose();
+          openResult(selected);
         } else if (query.trim()) {
           void askAi();
         }
@@ -144,7 +157,7 @@ export function SearchModal({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, results.length, selected, router, query, askAi]);
+  }, [open, onClose, results.length, selected, query, askAi, openResult]);
 
   if (!open) return null;
 
@@ -226,10 +239,7 @@ export function SearchModal({
                       <button
                         type="button"
                         onMouseEnter={() => setActive(i)}
-                        onClick={() => {
-                          router.push(hit.href);
-                          onClose();
-                        }}
+                        onClick={() => openResult(hit)}
                         className={`no-focus-ring w-full text-left px-3.5 py-1.5 flex items-center gap-2.5 text-[13px] ${
                           i === active
                             ? "text-[var(--text-primary)] bg-[var(--bg-secondary)]"

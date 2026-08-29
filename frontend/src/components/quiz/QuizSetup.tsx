@@ -7,6 +7,7 @@ import { quizApi } from "@/lib/quiz/api";
 import type { QuizLaunch, QuizSourceKind } from "@/lib/quiz/types";
 import { DIFFICULTY_LABELS, TIME_OPTIONS, quizHref } from "@/lib/quiz/href";
 import { quizBtnPrimary, quizFieldClass } from "@/lib/quiz/ui";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import {
   QuizScopeFields,
@@ -107,9 +108,22 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
         sourceText: sourceKind === "UPLOAD" ? sourceText || null : null,
         file: sourceKind === "UPLOAD" ? file : null,
       });
+      track(AnalyticsEvents.quizGenerated, {
+        sourceKind,
+        difficulty,
+        mcqCount,
+        writtenCount,
+        proctored,
+      });
       router.push(quizHref(quiz.id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not start quiz");
+      const message = err instanceof Error ? err.message : "Could not start quiz";
+      setError(message);
+      track(AnalyticsEvents.quizGenerationFailed, {
+        sourceKind,
+        phase: "create",
+        error: message,
+      });
     } finally {
       setBusy(false);
     }

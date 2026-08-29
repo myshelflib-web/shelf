@@ -15,6 +15,7 @@ import {
 } from "./outbox";
 import { isOnline, dispatchOfflineSync } from "./network";
 import { mergeHighlightLists, stripHighlightMeta, toLocalHighlight } from "./highlightMerge";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 
 export type HighlightWriteInput = {
   userTopicId: string;
@@ -133,6 +134,10 @@ export async function createHighlight(data: HighlightWriteInput): Promise<UserCo
         position: data.position ?? undefined,
       });
       await putHighlight(toLocalHighlight(highlight, userId, data.userTopicId));
+      track(AnalyticsEvents.highlightCreated, {
+        kind: data.kind ?? "TEXT",
+        hasNote: Boolean(data.note?.trim()),
+      });
       return highlight;
     } catch (err) {
       if (!isNetworkError(err)) throw err;
@@ -160,6 +165,11 @@ export async function createHighlight(data: HighlightWriteInput): Promise<UserCo
   await putHighlight(highlight);
   await enqueueOutbox(userId, "highlight", "create", id, { ...data });
   dispatchOfflineSync();
+  track(AnalyticsEvents.highlightCreated, {
+    kind: data.kind ?? "TEXT",
+    hasNote: Boolean(data.note?.trim()),
+    offline: true,
+  });
   return stripHighlightMeta(highlight);
 }
 

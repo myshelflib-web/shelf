@@ -6,6 +6,7 @@ import {
   updateTask,
 } from "@/lib/offline/tasks";
 import { StudyTask } from "@/types";
+import { AnalyticsEvents, track } from "@/lib/analytics";
 
 function masterId(id: string) {
   return id.split("::")[0];
@@ -47,6 +48,12 @@ export function usePlannerTasks(from: Date, to: Date) {
     );
     try {
       await updateTask(masterId(task.id), { completed: next });
+      if (next) {
+        track(AnalyticsEvents.plannerTaskCompleted, {
+          kind: task.kind ?? "TASK",
+          hadHref: Boolean(task.href),
+        });
+      }
     } catch {
       setTasks((prev) =>
         prev.map((t) => (t.id === task.id ? { ...t, completed: !next } : t))
