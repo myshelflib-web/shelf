@@ -52,7 +52,7 @@ export interface AddTarget {
   /** Prefill the upload field (e.g. after a drag-and-drop). */
   file?: File;
   /** Open the page modal on a specific tab (upload / sketch / doc / URL / bulk). */
-  pageMode?: "file" | "bulk" | "sketch" | "doc" | "link";
+  pageMode?: "file" | "bulk" | "sketch" | "doc" | "link" | "youtube";
   /** Prefill bulk folder import. */
   bulkFiles?: File[];
 }
@@ -134,7 +134,9 @@ export function MyContentAddProvider({
     null
   );
   const [message, setMessage] = useState("");
-  const [addMode, setAddMode] = useState<"file" | "bulk" | "sketch" | "doc" | "link">("file");
+  const [addMode, setAddMode] = useState<
+    "file" | "bulk" | "sketch" | "doc" | "link" | "youtube"
+  >("file");
   const [pageLink, setPageLink] = useState("");
   const [sketchTemplate, setSketchTemplate] = useState<SketchTemplate>("ruled");
   const [sketchBg, setSketchBg] = useState("#ffffff");
@@ -326,7 +328,7 @@ export function MyContentAddProvider({
       }
       return;
     }
-    if (!pageTitle.trim()) return;
+    if (!pageTitle.trim() && addMode !== "youtube") return;
     if (!requireOnline("Add pages")) return;
     setSubmitting(true);
     setMessage("");

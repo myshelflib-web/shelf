@@ -54,10 +54,10 @@ export function HomePageClient() {
                 Your material. One reader, Study AI, planner, and quiz.
               </h1>
               <p className="landing-lead">
-                Upload PDFs, sketch notebooks, and doc pages into collections you
-                control. Read in tabs or split view, highlight as you go, ask Study
-                AI from your files, sit exam-style quizzes, and plan revision on one
-                calendar.
+                Upload PDFs, YouTube lectures, sketch notebooks, and doc pages
+                into collections you control. Read in tabs or split view, highlight
+                as you go, ask Study AI from your files, sit exam-style quizzes,
+                and plan revision on one calendar.
               </p>
               <div className="landing-hero-actions">
                 <Link href="/login" className="landing-btn landing-btn-primary">
@@ -117,8 +117,8 @@ export function HomePageClient() {
 
         <section className="landing-features-link">
           <Link href="/features">
-            See all features — reader workspace, Telegram import and send,
-            sharing, offline PWA, Premium &amp; more →
+            See all features — reader workspace, YouTube lectures, Telegram
+            import and send, sharing, offline PWA, Premium &amp; more →
           </Link>
         </section>
 

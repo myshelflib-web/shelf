@@ -12,13 +12,13 @@ const STEPS = [
   {
     icon: FileText,
     title: "Collect",
-    body: "Bring together PDFs, notes, links and coaching material that usually stay scattered — including Telegram forwards you can send back from Share.",
+    body: "Bring together PDFs, YouTube lectures, notes, links and coaching material that usually stay scattered — including Telegram forwards you can send back from Share.",
     mini: "One place for all your material",
   },
   {
     icon: FolderOpen,
     title: "Organize",
-    body: "Build collections and topics, add sketch notebooks and doc pages beside PDFs, and place pages at library or collection level.",
+    body: "Build collections and topics, add YouTube playlists, sketch notebooks and doc pages beside PDFs, and place pages at library or collection level.",
     mini: "PDFs, notebooks, and docs together",
   },
   {

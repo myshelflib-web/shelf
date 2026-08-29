@@ -5,10 +5,11 @@ export const personalStudyLibrary = buildPost(
     slug: "personal-study-library-collections",
     title: "Build a Personal Study Library with Collections and Topics",
     description:
-      "Organize PDFs and notes into collections, topics, and root-level pages on Shelf. A private study library you control — not a generic content feed.",
+      "Organize PDFs, YouTube lectures, and notes into collections, topics, and root-level pages on Shelf. A private study library you control — not a generic content feed.",
     excerpt:
       "Shelf is built around your material: collections act like notebooks, topics group related pages, and root-level pages sit beside collections for quick access.",
     publishedAt: "2026-01-15",
+    updatedAt: "2026-08-29",
     tags: ["library", "collections", "organization", "pdf"],
     readingMinutes: 6,
   },
@@ -16,7 +17,7 @@ export const personalStudyLibrary = buildPost(
     {
       heading: "Your material, your structure",
       paragraphs: [
-        "Most study apps treat you like a consumer of someone else's catalog. Shelf inverts that: after you sign in, /my-content becomes your home — a workspace for PDFs, typed notes, sketch pages, and imported documents you upload yourself.",
+        "Most study apps treat you like a consumer of someone else's catalog. Shelf inverts that: after you sign in, /my-content becomes your home — a workspace for PDFs, YouTube lectures, typed notes, sketch pages, and imported documents you bring yourself.",
         "Collections (sometimes called notebooks in the UI) are top-level folders. Inside a collection you can add topics — thematic groupings like \"Constitutional Law\" or \"Organic Chemistry Unit 3\" — and pages that hold the actual files.",
       ],
     },

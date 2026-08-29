@@ -22,7 +22,7 @@ describe("isClipNotePage", () => {
     expect(isClipNotePage(page("1", "Doc", "HTML"))).toBe(true);
     expect(isClipNotePage(page("2", "Sketch"))).toBe(true);
     expect(isClipNotePage(page("3", "Paper", "PDF"))).toBe(false);
-    expect(isClipNotePage(page("4", "Site", "LINK"))).toBe(false);
+    expect(isClipNotePage(page("5", "Lecture", "VIDEO"))).toBe(true);
   });
 });
 

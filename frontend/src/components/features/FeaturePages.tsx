@@ -114,9 +114,9 @@ export function FeaturesHub() {
               Every Shelf feature
             </h1>
             <p className="text-[var(--text-secondary)] leading-relaxed max-w-2xl mx-auto">
-              Granular guides to PDF libraries, Study AI, Quiz, Telegram import
-              and send, Spotify focus audio, sharing, planner, and more — for
-              students and professionals in India and beyond.
+              Granular guides to PDF libraries, YouTube lectures, Study AI, Quiz,
+              Telegram import and send, Spotify focus audio, sharing, planner,
+              and more — for students and professionals in India and beyond.
             </p>
           </RevealOnScroll>
         </section>

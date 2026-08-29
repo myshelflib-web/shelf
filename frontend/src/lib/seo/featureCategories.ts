@@ -5,7 +5,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
     id: "library",
     label: "Library & reader",
     description:
-      "Organize PDFs, highlight as you read, and work in a multi-tab reader workspace.",
+      "Organize PDFs, YouTube lectures, highlight as you read, and work in a multi-tab reader workspace.",
   },
   {
     id: "study-ai",
@@ -23,7 +23,7 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
     id: "integrations",
     label: "Integrations",
     description:
-      "Import PDFs from Telegram and send them back, play Spotify beside your reader, and share documents with classmates.",
+      "Import PDFs from Telegram and send them back, bring YouTube lectures into your library, play Spotify beside your reader, and share documents with classmates.",
   },
   {
     id: "platform",

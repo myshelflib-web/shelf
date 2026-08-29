@@ -200,6 +200,7 @@ enum UserContentType {
   TEXT
   DOCX
   LINK
+  VIDEO
 }
 
 enum HighlightKind {

@@ -98,7 +98,10 @@ export async function extractPageBody(
   },
   opts?: { ocr?: boolean }
 ): Promise<string> {
-  if (page.contentType === "LINK" && page.sourceUrl) {
+  if (
+    (page.contentType === "LINK" || page.contentType === "VIDEO") &&
+    page.sourceUrl
+  ) {
     const snap = page.contentUrl ? await loadS3Text(page.contentUrl) : "";
     return [page.title, page.sourceUrl, snap].filter(Boolean).join("\n");
   }

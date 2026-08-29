@@ -72,6 +72,8 @@ import {
   signDirectUpload,
   verifyDirectUpload,
 } from "../utils/directUpload.js";
+import { parseYoutubeUrl } from "../utils/youtubeUrl.js";
+import { createVideoPage } from "../services/youtubeImport.js";
 
 const router = Router();
 
@@ -389,6 +391,32 @@ async function handlePageCreate(
   const order = await nextPageOrder(parent.scope);
 
   if (sourceUrl) {
+    const youtube = parseYoutubeUrl(sourceUrl);
+    if (youtube?.kind === "playlist") {
+      res.status(400).json({
+        error: "Paste playlists under Add page → YouTube to import every lecture.",
+      });
+      return;
+    }
+    if (youtube?.kind === "video") {
+      try {
+        const page = await createVideoPage({
+          parent,
+          title: title.trim(),
+          videoId: youtube.videoId,
+          playlistId: youtube.playlistId,
+        });
+        res.status(201).json({ page });
+      } catch (err) {
+        if (err instanceof QuotaError) {
+          res.status(err.status).json({ error: err.message });
+          return;
+        }
+        throw err;
+      }
+      return;
+    }
+
     const page = await prisma.userTopic.create({
       data: {
         userId: parent.userId,

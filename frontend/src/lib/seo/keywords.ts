@@ -39,6 +39,7 @@ export const SEO_KEYWORDS = {
     "save Telegram PDF to library",
     "send PDF back to Telegram",
     "Spotify while reading PDF",
+    "YouTube lecture notes",
     "share PDF with classmates",
     "exam quiz from your notes",
   ],
@@ -153,6 +154,11 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "sync PDF reading progress",
     "cross device study app",
   ],
+  "youtube-lectures-in-your-library": [
+    "YouTube lecture notes",
+    "watch YouTube while taking notes",
+    "import YouTube playlist study",
+  ],
   "share-study-documents": [
     "share PDF with classmates",
     "collaborative study documents",
@@ -250,14 +256,15 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
 };
 
 export const HOME_TITLE =
-  "Shelf — Personal Study Library | PDF Highlights, Study AI & Planner";
+  "Shelf — Personal Study Library | PDFs, YouTube Lectures, Study AI & Planner";
 
 export const HOME_DESCRIPTION =
-  "Build a private study library: upload PDFs, highlight as you read, ask Study AI from your material, import from Telegram and send PDFs back, Spotify focus audio, share with classmates, exam-style quiz from your notes, and plan on one calendar. Browse free curriculum on Learn without sign-in.";
+  "Build a private study library: upload PDFs, bring in YouTube lectures and playlists, highlight as you read, ask Study AI from your material, import from Telegram and send PDFs back, Spotify focus audio, share with classmates, exam-style quiz from your notes, and plan on one calendar. Browse free curriculum on Learn without sign-in.";
 
 /** Homepage meta keywords — product surfaces + integrations + guest access. */
 export const HOME_PAGE_KEYWORDS: string[] = [
   ...DEFAULT_KEYWORDS,
+  "YouTube lecture notes",
   "Telegram PDF import and send",
   "Spotify study reader",
   "exam quiz from notes",
@@ -269,14 +276,15 @@ export const HOME_PAGE_KEYWORDS: string[] = [
 ];
 
 export const FEATURES_HUB_TITLE =
-  "Shelf Features — PDF Library, Study AI, Quiz, Telegram & More";
+  "Shelf Features — PDF Library, YouTube Lectures, Study AI, Quiz & More";
 
 export const FEATURES_HUB_DESCRIPTION =
-  "Explore every Shelf feature: personal PDF library, highlights, multi-tab reader, Study AI chat, exam quizzes, Telegram PDF import and send, Spotify focus audio, document sharing, planner, and offline PWA — for UPSC, NEET PG, GATE, and more.";
+  "Explore every Shelf feature: personal PDF library, YouTube lectures, highlights, multi-tab reader, Study AI chat, exam quizzes, Telegram PDF import and send, Spotify focus audio, document sharing, planner, and offline PWA — for UPSC, NEET PG, GATE, and more.";
 
 export const FEATURES_HUB_KEYWORDS = [
   "Shelf features",
   "PDF study library",
+  "YouTube lecture notes",
   "Study AI features",
   "Telegram PDF import and send",
   "Spotify study reader",
@@ -290,7 +298,7 @@ export const LEARN_DESCRIPTION =
   "Browse free curriculum packs — syllabus articles, textbooks, and topic guides. Open without signing up; sign in to keep a parallel private library of your own PDFs and notes.";
 
 export const BLOG_INDEX_DESCRIPTION =
-  "Long-form guides to Shelf: personal PDF libraries, highlights, Study AI, planner, reader workspace, and workflows for students, researchers, and professionals.";
+  "Long-form guides to Shelf: personal PDF libraries, YouTube lectures, highlights, Study AI, planner, reader workspace, and workflows for students, researchers, and professionals.";
 
 export const QUIZ_TITLE =
   "Exam-Style Quiz from Your Notes — MCQ, Written & PYQ Practice | Shelf";

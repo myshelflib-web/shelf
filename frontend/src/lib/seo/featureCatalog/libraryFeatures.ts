@@ -6,7 +6,7 @@ export const LIBRARY_FEATURES: ShelfFeature[] = [
     category: "library",
     title: "Personal Study Library — Collections, Topics & PDF Organization | Shelf",
     metaDescription:
-      "Build a private study library on Shelf: collections, topics, and root-level pages for PDFs and notes. Organize coaching material, research papers, and exam PDFs your way.",
+      "Build a private study library on Shelf: collections, topics, and root-level pages for PDFs, YouTube lectures, and notes. Organize coaching material, research papers, and exam PDFs your way.",
     keywords: [
       "personal study library",
       "organize PDF notes",
@@ -16,7 +16,7 @@ export const LIBRARY_FEATURES: ShelfFeature[] = [
     ],
     headline: "Your material, your structure",
     subhead:
-      "Collections act like notebooks. Topics group related pages. Root-level pages sit beside collections for quick access — no forced “General” folder.",
+      "Collections act like notebooks. Topics group related pages — including YouTube playlists. Root-level pages sit beside collections for quick access — no forced “General” folder.",
     bullets: [
       "Library-root, collection-level, and topic-level page placement",
       "Search, sort, pin, and resume reading per collection",
@@ -24,7 +24,7 @@ export const LIBRARY_FEATURES: ShelfFeature[] = [
       "Private to your account; you upload what you study",
     ],
     paragraphs: [
-      "Shelf is built for students who outgrew scattered Downloads folders. Competitive exam PDFs, law case bundles, medical journals, and work documents all live in one calm explorer at /my-content.",
+      "Shelf is built for students who outgrew scattered Downloads folders. Competitive exam PDFs, YouTube coaching playlists, law case bundles, medical journals, and work documents all live in one calm explorer at /my-content.",
       "Unlike content-catalog apps, Shelf does not push someone else's syllabus first. You bring coaching notes, marked PYQs, and papers — then organize them the way you already think about revision.",
     ],
     relatedBlogSlug: "personal-study-library-collections",
@@ -174,5 +174,35 @@ export const LIBRARY_FEATURES: ShelfFeature[] = [
     relatedBlogSlug: "pin-collections-continue-reading",
     ctaHref: "/login",
     ctaLabel: "Resume reading",
+  },
+  {
+    slug: "youtube-lectures",
+    category: "library",
+    title: "YouTube Lectures in Your Study Library | Shelf",
+    metaDescription:
+      "Paste a YouTube video or playlist into Shelf. Watch lectures beside PDFs, stamp timestamps into notes, and resume playback in the same reader workspace.",
+    keywords: [
+      "YouTube lecture notes",
+      "watch YouTube while taking notes",
+      "import YouTube playlist study",
+      "YouTube in study library",
+      "timestamp notes YouTube",
+    ],
+    headline: "YouTube lectures next to your PDFs",
+    subhead:
+      "Bring a video or a whole playlist into the same collection as your notes. Watch in the reader, stamp the time, and split a textbook beside the lecture.",
+    bullets: [
+      "Paste a watch URL or a playlist into Add page → YouTube",
+      "Playlist imports become a topic (or a collection at library root)",
+      "Timestamp stamps jump the player during revision",
+      "Resume time and watch minutes follow the same reader progress as PDFs",
+    ],
+    paragraphs: [
+      "Coaching YouTube is how a lot of exam prep actually happens. Shelf does not become another video catalog — you paste the lectures you already chose, and they live with the PDF they explain.",
+      "Notes stay on the lecture page. Split view still lets you open the matching chapter on the other side. Study AI can use those notes when you ask from the page.",
+    ],
+    relatedBlogSlug: "youtube-lectures-in-your-library",
+    ctaHref: "/login",
+    ctaLabel: "Add a lecture",
   },
 ];

@@ -134,10 +134,12 @@
   }
 }
 
-.prose-content {
-  font-family: var(--font-serif), ui-serif, Georgia, "Times New Roman", serif;
-  font-size: 1.02rem;
-  color: var(--text-primary);
+.prose-content a[href^="#t-"] {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
 }
 
 .prose-content .doc-masthead {

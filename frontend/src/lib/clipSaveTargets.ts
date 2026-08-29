@@ -1,7 +1,7 @@
 import type { UserPageSummary, UserSubject } from "@/types";
 import { getNotebookPages, getTopicGroups } from "@/lib/myContentTree";
 
-const NOTE_TYPES = new Set(["HTML", "MARKDOWN", "TEXT", "DOCX"]);
+const NOTE_TYPES = new Set(["HTML", "MARKDOWN", "TEXT", "DOCX", "VIDEO"]);
 
 export type ClipTarget = {
   id: string;

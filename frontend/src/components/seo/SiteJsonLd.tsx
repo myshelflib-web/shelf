@@ -19,7 +19,7 @@ export function SiteJsonLd() {
     },
     image: `${siteUrl}/icons/shelf-icon-2048.png`,
     description:
-      "Personal study library with PDF highlights, Study AI, and a planner — for students, professionals, researchers, and lifelong learners.",
+      "Personal study library with PDF highlights, YouTube lectures, Study AI, and a planner — for students, professionals, researchers, and lifelong learners.",
     sameAs: SOCIAL_SAME_AS,
   };
 
@@ -30,7 +30,7 @@ export function SiteJsonLd() {
     alternateName: "myshelflib.com",
     url: siteUrl,
     description:
-      "Upload PDFs, highlight as you read, ask Study AI from your material, and plan work on one calendar. Optional free curriculum packs included.",
+      "Upload PDFs, bring in YouTube lectures, highlight as you read, ask Study AI from your material, and plan work on one calendar. Optional free curriculum packs included.",
     inLanguage: "en-IN",
     publisher: {
       "@type": "Organization",

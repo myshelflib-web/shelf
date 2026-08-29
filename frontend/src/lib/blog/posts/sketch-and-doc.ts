@@ -9,7 +9,7 @@ export const sketchAndDoc = buildPost(
     excerpt:
       "Beyond PDF uploads: draw on A4 sheets, type structured notes, or import existing documents — all live beside PDFs in your collections.",
     publishedAt: "2026-02-11",
-    updatedAt: "2026-08-28",
+    updatedAt: "2026-08-29",
     tags: ["notebook", "sketch", "doc editor", "notes"],
     readingMinutes: 6,
   },
@@ -17,7 +17,7 @@ export const sketchAndDoc = buildPost(
     {
       heading: "Three page types",
       paragraphs: [
-        "Shelf pages can be PDFs (uploaded or linked), HTML documents (imported or edited), or sketch notebooks. Pick Add page → Notebook for draw-only multi-sheet editors, or Add page → Doc for typed rich text without ink.",
+        "Shelf pages can be PDFs (uploaded or linked), YouTube lectures, HTML documents (imported or edited), or sketch notebooks. Pick Add page → YouTube for a video or playlist, Add page → Notebook for draw-only multi-sheet editors, or Add page → Doc for typed rich text without ink.",
       ],
     },
     {

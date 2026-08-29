@@ -97,6 +97,9 @@ async function keywordExcerpts(
       try {
         const html = await getFromS3(page.contentUrl);
         text = truncateText(htmlToPlainText(html), 1800);
+        if (page.contentType === "VIDEO" && page.sourceUrl) {
+          text = `${page.title} ${page.sourceUrl}\n${text}`;
+        }
         const lower = text.toLowerCase();
         if (lower.includes(needle)) score += 2;
         for (const term of terms) {

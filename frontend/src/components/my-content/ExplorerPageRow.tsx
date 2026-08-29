@@ -9,6 +9,7 @@ import {
   FileText,
   Pencil,
   Share2,
+  Youtube,
 } from "lucide-react";
 import { UserPageSummary } from "@/types";
 import {
@@ -212,6 +213,8 @@ export function ExplorerPageRow({
             />
             {page.completed ? (
               <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
+            ) : page.contentType === "VIDEO" ? (
+              <Youtube className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
             ) : (
               <FileText className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
             )}

@@ -81,4 +81,47 @@ export const BLOG_EXPANSIONS_C: Record<string, BlogSection[]> = {
       ],
     },
   ],
+  "youtube-lectures-in-your-library": [
+    {
+      heading: "Add a lecture or a playlist",
+      paragraphs: [
+        "Open Add page and choose YouTube. Paste a watch URL for one lecture, or a playlist URL to import the course. Titles come from YouTube when you leave the title field blank.",
+        "Inside a collection, a playlist becomes a new topic. At the library root, it becomes a new collection. Videos already inside a topic are added as pages in that topic, in playlist order.",
+      ],
+    },
+    {
+      heading: "Timestamped notes",
+      paragraphs: [
+        "Stamp writes the current time into the notes doc under the player as a 12:34 link. Click it later to seek. Use stamps for definitions, PYQ hints, or anything the teacher repeats.",
+        "Notes autosave like other Shelf docs. They are indexed with the lecture title and URL so Study AI can use what you wrote — not a full transcript of the video.",
+      ],
+    },
+    {
+      heading: "Split with the matching PDF",
+      paragraphs: [
+        "Drop a textbook or coaching PDF onto the other pane while the lecture plays. Each pane keeps its own place. That is the point of putting video in the library instead of a second app.",
+        "Schedule the lecture from the reader bottom bar the same way you schedule a PDF. Resume time syncs across devices like last-read page.",
+      ],
+    },
+    {
+      heading: "Playlists and YouTube limits",
+      paragraphs: [
+        "Shelf never downloads the file. Playback uses YouTube's player. Videos that disable embedding still keep your notes; use Open on YouTube for those.",
+        "Without a server YouTube Data API key, public playlist feeds include about the first 15 videos. Paste remaining watch URLs, or configure YOUTUBE_API_KEY for a fuller import (capped at 80 lectures).",
+      ],
+    },
+    {
+      heading: "What this is not",
+      paragraphs: [
+        "Shelf is not a YouTube search engine or a coaching catalog. You bring the lectures you already chose — the same rule as PDFs.",
+        "Private or unlisted videos follow YouTube's own login inside the player. Shelf does not store YouTube passwords.",
+      ],
+    },
+    {
+      heading: "Study loop",
+      paragraphs: [
+        "Watch, stamp, highlight the matching PDF, ask Study AI on your notes, then schedule the next lecture. Streak minutes include time on a focused video page the same way they include reading.",
+      ],
+    },
+  ],
 };

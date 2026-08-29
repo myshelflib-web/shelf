@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { FolderUp, PenLine, FileText, Upload, X } from "lucide-react";
+import { X } from "lucide-react";
 import { FileUploadZone } from "@/components/FileUploadZone";
 import { FolderUploadZone } from "@/components/my-content/FolderUploadZone";
 import type { UploadProgress } from "@/lib/api";
@@ -10,107 +10,16 @@ import {
   SKETCH_TEMPLATES,
   type SketchTemplate,
 } from "@/lib/sketchNotebook";
+import {
+  AddUploadProgressBar,
+  PAGE_ADD_MODES,
+  pageAddSubmitLabel,
+  type PageAddMode,
+} from "./myContentAddModalBits";
 
 export type AddModalKind = "notebook" | "topic" | "page";
-export type PageAddMode = "file" | "bulk" | "sketch" | "doc" | "link";
+export type { PageAddMode };
 
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function submitLabel(
-  addMode: PageAddMode,
-  submitting: boolean,
-  uploadProgress: UploadProgress | null
-) {
-  if (submitting && addMode === "bulk") return "Importing…";
-  if (submitting && addMode === "file") {
-    if (uploadProgress?.phase === "compressing") return "Compressing…";
-    if (uploadProgress && uploadProgress.percent < 100) {
-      return `Uploading ${uploadProgress.percent}%`;
-    }
-    return "Saving…";
-  }
-  if (submitting && addMode === "link") return "Adding…";
-  if (submitting) return "Creating…";
-  if (addMode === "link") return "Add link";
-  if (addMode === "bulk") {
-    return (
-      <>
-        <FolderUp className="w-4 h-4" />
-        Import folders
-      </>
-    );
-  }
-  if (addMode === "file") {
-    return (
-      <>
-        <Upload className="w-4 h-4" />
-        Upload
-      </>
-    );
-  }
-  if (addMode === "sketch") {
-    return (
-      <>
-        <PenLine className="w-4 h-4" />
-        Create notebook
-      </>
-    );
-  }
-  return (
-    <>
-      <FileText className="w-4 h-4" />
-      Create doc
-    </>
-  );
-}
-
-function UploadProgressBar({ progress }: { progress: UploadProgress }) {
-  const compressing = progress.phase === "compressing";
-  const saving = !compressing && progress.percent >= 100;
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
-        <span>
-          {compressing
-            ? "Compressing…"
-            : saving
-              ? "Saving to library…"
-              : "Uploading"}
-        </span>
-        <span className="tabular-nums text-[var(--text-secondary)]">
-          {compressing
-            ? "Preparing file"
-            : saving
-              ? "100%"
-              : progress.total > 0
-                ? `${formatBytes(progress.loaded)} of ${formatBytes(progress.total)} · ${progress.percent}%`
-                : `${progress.percent}%`}
-        </span>
-      </div>
-      <div
-        role="progressbar"
-        aria-label="Upload progress"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={progress.percent}
-        className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg-secondary)]"
-      >
-        <div
-          className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-150 ease-out"
-          style={{
-            width: compressing
-              ? "18%"
-              : `${Math.max(saving ? 100 : progress.percent, 2)}%`,
-          }}
-        />
-      </div>
-    </div>
-  );
-}
 
 interface MyContentAddModalProps {
   kind: AddModalKind;
@@ -302,16 +211,8 @@ export function MyContentAddModal({
                 className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
               />
             )}
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                [
-                  ["file", "Upload"],
-                  ["bulk", "Folders"],
-                  ["link", "Link"],
-                  ["sketch", "Notebook"],
-                  ["doc", "Doc"],
-                ] as const
-              ).map(([mode, label]) => (
+            <div className="grid grid-cols-3 gap-2">
+              {PAGE_ADD_MODES.map(([mode, label]) => (
                 <button
                   key={mode}
                   type="button"
@@ -325,10 +226,14 @@ export function MyContentAddModal({
             </div>
             <input
               type="text"
-              placeholder="Page title"
+              placeholder={
+                addMode === "youtube"
+                  ? "Title (optional — from YouTube)"
+                  : "Page title"
+              }
               value={pageTitle}
               onChange={(e) => onPageTitleChange(e.target.value)}
-              required={addMode !== "bulk"}
+              required={addMode !== "bulk" && addMode !== "youtube"}
               disabled={submitting || addMode === "bulk"}
               className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
             />
@@ -361,7 +266,7 @@ export function MyContentAddModal({
                   disabled={submitting}
                 />
                 {submitting && bulkProgress ? (
-                  <UploadProgressBar
+                  <AddUploadProgressBar
                     progress={{
                       loaded: bulkProgress.done,
                       total: bulkProgress.total,
@@ -389,12 +294,30 @@ export function MyContentAddModal({
                   label="Drop a file or click to browse"
                 />
                 {submitting && uploadProgress ? (
-                  <UploadProgressBar progress={uploadProgress} />
+                  <AddUploadProgressBar progress={uploadProgress} />
                 ) : (
                   <p className="text-xs text-[var(--text-muted)]">
                     Drag a file here, or click to browse. PDF, TXT, MD, or DOCX.
                   </p>
                 )}
+              </>
+            )}
+            {addMode === "youtube" && (
+              <>
+                <input
+                  type="url"
+                  placeholder="https://youtube.com/watch… or playlist"
+                  value={pageLink}
+                  onChange={(e) => onPageLinkChange(e.target.value)}
+                  required
+                  disabled={submitting}
+                  className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
+                />
+                <p className="text-xs text-[var(--text-muted)]">
+                  One lecture becomes a page. A playlist becomes a topic (or a
+                  collection at library root) with a page per video — watch and
+                  take notes in the same reader.
+                </p>
               </>
             )}
             {addMode === "link" && (
@@ -409,7 +332,8 @@ export function MyContentAddModal({
                   className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
                 />
                 <p className="text-xs text-[var(--text-muted)]">
-                  Some sites block embedding — use Open in the reader.
+                  Some sites block embedding — use Open in the reader. YouTube
+                  links should use the YouTube tab.
                 </p>
               </>
             )}
@@ -479,11 +403,12 @@ export function MyContentAddModal({
                 (addMode === "bulk" &&
                   (bulkFiles.length === 0 ||
                     (!notebookName && !notebookNameInput.trim()))) ||
-                (addMode === "link" && !pageLink.trim())
+                ((addMode === "link" || addMode === "youtube") &&
+                  !pageLink.trim())
               }
               className="btn-primary w-full sm:w-auto"
             >
-              {submitLabel(addMode, submitting, uploadProgress)}
+              {pageAddSubmitLabel(addMode, submitting, uploadProgress)}
             </button>
           </form>
         )}

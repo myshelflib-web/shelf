@@ -9,6 +9,7 @@ import type { UserPageSummary, UserSubject, UserTopicGroup } from "@/types";
 import type { PageAddMode } from "./MyContentAddModal";
 import { runBulkFolderUpload, type BulkUploadProgress } from "./bulkFolderUpload";
 import { emitContentChanged } from "@/lib/contentEvents";
+import { isYoutubeUrl } from "@/lib/youtubeUrl";
 
 function assertUploadOk(file: File) {
   const name = file.name.toLowerCase();
@@ -98,6 +99,30 @@ export async function submitAddPage(input: {
         input.reportUploadProgress
       ));
     }
+  } else if (
+    input.addMode === "youtube" ||
+    (input.addMode === "link" && isYoutubeUrl(input.pageLink))
+  ) {
+    const result = await api.myContent.importYoutube({
+      sourceUrl: input.pageLink,
+      title: input.pageTitle.trim() || undefined,
+      notebookId: notebook?.id,
+      topicId: topic?.id,
+    });
+    if (result.kind === "playlist") {
+      emitContentChanged();
+    } else {
+      emitContentChanged({
+        type: "page-created",
+        page: result.page,
+        href: result.href,
+        notebookId: result.notebook?.id ?? notebook?.id,
+        notebookSlug: result.notebook?.slug ?? notebook?.slug ?? null,
+        topicId: result.topic?.id ?? topic?.id,
+        topicSlug: result.topic?.slug ?? topic?.slug ?? null,
+      });
+    }
+    return { page: result.page, href: result.href };
   } else if (input.addMode === "link") {
     const body = { title: input.pageTitle, sourceUrl: input.pageLink };
     if (notebook && topic) {

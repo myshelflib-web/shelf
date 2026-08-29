@@ -27,7 +27,7 @@ export const collegeStudents = longPost(
     {
       heading: "Textbook chapters beside slides",
       paragraphs: [
-        "Keep textbook PDFs in the same topic as the matching lecture. Split view: slides left, textbook right — compare definitions without alt-tabbing.",
+        "Keep textbook PDFs in the same topic as the matching lecture — including YouTube classes pasted via Add page → YouTube. Split view: lecture left, textbook right — compare definitions without alt-tabbing.",
         "When Study AI answers, ask it to reconcile slide wording with textbook wording using both sources in library-wide chat.",
       ],
     },

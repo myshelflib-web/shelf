@@ -12,6 +12,7 @@ import {
   NotebookPen,
   Send,
   Target,
+  Youtube,
 } from "lucide-react";
 
 export interface MarketingFeature {
@@ -35,6 +36,11 @@ export const MARKETING_FEATURES: MarketingFeature[] = [
     icon: NotebookPen,
     title: "Sketch notebooks & doc pages",
     body: "Create multi-sheet sketch notebooks or typed doc pages in the same collection as your PDFs — not a separate notes app.",
+  },
+  {
+    icon: Youtube,
+    title: "YouTube lectures",
+    body: "Paste a video or playlist into your library. Watch in the reader, stamp timestamps into notes, and split a PDF beside the lecture.",
   },
   {
     icon: Columns2,

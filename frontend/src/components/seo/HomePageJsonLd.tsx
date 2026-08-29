@@ -4,7 +4,7 @@ const FAQ = [
   {
     question: "What is Shelf?",
     answer:
-      "Shelf is a personal study library: upload PDFs and notes, highlight as you read, ask Study AI grounded in your material, plan revision on a calendar, and sit exam-style quizzes — for college, exams, research, or professional reading.",
+      "Shelf is a personal study library: upload PDFs and notes, bring in YouTube lectures, highlight as you read, ask Study AI grounded in your material, plan revision on a calendar, and sit exam-style quizzes — for college, exams, research, or professional reading.",
   },
   {
     question: "Can I use Shelf without signing in?",
@@ -25,6 +25,11 @@ const FAQ = [
     question: "Can I send PDFs back to Telegram?",
     answer:
       "Yes. Share on a page includes Send to Telegram. The PDF arrives in your Shelf bot chat (up to ~50 MB) so you can forward it into a study group. You can also enable Anyone with link and use Share link in Telegram.",
+  },
+  {
+    question: "Can I watch YouTube lectures in Shelf?",
+    answer:
+      "Yes. Add page → YouTube and paste a video or playlist URL. Lectures live in your library beside PDFs. Watch in the reader, stamp timestamps into notes, and resume playback like reading progress.",
   },
   {
     question: "Can I listen to Spotify while reading?",
@@ -60,6 +65,7 @@ export function HomePageJsonLd() {
     name: "Shelf product capabilities",
     itemListElement: [
       { name: "Personal PDF library", url: `${siteUrl}/features/personal-library` },
+      { name: "YouTube lectures", url: `${siteUrl}/features/youtube-lectures` },
       { name: "PDF reader with highlights", url: `${siteUrl}/features/pdf-highlights` },
       { name: "Study AI", url: `${siteUrl}/features/study-ai` },
       { name: "Exam-style quiz", url: `${siteUrl}/quiz` },

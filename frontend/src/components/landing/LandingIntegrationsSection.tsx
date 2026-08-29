@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Music, Send, Share2 } from "lucide-react";
+import { ArrowRight, Music, Send, Share2, Youtube } from "lucide-react";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 
 const INTEGRATIONS = [
@@ -10,6 +10,14 @@ const INTEGRATIONS = [
     href: "/features/telegram-pdf-import",
     blogHref: "/blog/telegram-save-pdfs",
     cta: "Telegram PDF guide",
+  },
+  {
+    icon: Youtube,
+    title: "YouTube lectures",
+    body: "Paste a video or playlist into your library. Watch in the reader, stamp timestamps into notes, and keep the matching PDF in split view.",
+    href: "/features/youtube-lectures",
+    blogHref: "/blog/youtube-lectures-in-your-library",
+    cta: "YouTube lecture guide",
   },
   {
     icon: Music,
@@ -41,17 +49,18 @@ export function LandingIntegrationsSection() {
           <div>
             <div className="landing-kicker">Integrations</div>
             <h2 id="landing-integrations-heading" className="landing-value-title">
-              Telegram, Spotify, and sharing — inside the reader
+              Telegram, YouTube, Spotify, and sharing — inside the reader
             </h2>
           </div>
           <p className="landing-value-copy">
             Shelf meets you where files and focus already live. Import from
-            Telegram, send a PDF back, play focus audio beside the reader, and
-            share pages without losing your private highlights.
+            Telegram, bring YouTube lectures into the same library as your PDFs,
+            send a PDF back, play focus audio beside the reader, and share pages
+            without losing your private highlights.
           </p>
         </div>
       </RevealOnScroll>
-      <div className="landing-value-grid !grid-cols-1 md:!grid-cols-3">
+      <div className="landing-value-grid !grid-cols-1 md:!grid-cols-2">
         {INTEGRATIONS.map((item, index) => (
           <RevealOnScroll key={item.title} delay={index * 60}>
             <article className="landing-value-card !min-h-0">

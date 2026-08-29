@@ -5,6 +5,7 @@ import Link from "next/link";
 import { PersonalContentArea } from "@/components/my-content/PersonalContentArea";
 import { PdfViewer, type PdfViewerCommands } from "@/components/my-content/PdfViewer";
 import { EmbedViewer } from "@/components/my-content/EmbedViewer";
+import { VideoPageView } from "@/components/my-content/VideoPageView";
 import { api, getStoredUser } from "@/lib/api";
 import {
   AnalyticsEvents,
@@ -699,6 +700,7 @@ export function DocumentPane({
 
   const startEditing = useCallback(() => {
     if (!pageData || pageData.contentType === "PDF") return;
+    if (pageData.contentType === "VIDEO") return;
     if (pageData.contentType === "LINK") {
       setDraftTitle(pageData.title);
       setDraftUrl(pageData.sourceUrl ?? "");
@@ -718,7 +720,7 @@ export function DocumentPane({
 
   const persistHtmlContent = useCallback(
     async (html: string, opts?: { exitEdit?: boolean }) => {
-      if (!pageData || pageData.contentType === "LINK") return;
+      if (!pageData || pageData.contentType === "LINK" || pageData.contentType === "VIDEO") return;
       if (!requireOnline("Save page edits")) return;
       const live =
         !pageData.isPreloaded && isLiveEditorHtml(html || pageData.content);
@@ -1009,11 +1011,12 @@ export function DocumentPane({
         Boolean(
           pageData &&
             !pageData.isPreloaded &&
-            pageData.contentType === "HTML" &&
-            editing &&
-            isLiveEditorHtml(
-              draftContentRef.current || editorSeed || pageData.content
-            )
+            ((pageData.contentType === "HTML" &&
+              editing &&
+              isLiveEditorHtml(
+                draftContentRef.current || editorSeed || pageData.content
+              )) ||
+              pageData.contentType === "VIDEO")
         ),
       saving,
       htmlClip,
@@ -1045,6 +1048,7 @@ export function DocumentPane({
 
   const isPdf = pageData?.contentType === "PDF";
   const isLink = pageData?.contentType === "LINK";
+  const isVideo = pageData?.contentType === "VIDEO";
   const liveBlank =
     Boolean(
       pageData &&
@@ -1214,6 +1218,10 @@ export function DocumentPane({
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 bg-[rgba(110,174,166,0.18)] text-[#6eaea6]">
                     Link
                   </span>
+                ) : isVideo ? (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 bg-[rgba(110,121,214,0.18)] text-[var(--accent)]">
+                    YouTube
+                  </span>
                 ) : isPreloadedDoc ? (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 bg-[var(--bg-secondary)] text-[var(--text-muted)]">
                     Preloaded
@@ -1334,6 +1342,28 @@ export function DocumentPane({
                   }}
                   onImport={importLinkPage}
                 />
+              ) : isVideo ? (
+                <VideoPageView
+                  pageId={pageData.id}
+                  title={pageData.title}
+                  sourceUrl={pageData.sourceUrl ?? ""}
+                  notesHtml={pageData.content}
+                  initialSeconds={savedView?.scrollTop ?? 0}
+                  highlights={highlights}
+                  onHighlightsChange={setHighlights}
+                  guestLocked={guestLocked}
+                  onGuestLockedClick={onGuestLockedClick}
+                  onAskSelection={(text, image, attach) =>
+                    openStudyAI(text, image, attach)
+                  }
+                  clipMode={htmlClip}
+                  onClip={(data) => {
+                    onClipImage(data, pageData);
+                    setHtmlClip(false);
+                  }}
+                  onViewStateChange={persistView}
+                  onReadProgress={handleReadProgress}
+                />
               ) : (
                 <>
                 <PersonalContentArea
@@ -1411,9 +1441,11 @@ export function DocumentPane({
                       <p className="text-[11px] text-[var(--text-muted)] truncate">
                         {isLink
                           ? "Ask about this linked page"
-                          : fsSelection
-                            ? "Ask about the highlight"
-                            : "Ask about this file"}
+                          : isVideo
+                            ? "Ask about this lecture and notes"
+                            : fsSelection
+                              ? "Ask about the highlight"
+                              : "Ask about this file"}
                       </p>
                     </div>
                   </div>

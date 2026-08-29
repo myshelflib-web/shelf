@@ -1016,6 +1016,26 @@ export const api = {
         `/api/my-content/pages`,
         { method: "POST", body: JSON.stringify(data) }
       ),
+    importYoutube: (data: {
+      sourceUrl: string;
+      title?: string;
+      notebookId?: string;
+      topicId?: string;
+    }) =>
+      request<{
+        kind: "video" | "playlist";
+        page: import("@/types").UserPageSummary;
+        pages: import("@/types").UserPageSummary[];
+        href: string;
+        notebook: { id: string; name: string; slug: string } | null;
+        topic: { id: string; title: string; slug: string } | null;
+        importedCount: number;
+        truncated: boolean;
+        playlistTitle: string | null;
+      }>("/api/my-content/youtube", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
     getPage: (notebookSlug: string, topicSlug: string, pageSlug: string) =>
       request<{
         page: import("@/types").UserPageDetail;

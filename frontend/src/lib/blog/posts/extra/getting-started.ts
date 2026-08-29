@@ -20,7 +20,7 @@ export const gettingStarted = longPost(
     {
       heading: "Upload something you already study",
       paragraphs: [
-        "Pick one PDF you open every week — a textbook chapter, lecture deck, case brief, or work brief. Use Add material from the library, drop the file, and wait for the short-lived upload to finish.",
+        "Pick one PDF or YouTube lecture you open every week — a textbook chapter, coaching playlist, case brief, or work brief. Use Add material from the library.",
         "Shelf stores one source PDF per page. Processing builds searchable text in the background so highlights and Study AI work when HTML is ready; you can open the original PDF view right away.",
       ],
     },

@@ -11,6 +11,7 @@ import {
   UploadMockup,
   WorkspaceMockup,
 } from "./LandingShowcaseMockups";
+import { YoutubeLectureMockup } from "./LandingYoutubeMockup";
 
 const ROTATE_MS = 6500;
 
@@ -36,6 +37,13 @@ const SLIDES: ShowcaseSlide[] = [
     linkHref: "/features/sketch-notes",
     linkLabel: "Notebooks & doc pages",
     visual: <NotebooksMockup />,
+  },
+  {
+    title: "Watch YouTube lectures beside your notes",
+    body: "Paste a video or a playlist into the same collection as your PDFs. Watch in the reader, stamp timestamps into notes, and split the matching chapter on the other pane.",
+    linkHref: "/features/youtube-lectures",
+    linkLabel: "YouTube in your library",
+    visual: <YoutubeLectureMockup />,
   },
   {
     title: "Open multiple pages — tabs and split view",

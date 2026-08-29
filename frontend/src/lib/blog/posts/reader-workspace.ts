@@ -9,6 +9,7 @@ export const readerWorkspace = buildPost(
     excerpt:
       "Open several PDFs at once, compare sources in a two-pane split, hide panels for focus, and restore tabs plus scroll position when you return.",
     publishedAt: "2026-02-08",
+    updatedAt: "2026-08-29",
     tags: ["reader", "tabs", "split view", "workspace"],
     readingMinutes: 6,
   },
@@ -22,7 +23,7 @@ export const readerWorkspace = buildPost(
     {
       heading: "Split view for comparison",
       paragraphs: [
-        "Drop a page from the library sidebar onto a pane divider to open side-by-side — useful when cross-referencing a textbook PDF with your case notes. Each pane has its own scroll position and zoom.",
+        "Drop a page from the library sidebar onto a pane divider to open side-by-side — useful when cross-referencing a textbook PDF with your case notes, or a YouTube lecture with the matching chapter. Each pane has its own scroll position and zoom.",
       ],
     },
     {

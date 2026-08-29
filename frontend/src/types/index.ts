@@ -174,7 +174,14 @@ export interface UserTopicGroup {
   pages: UserPageSummary[];
 }
 
-export type UserContentType = "PDF" | "HTML" | "MARKDOWN" | "TEXT" | "DOCX" | "LINK";
+export type UserContentType =
+  | "PDF"
+  | "HTML"
+  | "MARKDOWN"
+  | "TEXT"
+  | "DOCX"
+  | "LINK"
+  | "VIDEO";
 
 export interface UserPageSummary {
   id: string;
