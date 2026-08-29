@@ -129,72 +129,43 @@
   margin-top: 28px;
 }
 
-.landing-hero-note {
-  margin-top: 14px;
-  max-width: 34rem;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--text-muted);
+.landing-micro {
+  margin-top: 11px;
+  font-size: 11px;
+  color: #9c978f;
 }
 
-.landing-hero-note a {
-  color: var(--accent);
-  font-weight: 650;
-  text-underline-offset: 2px;
-}
-
-.landing-hero-note a:hover {
-  text-decoration: underline;
-}
-
-.landing-hero-foot {
-  margin-top: 22px;
-  max-width: 28rem;
-}
-
-.landing-hero-features {
+.landing-featureline {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-radius: 14px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  background: var(--border);
-  box-shadow: 0 2px 10px rgba(38, 35, 29, 0.04);
+  grid-template-columns: repeat(3, max-content);
+  gap: 6px 10px;
+  margin-top: 22px;
+  max-width: 34rem;
 }
 
-.landing-hero-feature {
-  display: flex;
+@media (max-width: 640px) {
+  .landing-featureline {
+    grid-template-columns: repeat(2, max-content);
+  }
+}
+
+.landing-featurepill {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 11px 10px;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 999px;
   background: var(--lp-surface-white);
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 620;
   white-space: nowrap;
 }
 
-.landing-hero-feature svg {
-  width: 15px;
-  height: 15px;
-  color: var(--accent);
-  flex-shrink: 0;
-}
-
-@media (max-width: 520px) {
-  .landing-hero-features {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .landing-hero-feature {
-    justify-content: flex-start;
-    padding-left: 14px;
-  }
+.landing-featurepill svg {
+  width: 12px;
+  height: 12px;
 }
 
 /* Product preview carousel */
@@ -1688,8 +1659,8 @@
   background: var(--lp-step-dot);
 }
 
-.dark .landing-hero-note {
-  color: var(--text-muted);
+.dark .landing-micro {
+  color: var(--lp-muted-2);
 }
 
 .dark .landing-preview-meta,
