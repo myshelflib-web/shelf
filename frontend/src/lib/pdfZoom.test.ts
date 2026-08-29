@@ -3,13 +3,14 @@ import {
   PDF_SCALE_MAX,
   PDF_SCALE_MIN,
   applyPdfVisualZoom,
-  applyPdfZoomAnchor,
-  capturePdfZoomAnchor,
+  capturePdfZoomAnchorFromBoxes,
   clearPdfVisualZoom,
   clampPdfScale,
   isPdfZoomWheel,
   nextPdfWheelScale,
+  nextPdfZoomScroll,
   pdfVisualZoomOrigin,
+  pickPdfZoomPage,
 } from "./pdfZoom";
 
 describe("clampPdfScale", () => {
@@ -50,19 +51,40 @@ describe("nextPdfWheelScale", () => {
 });
 
 describe("pdf zoom scroll anchor", () => {
-  it("keeps the point under the cursor after a 2x zoom", () => {
-    const root = {
-      getBoundingClientRect: () => ({ left: 100, top: 50 }) as DOMRect,
-      scrollLeft: 200,
-      scrollTop: 400,
-    };
-    const anchor = capturePdfZoomAnchor(root, 180, 130, 2);
-    expect(anchor.cursorX).toBe(80);
-    expect(anchor.cursorY).toBe(80);
-    const next = { scrollLeft: 0, scrollTop: 0 };
-    applyPdfZoomAnchor(next, anchor);
-    expect(next.scrollLeft).toBe(480);
-    expect(next.scrollTop).toBe(880);
+  const page1 = { page: 1, left: 40, top: 80, width: 200, height: 280 };
+  const page2 = { page: 2, left: 40, top: 384, width: 200, height: 280 };
+
+  it("picks the sheet under the cursor", () => {
+    expect(pickPdfZoomPage([page1, page2], 100, 200)?.page).toBe(1);
+    expect(pickPdfZoomPage([page1, page2], 100, 420)?.page).toBe(2);
+  });
+
+  it("picks the nearest sheet when the cursor is in the gap", () => {
+    expect(pickPdfZoomPage([page1, page2], 100, 378)?.page).toBe(2);
+  });
+
+  it("records the page-local point, not a scaled scrollTop", () => {
+    const anchor = capturePdfZoomAnchorFromBoxes(0, 0, [page1, page2], 140, 220);
+    expect(anchor).toEqual({
+      page: 1,
+      fracX: 0.5,
+      fracY: 0.5,
+      cursorX: 140,
+      cursorY: 220,
+    });
+  });
+
+  it("keeps that page point under the cursor after sheets grow", () => {
+    const anchor = capturePdfZoomAnchorFromBoxes(0, 0, [page1, page2], 140, 220);
+    expect(anchor).not.toBeNull();
+    const grown = { page: 1, left: 20, top: 200, width: 400, height: 560 };
+    const next = nextPdfZoomScroll(
+      grown,
+      { left: 0, top: 0, scrollLeft: 0, scrollTop: 120 },
+      anchor!
+    );
+    expect(next.scrollLeft).toBe(grown.left + 0.5 * grown.width - 140);
+    expect(next.scrollTop).toBe(120 + (grown.top + 0.5 * grown.height - 220));
   });
 });
 

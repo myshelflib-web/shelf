@@ -62,7 +62,6 @@ import { usePdfMarkUndo } from "./usePdfMarkUndo";
 import { usePdfWheelZoom } from "./usePdfWheelZoom";
 import { useHotkey } from "@/hooks/useHotkeys";
 import { useAppDialog } from "@/hooks/useAppDialog";
-import { clampPdfScale } from "@/lib/pdfZoom";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
@@ -664,11 +663,7 @@ export function PdfViewer({
     });
   }, []);
 
-  usePdfWheelZoom(scrollRoot, scale, setScale);
-
-  const zoomBy = useCallback((delta: number) => {
-    setScale((s) => clampPdfScale(s + delta));
-  }, []);
+  const zoomBy = usePdfWheelZoom(scrollRoot, scale, setScale);
 
   const fitToSheet = useCallback(
     (layout: PdfPageLayout) => {

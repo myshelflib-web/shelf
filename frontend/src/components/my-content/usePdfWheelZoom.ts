@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -29,14 +30,15 @@ type GestureLike = Event & {
 };
 
 /**
- * Zoom the PDF with trackpad pinch or Ctrl/Cmd + mouse wheel.
+ * Zoom the PDF with trackpad pinch, Ctrl/Cmd + mouse wheel, or toolbar +/-.
  * CSS-scales during the gesture; PDF.js canvases re-render after it settles.
+ * After layout, the same sheet point stays under the cursor (or viewport center).
  */
 export function usePdfWheelZoom(
   root: HTMLElement | null,
   scale: number,
   setScale: Dispatch<SetStateAction<number>>
-) {
+): (delta: number) => void {
   const pendingScaleRef = useRef<number | null>(null);
   const scaleRef = useRef(scale);
   if (pendingScaleRef.current == null || pendingScaleRef.current === scale) {
@@ -99,7 +101,7 @@ export function usePdfWheelZoom(
         return;
       }
       const { x, y } = lastClientRef.current;
-      anchorRef.current = capturePdfZoomAnchor(root, x, y, pending / from);
+      anchorRef.current = capturePdfZoomAnchor(root, x, y);
       const apply = () => setScaleRef.current(pending);
       if (sync) flushSync(apply);
       else apply();
@@ -173,4 +175,20 @@ export function usePdfWheelZoom(
       root.removeEventListener("pointerdown", onPointerDown, true);
     };
   }, [root]);
+
+  return useCallback((delta: number) => {
+    const from = pendingScaleRef.current ?? scaleRef.current;
+    const next = clampPdfScale(from + delta);
+    if (next === from) return;
+    const el = rootRef.current;
+    if (el) {
+      const rect = el.getBoundingClientRect();
+      anchorRef.current = capturePdfZoomAnchor(
+        el,
+        rect.left + rect.width / 2,
+        rect.top + rect.height / 2
+      );
+    }
+    setScaleRef.current(next);
+  }, []);
 }
