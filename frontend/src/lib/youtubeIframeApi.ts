@@ -9,6 +9,8 @@ type YtPlayer = {
 
 type YtPlayerOptions = {
   videoId: string;
+  width?: string | number;
+  height?: string | number;
   host?: string;
   playerVars?: Record<string, string | number>;
   events?: {

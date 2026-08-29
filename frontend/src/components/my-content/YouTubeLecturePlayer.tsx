@@ -15,6 +15,7 @@ type YouTubeLecturePlayerProps = {
   onSpeedChange: (rate: number) => void;
   onTime: (seconds: number, duration: number) => void;
   onStamp: () => void;
+  stampEnabled?: boolean;
   playerRef: MutableRefObject<YtPlayer | null>;
 };
 
@@ -28,6 +29,7 @@ export function YouTubeLecturePlayer({
   onSpeedChange,
   onTime,
   onStamp,
+  stampEnabled = true,
   playerRef,
 }: YouTubeLecturePlayerProps) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -49,9 +51,13 @@ export function YouTubeLecturePlayer({
       if (cancelled || !window.YT?.Player || !hostRef.current) return;
       hostRef.current.replaceChildren();
       const mount = document.createElement("div");
+      mount.style.width = "100%";
+      mount.style.height = "100%";
       hostRef.current.appendChild(mount);
       player = new window.YT.Player(mount, {
         videoId,
+        width: "100%",
+        height: "100%",
         host: "https://www.youtube-nocookie.com",
         playerVars: {
           rel: 0,
@@ -112,58 +118,59 @@ export function YouTubeLecturePlayer({
   }, [videoId, playerRef]);
 
   return (
-    <div className="shrink-0 border-b border-[var(--border)] bg-[var(--bg-primary)]">
-      <div className="max-w-4xl mx-auto w-full px-4 pt-3 pb-2 space-y-2">
-        <div className="relative w-full aspect-video overflow-hidden rounded-[10px] bg-black">
-          <div ref={hostRef} className="absolute inset-0" title={title} />
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-black">
+      <div className="relative flex-1 min-h-0 w-full overflow-hidden bg-black">
+        <div
+          ref={hostRef}
+          className="absolute inset-0 [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:h-full [&_iframe]:w-full"
+          title={title}
+        />
+      </div>
+      <div className="shrink-0 flex flex-wrap items-center gap-2 px-3 py-2 bg-[var(--bg-primary)] border-t border-[var(--border)]">
+        <span className="text-xs tabular-nums text-[var(--text-secondary)] min-w-[3.5rem]">
+          {currentLabel}
+        </span>
+        <div className="flex items-center gap-1">
+          {SPEEDS.map((rate) => (
+            <button
+              key={rate}
+              type="button"
+              onClick={() => {
+                onSpeedChange(rate);
+                try {
+                  playerRef.current?.setPlaybackRate(rate);
+                } catch {
+                  /* ignore */
+                }
+              }}
+              className={`px-1.5 py-0.5 rounded-md text-[11px] border ${
+                speed === rate
+                  ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]"
+                  : "border-[var(--border)] text-[var(--text-muted)]"
+              }`}
+            >
+              {rate}x
+            </button>
+          ))}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs tabular-nums text-[var(--text-secondary)] min-w-[3.5rem]">
-            {currentLabel}
-          </span>
-          <div className="flex items-center gap-1">
-            {SPEEDS.map((rate) => (
-              <button
-                key={rate}
-                type="button"
-                onClick={() => {
-                  onSpeedChange(rate);
-                  try {
-                    playerRef.current?.setPlaybackRate(rate);
-                  } catch {
-                    /* ignore */
-                  }
-                }}
-                className={`px-1.5 py-0.5 rounded-md text-[11px] border ${
-                  speed === rate
-                    ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]"
-                    : "border-[var(--border)] text-[var(--text-muted)]"
-                }`}
-              >
-                {rate}x
-              </button>
-            ))}
-          </div>
+        {stampEnabled ? (
           <button
             type="button"
             onClick={onStamp}
             className="px-2 py-0.5 rounded-md text-[11px] border border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            title="Insert timestamp into notes"
           >
             Stamp {currentLabel}
           </button>
-          <a
-            href={watchUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="ml-auto text-[11px] text-[var(--accent)] hover:underline"
-          >
-            Open on YouTube
-          </a>
-        </div>
-        <p className="text-[11px] text-[var(--text-muted)]">
-          Stamp inserts the time into notes below. Split a PDF or notebook beside
-          this lecture from the library.
-        </p>
+        ) : null}
+        <a
+          href={watchUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="ml-auto text-[11px] text-[var(--accent)] hover:underline"
+        >
+          Open on YouTube
+        </a>
       </div>
     </div>
   );

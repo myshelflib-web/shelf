@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+} from "react";
+import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { PersonalContentArea } from "@/components/my-content/PersonalContentArea";
 import { YouTubeLecturePlayer } from "@/components/my-content/YouTubeLecturePlayer";
 import { api } from "@/lib/api";
@@ -13,6 +20,9 @@ import {
 import { canonicalWatchUrl, parseYoutubeUrl } from "@/lib/youtubeUrl";
 import type { YtPlayer } from "@/lib/youtubeIframeApi";
 import type { UserContentHighlight } from "@/types";
+
+const NOTES_OPEN_KEY = "shelf:video-notes-open";
+const NOTES_WIDTH = 340;
 
 type VideoPageViewProps = {
   pageId: string;
@@ -34,6 +44,17 @@ type VideoPageViewProps = {
   onViewStateChange: (state: { scrollTop: number }) => void;
   onReadProgress: (percent: number) => void;
 };
+
+function readNotesOpen(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    const raw = localStorage.getItem(NOTES_OPEN_KEY);
+    if (raw == null) return true;
+    return raw !== "0";
+  } catch {
+    return true;
+  }
+}
 
 export function VideoPageView({
   pageId,
@@ -66,10 +87,15 @@ export function VideoPageView({
   const [notesEpoch, setNotesEpoch] = useState(0);
   const [seconds, setSeconds] = useState(initialSeconds);
   const [speed, setSpeed] = useState(1);
+  const [notesOpen, setNotesOpen] = useState(true);
   const onViewRef = useRef(onViewStateChange);
   onViewRef.current = onViewStateChange;
   const onProgressRef = useRef(onReadProgress);
   onProgressRef.current = onReadProgress;
+
+  useEffect(() => {
+    setNotesOpen(readNotesOpen());
+  }, []);
 
   useEffect(() => {
     notesRef.current = notesHtml;
@@ -77,6 +103,15 @@ export function VideoPageView({
     setNotesSeed(notesHtml);
     setNotesEpoch(0);
   }, [pageId, notesHtml]);
+
+  const setNotesOpenPersist = useCallback((open: boolean) => {
+    setNotesOpen(open);
+    try {
+      localStorage.setItem(NOTES_OPEN_KEY, open ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const persistNotes = useCallback(
     async (html: string) => {
@@ -124,35 +159,38 @@ export function VideoPageView({
   }, []);
 
   const onStamp = useCallback(() => {
+    if (!notesOpen) setNotesOpenPersist(true);
     const next = prependTimestamp(notesRef.current, seconds);
     notesRef.current = next;
     setNotesSeed(next);
     setNotesEpoch((n) => n + 1);
     scheduleSave(next);
-  }, [scheduleSave, seconds]);
+  }, [notesOpen, scheduleSave, seconds, setNotesOpenPersist]);
 
-  const onNotesClick = useCallback(
-    (e: MouseEvent<HTMLDivElement>) => {
-      const target = (e.target as HTMLElement).closest("a");
-      if (!target) return;
-      const href = target.getAttribute("href") || "";
-      const t = secondsFromTimestampHref(href);
-      if (t == null) return;
-      e.preventDefault();
-      try {
-        playerRef.current?.seekTo(t, true);
-      } catch {
-        /* ignore */
-      }
-    },
-    []
-  );
+  const onNotesClick = useCallback((e: MouseEvent<HTMLDivElement>) => {
+    const target = (e.target as HTMLElement).closest("a");
+    if (!target) return;
+    const href = target.getAttribute("href") || "";
+    const t = secondsFromTimestampHref(href);
+    if (t == null) return;
+    e.preventDefault();
+    try {
+      playerRef.current?.seekTo(t, true);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   if (!videoId) {
     return (
       <div className="flex-1 flex items-center justify-center text-sm text-[var(--text-muted)] px-6 text-center">
         This YouTube link could not be loaded.{" "}
-        <a href={sourceUrl} className="text-[var(--accent)] underline ml-1" target="_blank" rel="noreferrer">
+        <a
+          href={sourceUrl}
+          className="text-[var(--accent)] underline ml-1"
+          target="_blank"
+          rel="noreferrer"
+        >
           Open original
         </a>
       </div>
@@ -160,43 +198,75 @@ export function VideoPageView({
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
-      <YouTubeLecturePlayer
-        videoId={videoId}
-        title={title}
-        initialSeconds={initialSeconds}
-        watchUrl={watchUrl}
-        currentLabel={formatVideoTime(seconds)}
-        speed={speed}
-        onSpeedChange={setSpeed}
-        onTime={onTime}
-        onStamp={onStamp}
-        playerRef={playerRef}
-      />
-      <div
-        className="flex-1 min-h-0 overflow-hidden flex flex-col"
-        onClick={onNotesClick}
-      >
-        <div className="px-4 pt-2 pb-1 shrink-0">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-            Notes
-          </p>
-        </div>
-        <PersonalContentArea
-          key={`${pageId}-${notesEpoch}`}
-          content={notesSeed}
-          userTopicId={pageId}
-          highlights={highlights}
-          onHighlightsChange={onHighlightsChange}
-          guestLocked={guestLocked}
-          onGuestLockedClick={onGuestLockedClick}
-          onAskSelection={onAskSelection}
-          editing
-          onContentChange={scheduleSave}
-          clipMode={clipMode}
-          onClip={onClip}
+    <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 min-w-0 relative">
+        <YouTubeLecturePlayer
+          videoId={videoId}
+          title={title}
+          initialSeconds={initialSeconds}
+          watchUrl={watchUrl}
+          currentLabel={formatVideoTime(seconds)}
+          speed={speed}
+          onSpeedChange={setSpeed}
+          onTime={onTime}
+          onStamp={onStamp}
+          playerRef={playerRef}
         />
+        {!notesOpen ? (
+          <button
+            type="button"
+            onClick={() => setNotesOpenPersist(true)}
+            className="absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] text-[11px] text-[var(--text-secondary)] shadow-sm hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            title="Show notes"
+            aria-label="Show notes"
+          >
+            <PanelRightOpen className="w-3.5 h-3.5" />
+            Notes
+          </button>
+        ) : null}
       </div>
+
+      {notesOpen ? (
+        <aside
+          className="shrink-0 h-full flex flex-col border-l border-[var(--border)] bg-[var(--bg-primary)] min-h-0 overflow-hidden"
+          style={{ width: NOTES_WIDTH }}
+          aria-label="Lecture notes"
+        >
+          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-[var(--border)] shrink-0">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+              Notes
+            </p>
+            <button
+              type="button"
+              onClick={() => setNotesOpenPersist(false)}
+              className="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+              title="Hide notes"
+              aria-label="Hide notes"
+            >
+              <PanelRightClose className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div
+            className="flex-1 min-h-0 overflow-hidden flex flex-col video-notes-pane"
+            onClick={onNotesClick}
+          >
+            <PersonalContentArea
+              key={`${pageId}-${notesEpoch}`}
+              content={notesSeed}
+              userTopicId={pageId}
+              highlights={highlights}
+              onHighlightsChange={onHighlightsChange}
+              guestLocked={guestLocked}
+              onGuestLockedClick={onGuestLockedClick}
+              onAskSelection={onAskSelection}
+              editing
+              onContentChange={scheduleSave}
+              clipMode={clipMode}
+              onClip={onClip}
+            />
+          </div>
+        </aside>
+      ) : null}
     </div>
   );
 }
