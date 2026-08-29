@@ -1655,7 +1655,7 @@ export function PdfViewer({
         )}
       <div
         ref={bindScrollRef}
-        className={`flex-1 overflow-auto px-4 py-6 overscroll-y-contain [overflow-anchor:none]${inkActive ? " shelf-ink-surface" : ""}${cursorTool ? " cursor-none" : ""}`}
+        className={`flex-1 overflow-auto px-4 pt-6 pb-20 overscroll-y-contain [overflow-anchor:none]${inkActive ? " shelf-ink-surface" : ""}${cursorTool ? " cursor-none" : ""}`}
         onPointerMove={(e) => {
           if (cursorTool) penCursor.move(e.clientX, e.clientY);
         }}

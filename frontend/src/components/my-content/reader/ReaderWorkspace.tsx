@@ -718,7 +718,7 @@ export function ReaderWorkspace({
           <Separator className="w-1 bg-[var(--border)] data-[separator]:hover:bg-[var(--accent)]/40" />
 
           <Panel id="editor" minSize="30%" defaultSize="82%">
-            <div className="h-full flex flex-col min-w-0 overflow-hidden bg-[var(--bg-primary)]">
+            <div className="relative h-full flex flex-col min-w-0 overflow-hidden bg-[var(--bg-primary)]">
               <div className="flex items-center gap-1 px-2 py-1 border-b border-[var(--border)] shrink-0 bg-[var(--bg-secondary)] min-w-0">
                 <div className="flex items-center gap-1 shrink-0">
                   <button
@@ -946,18 +946,6 @@ export function ReaderWorkspace({
 
               {pageData && focusedHandlers && (
                 <ReaderBottomBar
-                  pdf={
-                    pageData.contentType === "PDF" &&
-                    focusedSnap?.pdfPage &&
-                    focusedSnap.pdfNumPages
-                      ? {
-                          page: focusedSnap.pdfPage,
-                          numPages: focusedSnap.pdfNumPages,
-                          onPrev: () => focusedHandlers.pdfPrevPage(),
-                          onNext: () => focusedHandlers.pdfNextPage(),
-                        }
-                      : null
-                  }
                   completed={pageData.completed}
                   onToggleComplete={focusedHandlers.handleToggleComplete}
                   onOpenStudyAI={() => {

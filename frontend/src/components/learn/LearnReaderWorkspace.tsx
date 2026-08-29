@@ -30,7 +30,6 @@ import {
 import { ReaderTabStrip } from "@/components/my-content/reader/ReaderTabStrip";
 import { useReaderWorkspace } from "@/components/my-content/reader/useReaderWorkspace";
 import {
-  navHref,
   OpenTab,
   PersonalPageReaderScope,
   scopeHref,
@@ -110,7 +109,6 @@ export function LearnReaderWorkspace({
     ? handlersRef.current[focusedPane.id]
     : null;
   const pageData = focusedSnap?.pageData ?? null;
-  const isPdf = pageData?.contentType === "PDF";
   const studyPageId = pageData?.id ?? null;
 
   useEffect(() => {
@@ -423,7 +421,7 @@ export function LearnReaderWorkspace({
           <Separator className="w-1 bg-[var(--border)] data-[separator]:hover:bg-[var(--accent)]/40" />
 
           <Panel id="learn-editor" minSize="30%" defaultSize="58%">
-            <div className="h-full flex flex-col min-w-0 overflow-hidden bg-[var(--bg-primary)]">
+            <div className="relative h-full flex flex-col min-w-0 overflow-hidden bg-[var(--bg-primary)]">
               <div className="flex items-center gap-1 px-2 py-1 border-b border-[var(--border)] shrink-0 bg-[var(--bg-secondary)]">
                 <button
                   type="button"
@@ -550,38 +548,6 @@ export function LearnReaderWorkspace({
 
               {pageData && focusedHandlers && (
                 <ReaderBottomBar
-                  prev={
-                    pageData.navigation.prev && focusedTab
-                      ? {
-                          href: navHref(
-                            focusedTab.scope,
-                            pageData.navigation.prev.slug
-                          ),
-                          title: pageData.navigation.prev.title,
-                        }
-                      : null
-                  }
-                  next={
-                    pageData.navigation.next && focusedTab
-                      ? {
-                          href: navHref(
-                            focusedTab.scope,
-                            pageData.navigation.next.slug
-                          ),
-                          title: pageData.navigation.next.title,
-                        }
-                      : null
-                  }
-                  pdf={
-                    isPdf && focusedSnap?.pdfPage && focusedSnap.pdfNumPages
-                      ? {
-                          page: focusedSnap.pdfPage,
-                          numPages: focusedSnap.pdfNumPages,
-                          onPrev: () => focusedHandlers.pdfPrevPage(),
-                          onNext: () => focusedHandlers.pdfNextPage(),
-                        }
-                      : null
-                  }
                   completed={pageData.completed}
                   onToggleComplete={() =>
                     void focusedHandlers.handleToggleComplete()

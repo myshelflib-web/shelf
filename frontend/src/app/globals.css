@@ -120,22 +120,17 @@
     box-shadow: none !important;
   }
 
-  /* Phone / tablet portrait: reader toolbar can scroll instead of overlapping. */
-  html[data-shelf-compact-portrait] .reader-bottom-bar {
+  /* Phone / tablet portrait: overlay pill can scroll instead of clipping. */
+  html[data-shelf-compact-portrait] .reader-bottom-bar > * {
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
-    justify-content: flex-start;
     flex-wrap: nowrap;
     scrollbar-width: none;
   }
 
-  html[data-shelf-compact-portrait] .reader-bottom-bar::-webkit-scrollbar {
+  html[data-shelf-compact-portrait] .reader-bottom-bar > *::-webkit-scrollbar {
     display: none;
-  }
-
-  html[data-shelf-compact-portrait] .reader-bottom-bar > * {
-    flex-shrink: 0;
   }
 }
 
