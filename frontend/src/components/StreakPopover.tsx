@@ -1,8 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Flame, Trophy } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Flame,
+  Share2,
+  Trophy,
+} from "lucide-react";
 import { ActivityMonthGrid } from "@/components/ActivityMonthGrid";
+import { StudyShareLauncher } from "@/components/study-share/StudyShareLauncher";
 import { getReadingStats } from "@/lib/readingStats";
 import { earnedMedals } from "@/lib/streakMedals";
 import { localYmd } from "@/lib/monthGrid";
@@ -122,6 +130,19 @@ export function StreakPopover() {
               {stats.activeDates.length} total
             </span>
           </div>
+
+          <StudyShareLauncher
+            renderTrigger={(open) => (
+              <button
+                type="button"
+                onClick={open}
+                className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[13px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors"
+              >
+                <Share2 className="w-3.5 h-3.5 text-[var(--accent)]" />
+                Share streak card
+              </button>
+            )}
+          />
         </div>
       )}
     </div>

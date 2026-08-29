@@ -88,4 +88,32 @@ slug: "exam-quiz",
     ctaHref: "/login?next=/dashboard",
     ctaLabel: "View dashboard",
   },
+{
+    slug: "study-streak-share-cards",
+    category: "practice",
+    title: "Share Study Streak Cards for Instagram & WhatsApp | Shelf",
+    metaDescription:
+      "Export Strava-style study streak cards from Shelf — reading time, medals, and active days — sized for Instagram Stories, WhatsApp, and Telegram.",
+    keywords: [
+      "study streak share",
+      "study progress instagram",
+      "exam prep accountability",
+      "reading streak card",
+    ],
+    headline: "Share your study streak",
+    subhead:
+      "Story-ready PNG cards from your reading stats — private library, public consistency.",
+    bullets: [
+      "Flame popover or dashboard share button",
+      "Story (9:16) and square formats",
+      "Toggle study goal and today's minutes",
+      "Native share, PNG download, or Telegram link",
+    ],
+    paragraphs: [
+      "Accountability without a social feed. Export a dark, on-brand card when your streak is worth celebrating — then post it wherever your batch hangs out.",
+    ],
+    relatedBlogSlug: "share-study-streak-cards",
+    ctaHref: "/login?next=/dashboard",
+    ctaLabel: "Share a streak",
+  },
 ];

@@ -123,6 +123,12 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "reading tracker students",
     "study habit dashboard",
   ],
+  "share-study-streak-cards": [
+    "study streak share",
+    "study progress instagram",
+    "reading streak card",
+    "exam prep accountability",
+  ],
   "reader-workspace-tabs-split-view": [
     "split screen PDF reader",
     "compare PDF notes",

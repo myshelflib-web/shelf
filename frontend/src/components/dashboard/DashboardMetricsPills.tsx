@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Clock, Flame } from "lucide-react";
+import { Clock, Flame, Share2 } from "lucide-react";
 import { DashboardMetricsSkeleton } from "@/components/dashboard/DashboardSkeletons";
+import { StudyShareLauncher } from "@/components/study-share/StudyShareLauncher";
 
 function formatReadingToday(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -60,6 +61,19 @@ export function DashboardMetricsPills({
         icon={<Flame className="w-4 h-4" strokeWidth={1.8} />}
         label="Streak"
         value={`${streak} ${streak === 1 ? "day" : "days"}`}
+      />
+      <StudyShareLauncher
+        renderTrigger={(open) => (
+          <button
+            type="button"
+            onClick={open}
+            className="h-[52px] w-[52px] shrink-0 rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] inline-flex items-center justify-center text-[var(--accent)] hover:bg-[var(--bg-secondary)] transition-colors"
+            aria-label="Share study streak card"
+            title="Share streak card"
+          >
+            <Share2 className="w-4 h-4" strokeWidth={1.8} />
+          </button>
+        )}
       />
     </div>
   );

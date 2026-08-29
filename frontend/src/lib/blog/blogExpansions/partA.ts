@@ -349,4 +349,45 @@ export const BLOG_EXPANSIONS_A: Record<string, BlogSection[]> = {
       ],
     },
   ],
+  "share-study-streak-cards": [
+    {
+      heading: "Why share cards, not a feed",
+      paragraphs: [
+        "Shelf stays a private workspace — no public profile, no likes, no batch leaderboard. Share cards are export-only: you choose when to post, where to post, and what details appear.",
+        "That matches how serious aspirants already use Telegram and Instagram — accountability posts in trusted groups, not performative social networks.",
+      ],
+    },
+    {
+      heading: "What appears on the card",
+      paragraphs: [
+        "The card pulls from the same reading stats as the header flame: current streak, last-seven-days activity dots, total active days, today's reading time, and your latest streak medal when you've earned one.",
+        "Study goal (UPSC, NEET PG, etc.) is optional — toggle it off if you prefer a cleaner look or do not want to label your track publicly.",
+      ],
+    },
+    {
+      heading: "Affiliate link on Telegram share",
+      paragraphs: [
+        "Telegram + link saves the PNG and opens Telegram's share picker with a Shelf landing URL. If you have an affiliate code in Settings, that link includes your ref so friends who upgrade can earn you Shelf coins — without exposing your library.",
+      ],
+    },
+    {
+      heading: "Formats for each platform",
+      paragraphs: [
+        "Story (9:16) fits Instagram Stories, WhatsApp status, and vertical Reels covers. Square works for feed posts and Telegram channel thumbnails. Both use the same dark Shelf palette so the card reads as premium, not a screenshot.",
+      ],
+    },
+    {
+      heading: "When to post",
+      paragraphs: [
+        "Seven-day and thirty-day streaks are natural milestones — the card shows your medal automatically. Daily posts work too when you hit your reading goal and want a quiet public commitment.",
+        "Pair with planner: complete linked revision tasks, then share the streak card as proof of consistency rather than hours alone.",
+      ],
+    },
+    {
+      heading: "Privacy defaults",
+      paragraphs: [
+        "Nothing posts automatically. PDF titles, highlights, and chat threads never appear on streak cards — only aggregate stats you preview before export. Your material stays in your library.",
+      ],
+    },
+  ],
 };

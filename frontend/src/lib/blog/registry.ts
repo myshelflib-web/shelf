@@ -18,6 +18,7 @@ import { pwaOffline } from "./posts/pwa-offline";
 import { studyAiChatControls } from "./posts/study-ai-chat-controls";
 import { examStyleQuiz } from "./posts/exam-style-quiz";
 import { documentSharing } from "./posts/document-sharing";
+import { studyShareCards } from "./posts/study-share-cards";
 import { telegramSavePdfs } from "./posts/telegram-save-pdfs";
 import { studyAiActions } from "./posts/study-ai-actions";
 import { studyAiDepthModes } from "./posts/study-ai-depth-modes";
@@ -27,6 +28,7 @@ const ALL_POSTS: BlogPost[] = [
   ...EXTRA_BLOG_POSTS,
   studyAiDepthModes,
   studyAiActions,
+  studyShareCards,
   telegramSavePdfs,
   documentSharing,
   examStyleQuiz,
