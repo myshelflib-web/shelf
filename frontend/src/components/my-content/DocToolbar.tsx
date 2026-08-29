@@ -57,9 +57,11 @@ const HIGHLIGHT_COLORS = [
 
 interface DocToolbarProps {
   onCommand: (cmd: string, value?: string) => void;
+  /** Narrow side panels — wrap + smaller controls. */
+  compact?: boolean;
 }
 
-export function DocToolbar({ onCommand }: DocToolbarProps) {
+export function DocToolbar({ onCommand, compact = false }: DocToolbarProps) {
   const [fontValue, setFontValue] = useState("");
   const [fontSize, setFontSize] = useState("16px");
   const [sizeOpen, setSizeOpen] = useState(false);
@@ -68,72 +70,87 @@ export function DocToolbar({ onCommand }: DocToolbarProps) {
   const sizeBtnRef = useRef<HTMLButtonElement>(null);
   const colorBtnRef = useRef<HTMLButtonElement>(null);
   const highlightBtnRef = useRef<HTMLButtonElement>(null);
+  const icon = compact ? "w-3.5 h-3.5" : "w-[17px] h-[17px]";
+  const labelBtn = compact
+    ? "!min-w-7 px-1.5 text-[10px] font-semibold"
+    : "!min-w-[34px] px-2 text-[11px] font-semibold";
 
   return (
-    <EditorToolbarShell>
+    <EditorToolbarShell compact={compact}>
       <ToolGroup>
         <ToolBtn
+          compact={compact}
           label="Undo (⌘Z)"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onCommand("undo")}
         >
-          <Undo2 className="w-[17px] h-[17px]" />
+          <Undo2 className={icon} />
         </ToolBtn>
         <ToolBtn
+          compact={compact}
           label="Redo (⌘⇧Z)"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onCommand("redo")}
         >
-          <Redo2 className="w-[17px] h-[17px]" />
+          <Redo2 className={icon} />
         </ToolBtn>
       </ToolGroup>
 
-      <ToolSep />
+      <ToolSep compact={compact} />
 
       <ToolGroup>
         <ToolBtn
+          compact={compact}
           label="Bold"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onCommand("bold")}
         >
-          <Bold className="w-[17px] h-[17px]" />
+          <Bold className={icon} />
         </ToolBtn>
         <ToolBtn
+          compact={compact}
           label="Italic"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onCommand("italic")}
         >
-          <Italic className="w-[17px] h-[17px]" />
+          <Italic className={icon} />
         </ToolBtn>
         <ToolBtn
+          compact={compact}
           label="Underline"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onCommand("underline")}
         >
-          <Underline className="w-[17px] h-[17px]" />
+          <Underline className={icon} />
         </ToolBtn>
         <ToolBtn
+          compact={compact}
           label="Strikethrough"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onCommand("strikeThrough")}
         >
-          <Strikethrough className="w-[17px] h-[17px]" />
+          <Strikethrough className={icon} />
         </ToolBtn>
         <ToolBtn
+          compact={compact}
           label="Align left"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onCommand("justifyLeft")}
         >
-          <AlignLeft className="w-[17px] h-[17px]" />
+          <AlignLeft className={icon} />
         </ToolBtn>
       </ToolGroup>
 
-      <ToolSep />
+      <ToolSep compact={compact} />
 
       <ToolGroup>
         <ShelfSelect
           compact
-          className="h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+          className={
+            compact
+              ? "h-7 max-w-[5.5rem] px-1.5 rounded-md text-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+              : "h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+          }
           value={fontValue}
           options={FONTS.map((f) => ({ value: f.value, label: f.label }))}
           aria-label="Font"
@@ -145,6 +162,7 @@ export function DocToolbar({ onCommand }: DocToolbarProps) {
         />
         <ToolBtn
           ref={sizeBtnRef}
+          compact={compact}
           label="Text size"
           active={sizeOpen}
           onMouseDown={(e) => e.preventDefault()}
@@ -154,7 +172,7 @@ export function DocToolbar({ onCommand }: DocToolbarProps) {
             setSizeOpen((v) => !v);
           }}
         >
-          <Type className="w-[17px] h-[17px]" />
+          <Type className={icon} />
         </ToolBtn>
       </ToolGroup>
 
@@ -181,36 +199,40 @@ export function DocToolbar({ onCommand }: DocToolbarProps) {
         </div>
       </ToolPopover>
 
-      <ToolSep />
+      <ToolSep compact={compact} />
 
       <ToolGroup>
         <ToolBtn
+          compact={compact}
           label="Heading 1"
-          className="!min-w-[34px] px-2 text-[11px] font-semibold"
+          className={labelBtn}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onCommand("formatBlock", "h1")}
         >
           H1
         </ToolBtn>
         <ToolBtn
+          compact={compact}
           label="Heading 2"
-          className="!min-w-[34px] px-2 text-[11px] font-semibold"
+          className={labelBtn}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onCommand("formatBlock", "h2")}
         >
           H2
         </ToolBtn>
         <ToolBtn
+          compact={compact}
           label="Bullet list"
-          className="!min-w-[34px] px-2 text-[11px] font-semibold"
+          className={labelBtn}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onCommand("insertUnorderedList")}
         >
-          • List
+          {compact ? "•" : "• List"}
         </ToolBtn>
         <ToolBtn
+          compact={compact}
           label="Numbered list"
-          className="!min-w-[34px] px-2 text-[11px] font-semibold"
+          className={labelBtn}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onCommand("insertOrderedList")}
         >
@@ -218,11 +240,12 @@ export function DocToolbar({ onCommand }: DocToolbarProps) {
         </ToolBtn>
       </ToolGroup>
 
-      <ToolSep />
+      <ToolSep compact={compact} />
 
       <ToolGroup>
         <ToolBtn
           ref={colorBtnRef}
+          compact={compact}
           label="Pen / text color"
           active={colorOpen}
           onMouseDown={(e) => e.preventDefault()}
@@ -232,10 +255,11 @@ export function DocToolbar({ onCommand }: DocToolbarProps) {
             setColorOpen((v) => !v);
           }}
         >
-          <Palette className="w-[17px] h-[17px]" />
+          <Palette className={icon} />
         </ToolBtn>
         <ToolBtn
           ref={highlightBtnRef}
+          compact={compact}
           label="Highlighter"
           active={highlightOpen}
           onMouseDown={(e) => e.preventDefault()}
@@ -245,7 +269,7 @@ export function DocToolbar({ onCommand }: DocToolbarProps) {
             setHighlightOpen((v) => !v);
           }}
         >
-          <Highlighter className="w-[17px] h-[17px]" />
+          <Highlighter className={icon} />
         </ToolBtn>
       </ToolGroup>
 

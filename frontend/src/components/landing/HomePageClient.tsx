@@ -51,7 +51,7 @@ export function HomePageClient() {
             <div>
               <div className="landing-eyebrow">Your personal study library</div>
               <h1 id="landing-hero-heading">
-                Your material. One reader, Study AI, planner, and quiz.
+                Everything you’re learning or working on. In one Shelf.
               </h1>
               <p className="landing-lead">
                 Upload PDFs, YouTube lectures, sketch notebooks, and doc pages

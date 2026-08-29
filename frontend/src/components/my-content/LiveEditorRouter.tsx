@@ -19,6 +19,8 @@ interface LiveEditorRouterProps {
   userTopicId: string;
   onContentChange?: (html: string) => void;
   onViewStateChange?: (state: { scrollTop: number; scrollLeft?: number }) => void;
+  /** Compact doc editor for side panels (e.g. lecture notes). */
+  compact?: boolean;
 }
 
 type EditorKind = "sketch" | "doc" | "blank";
@@ -35,6 +37,7 @@ export function LiveEditorRouter({
   userTopicId,
   onContentChange,
   onViewStateChange,
+  compact = false,
 }: LiveEditorRouterProps) {
   // Latch kind + seed on first paint so parent re-renders never switch editors
   // or re-feed HTML into a live contentEditable (that steals the caret).
@@ -72,6 +75,7 @@ export function LiveEditorRouter({
         initialHtml={seed}
         onChange={(html) => onContentChange?.(html)}
         onViewStateChange={onViewStateChange}
+        compact={compact}
       />
     );
   }

@@ -8,12 +8,15 @@ interface DocEditorProps {
   initialHtml: string;
   onChange: (html: string) => void;
   onViewStateChange?: (state: { scrollTop: number; scrollLeft: number }) => void;
+  /** Side panel notes — flush surface, compact toolbar, no footer tip. */
+  compact?: boolean;
 }
 
 export function DocEditor({
   initialHtml,
   onChange,
   onViewStateChange,
+  compact = false,
 }: DocEditorProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -70,11 +73,11 @@ export function DocEditor({
   };
 
   return (
-    <div className="relative flex-1 flex flex-col overflow-hidden bg-[var(--bg-primary)]">
-      <DocToolbar onCommand={runCommand} />
+    <div className="relative flex-1 flex flex-col overflow-hidden bg-[var(--bg-primary)] min-h-0">
+      <DocToolbar onCommand={runCommand} compact={compact} />
       <div
         ref={viewportRef}
-        className="flex-1 overflow-auto doc-editor-viewport"
+        className="flex-1 overflow-auto doc-editor-viewport min-h-0"
         onScroll={() => {
           const vp = viewportRef.current;
           if (!vp) return;
@@ -84,22 +87,39 @@ export function DocEditor({
           });
         }}
       >
-        <div className="max-w-3xl mx-auto px-8 py-8 min-h-full">
-          <div className="shelf-doc-editor rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] shadow-sm min-h-[70vh]">
-            <div
-              ref={bodyRef}
-              className="shelf-doc-body prose-content px-10 py-12 outline-none min-h-[70vh] text-[var(--text-primary)]"
-              contentEditable
-              suppressContentEditableWarning
-              onInput={emit}
-              onBlur={emit}
-            />
+        {compact ? (
+          <div className="min-h-full h-full">
+            <div className="shelf-doc-editor min-h-full h-full bg-[var(--bg-primary)]">
+              <div
+                ref={bodyRef}
+                className="shelf-doc-body prose-content px-3.5 py-3 outline-none min-h-full text-[var(--text-primary)]"
+                contentEditable
+                suppressContentEditableWarning
+                onInput={emit}
+                onBlur={emit}
+              />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="max-w-3xl mx-auto px-8 py-8 min-h-full">
+            <div className="shelf-doc-editor rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] shadow-sm min-h-[70vh]">
+              <div
+                ref={bodyRef}
+                className="shelf-doc-body prose-content px-10 py-12 outline-none min-h-[70vh] text-[var(--text-primary)]"
+                contentEditable
+                suppressContentEditableWarning
+                onInput={emit}
+                onBlur={emit}
+              />
+            </div>
+          </div>
+        )}
       </div>
-      <p className="shrink-0 text-center text-[11px] text-[var(--text-muted)] py-1.5 border-t border-[var(--border)]">
-        Doc — type and format your notes · changes autosave
-      </p>
+      {compact ? null : (
+        <p className="doc-editor-hint shrink-0 text-center text-[11px] text-[var(--text-muted)] py-1.5 border-t border-[var(--border)]">
+          Doc — type and format your notes · changes autosave
+        </p>
+      )}
     </div>
   );
 }

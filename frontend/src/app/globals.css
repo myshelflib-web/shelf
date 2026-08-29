@@ -142,20 +142,18 @@
   cursor: pointer;
 }
 
-/* Lecture notes side panel — fill width, no centered reading column */
-.video-notes-pane .doc-editor-viewport > div {
-  max-width: none;
-  margin-left: 0;
-  margin-right: 0;
-  padding: 0.75rem;
+/* Lecture notes side panel — flush page surface, no reading-column card */
+.video-notes-pane {
+  min-height: 0;
 }
-.video-notes-pane .shelf-doc-editor {
-  min-height: 100%;
-  border-radius: 10px;
+.video-notes-pane .doc-editor-viewport {
+  min-height: 0;
 }
 .video-notes-pane .shelf-doc-body {
-  min-height: 12rem;
-  padding: 0.85rem 1rem;
+  min-height: 100%;
+}
+.video-notes-pane .shelf-doc-body a[href^="#t-"] {
+  display: inline;
 }
 
 .prose-content .doc-masthead {

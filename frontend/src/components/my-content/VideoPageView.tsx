@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type MouseEvent,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { PersonalContentArea } from "@/components/my-content/PersonalContentArea";
@@ -22,7 +23,10 @@ import type { YtPlayer } from "@/lib/youtubeIframeApi";
 import type { UserContentHighlight } from "@/types";
 
 const NOTES_OPEN_KEY = "shelf:video-notes-open";
-const NOTES_WIDTH = 340;
+const NOTES_WIDTH_KEY = "shelf:video-notes-width";
+const NOTES_WIDTH_DEFAULT = 380;
+const NOTES_WIDTH_MIN = 280;
+const NOTES_WIDTH_MAX_RATIO = 0.55;
 
 type VideoPageViewProps = {
   pageId: string;
@@ -56,6 +60,27 @@ function readNotesOpen(): boolean {
   }
 }
 
+function readNotesWidth(): number {
+  if (typeof window === "undefined") return NOTES_WIDTH_DEFAULT;
+  try {
+    const raw = Number(localStorage.getItem(NOTES_WIDTH_KEY));
+    if (!Number.isFinite(raw) || raw < NOTES_WIDTH_MIN) {
+      return NOTES_WIDTH_DEFAULT;
+    }
+    return Math.round(raw);
+  } catch {
+    return NOTES_WIDTH_DEFAULT;
+  }
+}
+
+function clampNotesWidth(width: number, shellWidth: number): number {
+  const max = Math.max(
+    NOTES_WIDTH_MIN,
+    Math.floor(shellWidth * NOTES_WIDTH_MAX_RATIO)
+  );
+  return Math.min(max, Math.max(NOTES_WIDTH_MIN, Math.round(width)));
+}
+
 export function VideoPageView({
   pageId,
   title,
@@ -79,6 +104,7 @@ export function VideoPageView({
     ? canonicalWatchUrl(videoId, playlistId)
     : sourceUrl;
 
+  const shellRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YtPlayer | null>(null);
   const notesRef = useRef(notesHtml);
   const savedRef = useRef(notesHtml);
@@ -88,6 +114,8 @@ export function VideoPageView({
   const [seconds, setSeconds] = useState(initialSeconds);
   const [speed, setSpeed] = useState(1);
   const [notesOpen, setNotesOpen] = useState(true);
+  const [notesWidth, setNotesWidth] = useState(NOTES_WIDTH_DEFAULT);
+  const [resizing, setResizing] = useState(false);
   const onViewRef = useRef(onViewStateChange);
   onViewRef.current = onViewStateChange;
   const onProgressRef = useRef(onReadProgress);
@@ -95,6 +123,7 @@ export function VideoPageView({
 
   useEffect(() => {
     setNotesOpen(readNotesOpen());
+    setNotesWidth(readNotesWidth());
   }, []);
 
   useEffect(() => {
@@ -112,6 +141,44 @@ export function VideoPageView({
       /* ignore */
     }
   }, []);
+
+  const onNotesResizePointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const shell = shellRef.current;
+      if (!shell) return;
+      const startX = e.clientX;
+      const startWidth = notesWidth;
+      const shellWidth = shell.getBoundingClientRect().width;
+      setResizing(true);
+
+      const onMove = (ev: PointerEvent) => {
+        setNotesWidth(
+          clampNotesWidth(startWidth + (startX - ev.clientX), shellWidth)
+        );
+      };
+      const onUp = (ev: PointerEvent) => {
+        setResizing(false);
+        const next = clampNotesWidth(
+          startWidth + (startX - ev.clientX),
+          shellWidth
+        );
+        setNotesWidth(next);
+        try {
+          localStorage.setItem(NOTES_WIDTH_KEY, String(next));
+        } catch {
+          /* ignore quota */
+        }
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+      };
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
+    },
+    [notesWidth]
+  );
 
   const persistNotes = useCallback(
     async (html: string) => {
@@ -198,7 +265,12 @@ export function VideoPageView({
   }
 
   return (
-    <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
+    <div
+      ref={shellRef}
+      className={`flex-1 flex min-h-0 min-w-0 overflow-hidden${
+        resizing ? " select-none cursor-col-resize" : ""
+      }`}
+    >
       <div className="flex-1 flex flex-col min-h-0 min-w-0 relative">
         <YouTubeLecturePlayer
           videoId={videoId}
@@ -227,45 +299,58 @@ export function VideoPageView({
       </div>
 
       {notesOpen ? (
-        <aside
-          className="shrink-0 h-full flex flex-col border-l border-[var(--border)] bg-[var(--bg-primary)] min-h-0 overflow-hidden"
-          style={{ width: NOTES_WIDTH }}
-          aria-label="Lecture notes"
-        >
-          <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-[var(--border)] shrink-0">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-              Notes
-            </p>
-            <button
-              type="button"
-              onClick={() => setNotesOpenPersist(false)}
-              className="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
-              title="Hide notes"
-              aria-label="Hide notes"
-            >
-              <PanelRightClose className="w-3.5 h-3.5" />
-            </button>
-          </div>
+        <>
           <div
-            className="flex-1 min-h-0 overflow-hidden flex flex-col video-notes-pane"
-            onClick={onNotesClick}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize notes panel"
+            title="Drag to resize"
+            className={`shrink-0 w-1.5 cursor-col-resize touch-none border-l border-[var(--border)] bg-[var(--bg-secondary)] hover:bg-[var(--accent)]/40 transition-colors${
+              resizing ? " bg-[var(--accent)]/50" : ""
+            }`}
+            onPointerDown={onNotesResizePointerDown}
+          />
+          <aside
+            className="shrink-0 h-full flex flex-col bg-[var(--bg-primary)] min-h-0 min-w-0 overflow-hidden"
+            style={{ width: notesWidth }}
+            aria-label="Lecture notes"
           >
-            <PersonalContentArea
-              key={`${pageId}-${notesEpoch}`}
-              content={notesSeed}
-              userTopicId={pageId}
-              highlights={highlights}
-              onHighlightsChange={onHighlightsChange}
-              guestLocked={guestLocked}
-              onGuestLockedClick={onGuestLockedClick}
-              onAskSelection={onAskSelection}
-              editing
-              onContentChange={scheduleSave}
-              clipMode={clipMode}
-              onClip={onClip}
-            />
-          </div>
-        </aside>
+            <div className="flex items-center justify-between gap-2 px-3 py-1.5 border-b border-[var(--border)] shrink-0">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+                Notes
+              </p>
+              <button
+                type="button"
+                onClick={() => setNotesOpenPersist(false)}
+                className="p-1.5 rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+                title="Hide notes"
+                aria-label="Hide notes"
+              >
+                <PanelRightClose className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <div
+              className="flex-1 min-h-0 overflow-hidden flex flex-col video-notes-pane"
+              onClick={onNotesClick}
+            >
+              <PersonalContentArea
+                key={`${pageId}-${notesEpoch}`}
+                content={notesSeed}
+                userTopicId={pageId}
+                highlights={highlights}
+                onHighlightsChange={onHighlightsChange}
+                guestLocked={guestLocked}
+                onGuestLockedClick={onGuestLockedClick}
+                onAskSelection={onAskSelection}
+                editing
+                compactEditor
+                onContentChange={scheduleSave}
+                clipMode={clipMode}
+                onClip={onClip}
+              />
+            </div>
+          </aside>
+        </>
       ) : null}
     </div>
   );

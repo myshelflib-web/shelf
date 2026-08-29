@@ -38,6 +38,8 @@ interface PersonalContentAreaProps {
   readOnly?: boolean;
   guestLocked?: boolean;
   onGuestLockedClick?: (feature: string) => void;
+  /** Compact live editor (side-panel notes). */
+  compactEditor?: boolean;
 }
 
 export function PersonalContentArea({
@@ -59,6 +61,7 @@ export function PersonalContentArea({
   readOnly = false,
   guestLocked = false,
   onGuestLockedClick,
+  compactEditor = false,
 }: PersonalContentAreaProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -364,6 +367,7 @@ export function PersonalContentArea({
           userTopicId={userTopicId}
           onContentChange={onContentChange}
           onViewStateChange={onViewStateChange}
+          compact={compactEditor}
         />
       </div>
     );
