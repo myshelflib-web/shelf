@@ -25,6 +25,11 @@ export function quizHref(id: string): string {
   return `/quiz/${id}`;
 }
 
+export function quizHomeHref(tab: "new" | "past", launch?: QuizLaunch): string {
+  if (tab === "past") return "/quiz?tab=past";
+  return quizSetupHref(launch);
+}
+
 export function parseQuizSearch(search: URLSearchParams): QuizLaunch {
   return {
     source: search.get("source") ?? undefined,

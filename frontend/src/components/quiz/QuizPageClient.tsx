@@ -18,7 +18,13 @@ function QuizHomeSwitch({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const search = useSearchParams();
   if (user) {
-    return <QuizWorkspace key={search.toString()} launch={parseQuizSearch(search)} />;
+    return (
+      <QuizWorkspace
+        key={search.toString()}
+        launch={parseQuizSearch(search)}
+        homeTab={search.get("tab") === "past" ? "past" : "new"}
+      />
+    );
   }
   return children;
 }

@@ -15,12 +15,15 @@ import {
   clampFocus,
   clampQuestionCounts,
   parseDifficulty,
+  parseEndedReason,
+  parseProctored,
   parseSourceKind,
   parseTimeLimitSec,
 } from "../services/quiz/quizLimits.js";
 import { generateQuizPaper, prepareQuizUser, scheduleQuizGeneration } from "../services/quiz/quizGenerate.js";
 import { gradeQuiz } from "../services/quiz/quizGrade.js";
 import {
+  quizScore,
   shouldReveal,
   toClientQuiz,
 } from "../services/quiz/quizSerialize.js";
@@ -63,12 +66,20 @@ router.get("/", async (req: Request, res: Response) => {
       mcqCount: true,
       writtenCount: true,
       timeLimitSec: true,
+      proctored: true,
+      endedReason: true,
       createdAt: true,
       updatedAt: true,
       submittedAt: true,
+      questions: { select: { marks: true, gradedScore: true } },
     },
   });
-  res.json({ quizzes });
+  res.json({
+    quizzes: quizzes.map(({ questions, ...row }) => ({
+      ...row,
+      score: quizScore(questions),
+    })),
+  });
 });
 
 router.post("/", upload.single("file"), async (req: Request, res: Response) => {
@@ -81,6 +92,7 @@ router.post("/", upload.single("file"), async (req: Request, res: Response) => {
     Number(body.writtenCount)
   );
   const timeLimitSec = parseTimeLimitSec(body.timeLimitSec);
+  const proctored = parseProctored(body.proctored);
   const focusTopic = clampFocus(body.focusTopic ?? body.focus);
   const contextKind = asKind(body.contextKind);
   const contextNotebookId = String(body.contextNotebookId ?? "").trim() || null;
@@ -162,6 +174,7 @@ router.post("/", upload.single("file"), async (req: Request, res: Response) => {
       timeLimitSec,
       mcqCount,
       writtenCount,
+      proctored,
       status: "GENERATING",
     },
     include: { questions: true },
@@ -281,12 +294,16 @@ router.post("/:id/submit", async (req: Request, res: Response) => {
     return;
   }
 
+  const body = (req.body ?? {}) as Record<string, unknown>;
+  const endedReason = parseEndedReason(body.endedReason);
+
   await prisma.quiz.update({
     where: { id: quiz.id },
     data: {
       status: "SUBMITTED",
       submittedAt: new Date(),
       startedAt: quiz.startedAt ?? new Date(),
+      endedReason,
     },
   });
 

@@ -10,6 +10,7 @@ import { quizApi } from "@/lib/quiz/api";
 import type { Quiz, QuizLaunch, QuizSummary } from "@/lib/quiz/types";
 import { quizBtnGhost, quizBtnPrimary } from "@/lib/quiz/ui";
 import { QuizHistory } from "./QuizHistory";
+import { QuizHomeTabs } from "./QuizHomeTabs";
 import { QuizResults } from "./QuizResults";
 import { QuizSetup } from "./QuizSetup";
 import { QuizTake } from "./QuizTake";
@@ -17,9 +18,11 @@ import { QuizTake } from "./QuizTake";
 export function QuizWorkspace({
   quizId,
   launch,
+  homeTab = "new",
 }: {
   quizId?: string;
   launch?: QuizLaunch;
+  homeTab?: "new" | "past";
 }) {
   const router = useRouter();
   const { user, loading: authLoading, refreshUser } = useAuth();
@@ -97,24 +100,29 @@ export function QuizWorkspace({
       <main
         className={
           taking
-            ? "flex-1 min-h-0"
-            : "flex-1 min-h-0 px-5 sm:px-6 py-5 max-w-[52rem] mx-auto w-full flex flex-col"
+            ? "flex-1 min-h-0 overflow-hidden"
+            : graded
+              ? "flex-1 min-h-0 px-5 sm:px-6 py-5 max-w-[52rem] mx-auto w-full overflow-y-auto"
+              : "flex-1 min-h-0 px-5 sm:px-6 py-5 max-w-[52rem] mx-auto w-full flex flex-col overflow-hidden"
         }
       >
         {!quizId ? (
           <>
-            <div className="shrink-0 mb-4">
+            <div className="shrink-0 mb-3">
               <h1 className="page-title">Quiz</h1>
               <LivelyLine surface="quiz" className="page-subtitle mt-1" />
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto space-y-6 pb-8">
-              <QuizSetup launch={launch} />
-              <div>
-                <h2 className="text-[13px] font-semibold text-[var(--text-secondary)] mb-2">
-                  Recent
-                </h2>
-                <QuizHistory quizzes={history} />
-              </div>
+            <div className="shrink-0 mb-3">
+              <QuizHomeTabs tab={homeTab} launch={launch} />
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden">
+              {homeTab === "past" ? (
+                <div className="h-full min-h-0 overflow-y-auto">
+                  <QuizHistory quizzes={history} />
+                </div>
+              ) : (
+                <QuizSetup launch={launch} />
+              )}
             </div>
           </>
         ) : generating ? (
@@ -156,11 +164,7 @@ export function QuizWorkspace({
           </div>
         ) : quiz ? (
           graded ? (
-            <QuizResults
-              quiz={quiz}
-              onQuiz={applyQuiz}
-              notice={proctorNotice}
-            />
+            <QuizResults quiz={quiz} notice={proctorNotice} />
           ) : (
             <QuizTake
               quiz={quiz}

@@ -7,7 +7,7 @@ slug: "exam-quiz",
     category: "practice",
     title: "Exam-Style Quiz from Your Notes — MCQ, Written & PYQ | Shelf",
     metaDescription:
-      "Sit timed MCQs, written answers, and photo working on Shelf Quiz. Papers from your library, uploads, or PYQ-style banks — mapped to your study goal and syllabus.",
+      "Sit timed MCQs, written answers, and photo working on Shelf Quiz. Choose a proctored fullscreen sitting or practice mode, then review a per-quiz analysis board.",
     keywords: [
       "exam quiz app",
       "MCQ from PDF",
@@ -17,12 +17,12 @@ slug: "exam-quiz",
     ],
     headline: "Exam-style papers from your notes",
     subhead:
-      "Proctored fullscreen quizzes: MCQs with four options, LaTeX written answers, and photos of handwritten working — from your indexed material.",
+      "Proctored or practice sittings: MCQs with four options, LaTeX written answers, and photos of handwritten working — from your indexed material.",
     bullets: [
       "Library, upload, or exam-bank paper sources",
-      "Timed sittings with tab-switch proctoring",
+      "Optional fullscreen proctoring (tab switch ends the paper)",
       "Instant MCQ marking; AI grading for written items",
-      "PYQ-style items without inventing years",
+      "Per-quiz analysis: score, accuracy, topics, review",
     ],
     paragraphs: [
       "Shelf Quiz is not a generic question bank. Stems come from excerpts retrieved from your uploads — or preloaded curriculum when you choose exam-bank mode.",

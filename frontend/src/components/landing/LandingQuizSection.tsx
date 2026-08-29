@@ -70,10 +70,10 @@ export function LandingQuizSection() {
             Sit real papers from your own notes
           </h2>
           <p className="!mb-4">
-            Timed, fullscreen quizzes with MCQs, written answers, and photos of
-            working — scoped to a document, an upload with syllabus, or a
-            PYQ-style exam bank. Open the public Quiz page to see how it works;
-            sign in to generate papers from your library.
+            Timed MCQs, written answers, and photos of working — scoped to a
+            document, an upload with syllabus, or a PYQ-style exam bank. Sit a
+            proctored fullscreen paper or a practice quiz, then open the
+            analysis board. Sign in to generate papers from your library.
           </p>
           <div className="flex flex-wrap gap-3 mb-6">
             <Link href="/quiz" className="landing-btn landing-btn-primary">

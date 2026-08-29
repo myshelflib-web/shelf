@@ -50,7 +50,7 @@ When `OTEL_EXPORTER_OTLP_ENDPOINT` (+ `OTEL_EXPORTER_OTLP_HEADERS`) is set, `src
 ## Quiz
 
 - `Quiz` / `QuizQuestion` in Postgres. Sources: `LIBRARY` (collection/topic/page), `UPLOAD` (file or paste), `EXAM_BANK` (PYQ titles in the library + preloaded curriculum + goal syllabus).
-- Generate with `services/quiz/` (goal-tuned paper setter, JSON questions). MCQ keys hidden until submit. Written/image answers graded with the chat/vision model. Uses the same LLM token quota as Study AI.
+- Generate with `services/quiz/` (goal-tuned paper setter, JSON questions). MCQ keys hidden until submit. Written/image answers graded with the chat/vision model. Uses the same LLM token quota as Study AI. `proctored` (default true) is chosen at create; tab/fullscreen violations submit with `endedReason`.
 
 ## Domain model (personal library)
 

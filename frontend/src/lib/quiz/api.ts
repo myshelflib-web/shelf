@@ -41,6 +41,7 @@ export type CreateQuizInput = {
   mcqCount: number;
   writtenCount: number;
   timeLimitSec: number | null;
+  proctored: boolean;
   contextKind: string;
   contextNotebookId?: string | null;
   contextTopicId?: string | null;
@@ -62,6 +63,7 @@ export const quizApi = {
       fd.append("mcqCount", String(input.mcqCount));
       fd.append("writtenCount", String(input.writtenCount));
       if (input.timeLimitSec) fd.append("timeLimitSec", String(input.timeLimitSec));
+      fd.append("proctored", String(input.proctored));
       fd.append("contextKind", input.contextKind);
       if (input.contextNotebookId) {
         fd.append("contextNotebookId", input.contextNotebookId);
@@ -82,6 +84,7 @@ export const quizApi = {
         mcqCount: input.mcqCount,
         writtenCount: input.writtenCount,
         timeLimitSec: input.timeLimitSec,
+        proctored: input.proctored,
         contextKind: input.contextKind,
         contextNotebookId: input.contextNotebookId,
         contextTopicId: input.contextTopicId,
@@ -109,10 +112,16 @@ export const quizApi = {
       method: "PATCH",
       body: JSON.stringify(data),
     }),
-  submit: (id: string, opts?: { keepalive?: boolean }) =>
+  submit: (
+    id: string,
+    opts?: { keepalive?: boolean; endedReason?: string }
+  ) =>
     request<{ quiz: Quiz }>(`/api/quiz/${id}/submit`, {
       method: "POST",
       keepalive: opts?.keepalive,
+      body: JSON.stringify({
+        endedReason: opts?.endedReason ?? "SUBMIT",
+      }),
     }),
   uploadAnswerImage: async (quizId: string, questionId: string, file: File) => {
     const fd = new FormData();

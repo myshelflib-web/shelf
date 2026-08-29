@@ -4,7 +4,7 @@ import { buildPageMetadata } from "@/lib/seo/metadata";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing — Free & Premium plans",
   description:
-    "Start free with your private study library — PDFs, highlights, Study AI, quiz, and planner. Upgrade to Premium for expanded library space, deeper AI, and advanced answer modes. Pay with Razorpay UPI.",
+    "Start free with your private study library. Upgrade to Premium when you're ready for more space, deeper Study AI, and daily exam workflows. Pay with Razorpay UPI Autopay.",
   path: "/subscribe",
   keywords: [
     "Shelf Premium",

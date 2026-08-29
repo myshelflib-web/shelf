@@ -657,6 +657,8 @@ model Quiz {
   timeLimitSec      Int?
   mcqCount          Int            @default(5)
   writtenCount      Int            @default(2)
+  proctored         Boolean        @default(true)
+  endedReason       String?
   status            QuizStatus     @default(GENERATING)
   startedAt         DateTime?
   submittedAt       DateTime?

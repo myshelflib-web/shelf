@@ -12,6 +12,7 @@ import {
   clampFocus,
   clampQuestionCounts,
   parseDifficulty,
+  parseProctored,
   parseSourceKind,
   parseTimeLimitSec,
 } from "./quiz/quizLimits.js";
@@ -116,6 +117,11 @@ export const STUDY_ACTION_TOOLS: ChatToolDef[] = [
           timeLimitSec: {
             type: "number",
             description: "Optional timer in seconds.",
+          },
+          proctored: {
+            type: "boolean",
+            description:
+              "True (default) for fullscreen exam sitting; false for practice with tab switches allowed.",
           },
           sourceKind: {
             type: "string",
@@ -307,6 +313,7 @@ async function createQuiz(
     args.writtenCount === undefined ? 2 : Number(args.writtenCount)
   );
   const timeLimitSec = parseTimeLimitSec(args.timeLimitSec);
+  const proctored = parseProctored(args.proctored);
   const focusTopic = clampFocus(args.focusTopic);
 
   let contextKind = parseContextKind(args.contextKind);
@@ -363,6 +370,7 @@ async function createQuiz(
       timeLimitSec,
       mcqCount,
       writtenCount,
+      proctored,
       status: "GENERATING",
     },
     select: { id: true },

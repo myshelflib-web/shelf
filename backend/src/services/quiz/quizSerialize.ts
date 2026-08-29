@@ -35,6 +35,8 @@ export type QuizClient = {
   timeLimitSec: number | null;
   mcqCount: number;
   writtenCount: number;
+  proctored: boolean;
+  endedReason: string | null;
   status: Quiz["status"];
   startedAt: string | null;
   submittedAt: string | null;
@@ -68,7 +70,9 @@ export function remainingSeconds(quiz: {
   return Math.max(0, Math.ceil((end - Date.now()) / 1000));
 }
 
-export function quizScore(questions: QuizQuestion[]): {
+export function quizScore(
+  questions: Array<{ marks: number; gradedScore: number | null }>
+): {
   earned: number;
   max: number;
   percent: number;
@@ -149,6 +153,8 @@ export async function toClientQuiz(
     timeLimitSec: quiz.timeLimitSec,
     mcqCount: quiz.mcqCount,
     writtenCount: quiz.writtenCount,
+    proctored: quiz.proctored,
+    endedReason: quiz.endedReason,
     status: quiz.status,
     startedAt: quiz.startedAt?.toISOString() ?? null,
     submittedAt: quiz.submittedAt?.toISOString() ?? null,

@@ -61,6 +61,7 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
   const [timeLimitSec, setTimeLimitSec] = useState<number | null>(1800);
   const [mcqCount, setMcqCount] = useState(8);
   const [writtenCount, setWrittenCount] = useState(2);
+  const [proctored, setProctored] = useState(true);
   const [focus, setFocus] = useState(launch?.focus ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [sourceText, setSourceText] = useState("");
@@ -96,6 +97,7 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
         mcqCount,
         writtenCount,
         timeLimitSec,
+        proctored,
         contextKind: sourceKind === "LIBRARY" ? scope.contextKind : "LIBRARY",
         contextNotebookId: scope.contextNotebookId || null,
         contextTopicId: scope.contextTopicId || null,
@@ -114,7 +116,8 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
   };
 
   return (
-    <div className="rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] p-4 sm:p-5">
+    <div className="h-full min-h-0 flex flex-col overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)]">
+      <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
       <div className="grid gap-2 sm:grid-cols-3 mb-4">
         {SOURCES.map((s) => (
           <button
@@ -185,6 +188,44 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
           />
         </div>
       )}
+
+      <div className="text-[12px] font-medium text-[var(--text-secondary)] mb-2">
+        Sitting
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 mb-4">
+        {(
+          [
+            {
+              id: true,
+              title: "Proctored",
+              body: "Opens fullscreen. Switching tabs or leaving the window ends the quiz.",
+            },
+            {
+              id: false,
+              title: "Practice",
+              body: "Stay in the app. Tab switches are allowed; the timer still runs.",
+            },
+          ] as const
+        ).map((s) => (
+          <button
+            key={String(s.id)}
+            type="button"
+            onClick={() => setProctored(s.id)}
+            className={`text-left rounded-[10px] border px-3 py-2.5 transition-colors ${
+              proctored === s.id
+                ? "border-[var(--accent)] bg-[var(--accent-subtle)]"
+                : "border-[var(--border)] hover:border-[var(--accent)]"
+            }`}
+          >
+            <div className="text-[13px] font-semibold text-[var(--text-primary)]">
+              {s.title}
+            </div>
+            <p className="mt-0.5 text-[11px] text-[var(--text-muted)] leading-snug">
+              {s.body}
+            </p>
+          </button>
+        ))}
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2 mt-4">
         <label className="text-[12px] font-medium text-[var(--text-secondary)]">
@@ -257,11 +298,8 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
       {error && (
         <p className="mt-3 text-[12px] text-red-400">{error}</p>
       )}
-      <p className="mt-4 text-[12px] text-[var(--text-muted)]">
-        Sittings are proctored: the paper opens in fullscreen, questions sit in
-        the center, and switching tabs ends the quiz.
-      </p>
-      <div className="mt-3 flex justify-end">
+      </div>
+      <div className="shrink-0 px-4 sm:px-5 py-3 border-t border-[var(--border)] flex justify-end">
         <button type="button" className={quizBtnPrimary} disabled={busy} onClick={() => void start()}>
           {busy ? "Starting…" : "Generate quiz"}
         </button>

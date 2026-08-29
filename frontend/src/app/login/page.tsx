@@ -240,9 +240,15 @@ function LoginForm() {
 
           <div className="space-y-3 w-full">
             {showGoogleSignIn ? (
-              <GoogleSignInButton onError={setError} redirectTo={nextPath} />
+              <GoogleSignInButton
+                onError={setError}
+                redirectTo={`/onboarding?next=${encodeURIComponent(nextPath)}`}
+              />
             ) : null}
-            <TelegramSignInButton onError={setError} redirectTo={nextPath} />
+            <TelegramSignInButton
+              onError={setError}
+              redirectTo={`/onboarding?next=${encodeURIComponent(nextPath)}`}
+            />
           </div>
         </>
       </div>

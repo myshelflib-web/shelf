@@ -5,6 +5,7 @@
 @import "./landing-page.css";
 @import "./learn-page.css";
 @import "./onboarding-page.css";
+@import "./plans-page.css";
 
 :root {
   --bg-primary: #f7f7f5;

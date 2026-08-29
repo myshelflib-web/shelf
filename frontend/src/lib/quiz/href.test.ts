@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatClock, quizSetupHref, parseQuizSearch } from "./href";
+import { formatClock, quizSetupHref, parseQuizSearch, quizHomeHref } from "./href";
 
 describe("quiz href", () => {
   it("builds a scoped setup URL", () => {
@@ -23,5 +23,10 @@ describe("quiz href", () => {
 
   it("formats a countdown", () => {
     expect(formatClock(90)).toBe("1:30");
+  });
+
+  it("builds home tab URLs", () => {
+    expect(quizHomeHref("past")).toBe("/quiz?tab=past");
+    expect(quizHomeHref("new")).toBe("/quiz");
   });
 });

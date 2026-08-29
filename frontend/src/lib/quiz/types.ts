@@ -36,6 +36,8 @@ export type QuizScore = {
   percent: number;
 };
 
+export type QuizEndedReason = "SUBMIT" | "TAB" | "FULLSCREEN" | "TIMER";
+
 export type Quiz = {
   id: string;
   title: string;
@@ -51,6 +53,8 @@ export type Quiz = {
   timeLimitSec: number | null;
   mcqCount: number;
   writtenCount: number;
+  proctored: boolean;
+  endedReason: QuizEndedReason | null;
   status: QuizStatus;
   startedAt: string | null;
   submittedAt: string | null;
@@ -72,9 +76,12 @@ export type QuizSummary = {
   mcqCount: number;
   writtenCount: number;
   timeLimitSec: number | null;
+  proctored: boolean;
+  endedReason: QuizEndedReason | null;
   createdAt: string;
   updatedAt: string;
   submittedAt: string | null;
+  score?: QuizScore | null;
 };
 
 export type QuizLaunch = {

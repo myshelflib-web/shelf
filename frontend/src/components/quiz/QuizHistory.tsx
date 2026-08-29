@@ -21,7 +21,7 @@ export function QuizHistory({
   if (quizzes.length === 0) {
     return (
       <p className="text-[13px] text-[var(--text-muted)]">
-        No quizzes yet. Start one above.
+        No past quizzes yet. Generate one from New quiz.
       </p>
     );
   }
@@ -40,11 +40,14 @@ export function QuizHistory({
               </div>
               <p className="text-[11px] text-[var(--text-muted)] truncate">
                 {q.sourceLabel || q.sourceKind} · {DIFFICULTY_LABELS[q.difficulty]} ·{" "}
-                {q.mcqCount} MCQ · {q.writtenCount} written
+                {q.proctored !== false ? "Proctored" : "Practice"}
+                {q.score ? ` · ${q.score.percent}%` : ""}
               </p>
             </div>
             <span className="text-[11px] font-medium text-[var(--text-secondary)] shrink-0">
-              {STATUS[q.status] ?? q.status}
+              {q.score && (q.status === "GRADED" || q.status === "SUBMITTED")
+                ? `${q.score.percent}%`
+                : (STATUS[q.status] ?? q.status)}
             </span>
           </Link>
         </li>

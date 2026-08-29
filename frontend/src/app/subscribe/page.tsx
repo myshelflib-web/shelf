@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/Header";
-import { MarketingFooter } from "@/components/MarketingFooter";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import { SHELF_PLANS, PRICING_FALLBACK } from "@/lib/plans";
@@ -13,7 +12,7 @@ import {
   formatCoinsAsInr,
   getStoredAffiliateRef,
 } from "@/lib/affiliateRef";
-import { Check, Sparkles, Loader2 } from "lucide-react";
+import { Check, Heart, Loader2 } from "lucide-react";
 
 declare global {
   interface Window {
@@ -42,7 +41,7 @@ export default function SubscribePage() {
 function SubscribePageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading: authLoading, refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [status, setStatus] = useState<{
     isPremium: boolean;
     priceInr: number;
@@ -90,7 +89,12 @@ function SubscribePageInner() {
 
   const finishSuccess = async () => {
     await refreshUser();
-    router.push("/my-content");
+    const next = searchParams?.get("next");
+    const dest =
+      next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/subscribe")
+        ? next
+        : "/my-content";
+    router.push(dest);
   };
 
   const handleSubscribe = async () => {
@@ -118,7 +122,7 @@ function SubscribePageInner() {
         name: sub.name,
         description: sub.description,
         prefill: sub.prefill,
-        theme: { color: "#6b8cae" },
+        theme: { color: "#625bc4" },
         handler: async (response: {
           razorpay_payment_id: string;
           razorpay_subscription_id: string;
@@ -165,22 +169,23 @@ function SubscribePageInner() {
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
 
-      <main className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-12 sm:py-16">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-10">
-            <Sparkles className="w-9 h-9 text-[var(--accent)] mx-auto mb-3" />
-            <h1 className="text-3xl sm:text-4xl font-bold mb-3 tracking-tight">
-              {SHELF_PLANS.page.title}
-            </h1>
-            <p className="text-[var(--text-secondary)] max-w-xl mx-auto">
-              {SHELF_PLANS.page.intro}
-            </p>
-          </div>
+      <main className="plans-page flex-1 min-h-0 overflow-hidden">
+        <div className="plans-page-inner">
+          <header className="plans-hero">
+            <div className="plans-kicker">
+              <Heart className="w-3 h-3" strokeWidth={2.25} aria-hidden />
+              {SHELF_PLANS.page.kicker}
+            </div>
+            <h1>{SHELF_PLANS.page.title}</h1>
+            <p className="plans-lead">{SHELF_PLANS.page.intro}</p>
+          </header>
 
-          {isPremium && user && (
-            <div className="mb-8 p-5 rounded-xl border border-[var(--accent)] bg-[var(--accent-subtle)] text-center">
-              <p className="font-semibold mb-1">You&apos;re on Premium</p>
-              <p className="text-sm text-[var(--text-secondary)]">
+          {isPremium && user ? (
+            <div className="plans-status">
+              <p className="text-sm font-semibold text-[var(--text-primary)]">
+                You&apos;re on Premium
+              </p>
+              <p className="text-xs text-[var(--text-secondary)] mt-0.5">
                 {status?.subscriptionExpiresAt
                   ? `Active until ${new Date(status.subscriptionExpiresAt).toLocaleDateString()}`
                   : "Full access is active on your account."}
@@ -191,64 +196,50 @@ function SubscribePageInner() {
                         : ""
                     }`
                   : ""}
-              </p>
-              <p className="text-xs text-[var(--text-muted)] mt-2">
-                You can renew below to extend your access. Coin credit:{" "}
-                {formatCoinsAsInr(coinBalance)}.
+                {" · "}
+                Coin credit: {formatCoinsAsInr(coinBalance)}
               </p>
             </div>
-          )}
+          ) : null}
 
-          <div className="grid md:grid-cols-2 gap-5 mb-8">
-            <div className="p-6 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] flex flex-col">
-              <p className="text-sm font-medium text-[var(--text-muted)] mb-1">
-                {SHELF_PLANS.free.name}
-              </p>
-              <p className="text-sm font-semibold text-[var(--text-primary)] mb-1">
-                {SHELF_PLANS.free.tagline}
-              </p>
-              <div className="mb-3">
-                <span className="text-3xl font-bold">{SHELF_PLANS.free.priceLabel}</span>
-                <span className="text-[var(--text-muted)] text-sm ml-1">
-                  {SHELF_PLANS.free.periodLabel}
-                </span>
+          <div className="plans-grid">
+            <article className="plans-card">
+              <p className="plans-card-label">{SHELF_PLANS.free.name}</p>
+              <p className="plans-card-tagline">{SHELF_PLANS.free.tagline}</p>
+              <div className="plans-price">
+                <span className="plans-price-amount">{SHELF_PLANS.free.priceLabel}</span>
+                <span className="plans-price-period">{SHELF_PLANS.free.periodLabel}</span>
               </div>
-              <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-5">
-                {SHELF_PLANS.free.description}
-              </p>
-              <ul className="space-y-2.5 mb-6 flex-1">
+              <p className="plans-card-desc">{SHELF_PLANS.free.description}</p>
+              <ul className="plans-features">
                 {SHELF_PLANS.free.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <Check className="w-4 h-4 text-[var(--accent)] shrink-0 mt-0.5" />
-                    {f}
+                  <li key={f}>
+                    <Check strokeWidth={2.25} aria-hidden />
+                    <span>{f}</span>
                   </li>
                 ))}
               </ul>
-              {user && !isPremium ? (
-                <p className="text-sm text-center text-[var(--text-muted)] py-2.5 rounded-full border border-[var(--border)]">
-                  Your current plan
-                </p>
-              ) : (
-                <Link
-                  href={user ? "/my-content" : "/login"}
-                  className="btn-secondary w-full justify-center"
-                >
-                  {user ? "Continue on Free" : "Sign in to start free"}
-                </Link>
-              )}
-            </div>
-
-            <div className="p-6 rounded-xl border border-[var(--accent)] bg-[var(--bg-secondary)] flex flex-col relative overflow-hidden">
-              <div className="absolute top-0 right-0 px-3 py-1 text-[11px] font-medium bg-[var(--accent)] text-white rounded-bl-lg">
-                Popular
+              <div className="plans-card-actions">
+                {user && !isPremium ? (
+                  <p className="text-center text-xs text-[var(--text-muted)] py-2 rounded-lg border border-[var(--border)]">
+                    Your current plan
+                  </p>
+                ) : (
+                  <Link
+                    href={user ? "/my-content" : "/login"}
+                    className="landing-btn w-full"
+                  >
+                    {user ? "Continue on Free" : "Sign in to start free"}
+                  </Link>
+                )}
               </div>
-              <p className="text-sm font-medium text-[var(--accent)] mb-1">
-                {SHELF_PLANS.premium.name}
-              </p>
-              <p className="text-sm font-semibold text-[var(--text-primary)] mb-2">
-                {SHELF_PLANS.premium.tagline}
-              </p>
-              <div className="mb-3 flex gap-1 p-1 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)]">
+            </article>
+
+            <article className="plans-card plans-card-premium">
+              <span className="plans-badge">Popular</span>
+              <p className="plans-card-label">{SHELF_PLANS.premium.name}</p>
+              <p className="plans-card-tagline">{SHELF_PLANS.premium.tagline}</p>
+              <div className="plans-billing" role="group" aria-label="Billing period">
                 {(
                   [
                     ["MONTHLY", "Monthly"],
@@ -258,92 +249,74 @@ function SubscribePageInner() {
                   <button
                     key={id}
                     type="button"
+                    aria-pressed={billing === id}
                     onClick={() => setBilling(id)}
-                    className={`flex-1 text-xs py-1.5 rounded-md transition ${
-                      billing === id
-                        ? "bg-[var(--accent)] text-white"
-                        : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                    }`}
                   >
                     {label}
                   </button>
                 ))}
               </div>
-              <div className="mb-4">
-                <span className="text-3xl font-bold">₹{displayPrice}</span>
-                <span className="text-[var(--text-muted)] text-sm ml-1">
-                  / {periodLabel}
-                </span>
-                <p className="text-[11px] text-[var(--text-muted)] mt-1">
-                  UPI Autopay — cancel anytime from Settings later.
-                </p>
+              <div className="plans-price">
+                <span className="plans-price-amount">₹{displayPrice}</span>
+                <span className="plans-price-period">/ {periodLabel}</span>
               </div>
-              <p className="text-sm text-[var(--text-secondary)] leading-relaxed mb-4">
-                {SHELF_PLANS.premium.description}
+              <p className="plans-billing-note">
+                UPI Autopay — cancel anytime from Settings
               </p>
-              <ul className="space-y-2.5 mb-4 flex-1">
+              <p className="plans-card-desc">{SHELF_PLANS.premium.description}</p>
+              <ul className="plans-features">
                 {SHELF_PLANS.premium.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <Check className="w-4 h-4 text-[var(--accent)] shrink-0 mt-0.5" />
-                    {f}
+                  <li key={f}>
+                    <Check strokeWidth={2.25} aria-hidden />
+                    <span>{f}</span>
                   </li>
                 ))}
               </ul>
-
-              {user && (
-                <div className="space-y-2 mb-4">
-                  <label className="block text-xs text-[var(--text-muted)]">
+              <div className="plans-card-actions">
+                {user ? (
+                  <label className="plans-coupon block text-[10px] text-[var(--text-muted)]">
                     Coupon code
                     <input
                       value={couponCode}
                       onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                       placeholder="Optional"
-                      className="mt-1 w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] font-mono"
                     />
                   </label>
-                  {affiliateCode && (
-                    <p className="text-[11px] text-[var(--text-muted)]">
-                      Referral: {affiliateCode}
-                    </p>
+                ) : null}
+                {affiliateCode ? (
+                  <p className="text-[10px] text-[var(--text-muted)]">
+                    Referral: {affiliateCode}
+                  </p>
+                ) : null}
+                {error ? (
+                  <p className="text-xs text-red-500 bg-red-500/10 px-2 py-1.5 rounded-lg">
+                    {error}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  onClick={handleSubscribe}
+                  disabled={paying || (user ? !scriptLoaded : false)}
+                  className="landing-btn landing-btn-primary w-full disabled:opacity-50"
+                >
+                  {paying ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Processing…
+                    </>
+                  ) : user ? (
+                    isPremium ? "Extend Premium" : "Upgrade to Premium"
+                  ) : (
+                    "Sign in to upgrade"
                   )}
-                </div>
-              )}
-
-              {error && (
-                <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg mb-3">
-                  {error}
-                </p>
-              )}
-
-              <button
-                type="button"
-                onClick={handleSubscribe}
-                disabled={paying || (user ? !scriptLoaded : false)}
-                className="btn-primary w-full justify-center disabled:opacity-50"
-              >
-                {paying ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Processing…
-                  </>
-                ) : user ? (
-                  isPremium ? "Extend Premium" : "Upgrade to Premium"
-                ) : (
-                  "Sign in to upgrade"
-                )}
-              </button>
-            </div>
+                </button>
+              </div>
+            </article>
           </div>
 
-          <p className="text-xs text-center text-[var(--text-muted)]">
-            {SHELF_PLANS.page.footnote} Secure payment via Razorpay UPI Autopay
-            (monthly or yearly). Share your affiliate link from Settings to earn coin
-            credit.
-          </p>
+          <p className="plans-footnote">{SHELF_PLANS.page.footnote}</p>
         </div>
       </main>
-
-      {!user && !authLoading && <MarketingFooter />}
     </div>
   );
 }

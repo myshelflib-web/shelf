@@ -13,14 +13,17 @@ import { markOnboardingComplete } from "@/lib/onboarding";
 import { getReadingGoalMinutes, setReadingGoalMinutes } from "@/lib/readingStats";
 import { STUDY_GOAL_GROUPS, STUDY_GOAL_LABELS } from "@/lib/studyGoal";
 import { StudyGoal } from "@/types";
+import { OnboardingPlanStep } from "@/components/onboarding/OnboardingPlanStep";
 
-const STEPS = ["welcome", "goal", "optional"] as const;
+const STEPS = ["welcome", "goal", "optional", "plan"] as const;
 
 const GOAL_OPTIONS: StudyGoal[] = STUDY_GOAL_GROUPS.flatMap((g) => g.options);
 
 function safeNextPath(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/my-content";
-  if (raw.startsWith("/onboarding") || raw.startsWith("/login")) return "/my-content";
+  if (raw.startsWith("/onboarding") || raw.startsWith("/login") || raw.startsWith("/subscribe")) {
+    return "/my-content";
+  }
   return raw;
 }
 
@@ -60,6 +63,25 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
     if (!user || saving) return;
     markOnboardingComplete(user.id);
     router.replace(nextPath);
+  };
+
+  const goToPremium = async () => {
+    if (!user || saving) return;
+    setSaving(true);
+    try {
+      if (studyGoal !== "GENERAL") {
+        await api.auth.updateMe({ studyGoal });
+      }
+      setReadingGoalMinutes(readingGoalMin);
+      await refreshUser();
+      markOnboardingComplete(user.id);
+      router.replace(`/subscribe?next=${encodeURIComponent(nextPath)}`);
+    } catch {
+      markOnboardingComplete(user.id);
+      router.replace(`/subscribe?next=${encodeURIComponent(nextPath)}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -112,7 +134,7 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
 
         {step === 1 && (
           <>
-            <p className="onboarding-step-label">Step 1 of 2</p>
+            <p className="onboarding-step-label">Step 1 of 3</p>
             <h1 className="onboarding-title">What are you studying for?</h1>
             <p className="onboarding-lead">
               Study AI uses this to stay on syllabus and exam style. Choose a track,
@@ -156,7 +178,7 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
 
         {step === 2 && (
           <>
-            <p className="onboarding-step-label">Step 2 of 2</p>
+            <p className="onboarding-step-label">Step 2 of 3</p>
             <h1 className="onboarding-title">A few nice-to-haves</h1>
             <p className="onboarding-lead">
               Optional preferences you can skip — we&apos;ll use sensible defaults.
@@ -201,37 +223,32 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
                 type="button"
                 disabled={saving}
                 className="onboarding-btn onboarding-btn-primary"
-                onClick={() =>
-                  void finish({
-                    saveOptional: true,
-                  })
-                }
+                onClick={() => {
+                  if (readingGoalMin) setReadingGoalMinutes(readingGoalMin);
+                  setStep(3);
+                }}
               >
-                {saving ? "Saving…" : "Open my library"}
+                Continue
                 <ArrowRight className="w-4 h-4" />
               </button>
               <button
                 type="button"
                 disabled={saving}
-                className="onboarding-btn"
-                onClick={() =>
-                  void finish({
-                    saveOptional: false,
-                  })
-                }
-              >
-                Save goal only
-              </button>
-              <button
-                type="button"
-                disabled={saving}
                 className="onboarding-btn onboarding-btn-ghost"
-                onClick={() => void finish()}
+                onClick={() => setStep(3)}
               >
                 Skip optional
               </button>
             </div>
           </>
+        )}
+
+        {step === 3 && (
+          <OnboardingPlanStep
+            saving={saving}
+            onContinueFree={() => void finish({ saveOptional: true })}
+            onUpgrade={() => void goToPremium()}
+          />
         )}
 
         <div className="onboarding-progress" aria-hidden>

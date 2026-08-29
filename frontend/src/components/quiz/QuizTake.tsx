@@ -1,21 +1,17 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
-import Link from "next/link";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { quizApi } from "@/lib/quiz/api";
 import type { Quiz } from "@/lib/quiz/types";
-import { quizBtnGhost, quizBtnPrimary } from "@/lib/quiz/ui";
 import { useQuizProctor, type QuizProctorReason } from "@/hooks/useQuizProctor";
 import { QuizProctorGate } from "./QuizProctorGate";
 import { QuizQuestionCard } from "./QuizQuestionCard";
-import { QuizTimer } from "./QuizTimer";
+import { QuizTakeChrome } from "./QuizTakeChrome";
+
+function isProctored(quiz: Quiz): boolean {
+  return quiz.proctored !== false;
+}
 
 export function QuizTake({
   quiz,
@@ -27,14 +23,14 @@ export function QuizTake({
   onProctorEnd?: (reason: QuizProctorReason) => void;
 }) {
   const router = useRouter();
+  const proctored = isProctored(quiz);
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [locked, setLocked] = useState(false);
+  const [locked, setLocked] = useState(!proctored);
   const saveTimer = useRef<number | null>(null);
   const beginningRef = useRef(false);
   const q = quiz.questions[index];
-  const reveal = quiz.status === "GRADED" || quiz.status === "SUBMITTED";
 
   useEffect(() => {
     return () => {
@@ -44,7 +40,7 @@ export function QuizTake({
 
   const saveAnswer = useCallback(
     async (patch: { optionId?: string | null; text?: string | null }) => {
-      if (!q || reveal) return;
+      if (!q) return;
       try {
         const { quiz: next } = await quizApi.save(quiz.id, {
           start: true,
@@ -55,24 +51,27 @@ export function QuizTake({
         setError(err instanceof Error ? err.message : "Could not save");
       }
     },
-    [q, quiz.id, reveal, onQuiz]
+    [q, quiz.id, onQuiz]
   );
 
   const submittingRef = useRef(false);
-  const submitRef = useRef<(opts?: { keepalive?: boolean }) => Promise<void>>(
-    async () => {}
-  );
+  const submitRef = useRef<
+    (opts?: { keepalive?: boolean; endedReason?: string }) => Promise<void>
+  >(async () => {});
 
   const { shellRef, enter, exit, release, armFilePicker } = useQuizProctor({
-    active: locked && !reveal,
+    active: proctored && locked,
     onViolation: (reason) => {
       onProctorEnd?.(reason);
-      void submitRef.current({ keepalive: true });
+      void submitRef.current({
+        keepalive: true,
+        endedReason: reason === "tab" ? "TAB" : "FULLSCREEN",
+      });
     },
   });
 
   const submit = useCallback(
-    async (opts?: { keepalive?: boolean }) => {
+    async (opts?: { keepalive?: boolean; endedReason?: string }) => {
       if (submittingRef.current) return;
       submittingRef.current = true;
       setBusy(true);
@@ -80,6 +79,7 @@ export function QuizTake({
       try {
         const { quiz: next } = await quizApi.submit(quiz.id, {
           keepalive: opts?.keepalive,
+          endedReason: opts?.endedReason ?? "SUBMIT",
         });
         release();
         await exit();
@@ -96,7 +96,7 @@ export function QuizTake({
   submitRef.current = submit;
 
   const onExpire = useCallback(() => {
-    void submit();
+    void submit({ endedReason: "TIMER" });
   }, [submit]);
 
   const begin = useCallback(async () => {
@@ -104,7 +104,7 @@ export function QuizTake({
     beginningRef.current = true;
     setError("");
     try {
-      await enter();
+      if (proctored) await enter();
       setLocked(true);
       if (!quiz.startedAt) {
         const { quiz: next } = await quizApi.save(quiz.id, { start: true });
@@ -114,7 +114,17 @@ export function QuizTake({
       beginningRef.current = false;
       setError(err instanceof Error ? err.message : "Could not start");
     }
-  }, [enter, locked, quiz.id, quiz.startedAt, onQuiz]);
+  }, [enter, locked, proctored, quiz.id, quiz.startedAt, onQuiz]);
+
+  useEffect(() => {
+    if (proctored || quiz.startedAt) return;
+    void quizApi
+      .save(quiz.id, { start: true })
+      .then(({ quiz: next }) => onQuiz(next))
+      .catch((err) =>
+        setError(err instanceof Error ? err.message : "Could not start")
+      );
+  }, [proctored, quiz.id, quiz.startedAt, onQuiz]);
 
   if (!q) {
     return (
@@ -127,9 +137,9 @@ export function QuizTake({
       question={q}
       index={index}
       total={quiz.questions.length}
-      reveal={reveal}
+      reveal={false}
       disabled={busy}
-      onFilePickerOpen={reveal ? undefined : armFilePicker}
+      onFilePickerOpen={armFilePicker}
       onOption={(optionId) => void saveAnswer({ optionId })}
       onText={(text) => {
         onQuiz({
@@ -163,193 +173,54 @@ export function QuizTake({
     />
   );
 
-  if (reveal) {
+  const paper = (
+    <QuizTakeChrome
+      quiz={quiz}
+      index={index}
+      setIndex={setIndex}
+      error={error}
+      busy={busy}
+      proctored={proctored}
+      onExpire={onExpire}
+      onSubmit={() => void submit()}
+      onPrev={() => setIndex((i) => Math.max(0, i - 1))}
+      onNext={() => {
+        void saveAnswer({ text: q.userAnswerText });
+        setIndex((i) => Math.min(quiz.questions.length - 1, i + 1));
+      }}
+    >
+      {card}
+    </QuizTakeChrome>
+  );
+
+  if (proctored) {
     return (
-      <QuizTakeChrome
-        quiz={quiz}
-        index={index}
-        setIndex={setIndex}
-        error={error}
-        busy={busy}
-        reveal
-        onExpire={onExpire}
-        onSubmit={() => void submit()}
-        onPrev={() => setIndex((i) => Math.max(0, i - 1))}
-        onNext={() => {
-          void saveAnswer({ text: q.userAnswerText });
-          setIndex((i) => Math.min(quiz.questions.length - 1, i + 1));
-        }}
+      <div
+        ref={shellRef}
+        data-shelf-hotkeys="off"
+        className="fixed inset-0 z-[90] bg-[var(--bg-primary)] flex flex-col overflow-hidden"
       >
-        {card}
-      </QuizTakeChrome>
+        {!locked ? (
+          <QuizProctorGate
+            title={quiz.title}
+            remainingSec={quiz.remainingSec}
+            alreadyStarted={Boolean(quiz.startedAt)}
+            busy={busy}
+            error={error}
+            onBegin={() => void begin()}
+            onExpire={onExpire}
+            onBack={() => router.push("/quiz")}
+          />
+        ) : (
+          paper
+        )}
+      </div>
     );
   }
 
   return (
-    <div
-      ref={shellRef}
-      data-shelf-hotkeys="off"
-      className="fixed inset-0 z-[90] bg-[var(--bg-primary)] flex flex-col"
-    >
-      {!locked ? (
-        <QuizProctorGate
-          title={quiz.title}
-          remainingSec={quiz.remainingSec}
-          alreadyStarted={Boolean(quiz.startedAt)}
-          busy={busy}
-          error={error}
-          onBegin={() => void begin()}
-          onExpire={onExpire}
-          onBack={() => router.push("/quiz")}
-        />
-      ) : (
-        <QuizTakeChrome
-          quiz={quiz}
-          index={index}
-          setIndex={setIndex}
-          error={error}
-          busy={busy}
-          reveal={false}
-          centered
-          onExpire={onExpire}
-          onSubmit={() => void submit()}
-          onPrev={() => setIndex((i) => Math.max(0, i - 1))}
-          onNext={() => {
-            void saveAnswer({ text: q.userAnswerText });
-            setIndex((i) => Math.min(quiz.questions.length - 1, i + 1));
-          }}
-        >
-          {card}
-        </QuizTakeChrome>
-      )}
-    </div>
-  );
-}
-
-function QuizTakeChrome({
-  quiz,
-  index,
-  setIndex,
-  error,
-  busy,
-  reveal,
-  centered,
-  onExpire,
-  onSubmit,
-  onPrev,
-  onNext,
-  children,
-}: {
-  quiz: Quiz;
-  index: number;
-  setIndex: (i: number) => void;
-  error: string;
-  busy: boolean;
-  reveal: boolean;
-  centered?: boolean;
-  onExpire: () => void;
-  onSubmit: () => void;
-  onPrev: () => void;
-  onNext: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-3 min-h-0 h-full">
-      <div className={`flex items-center gap-2 shrink-0 ${centered ? "px-5 sm:px-8 pt-4" : ""}`}>
-        <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-semibold truncate">{quiz.title}</div>
-          <p className="text-[11px] text-[var(--text-muted)] truncate">
-            {quiz.sourceLabel} · {quiz.difficulty.toLowerCase()}
-            {!reveal && " · Proctored"}
-          </p>
-        </div>
-        <QuizTimer remainingSec={quiz.remainingSec} onExpire={onExpire} />
-        {!reveal && (
-          <button
-            type="button"
-            className={quizBtnPrimary}
-            disabled={busy}
-            onClick={onSubmit}
-          >
-            {busy ? "Submitting…" : "Submit"}
-          </button>
-        )}
-        {reveal && (
-          <Link href="/quiz" className={quizBtnGhost}>
-            Exit
-          </Link>
-        )}
-      </div>
-
-      <div className={`flex flex-wrap gap-1 ${centered ? "px-5 sm:px-8" : ""}`}>
-        {quiz.questions.map((item, i) => {
-          const filled =
-            Boolean(item.userAnswerOption) ||
-            Boolean(item.userAnswerText?.trim()) ||
-            Boolean(item.userImageUrl);
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setIndex(i)}
-              className={`h-7 min-w-7 px-1.5 rounded-md text-[11px] font-semibold border ${
-                i === index
-                  ? "border-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--accent)]"
-                  : filled
-                    ? "border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-primary)]"
-                    : "border-[var(--border)] text-[var(--text-muted)]"
-              }`}
-            >
-              {i + 1}
-            </button>
-          );
-        })}
-      </div>
-
-      {error && (
-        <p className={`text-[12px] text-red-400 ${centered ? "px-5 sm:px-8" : ""}`}>
-          {error}
-        </p>
-      )}
-
-      <div
-        className={`flex-1 min-h-0 overflow-y-auto ${
-          centered ? "px-5 sm:px-8" : ""
-        }`}
-      >
-        {centered ? (
-          <div className="min-h-full flex items-center justify-center py-6">
-            <div className="w-full max-w-[40rem]">{children}</div>
-          </div>
-        ) : (
-          children
-        )}
-      </div>
-
-      {!reveal && (
-        <div
-          className={`flex justify-between shrink-0 ${
-            centered ? "px-5 sm:px-8 pb-4" : ""
-          }`}
-        >
-          <button
-            type="button"
-            className={quizBtnGhost}
-            disabled={index === 0}
-            onClick={onPrev}
-          >
-            Previous
-          </button>
-          <button
-            type="button"
-            className={quizBtnGhost}
-            disabled={index >= quiz.questions.length - 1}
-            onClick={onNext}
-          >
-            Next
-          </button>
-        </div>
-      )}
+    <div className="h-full overflow-hidden bg-[var(--bg-primary)]">
+      {paper}
     </div>
   );
 }

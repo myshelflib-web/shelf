@@ -7,25 +7,26 @@ export const PRICING_FALLBACK = {
 
 export const SHELF_PLANS = {
   page: {
-    title: "Plans",
+    kicker: "Simple, honest pricing",
+    title: "Start free. Upgrade when Shelf becomes home.",
     intro:
-      "Your private study library is free to start. Upgrade to Premium when you read, ask, and quiz from your material every day.",
+      "Bring your notes in, study at your pace, and only pay when you need more room and deeper Study AI — no pressure, no fine print surprises.",
     footnote:
-      "Fair-use limits apply and reset monthly. See your current allowance anytime in Settings → Plan usage.",
+      "Fair-use limits reset monthly · Razorpay UPI Autopay · Cancel anytime in Settings",
   },
   free: {
     id: "FREE" as const,
     name: "Free",
-    tagline: "Start with your own material",
+    tagline: "Everything you need to begin",
     description:
-      "Bring coaching PDFs, notes, and papers into one place. Read, highlight, ask Study AI, sit quizzes, and plan revision — no credit card required.",
+      "Your private library — read, highlight, ask, quiz, and plan. No card required.",
     priceLabel: "₹0",
     periodLabel: "forever",
     features: [
       "Personal library with collections & topics",
       "PDF reader with tabs, split view & highlights",
       "Sketch notebooks & typed doc pages",
-      "Study AI grounded in what you uploaded",
+      "Study AI grounded in your uploads",
       "Exam-style quiz from your notes",
       "Planner, calendar & reading streaks",
       "Telegram import & document sharing",
@@ -35,9 +36,9 @@ export const SHELF_PLANS = {
   premium: {
     id: "PREMIUM" as const,
     name: "Premium",
-    tagline: "For daily, exam-focused study",
+    tagline: "When you study here every day",
     description:
-      "Built for students who live in Shelf — larger libraries, heavier Study AI use, deeper answers on long PDFs, and more room for syllabus context.",
+      "More space and Study AI headroom for full subjects, long PDFs, and daily workflows.",
     priceInr: PRICING_FALLBACK.yearlyInr,
     monthlyInr: PRICING_FALLBACK.monthlyInr,
     planDays: PRICING_FALLBACK.planDays,

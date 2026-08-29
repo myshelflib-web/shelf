@@ -50,9 +50,10 @@ export function QuizMarketingLanding() {
               <span className="text-[var(--accent)]">your own notes</span>
             </h1>
             <p className="text-base sm:text-lg text-[var(--text-secondary)] leading-relaxed max-w-2xl mx-auto">
-              Sit timed, proctored MCQs, written answers, and photos of working —
-              scoped to a document, an upload plus syllabus, or a PYQ-style exam
-              bank. The paper opens in fullscreen; switching tabs ends the sitting.
+              Sit timed MCQs, written answers, and photos of working — scoped to
+              a document, an upload plus syllabus, or a PYQ-style exam bank.
+              Choose a proctored fullscreen sitting or practice mode, then open
+              the analysis board when you are done.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link href="/login?next=/quiz" className="btn-primary">

@@ -81,6 +81,30 @@ export function clampFocus(raw: unknown): string | null {
   return t || null;
 }
 
+export type QuizEndedReason = "SUBMIT" | "TAB" | "FULLSCREEN" | "TIMER";
+
+const ENDED_REASONS = new Set<QuizEndedReason>([
+  "SUBMIT",
+  "TAB",
+  "FULLSCREEN",
+  "TIMER",
+]);
+
+/** Default true so older clients keep exam-style sittings. */
+export function parseProctored(raw: unknown): boolean {
+  if (raw === undefined || raw === null || raw === "") return true;
+  if (raw === false || raw === 0) return false;
+  const v = String(raw).trim().toLowerCase();
+  if (v === "false" || v === "0" || v === "no") return false;
+  return true;
+}
+
+export function parseEndedReason(raw: unknown): QuizEndedReason {
+  const v = String(raw ?? "SUBMIT").trim().toUpperCase();
+  if (ENDED_REASONS.has(v as QuizEndedReason)) return v as QuizEndedReason;
+  return "SUBMIT";
+}
+
 export type DraftMcqOption = { id: string; text: string };
 
 export type DraftQuestion = {

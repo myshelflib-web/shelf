@@ -288,7 +288,7 @@ export const QUIZ_TITLE =
   "Exam-Style Quiz from Your Notes — MCQ, Written & PYQ Practice | Shelf";
 
 export const QUIZ_DESCRIPTION =
-  "Sit exam-style MCQs, written answers, and photo working from your Shelf library, uploads, or PYQ-style banks. Timed papers mapped to your study goal.";
+  "Sit exam-style MCQs, written answers, and photo working from your Shelf library, uploads, or PYQ-style banks. Proctored or practice sittings, then a per-quiz analysis board.";
 
 export const QUIZ_KEYWORDS = [
   "exam quiz app",
