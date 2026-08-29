@@ -56,14 +56,16 @@ async function downloadHtmlIfExists(key: string): Promise<string | null> {
 }
 
 async function uploadHtml(key: string, html: string): Promise<void> {
+  const body = Buffer.from(html, "utf8");
   await withRetry(
     () =>
       s3.send(
         new PutObjectCommand({
           Bucket: getS3Bucket(),
           Key: key,
-          Body: html,
-          ContentType: "text/html",
+          Body: body,
+          ContentLength: body.length,
+          ContentType: "text/html; charset=utf-8",
         })
       ),
     {
@@ -75,6 +77,10 @@ async function uploadHtml(key: string, html: string): Promise<void> {
   );
 }
 
+export function htmlExtractIsEmpty(html: string): boolean {
+  return html.replace(/\s+/g, "").length === 0;
+}
+
 /** Prefer existing OCR / longer HTML over an empty pdf.js extract. */
 export function shouldKeepExistingHtml(
   existingHtml: string | null,
@@ -84,6 +90,7 @@ export function shouldKeepExistingHtml(
   if (existingHtml.includes('name="shelf-ocr"')) return true;
   const existingLen = existingHtml.replace(/\s+/g, " ").trim().length;
   const newLen = newHtml.replace(/\s+/g, " ").trim().length;
+  if (newLen === 0 && existingLen > 0) return true;
   return existingLen > 200 && newLen < Math.max(120, Math.floor(existingLen * 0.35));
 }
 
@@ -112,18 +119,25 @@ export async function processPdf(request: ProcessRequest): Promise<{
     const contentKey = contentKeyFromPdfKey(request.pdfKey);
     const existingHtml = await downloadHtmlIfExists(contentKey);
     const keepExisting = shouldKeepExistingHtml(existingHtml, indexedHtml);
+    const emptyExtract = htmlExtractIsEmpty(indexedHtml);
     const htmlToWrite = keepExisting ? existingHtml! : indexedHtml;
 
-    if (!keepExisting) {
-      await uploadHtml(contentKey, indexedHtml);
-      metrics.inc("s3_ops_total", { op: "put", ok: true });
-    } else {
+    if (keepExisting) {
       log.info("processor.keep_existing_html", {
         contentKey,
         reason: existingHtml?.includes('name="shelf-ocr"')
           ? "shelf-ocr"
           : "richer-than-extract",
       });
+    } else if (emptyExtract) {
+      // Empty string Body makes AWS SDK warn and can overwrite good HTML with 0 bytes.
+      log.info("processor.skip_empty_html", {
+        contentKey,
+        pages: parsed.numpages,
+      });
+    } else {
+      await uploadHtml(contentKey, indexedHtml);
+      metrics.inc("s3_ops_total", { op: "put", ok: true });
     }
 
     const durationMs = Date.now() - start;

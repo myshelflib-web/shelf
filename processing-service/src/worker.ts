@@ -15,6 +15,41 @@ export interface ProcessingJob {
 }
 
 const inFlight = new Set<string>();
+let pollRunning = false;
+let jobTail: Promise<void> = Promise.resolve();
+
+const DEFAULT_JOBS_PER_POLL = 1;
+
+function jobsPerPoll(): number {
+  const n = Number(process.env.PROCESS_JOBS_PER_POLL ?? DEFAULT_JOBS_PER_POLL);
+  return Number.isFinite(n) && n > 0 ? Math.min(n, 5) : DEFAULT_JOBS_PER_POLL;
+}
+
+/** One PDF at a time — overlapping polls on Render OOMed (exit 137). */
+export function pickPendingJobs<T extends { topicId: string }>(
+  jobs: T[],
+  inFlightIds: Iterable<string>,
+  limit: number
+): T[] {
+  const busy = new Set(inFlightIds);
+  const picked: T[] = [];
+  for (const job of jobs) {
+    if (busy.has(job.topicId)) continue;
+    picked.push(job);
+    busy.add(job.topicId);
+    if (picked.length >= limit) break;
+  }
+  return picked;
+}
+
+export function enqueueJob(job: ProcessingJob): Promise<void> {
+  const run = jobTail.then(() => runJob(job));
+  jobTail = run.then(
+    () => undefined,
+    () => undefined
+  );
+  return run;
+}
 
 function internalHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
@@ -152,22 +187,30 @@ export async function runJob(job: ProcessingJob): Promise<void> {
 }
 
 export async function pollAndProcess(): Promise<void> {
+  if (pollRunning || inFlight.size > 0) {
+    logger.debug("worker.poll.skip_busy", { inFlight: inFlight.size });
+    return;
+  }
+  pollRunning = true;
+
   const pollStart = Date.now();
   metrics.inc("worker_polls_total");
 
   try {
     const jobs = await fetchPendingJobs();
+    const batch = pickPendingJobs(jobs, inFlight, jobsPerPoll());
     metrics.observe("worker_poll_duration_ms", Date.now() - pollStart, {
       ok: true,
     });
     logger.debug("worker.poll", {
       jobCount: jobs.length,
+      batchCount: batch.length,
       inFlight: inFlight.size,
       durationMs: Date.now() - pollStart,
     });
 
-    for (const job of jobs) {
-      await runJob(job);
+    for (const job of batch) {
+      await enqueueJob(job);
     }
   } catch (err) {
     metrics.observe("worker_poll_duration_ms", Date.now() - pollStart, {
@@ -176,13 +219,18 @@ export async function pollAndProcess(): Promise<void> {
     metrics.inc("worker_poll_failures_total");
     logger.error("worker.poll.failed", errorFields(err));
     throw err;
+  } finally {
+    pollRunning = false;
   }
 }
 
 export function startWorker(): void {
   const intervalMs = Number(process.env.POLL_INTERVAL_MS ?? 15000);
 
-  logger.info("worker.started", { pollIntervalMs: intervalMs });
+  logger.info("worker.started", {
+    pollIntervalMs: intervalMs,
+    jobsPerPoll: jobsPerPoll(),
+  });
 
   pollAndProcess().catch((err) =>
     logger.error("worker.initial_poll.failed", errorFields(err))

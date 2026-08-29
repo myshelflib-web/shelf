@@ -1,4 +1,4 @@
-import { logger } from "../utils/logger.js";
+import { logger, errorFields } from "../utils/logger.js";
 import { fetchWithTimeout } from "../utils/timeout.js";
 import {
   acquireGeminiChatSlot,
@@ -13,10 +13,7 @@ import {
   embeddingApiKey,
 } from "./llmConfig.js";
 
-export function pdfOcrMaxBytes(): number {
-  const n = Number(process.env.PDF_OCR_MAX_BYTES ?? 8 * 1024 * 1024);
-  return Number.isFinite(n) && n > 0 ? n : 8 * 1024 * 1024;
-}
+const MAX_JPEG_BYTES = Number(process.env.PDF_OCR_JPEG_MAX_BYTES ?? 1.5 * 1024 * 1024);
 
 export function pdfOcrEnabled(): boolean {
   return process.env.PDF_OCR !== "false";
@@ -26,10 +23,48 @@ function ocrKey(): string | undefined {
   return llmApiKey() ?? embeddingApiKey();
 }
 
-/** Transcribe a scanned / image PDF when pdf.js left little text. */
-export async function ocrPdfBuffer(pdf: Buffer): Promise<string | null> {
+export function parseGeminiOcrText(data: unknown): string | null {
+  const rec = data as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+  };
+  const text = (rec.candidates?.[0]?.content?.parts ?? [])
+    .map((p) => p.text ?? "")
+    .join("\n")
+    .trim();
+  if (!text || /^\[blank page\]$/i.test(text)) return null;
+  return text.length >= 20 ? text : null;
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** HTML the processor will not clobber (`meta name="shelf-ocr"`). */
+export function buildShelfOcrHtml(text: string): string {
+  const paras = text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const body = paras
+    .map((p) => `<p>${escapeHtml(p).replace(/\n/g, "<br/>")}</p>`)
+    .join("\n");
+  return `<html><head><meta name="shelf-ocr" content="gemini"/></head><body>\n${body}\n</body></html>`;
+}
+
+export function pdfPageNeedsOcr(pageText: string): boolean {
+  return pageText.replace(/\s+/g, " ").trim().length < 40;
+}
+
+/** Transcribe one page JPEG — never a full PDF. */
+export async function ocrJpegBuffer(jpeg: Buffer): Promise<string | null> {
   if (!pdfOcrEnabled()) return null;
-  if (pdf.length < 80 || pdf.length > pdfOcrMaxBytes()) return null;
+  if (jpeg.length < 80 || jpeg.length > envPositive(MAX_JPEG_BYTES, 1.5 * 1024 * 1024)) {
+    return null;
+  }
   const key = ocrKey();
   if (!key) return null;
   if (!chatModel().toLowerCase().includes("gemini") && !isGeminiBaseUrl(llmBaseUrl())) {
@@ -40,7 +75,7 @@ export async function ocrPdfBuffer(pdf: Buffer): Promise<string | null> {
   const path = `${geminiNativeBaseUrl()}/models/${slug}:generateContent`;
   await acquireGeminiChatSlot();
 
-  const timeoutMs = Number(process.env.PDF_OCR_TIMEOUT_MS ?? 90_000);
+  const timeoutMs = Number(process.env.PDF_OCR_TIMEOUT_MS ?? 45_000);
   const res = await fetchWithTimeout(path, {
     method: "POST",
     timeoutMs,
@@ -54,18 +89,18 @@ export async function ocrPdfBuffer(pdf: Buffer): Promise<string | null> {
           role: "user",
           parts: [
             {
-              text: "Transcribe every readable page of this PDF in reading order. Include printed text, handwriting, and diagram labels. Use plain text with blank lines between pages. Do not summarize. If a page is blank, write [blank page].",
+              text: "Transcribe all readable text on this page in reading order. Include printed text, handwriting, and diagram labels. Plain text only. Do not summarize. If the page is blank, write [blank page].",
             },
             {
               inlineData: {
-                mimeType: "application/pdf",
-                data: pdf.toString("base64"),
+                mimeType: "image/jpeg",
+                data: jpeg.toString("base64"),
               },
             },
           ],
         },
       ],
-      generationConfig: { temperature: 0, maxOutputTokens: 8192 },
+      generationConfig: { temperature: 0, maxOutputTokens: 4096 },
     }),
   });
 
@@ -77,16 +112,21 @@ export async function ocrPdfBuffer(pdf: Buffer): Promise<string | null> {
   }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    logger.warn("pdf_ocr.failed", { status: res.status, body: body.slice(0, 240) });
+    logger.warn("pdf_ocr.failed", {
+      status: res.status,
+      body: body.slice(0, 240),
+    });
     return null;
   }
 
-  const data = (await res.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-  };
-  const text = (data.candidates?.[0]?.content?.parts ?? [])
-    .map((p) => p.text ?? "")
-    .join("\n")
-    .trim();
-  return text.length >= 40 ? text : null;
+  try {
+    return parseGeminiOcrText(await res.json());
+  } catch (err) {
+    logger.warn("pdf_ocr.parse_failed", errorFields(err));
+    return null;
+  }
+}
+
+function envPositive(n: number, fallback: number): number {
+  return Number.isFinite(n) && n > 0 ? n : fallback;
 }

@@ -3,9 +3,10 @@ import { htmlToPlainText } from "../utils/htmlText.js";
 import { logger, errorFields } from "../utils/logger.js";
 import { contentKeyFromPdfKey } from "../utils/docPaths.js";
 import { isThinPageText } from "../utils/pageAskContext.js";
+import { extractPdfTextByRanges } from "./libraryIndexPdf.js";
 
 /** Bump when extract/assemble logic changes so the worker refreshes old rows. */
-export const INDEX_CONTENT_VERSION = "v3";
+export const INDEX_CONTENT_VERSION = "v5";
 
 /** Written before embed so an OOM skip-loop does not retry the same page. */
 export const INDEX_LEASE_PREFIX = `${INDEX_CONTENT_VERSION}:lease:`;
@@ -110,7 +111,13 @@ export async function extractPageBody(page: {
   for (const key of keys) {
     if (!isIndexableTextKey(key)) continue;
     const text = await loadS3Text(key);
-    if (text) return text;
+    if (text && !isThinPageText(page.title, text)) return text;
+    if (text && text !== page.title) return text;
+  }
+
+  if (page.pdfKey && (page.contentType === "PDF" || page.pdfKey.endsWith(".pdf"))) {
+    const fromPdf = await extractPdfTextByRanges(page.pdfKey);
+    if (fromPdf) return fromPdf;
   }
 
   return page.title;

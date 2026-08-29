@@ -32,7 +32,7 @@ export {
   INDEX_LEASE_PREFIX,
 } from "./libraryIndexText.js";
 
-/** Version-prefixed digest so the worker can refresh pre-v3 (title-only) rows. */
+/** Version-prefixed digest so the worker can refresh pre-v5 (metadata-only / no OCR) rows. */
 function hashContent(text: string): string {
   const digest = createHash("sha256").update(text).digest("hex").slice(0, 16);
   return `${INDEX_CONTENT_VERSION}:${digest}`;

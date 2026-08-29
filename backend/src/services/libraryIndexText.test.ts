@@ -31,7 +31,7 @@ describe("assembleIndexText", () => {
 });
 
 describe("isIndexableTextKey", () => {
-  it("refuses PDF object keys so the indexer never buffers source.pdf", () => {
+  it("refuses PDF object keys so loadS3Text never buffers source.pdf", () => {
     expect(isIndexableTextKey("users/a/_file/p/content.html")).toBe(true);
     expect(isIndexableTextKey("users/a/_file/p/source.pdf")).toBe(false);
     expect(isIndexableTextKey("notes.pdf")).toBe(false);

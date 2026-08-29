@@ -25,7 +25,7 @@ router.get("/pending-processing", async (req: Request, res: Response) => {
         },
       },
       orderBy: { updatedAt: "asc" },
-      take: 20,
+      take: 5,
     }),
     prisma.userTopic.findMany({
       where: {
@@ -38,7 +38,7 @@ router.get("/pending-processing", async (req: Request, res: Response) => {
         userTopicGroup: { select: { slug: true } },
       },
       orderBy: { updatedAt: "asc" },
-      take: 20,
+      take: 5,
     }),
   ]);
 

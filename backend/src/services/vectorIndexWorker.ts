@@ -11,10 +11,10 @@ import { isTransientError, withRetry } from "../utils/retry.js";
 import { TimeoutError, withTimeout } from "../utils/timeout.js";
 
 const DEFAULT_INTERVAL_MS = 120_000;
-/** Keep at 1 on small Render instances — PDF OCR + embed of two pages OOMs 512MB. */
+/** Keep at 1 on small Render instances — embed + pdf.js of two pages OOMs 512MB. */
 const DEFAULT_BATCH_SIZE = 1;
 const MAX_BATCH_SIZE = 1;
-const DEFAULT_PAGE_TIMEOUT_MS = 120_000;
+const DEFAULT_PAGE_TIMEOUT_MS = 180_000;
 const DEFAULT_BATCH_TIMEOUT_MS = 300_000;
 const DEFAULT_STUCK_MS = 360_000;
 const DEFAULT_PAGE_ATTEMPTS = 3;
@@ -103,7 +103,7 @@ export async function findPagesNeedingIndex(batchSize: number): Promise<string[]
     return [...neverIndexed.map((p) => p.id), ...expiredLeases.map((r) => r.pageId)];
   }
 
-  // Refresh rows indexed before INDEX_CONTENT_VERSION (e.g. title-only v2).
+  // Refresh rows indexed before INDEX_CONTENT_VERSION (e.g. metadata-only v4).
   const outdated = await prisma.pageVectorIndex.findMany({
     where: {
       page: { status: "PUBLISHED" },

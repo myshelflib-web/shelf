@@ -16,7 +16,7 @@ describe("INDEX_CONTENT_VERSION", () => {
 });
 
 describe("index leases", () => {
-  it("marks in-flight hashes so a crashed OCR run is not retried immediately", () => {
+  it("marks in-flight hashes so a crashed index run is not retried immediately", () => {
     const hash = `${INDEX_LEASE_PREFIX}${Date.now()}`;
     expect(isIndexLeaseHash(hash)).toBe(true);
     expect(isIndexLeaseHash(`${INDEX_CONTENT_VERSION}:abcd1234efgh5678`)).toBe(

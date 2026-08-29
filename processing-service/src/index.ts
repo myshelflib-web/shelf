@@ -2,9 +2,9 @@ import "dotenv/config";
 // Shelf PDF processing worker entrypoint
 import express from "express";
 import {
+  enqueueJob,
   getInFlightCount,
   pollAndProcess,
-  runJob,
   startWorker,
 } from "./worker.js";
 import { errorFields, logger } from "./utils/logger.js";
@@ -63,7 +63,7 @@ app.post("/process", async (req, res) => {
 
   res.json({ status: "queued", topicId });
 
-  runJob(job).catch((err) =>
+  enqueueJob(job).catch((err) =>
     logger.error("manual.process.failed", {
       topicId,
       ...errorFields(err),
