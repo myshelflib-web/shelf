@@ -10,28 +10,24 @@ import {
 
 const STEPS = [
   {
-    no: "1",
     icon: FileText,
     title: "Collect",
     body: "Bring together PDFs, notes, links and coaching material that usually stay scattered across different apps.",
     mini: "One place for all your material",
   },
   {
-    no: "2",
     icon: FolderOpen,
     title: "Organize",
     body: "Build collections and topics, add sketch notebooks and doc pages beside PDFs, and place pages at library or collection level.",
     mini: "PDFs, notebooks, and docs together",
   },
   {
-    no: "3",
     icon: Sparkles,
     title: "Ask AI",
     body: "Use Study AI on a single file, a topic, or your wider library so answers stay grounded in what you uploaded.",
     mini: "Context-aware AI, not generic chat",
   },
   {
-    no: "4",
     icon: ListChecks,
     title: "Quiz",
     body: "Sit timed MCQs, written answers, and photo working from your library, uploads, or exam-bank material — a real quiz workspace, not chat bubbles.",
@@ -39,7 +35,6 @@ const STEPS = [
     href: "/quiz",
   },
   {
-    no: "5",
     icon: CalendarDays,
     title: "Plan & goals",
     body: "Schedule revision on the planner with tasks linked back to pages. Optionally set a study goal so Study AI and planning stay aligned.",
@@ -56,27 +51,30 @@ export function LandingValueSteps() {
           <div>
             <div className="landing-kicker">How it works</div>
             <h2 id="landing-how-heading" className="landing-value-title">
-              The product story, in five clear steps
+              Five steps from scattered files to a study loop
             </h2>
           </div>
+          <p className="landing-value-copy">
+            Collect material, organize it, ask Study AI, sit exam-style quizzes, and
+            plan revision on one calendar.
+          </p>
         </div>
       </RevealOnScroll>
       <div className="landing-value-grid landing-value-grid-steps">
         {STEPS.map((step, index) => (
           <RevealOnScroll key={step.title} delay={index * 60}>
             <article className="landing-value-card">
-              <div className="landing-value-no">{step.no}</div>
-              <div className="landing-value-icon" aria-hidden>
-                <step.icon />
+              <div className="landing-value-card-head">
+                <step.icon aria-hidden />
+                <h3>{step.title}</h3>
               </div>
-              <h3>{step.title}</h3>
               <p>{step.body}</p>
               {"href" in step && step.href ? (
-                <Link href={step.href} className="landing-value-mini hover:underline">
+                <Link href={step.href} className="landing-value-link">
                   {step.mini} →
                 </Link>
               ) : (
-                <div className="landing-value-mini">{step.mini}</div>
+                <p className="landing-value-link landing-value-link-muted">{step.mini}</p>
               )}
             </article>
           </RevealOnScroll>

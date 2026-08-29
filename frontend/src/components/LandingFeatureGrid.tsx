@@ -14,6 +14,11 @@ export function LandingFeatureGrid({
         <RevealOnScroll>
           <div className="landing-kicker">Full feature set</div>
           <div className="landing-value-title">{title}</div>
+          <p className="landing-value-copy mt-2">
+            Reader workspace, Study AI, quiz, planner, Telegram import, Spotify
+            focus audio, sharing, and offline PWA — one calm surface for your own
+            material.
+          </p>
         </RevealOnScroll>
         <div className="landing-feature-grid">
           {MARKETING_FEATURES.map((feature, index) => (

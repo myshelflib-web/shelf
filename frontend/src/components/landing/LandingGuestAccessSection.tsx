@@ -27,7 +27,7 @@ const GUEST_ITEMS = [
 export function LandingGuestAccessSection() {
   return (
     <section
-      className="landing-value-section !pt-0"
+      className="landing-value-section"
       id="guest-access"
       aria-labelledby="landing-guest-heading"
     >
@@ -46,17 +46,21 @@ export function LandingGuestAccessSection() {
           </p>
         </div>
       </RevealOnScroll>
-      <div className="landing-value-grid !grid-cols-1 sm:!grid-cols-2">
+      <ul className="landing-link-list">
         {GUEST_ITEMS.map((item, index) => (
-          <RevealOnScroll key={item.title} delay={index * 50}>
-            <Link href={item.href} className="landing-value-card !min-h-0 block hover:!border-[var(--accent)]">
-              <h3 className="!mt-0 text-base">{item.title}</h3>
-              <p>{item.body}</p>
-              <span className="landing-value-mini mt-4">Open →</span>
-            </Link>
+          <RevealOnScroll key={item.title} delay={index * 40}>
+            <li>
+              <Link href={item.href} className="landing-link-row">
+                <span className="landing-link-row-title">{item.title}</span>
+                <span className="landing-link-row-body">{item.body}</span>
+                <span className="landing-link-row-arrow" aria-hidden>
+                  →
+                </span>
+              </Link>
+            </li>
           </RevealOnScroll>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

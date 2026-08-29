@@ -16,6 +16,7 @@ import { LandingCtaBanner } from "@/components/landing/LandingCtaBanner";
 import { LandingQuizSection } from "@/components/landing/LandingQuizSection";
 import { LandingIntegrationsSection } from "@/components/landing/LandingIntegrationsSection";
 import { LandingLearnSection } from "@/components/landing/LandingLearnSection";
+import { LandingGuestAccessSection } from "@/components/landing/LandingGuestAccessSection";
 import { useAuth } from "@/hooks/useAuth";
 import {
   CalendarDays,
@@ -56,8 +57,10 @@ export function HomePageClient() {
                 Your material. One reader, Study AI, planner, and quiz.
               </h1>
               <p className="landing-lead">
-                Bring your PDFs and notes into one private library — read, highlight,
-                and revise without switching apps.
+                Upload PDFs, sketch notebooks, and doc pages into collections you
+                control. Read in tabs or split view, highlight as you go, ask Study
+                AI from your files, sit exam-style quizzes, and plan revision on one
+                calendar.
               </p>
               <div className="landing-hero-actions">
                 <Link href="/login" className="landing-btn landing-btn-primary">
@@ -71,32 +74,32 @@ export function HomePageClient() {
                 Learn and feature guides are open without sign-in. Your private
                 library starts when you create an account.
               </p>
-              <div className="landing-featureline">
-                <span className="landing-featurepill">
-                  <FolderOpen strokeWidth={1.8} />
+              <ul className="landing-featurelist" aria-label="Product areas">
+                <li>
+                  <FolderOpen strokeWidth={1.75} aria-hidden />
                   Library
-                </span>
-                <span className="landing-featurepill">
-                  <NotebookPen strokeWidth={1.8} />
+                </li>
+                <li>
+                  <NotebookPen strokeWidth={1.75} aria-hidden />
                   Notebooks
-                </span>
-                <span className="landing-featurepill">
-                  <Layers strokeWidth={1.8} />
+                </li>
+                <li>
+                  <Layers strokeWidth={1.75} aria-hidden />
                   Tabs &amp; split
-                </span>
-                <span className="landing-featurepill">
-                  <Sparkles strokeWidth={1.8} />
+                </li>
+                <li>
+                  <Sparkles strokeWidth={1.75} aria-hidden />
                   Study AI
-                </span>
-                <span className="landing-featurepill">
-                  <ListChecks strokeWidth={1.8} />
+                </li>
+                <li>
+                  <ListChecks strokeWidth={1.75} aria-hidden />
                   Quiz
-                </span>
-                <span className="landing-featurepill">
-                  <CalendarDays strokeWidth={1.8} />
+                </li>
+                <li>
+                  <CalendarDays strokeWidth={1.75} aria-hidden />
                   Planner
-                </span>
-              </div>
+                </li>
+              </ul>
             </div>
           </RevealOnScroll>
 
@@ -124,6 +127,8 @@ export function HomePageClient() {
             See all features — reader workspace, sharing, offline PWA, Premium &amp; more →
           </Link>
         </section>
+
+        <LandingGuestAccessSection />
 
         <LandingGoalSection />
 

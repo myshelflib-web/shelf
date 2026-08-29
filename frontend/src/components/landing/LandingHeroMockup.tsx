@@ -1,17 +1,14 @@
 import { LandingWindow } from "./LandingWindow";
 import {
   BookOpen,
-  CalendarDays,
   FileUp,
   Highlighter,
-  MessageSquareText,
-  Pin,
   Sparkles,
 } from "lucide-react";
 
 export function LandingHeroMockup() {
   return (
-    <div className="landing-hero-stage landing-float" aria-hidden>
+    <div className="landing-hero-stage" aria-hidden>
       <div className="grid lg:grid-cols-[220px_1fr_240px] gap-3 min-h-[320px]">
         <LandingWindow title="Shelf — Library" className="hidden lg:flex flex-col">
           <div className="p-3 space-y-2 text-xs">
@@ -101,19 +98,6 @@ export function LandingHeroMockup() {
             </div>
           </div>
         </LandingWindow>
-      </div>
-
-      <div className="landing-hero-chip landing-hero-chip-calendar">
-        <CalendarDays className="w-3.5 h-3.5 text-[var(--accent)]" />
-        <span>Revision · Friday 4pm</span>
-      </div>
-      <div className="landing-hero-chip landing-hero-chip-pin">
-        <Pin className="w-3.5 h-3.5 text-[var(--accent)]" />
-        <span>Pinned page</span>
-      </div>
-      <div className="landing-hero-chip landing-hero-chip-chat">
-        <MessageSquareText className="w-3.5 h-3.5 text-[var(--accent)]" />
-        <span>Ask on selection</span>
       </div>
     </div>
   );

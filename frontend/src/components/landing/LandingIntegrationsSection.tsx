@@ -55,17 +55,17 @@ export function LandingIntegrationsSection() {
         {INTEGRATIONS.map((item, index) => (
           <RevealOnScroll key={item.title} delay={index * 60}>
             <article className="landing-value-card !min-h-0">
-              <div className="landing-value-icon !relative !top-0 !right-0 !mb-3">
-                <item.icon />
+              <div className="landing-value-card-head">
+                <item.icon aria-hidden />
+                <h3>{item.title}</h3>
               </div>
-              <h3 className="!mt-0">{item.title}</h3>
               <p>{item.body}</p>
-              <div className="flex flex-wrap gap-2 mt-4">
-                <Link href={item.href} className="landing-value-mini hover:underline">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3">
+                <Link href={item.href} className="landing-value-link inline-flex items-center gap-1">
                   {item.cta}
                   <ArrowRight className="w-3 h-3" />
                 </Link>
-                <Link href={item.blogHref} className="landing-value-mini hover:underline">
+                <Link href={item.blogHref} className="landing-value-link">
                   Blog article
                 </Link>
               </div>
