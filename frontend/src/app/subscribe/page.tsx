@@ -13,6 +13,7 @@ import {
   getStoredAffiliateRef,
 } from "@/lib/affiliateRef";
 import { GreetingDots } from "@/components/GreetingAccent";
+import { Check, Heart, Loader2 } from "lucide-react";
 
 declare global {
   interface Window {
