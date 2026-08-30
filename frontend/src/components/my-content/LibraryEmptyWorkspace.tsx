@@ -165,7 +165,15 @@ export function LibraryEmptyWorkspace() {
           </div>
         )}
 
-        <label className="relative w-full mt-8">
+        {!query.trim() ? (
+          <LibrarySuggestChips
+            surface="library"
+            className={bootLoading || showResume ? "mt-4" : "mt-8"}
+            onPick={(item) => setQuery(item.query)}
+          />
+        ) : null}
+
+        <label className={`relative w-full ${query.trim() ? "mt-8" : "mt-3"}`}>
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
           <input
             value={query}
@@ -220,12 +228,7 @@ export function LibraryEmptyWorkspace() {
               ))
             )}
           </ul>
-        ) : (
-          <LibrarySuggestChips
-            surface="library"
-            onPick={(item) => setQuery(item.query)}
-          />
-        )}
+        ) : null}
 
         <div className="mt-8 w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
           <button

@@ -51,7 +51,7 @@ export function LibrarySuggestChips({
 
   return (
     <div
-      className={`w-full min-h-[4.25rem] mt-3 lively-line ${
+      className={`w-full min-h-[4.25rem] lively-line ${
         visible ? "lively-line-in" : "lively-line-out"
       } ${className}`.trim()}
       role="list"
