@@ -35,6 +35,7 @@ import { GreetingBlock } from "@/components/GreetingBlock";
 import { LivelyLine } from "@/components/LivelyLine";
 import { ShelfLogo } from "@/components/ShelfLogo";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
 
 export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
@@ -70,6 +71,7 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const [chatMenuThreadId, setChatMenuThreadId] = useState<string | null>(null);
   const [threadsOpen, setThreadsOpen] = useState(false);
   const compactPortrait = useCompactPortrait();
+  const isPhone = useIsPhone();
 
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -515,6 +517,7 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
         open={compactPortrait && threadsOpen}
         onClose={() => setThreadsOpen(false)}
         title="Chats"
+        fullScreen={isPhone}
       >
         <div className="study-ai-sidebar-drawer-host h-full">{sidebar}</div>
       </ShelfDrawer>

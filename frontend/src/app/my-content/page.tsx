@@ -8,6 +8,7 @@ import { LibraryEmptyWorkspace } from "@/components/my-content/LibraryEmptyWorks
 import { useAddContent } from "@/components/my-content/MyContentAddProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { ShelfExplorerFab } from "@/components/ShelfExplorerFab";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
@@ -20,6 +21,7 @@ function MyContentDashboard() {
   const { user, loading: authLoading } = useAuth();
   const { openAdd } = useAddContent();
   const compactPortrait = useCompactPortrait();
+  const isPhone = useIsPhone();
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [restoringTabs, setRestoringTabs] = useState(true);
 
@@ -97,6 +99,7 @@ function MyContentDashboard() {
         open={compactPortrait && explorerOpen}
         onClose={() => setExplorerOpen(false)}
         title="Explorer"
+        fullScreen={isPhone}
       >
         <LibrarySidePanel className="w-full border-r-0" />
       </ShelfDrawer>

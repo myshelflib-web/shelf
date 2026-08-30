@@ -13,13 +13,17 @@ import {
   MousePointer2,
   MousePointerClick,
   PenLine,
+  Share2,
+  Star,
   Sun,
+  Trash2,
   Undo2,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import clsx from "clsx";
 import { withShortcut } from "@/lib/hotkeys";
-import { useCompactPortrait } from "@/hooks/useCompactPortrait";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import { INK_WIDTHS } from "@/lib/straightenStroke";
 import { PEN_COLORS } from "./BlankEditorToolbar";
 import {
@@ -35,6 +39,13 @@ import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
 
 export type PdfToolbarMode = "text" | "pen" | "ink" | "erase" | "clip";
 
+export type PdfPhoneChrome = {
+  starred: boolean;
+  onToggleStar: () => void;
+  onShare?: () => void;
+  onDelete?: () => void;
+};
+
 type Props = {
   currentPage: number;
   numPages: number;
@@ -49,7 +60,7 @@ type Props = {
   ) => void;
   guestLocked: boolean;
   lockedTool: string;
-  blocked: (feature: string) => boolean;
+  blocked: (feature: string) => boolean | void;
   penCursorHide: () => void;
   downloadPdf: () => void | Promise<void>;
   penSettingsOpen: boolean;
@@ -70,6 +81,7 @@ type Props = {
   zoomBy: (delta: number) => void;
   darkPdf: boolean;
   toggleDarkPdf: () => void;
+  phoneChrome?: PdfPhoneChrome;
 };
 
 export function PdfToolbar(props: Props) {
@@ -105,13 +117,14 @@ export function PdfToolbar(props: Props) {
     zoomBy,
     darkPdf,
     toggleDarkPdf,
+    phoneChrome,
   } = props;
 
   const inkBtnRef = useRef<HTMLButtonElement>(null);
   const eraseBtnRef = useRef<HTMLButtonElement>(null);
   const [inkOpen, setInkOpen] = useState(false);
   const [eraseOpen, setEraseOpen] = useState(false);
-  const compactToolbar = useCompactPortrait();
+  const isPhone = useIsPhone();
 
   const closeExtras = () => {
     setInkOpen(false);
@@ -119,11 +132,15 @@ export function PdfToolbar(props: Props) {
     setPenSettingsOpen(false);
   };
 
+  const btn = { phone: isPhone };
+  const sep = { phone: isPhone };
+
   return (
-    <EditorToolbarShell compact={compactToolbar}>
+    <EditorToolbarShell phone={isPhone}>
       <ToolGroup>
         <PdfPageNav
           compact
+          phone={isPhone}
           currentPage={currentPage}
           numPages={numPages}
           pdfDoc={pdfDoc}
@@ -134,10 +151,11 @@ export function PdfToolbar(props: Props) {
         />
       </ToolGroup>
 
-      <ToolSep />
+      <ToolSep {...sep} />
 
       <ToolGroup>
         <ToolBtn
+          {...btn}
           label={
             guestLocked
               ? "Sign in to highlight or ask Study AI"
@@ -153,6 +171,7 @@ export function PdfToolbar(props: Props) {
           <MousePointer2 className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolBtn
+          {...btn}
           ref={inkBtnRef}
           label={
             guestLocked
@@ -177,6 +196,7 @@ export function PdfToolbar(props: Props) {
           <PenLine className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolBtn
+          {...btn}
           ref={penSettingsBtnRef}
           label={
             guestLocked
@@ -201,6 +221,7 @@ export function PdfToolbar(props: Props) {
           <Highlighter className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolBtn
+          {...btn}
           ref={eraseBtnRef}
           label={guestLocked ? "Sign in to erase highlights" : "Eraser"}
           active={mode === "erase"}
@@ -223,6 +244,7 @@ export function PdfToolbar(props: Props) {
         </ToolBtn>
         {showClip && (
           <ToolBtn
+            {...btn}
             label={
               guestLocked
                 ? "Sign in to clip regions"
@@ -241,9 +263,11 @@ export function PdfToolbar(props: Props) {
             <Crop className="w-[17px] h-[17px]" />
           </ToolBtn>
         )}
-        <ToolBtn label="Download PDF" onClick={() => void downloadPdf()}>
-          <Download className="w-[17px] h-[17px]" />
-        </ToolBtn>
+        {!isPhone ? (
+          <ToolBtn {...btn} label="Download PDF" onClick={() => void downloadPdf()}>
+            <Download className="w-[17px] h-[17px]" />
+          </ToolBtn>
+        ) : null}
       </ToolGroup>
 
       <ToolPopover
@@ -303,10 +327,11 @@ export function PdfToolbar(props: Props) {
         </div>
       </ToolPopover>
 
-      <ToolSep />
+      <ToolSep {...sep} />
 
       <ToolGroup>
         <ToolBtn
+          {...btn}
           label={
             guestLocked
               ? "Sign in to undo marks"
@@ -321,29 +346,67 @@ export function PdfToolbar(props: Props) {
         >
           <Undo2 className="w-[17px] h-[17px]" />
         </ToolBtn>
-        <ToolBtn
-          label="A4 sheet — one page"
-          active={pageLayout === "single"}
-          onClick={() => setSheetLayout("single")}
-        >
-          <File className="w-[17px] h-[17px]" />
-        </ToolBtn>
-        <ToolBtn
-          label="A4 sheets — two pages side by side"
-          active={pageLayout === "spread"}
-          onClick={() => setSheetLayout("spread")}
-        >
-          <Columns2 className="w-[17px] h-[17px]" />
-        </ToolBtn>
+        {!isPhone ? (
+          <>
+            <ToolBtn
+              {...btn}
+              label="A4 sheet — one page"
+              active={pageLayout === "single"}
+              onClick={() => setSheetLayout("single")}
+            >
+              <File className="w-[17px] h-[17px]" />
+            </ToolBtn>
+            <ToolBtn
+              {...btn}
+              label="A4 sheets — two pages side by side"
+              active={pageLayout === "spread"}
+              onClick={() => setSheetLayout("spread")}
+            >
+              <Columns2 className="w-[17px] h-[17px]" />
+            </ToolBtn>
+          </>
+        ) : null}
       </ToolGroup>
 
-      <ToolSep />
+      {phoneChrome ? (
+        <>
+          <ToolSep {...sep} />
+          <ToolGroup>
+            {phoneChrome.onShare ? (
+              <ToolBtn {...btn} label="Share this page" onClick={phoneChrome.onShare}>
+                <Share2 className="w-[17px] h-[17px]" />
+              </ToolBtn>
+            ) : null}
+            <ToolBtn
+              {...btn}
+              label={withShortcut(
+                phoneChrome.starred ? "Remove star" : "Star this page",
+                "*"
+              )}
+              active={phoneChrome.starred}
+              className={phoneChrome.starred ? "text-amber-400" : undefined}
+              onClick={phoneChrome.onToggleStar}
+            >
+              <Star
+                className={clsx(
+                  "w-[17px] h-[17px]",
+                  phoneChrome.starred && "fill-amber-400"
+                )}
+              />
+            </ToolBtn>
+            {phoneChrome.onDelete ? (
+              <ToolBtn {...btn} label="Delete page" onClick={phoneChrome.onDelete}>
+                <Trash2 className="w-[17px] h-[17px]" />
+              </ToolBtn>
+            ) : null}
+          </ToolGroup>
+        </>
+      ) : null}
+
+      <ToolSep {...sep} />
 
       <ToolGroup>
-        <ToolBtn
-          label={withShortcut("Zoom out", "-")}
-          onClick={() => zoomBy(-0.15)}
-        >
+        <ToolBtn {...btn} label={withShortcut("Zoom out", "-")} onClick={() => zoomBy(-0.15)}>
           <ZoomOut className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolMuted>
@@ -354,13 +417,11 @@ export function PdfToolbar(props: Props) {
             {Math.round(scale * 100)}%
           </span>
         </ToolMuted>
-        <ToolBtn
-          label={withShortcut("Zoom in", "=")}
-          onClick={() => zoomBy(0.15)}
-        >
+        <ToolBtn {...btn} label={withShortcut("Zoom in", "=")} onClick={() => zoomBy(0.15)}>
           <ZoomIn className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolBtn
+          {...btn}
           label={
             darkPdf
               ? withShortcut("Switch to light PDF pages", "m")

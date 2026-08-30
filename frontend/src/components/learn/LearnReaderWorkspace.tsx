@@ -37,6 +37,7 @@ import {
 } from "@/components/my-content/reader/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import { useReaderCompactInit } from "@/hooks/useReaderCompactInit";
 import { useLearnStudyGoal } from "@/hooks/useLearnStudyGoal";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
@@ -55,6 +56,7 @@ export function LearnReaderWorkspace({
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const compactPortrait = useCompactPortrait();
+  const isPhone = useIsPhone();
   const { setGuestGoal, showGoalPicker } = useLearnStudyGoal();
 
   const libraryPanelRef = usePanelRef();
@@ -262,10 +264,11 @@ export function LearnReaderWorkspace({
 
   const handleOpenTab = useCallback(
     (paneId: string, tab: OpenTab) => {
-      openInPane(paneId, tab, { activate: true });
+      openInPane(paneId, tab, { activate: true, replace: isPhone });
       syncReaderUrl(tab.href);
+      if (isPhone) setLibraryCollapsed(true);
     },
-    [openInPane, syncReaderUrl]
+    [openInPane, syncReaderUrl, isPhone, setLibraryCollapsed]
   );
 
   const onAskStudyAI = useCallback(
@@ -413,6 +416,7 @@ export function LearnReaderWorkspace({
             collapsible
             collapsedSize={0}
             onResize={(size) => {
+              if (layoutCompact) return;
               if (size.asPercentage < 1 && !state.libraryCollapsed) {
                 setLibraryCollapsed(true);
               } else if (size.asPercentage >= 1 && state.libraryCollapsed) {
@@ -485,16 +489,23 @@ export function LearnReaderWorkspace({
                       className="flex flex-col min-w-0 min-h-0 overflow-hidden flex-1"
                       onMouseDown={() => focusPane(pane.id)}
                     >
-                      <ReaderTabStrip
-                        paneId={pane.id}
-                        tabs={pane.tabs}
-                        activeTabKey={pane.activeTabKey}
-                        focused={focused}
-                        onActivate={(key) => handleActivateTab(pane.id, key)}
-                        onClose={(key) => handleCloseTab(pane.id, key)}
-                        onFocusPane={() => focusPane(pane.id)}
-                        onDropPage={(tab) => handleOpenTab(pane.id, tab)}
-                      />
+                      <div className="reader-workspace-tabs">
+                        <ReaderTabStrip
+                          paneId={pane.id}
+                          tabs={pane.tabs}
+                          activeTabKey={pane.activeTabKey}
+                          focused={focused}
+                          onActivate={(key) => handleActivateTab(pane.id, key)}
+                          onClose={(key) => handleCloseTab(pane.id, key)}
+                          onFocusPane={() => focusPane(pane.id)}
+                          onDropPage={(tab) => handleOpenTab(pane.id, tab)}
+                        />
+                      </div>
+                      {isPhone ? (
+                        <div className="shrink-0 px-3 py-1.5 border-b border-[var(--border)] bg-[var(--bg-secondary)] text-xs font-medium text-[var(--text-primary)] truncate">
+                          {active.title}
+                        </div>
+                      ) : null}
                       <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
                         {pane.tabs.map((tab) => {
                           const isActive = tab.key === active.key;
@@ -582,6 +593,7 @@ export function LearnReaderWorkspace({
             collapsible
             collapsedSize={0}
             onResize={(size) => {
+              if (layoutCompact) return;
               if (size.asPercentage < 1 && !state.studyAICollapsed) {
                 setStudyAICollapsed(true);
               } else if (size.asPercentage >= 1 && state.studyAICollapsed) {
@@ -598,6 +610,7 @@ export function LearnReaderWorkspace({
         open={layoutCompact && !state.libraryCollapsed}
         onClose={() => setLibraryCollapsed(true)}
         title="Explorer"
+        fullScreen={isPhone}
       >
         {libraryExplorer}
       </ShelfDrawer>
@@ -608,6 +621,7 @@ export function LearnReaderWorkspace({
         side="right"
         wide
         title="Study AI"
+        fullScreen={isPhone}
       >
         {studyAIShell}
       </ShelfDrawer>

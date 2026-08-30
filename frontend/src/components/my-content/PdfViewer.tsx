@@ -26,7 +26,7 @@ import {
 } from "@/lib/pdfLayout";
 import { PenSettingsPanel } from "./PenSettingsPanel";
 import { PEN_COLORS } from "./BlankEditorToolbar";
-import { PdfToolbar } from "./PdfToolbar";
+import { PdfToolbar, type PdfPhoneChrome } from "./PdfToolbar";
 import { usePdfReadProgressSync } from "./PdfReadProgress";
 import { useInkGestures } from "./useInkGestures";
 import { useWindowPenStroke } from "./useWindowPenStroke";
@@ -62,6 +62,7 @@ import { usePdfMarkUndo } from "./usePdfMarkUndo";
 import { usePdfWheelZoom } from "./usePdfWheelZoom";
 import { useHotkey } from "@/hooks/useHotkeys";
 import { useAppDialog } from "@/hooks/useAppDialog";
+import { useIsPhone } from "@/hooks/useIsPhone";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
@@ -109,6 +110,7 @@ interface PdfViewerProps {
   onGuestLockedClick?: (feature: string) => void;
   /** Owner library PDFs — page delete via thumbnail grid. */
   canEditPdf?: boolean;
+  phoneChrome?: PdfPhoneChrome;
 }
 
 type ToolMode = "text" | "pen" | "ink" | "clip" | "erase";
@@ -143,8 +145,10 @@ export function PdfViewer({
   guestLocked = false,
   onGuestLockedClick,
   canEditPdf,
+  phoneChrome,
 }: PdfViewerProps) {
   const { alert } = useAppDialog();
+  const isPhone = useIsPhone();
   const rootRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
@@ -221,6 +225,11 @@ export function PdfViewer({
   const [inkColor, setInkColor] = useState(DEFAULT_INK_COLOR);
   const [inkWidth, setInkWidth] = useState<number>(DEFAULT_INK_WIDTH);
   const [pageLayout, setPageLayout] = useState<PdfPageLayout>(readPdfPageLayout);
+
+  useEffect(() => {
+    if (!isPhone) return;
+    if (pageLayout !== "single") setPageLayout("single");
+  }, [isPhone, pageLayout]);
   const [penSettingsOpen, setPenSettingsOpen] = useState(false);
   const penSettingsBtnRef = useRef<HTMLButtonElement>(null);
   const penCursor = usePenCursor();
@@ -478,6 +487,21 @@ export function PdfViewer({
           requestAnimationFrame(apply);
           return;
         }
+      } else if (isPhone && root.clientWidth > 0 && root.clientHeight > 0) {
+        const fit = pdfFitPageSize(pageSizes, pageSize);
+        if (fit.w > 0) {
+          const fitScale = fitPdfSheetScale({
+            layout: "single",
+            containerW: root.clientWidth,
+            containerH: root.clientHeight,
+            pageW: fit.w,
+            pageH: fit.h,
+          });
+          if (savedScale > fitScale * 1.08) {
+            setScale(fitScale);
+            return;
+          }
+        }
       }
 
       const el = pageRefs.current.get(page);
@@ -538,6 +562,7 @@ export function PdfViewer({
     pageLayout,
     pageSize,
     pageSizes,
+    isPhone,
   ]);
 
   /** Persist view state while reading — only after restore so we don't save page 1. */
@@ -1624,6 +1649,7 @@ export function PdfViewer({
         zoomBy={zoomBy}
         darkPdf={darkPdf}
         toggleDarkPdf={toggleDarkPdf}
+        phoneChrome={phoneChrome}
       />
 
       <div className="relative flex-1 flex flex-col min-h-0">
@@ -1650,7 +1676,7 @@ export function PdfViewer({
         )}
       <div
         ref={bindScrollRef}
-        className={`flex-1 overflow-auto px-4 pt-6 pb-20 overscroll-y-contain [overflow-anchor:none]${inkActive ? " shelf-ink-surface" : ""}${cursorTool ? " cursor-none" : ""}`}
+        className={`pdf-scroll-root flex-1 overflow-auto px-4 pt-6 pb-20 overscroll-y-contain [overflow-anchor:none]${inkActive ? " shelf-ink-surface" : ""}${cursorTool ? " cursor-none" : ""}`}
         onPointerMove={(e) => {
           if (cursorTool) penCursor.move(e.clientX, e.clientY);
         }}

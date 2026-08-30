@@ -309,8 +309,9 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
   }, []);
 
   const openInPane = useCallback(
-    (paneId: string, tab: OpenTab, opts?: { activate?: boolean }) => {
+    (paneId: string, tab: OpenTab, opts?: { activate?: boolean; replace?: boolean }) => {
       const activate = opts?.activate !== false;
+      const replace = opts?.replace === true;
       setState((prev) => {
         const existing = findTab(
           prev.panes,
@@ -349,13 +350,22 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
 
         let panes = prev.panes.map((p) => {
           if (p.id !== target.id) return p;
+          if (replace) {
+            return {
+              ...p,
+              tabs: [tab],
+              activeTabKey: tab.key,
+            };
+          }
           return {
             ...p,
             tabs: [...p.tabs, tab],
             activeTabKey: activate ? tab.key : p.activeTabKey,
           };
         });
-        panes = trimOldest(panes, tab.key);
+        if (!replace) {
+          panes = trimOldest(panes, tab.key);
+        }
         return {
           ...prev,
           panes,

@@ -11,19 +11,32 @@ import { clsx } from "clsx";
 export function EditorToolbarShell({
   children,
   compact = false,
+  phone = false,
+  className,
 }: {
   children: ReactNode;
   /** Side panels: wrap + left-align instead of a single scrolled row. */
   compact?: boolean;
+  /** Phone: one horizontal scroll row, no wrap. */
+  phone?: boolean;
+  className?: string;
 }) {
   return (
-    <div className="shrink-0 border-b border-[var(--border)] bg-[var(--bg-elevated)]">
+    <div
+      className={clsx(
+        "shrink-0 border-b border-[var(--border)] bg-[var(--bg-elevated)]",
+        phone && "pdf-toolbar-phone",
+        className
+      )}
+    >
       <div
         className={clsx(
           "editor-toolbar-row flex items-center gap-0.5",
-          compact
-            ? "flex-wrap justify-start px-1.5 py-1 min-h-0"
-            : "justify-center gap-1 px-3 py-1.5 min-h-[56px] overflow-x-auto scrollbar-none"
+          phone
+            ? "flex-nowrap overflow-x-auto scrollbar-none px-1.5 py-1 min-h-[40px]"
+            : compact
+              ? "flex-wrap justify-start px-1.5 py-1 min-h-0"
+              : "justify-center gap-1 px-3 py-1.5 min-h-[56px] overflow-x-auto scrollbar-none"
         )}
       >
         {children}
@@ -46,12 +59,12 @@ export function ToolGroup({
   );
 }
 
-export function ToolSep({ compact = false }: { compact?: boolean }) {
+export function ToolSep({ compact = false, phone = false }: { compact?: boolean; phone?: boolean }) {
   return (
     <div
       className={clsx(
         "w-px bg-[var(--border)] shrink-0",
-        compact ? "h-5 mx-0.5" : "h-7 mx-1.5"
+        phone ? "tool-sep-phone" : compact ? "h-5 mx-0.5" : "h-7 mx-1.5"
       )}
       aria-hidden
     />
@@ -62,6 +75,7 @@ type ToolBtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   active?: boolean;
   label: string;
   compact?: boolean;
+  phone?: boolean;
 };
 
 export const ToolBtn = forwardRef<HTMLButtonElement, ToolBtnProps>(
@@ -70,6 +84,7 @@ export const ToolBtn = forwardRef<HTMLButtonElement, ToolBtnProps>(
       active,
       label,
       compact = false,
+      phone = false,
       className,
       children,
       type = "button",
@@ -88,9 +103,11 @@ export const ToolBtn = forwardRef<HTMLButtonElement, ToolBtnProps>(
           "inline-flex items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors",
           "hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]",
           "disabled:opacity-35 disabled:pointer-events-none",
-          compact
-            ? "h-7 min-w-7 px-1 rounded-md"
-            : "h-[34px] min-w-[34px] px-1.5",
+          phone
+            ? "h-8 min-w-8 px-1 rounded-md tool-btn-phone"
+            : compact
+              ? "h-7 min-w-7 px-1 rounded-md"
+              : "h-[34px] min-w-[34px] px-1.5",
           active &&
             "bg-[var(--accent-light)] text-[var(--accent)] ring-1 ring-[var(--accent)]/25 hover:bg-[var(--accent-light)] hover:text-[var(--accent)]",
           className

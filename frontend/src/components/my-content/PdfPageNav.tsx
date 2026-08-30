@@ -13,6 +13,7 @@ export function PdfPageNav({
   modeHint = "",
   pdfDoc,
   compact = false,
+  phone = false,
   canDeletePages = false,
   deletingPages = false,
   onGoToPage,
@@ -23,6 +24,7 @@ export function PdfPageNav({
   modeHint?: string;
   pdfDoc: PDFDocumentProxy | null;
   compact?: boolean;
+  phone?: boolean;
   canDeletePages?: boolean;
   deletingPages?: boolean;
   onGoToPage: (page: number) => void;
@@ -55,6 +57,7 @@ export function PdfPageNav({
     <div className={compact ? "shrink-0" : "min-w-0"}>
       <div className="flex items-center gap-1 min-w-0">
         <ToolBtn
+          phone={phone}
           label={withShortcut(
             numPages
               ? `Previous page (${currentPage - 1} of ${numPages})`
@@ -78,8 +81,8 @@ export function PdfPageNav({
           <label className="sr-only" htmlFor={inputId}>
             Go to page
           </label>
-          <ToolMuted>Page</ToolMuted>
-          <ToolPill className="!p-0 overflow-hidden">
+          <ToolMuted>{phone ? null : "Page"}</ToolMuted>
+          <ToolPill className={phone ? "!min-w-0 !h-8" : undefined}>
             <input
               ref={inputRef}
               id={inputId}
@@ -104,7 +107,9 @@ export function PdfPageNav({
                   e.currentTarget.blur();
                 }
               }}
-              className="h-[34px] w-[52px] bg-transparent text-center text-[12px] font-medium tabular-nums text-[var(--text-primary)] outline-none disabled:opacity-50"
+              className={`bg-transparent text-center font-medium tabular-nums text-[var(--text-primary)] outline-none disabled:opacity-50 ${
+                phone ? "h-8 w-9 text-[11px]" : "h-[34px] w-[52px] text-[12px]"
+              }`}
               aria-label="Go to page number"
               title="Go to page"
             />
@@ -112,6 +117,7 @@ export function PdfPageNav({
           <ToolMuted>/ {numPages || "—"}</ToolMuted>
         </form>
         <ToolBtn
+          phone={phone}
           label={withShortcut(
             numPages
               ? `Next page (${currentPage + 1} of ${numPages})`
@@ -124,6 +130,7 @@ export function PdfPageNav({
           <ChevronRight className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolBtn
+          phone={phone}
           label="Page thumbnails"
           disabled={!pdfDoc || !numPages}
           onClick={() => setPreviewOpen(true)}

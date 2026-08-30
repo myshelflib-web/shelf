@@ -1,4 +1,4 @@
-/* Phone / tablet portrait — shared responsive chrome (see useCompactPortrait). */
+/* Tablet portrait — shared compact chrome (see useCompactPortrait). */
 
 html[data-shelf-compact-portrait] .app-header-inner {
   gap: 0.5rem;
@@ -10,7 +10,6 @@ html[data-shelf-compact-portrait] .app-header .nav-link {
   display: none;
 }
 
-/* Reader: side panels become drawers — editor uses full width. */
 html[data-shelf-compact-portrait] .reader-shell-compact [data-panel]:not(#editor):not(#learn-editor) {
   flex: 0 0 0 !important;
   min-width: 0 !important;
@@ -28,22 +27,8 @@ html[data-shelf-compact-portrait] .reader-shell-compact [data-separator] {
   display: none !important;
 }
 
-/* Document title row: stack breadcrumbs; hide center progress on narrow screens. */
-html[data-shelf-compact-portrait] .doc-chrome-bar {
-  grid-template-columns: minmax(0, 1fr) auto !important;
-  gap: 0.5rem !important;
-  padding-left: 0.75rem !important;
-  padding-right: 0.75rem !important;
-}
-
 html[data-shelf-compact-portrait] .doc-chrome-progress {
   display: none;
-}
-
-/* Reader tab strip + toolbar: tighter on phones. */
-html[data-shelf-compact-portrait] .reader-workspace-toolbar {
-  padding-left: 0.25rem;
-  padding-right: 0.25rem;
 }
 
 html[data-shelf-compact-portrait] .reader-workspace-toolbar button[aria-label="Split editor"],
@@ -51,27 +36,84 @@ html[data-shelf-compact-portrait] .reader-workspace-toolbar button[aria-label="U
   display: none;
 }
 
-html[data-shelf-compact-portrait] .reader-bottom-bar {
+html[data-shelf-compact-portrait] .study-ai-sidebar-drawer-host .study-ai-sidebar {
+  display: flex !important;
+  width: 100%;
+  border-right: 0;
+}
+
+/* Phone only (max-width 767px) — see useIsPhone. */
+
+html[data-shelf-phone] .doc-chrome-bar {
+  display: none;
+}
+
+html[data-shelf-phone] .reader-workspace-tabs {
+  display: none;
+}
+
+html[data-shelf-phone] .reader-workspace-toolbar {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+html[data-shelf-phone] .reader-bottom-bar {
   bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
   padding-left: 0.5rem;
   padding-right: 0.5rem;
 }
 
-/* Study AI + explorer drawers sit above reader chrome. */
+html[data-shelf-phone] .pdf-toolbar-phone .editor-toolbar-row {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 0;
+  padding: 0.25rem 0.375rem;
+  min-height: 2.5rem;
+}
+
+html[data-shelf-phone] .pdf-toolbar-phone .editor-toolbar-row::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-shelf-phone] .pdf-toolbar-phone .tool-btn-phone {
+  height: 2rem;
+  min-width: 2rem;
+  padding: 0 0.25rem;
+  border-radius: 0.375rem;
+}
+
+html[data-shelf-phone] .pdf-toolbar-phone .tool-btn-phone svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+html[data-shelf-phone] .pdf-toolbar-phone .tool-sep-phone {
+  height: 1.25rem;
+  margin-left: 0.125rem;
+  margin-right: 0.125rem;
+}
+
+html[data-shelf-phone] .pdf-scroll-root {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
 .shelf-drawer-backdrop {
   z-index: 68;
 }
 
-.shelf-drawer-panel {
+.shelf-drawer-panel-docked {
   z-index: 69;
   top: 3rem;
   bottom: 0;
   max-height: calc(100dvh - 3rem);
 }
 
-/* Study AI page: thread list in a drawer on compact screens. */
-html[data-shelf-compact-portrait] .study-ai-sidebar-drawer-host .study-ai-sidebar {
-  display: flex !important;
-  width: 100%;
-  border-right: 0;
+.shelf-drawer-panel-fullscreen {
+  z-index: 79;
+  border-color: var(--border);
 }

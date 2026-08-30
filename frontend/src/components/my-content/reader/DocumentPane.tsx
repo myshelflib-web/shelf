@@ -37,6 +37,7 @@ import {
 import { ApiError } from "@/lib/api";
 import { StudyPanel } from "@/components/StudyPanel";
 import { useFullscreen } from "@/hooks/useFullscreen";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import { useAppDialog } from "@/hooks/useAppDialog";
 import {
   getTabViewState,
@@ -310,6 +311,7 @@ export function DocumentPane({
   signInGate,
 }: DocumentPaneProps) {
   const { confirm, alert } = useAppDialog();
+  const isPhone = useIsPhone();
   const scope = tab.scope;
   const [pageData, setPageData] = useState<LoadedPage | null>(null);
   const [highlights, setHighlights] = useState<UserContentHighlight[]>([]);
@@ -1324,6 +1326,24 @@ export function DocumentPane({
                   commandsRef={pdfCommandsRef}
                   onPageInfo={setPdfInfo}
                   onReadProgress={handleReadProgress}
+                  phoneChrome={
+                    isPhone && showChrome
+                      ? {
+                          starred: pageData.starred,
+                          onToggleStar: () => void handleToggleStar(),
+                          onShare:
+                            !isPreloadedDoc &&
+                            (!pageData.access || pageData.access.isOwner)
+                              ? () => setShareOpen(true)
+                              : undefined,
+                          onDelete:
+                            !isPreloadedDoc &&
+                            (!pageData.access || pageData.access.isOwner)
+                              ? () => void handleDelete()
+                              : undefined,
+                        }
+                      : undefined
+                  }
                 />
               ) : isLink ? (
                 <EmbedViewer

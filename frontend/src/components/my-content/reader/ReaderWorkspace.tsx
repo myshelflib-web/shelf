@@ -42,6 +42,7 @@ import { ReaderTabStrip } from "./ReaderTabStrip";
 import { useReaderWorkspace } from "./useReaderWorkspace";
 import { useHotkey } from "@/hooks/useHotkeys";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import { useReaderCompactInit } from "@/hooks/useReaderCompactInit";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { getSelectedText, withShortcut } from "@/lib/hotkeys";
@@ -97,6 +98,7 @@ export function ReaderWorkspace({
 
   const workspace = useReaderWorkspace(routeScope);
   const compactPortrait = useCompactPortrait();
+  const isPhone = useIsPhone();
   const {
     state,
     focusedPane,
@@ -380,10 +382,13 @@ export function ReaderWorkspace({
 
   const handleOpenTab = useCallback(
     (paneId: string, tab: OpenTab) => {
-      openInPane(paneId, tab, { activate: true });
+      openInPane(paneId, tab, { activate: true, replace: isPhone });
       syncReaderUrl(tab.href);
+      if (isPhone) {
+        setLibraryCollapsed(true);
+      }
     },
-    [openInPane, syncReaderUrl]
+    [openInPane, syncReaderUrl, isPhone, setLibraryCollapsed]
   );
 
   useEffect(() => {
@@ -710,6 +715,7 @@ export function ReaderWorkspace({
             collapsible
             collapsedSize={0}
             onResize={(size) => {
+              if (layoutCompact) return;
               if (size.asPercentage < 1 && !state.libraryCollapsed) {
                 setLibraryCollapsed(true);
               } else if (size.asPercentage >= 1 && state.libraryCollapsed) {
@@ -795,23 +801,35 @@ export function ReaderWorkspace({
                 </div>
 
                 {panesToRender.length === 1 && panesToRender[0] ? (
-                  <ReaderTabStrip
-                    variant="toolbar"
-                    paneId={panesToRender[0].id}
-                    tabs={panesToRender[0].tabs}
-                    activeTabKey={panesToRender[0].activeTabKey}
-                    focused
-                    onActivate={(key) =>
-                      handleActivateTab(panesToRender[0].id, key)
-                    }
-                    onClose={(key) =>
-                      handleCloseTab(panesToRender[0].id, key)
-                    }
-                    onFocusPane={() => focusPane(panesToRender[0].id)}
-                    onDropPage={(tab) =>
-                      handleOpenTab(panesToRender[0].id, tab)
-                    }
-                  />
+                  isPhone ? (
+                    <div className="flex-1 min-w-0 px-2 flex items-center">
+                      <span className="text-xs font-medium text-[var(--text-primary)] truncate">
+                        {panesToRender[0].tabs.find(
+                          (t) => t.key === panesToRender[0].activeTabKey
+                        )?.title ?? "Document"}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="reader-workspace-tabs flex-1 min-w-0">
+                      <ReaderTabStrip
+                        variant="toolbar"
+                        paneId={panesToRender[0].id}
+                        tabs={panesToRender[0].tabs}
+                        activeTabKey={panesToRender[0].activeTabKey}
+                        focused
+                        onActivate={(key) =>
+                          handleActivateTab(panesToRender[0].id, key)
+                        }
+                        onClose={(key) =>
+                          handleCloseTab(panesToRender[0].id, key)
+                        }
+                        onFocusPane={() => focusPane(panesToRender[0].id)}
+                        onDropPage={(tab) =>
+                          handleOpenTab(panesToRender[0].id, tab)
+                        }
+                      />
+                    </div>
+                  )
                 ) : (
                   <div className="flex-1 min-w-0" />
                 )}
@@ -990,6 +1008,7 @@ export function ReaderWorkspace({
             collapsible
             collapsedSize={0}
             onResize={(size) => {
+              if (layoutCompact) return;
               if (size.asPercentage < 1 && !state.studyAICollapsed) {
                 setStudyAICollapsed(true);
               } else if (size.asPercentage >= 1 && state.studyAICollapsed) {
@@ -1006,6 +1025,7 @@ export function ReaderWorkspace({
         open={layoutCompact && !state.libraryCollapsed}
         onClose={() => setLibraryCollapsed(true)}
         title="Explorer"
+        fullScreen={isPhone}
       >
         {libraryExplorer}
       </ShelfDrawer>
@@ -1016,6 +1036,7 @@ export function ReaderWorkspace({
         side="right"
         wide
         title="Study AI"
+        fullScreen={isPhone}
       >
         {studyAIShell}
       </ShelfDrawer>
