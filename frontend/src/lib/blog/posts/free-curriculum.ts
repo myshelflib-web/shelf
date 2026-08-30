@@ -42,15 +42,16 @@ export const freeCurriculum = buildPost(
     {
       heading: "Reading curriculum articles",
       paragraphs: [
-        "Articles render with familiar reader chrome: PDF attachments via presigned URLs with Range fetching, highlights when signed in, and progress tracking for logged-in users.",
+        "Articles open in the same reader chrome as your library: PDF Range fetching, highlights when signed in, and progress for logged-in users. Preloaded files stay read-only until you save a copy into your personal library — then you can annotate and edit like any other page.",
+        "If you read a curriculum PDF before creating an account, Shelf copies that file into your library when you sign in and opens it. Signed-in readers can also tap Save to library on any preloaded article.",
         "Every public article has its own URL, meta description, and structured data so search engines can index individual papers and guides.",
       ],
     },
     {
       heading: "When to use Learn vs My Content",
       paragraphs: [
-        "Use Learn for shared syllabus-style coverage and official PDFs you should not have to hunt on Telegram. Use My Content for coaching notes, marked-up PDFs, research papers, work docs, and anything Study AI should query privately.",
-        "Keep Learn open in one tab and your uploads in another when you want both.",
+        "Use Learn for shared syllabus-style coverage and official PDFs you should not have to hunt on Telegram. Save a copy into My Content when you want personal highlights, notes, or Study AI on that file.",
+        "New accounts with an exam study goal (not General) open the Preloaded explorer on first login so the catalog is one click away from your own shelves.",
       ],
     },
     {

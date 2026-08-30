@@ -9,6 +9,7 @@ export type TimeBucket = "morning" | "afternoon" | "evening";
 export type LivelySurface =
   | "library"
   | "libraryEmpty"
+  | "libraryGuest"
   | "studyAi"
   | "studyPanel"
   | "dashboard"
@@ -102,6 +103,13 @@ const SURFACE_LINES: Record<LivelySurface, string[]> = {
     "Your first collection is one click away.",
     "Start with one page. The rest will follow.",
     "A blank library is an invitation, not a gap.",
+  ],
+  libraryGuest: [
+    "Browse the preloaded library — sign in to keep a copy.",
+    "Search collections here. Study AI waits until you log in.",
+    "Open a page from the explorer, or sign in to start your own shelves.",
+    "This is a taste of Shelf. Your library begins after sign-in.",
+    "Find a syllabus or past paper, then keep it when you join.",
   ],
   studyAi: [
     "Ask anything — notes, quizzes, or a reminder for later.",
@@ -225,6 +233,32 @@ export function pickGreetingSubtitle(
     opts.slot ?? livelySlot(Date.now(), LIVELY_SALUTATION_ROTATE_MS)
   );
   return pickFromPool(SUBTITLES[bucket], seed);
+}
+
+const GUEST_NICKNAMES = [
+  "stranger",
+  "wanderer",
+  "visitor",
+  "friend",
+  "newcomer",
+  "guest",
+];
+
+/** Rotating nickname for signed-out greetings (“Hey, stranger”). */
+export function pickGuestNickname(
+  opts: {
+    sessionSeed?: string | number;
+    slot?: number;
+    day?: string;
+  } = {}
+): string {
+  const seed = hashSeed(
+    "guest-nick",
+    opts.day ?? dayKey(),
+    opts.sessionSeed ?? "shelf",
+    opts.slot ?? livelySlot(Date.now(), LIVELY_SALUTATION_ROTATE_MS)
+  );
+  return pickFromPool(GUEST_NICKNAMES, seed);
 }
 
 export function pickSurfaceLine(

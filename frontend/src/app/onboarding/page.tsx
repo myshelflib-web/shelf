@@ -10,6 +10,7 @@ import {
 } from "@/components/onboarding/OnboardingWizard";
 import { useAuth } from "@/hooks/useAuth";
 import { needsOnboarding } from "@/lib/onboarding";
+import { destinationAfterSignIn } from "@/lib/postAuthNavigation";
 
 function OnboardingContent() {
   const router = useRouter();
@@ -24,7 +25,9 @@ function OnboardingContent() {
       return;
     }
     if (!needsOnboarding(user)) {
-      router.replace(nextPath);
+      void destinationAfterSignIn(nextPath).then((href) => {
+        router.replace(href);
+      });
     }
   }, [user, loading, router, nextPath]);
 

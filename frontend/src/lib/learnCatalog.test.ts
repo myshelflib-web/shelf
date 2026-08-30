@@ -4,6 +4,7 @@ import {
   featuredGoalFor,
   groupSubjectsByGoal,
   parseLearnPath,
+  searchLearnCatalog,
   subjectGoal,
 } from "./learnCatalog";
 import { Subject } from "@/types";
@@ -66,5 +67,42 @@ describe("learnCatalog", () => {
 
   it("defaults a missing studyGoal to GENERAL", () => {
     expect(subjectGoal(subject("misc", undefined))).toBe("GENERAL");
+  });
+
+  it("searches collections, topics, and articles", () => {
+    const catalog: Subject[] = [
+      {
+        id: "gate",
+        name: "Official GATE",
+        slug: "official-gate",
+        order: 0,
+        studyGoal: "GATE",
+        topics: [
+          {
+            id: "syl",
+            title: "Syllabus",
+            slug: "syllabus",
+            order: 0,
+            articles: [
+              {
+                id: "a1",
+                title: "GATE 2026 syllabus",
+                slug: "gate-2026-syllabus",
+                order: 0,
+                isPremium: false,
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    const hits = searchLearnCatalog(catalog, "syllabus");
+    expect(hits.map((h) => h.title)).toEqual([
+      "Syllabus",
+      "GATE 2026 syllabus",
+    ]);
+    expect(hits[1]?.href).toBe(
+      "/learn/official-gate/syllabus/gate-2026-syllabus"
+    );
   });
 });

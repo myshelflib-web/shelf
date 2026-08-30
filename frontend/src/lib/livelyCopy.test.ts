@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   hashSeed,
   pickFromPool,
+  pickGuestNickname,
   pickSalutation,
   pickSurfaceLine,
   timeBucket,
@@ -76,5 +77,21 @@ describe("livelyCopy", () => {
 
   it("hashes and indexes pools safely", () => {
     expect(pickFromPool(["a", "b", "c"], hashSeed("x"))).toMatch(/^[abc]$/);
+  });
+
+  it("picks a guest nickname from the rotating pool", () => {
+    const nick = pickGuestNickname({
+      day: "2026-8-22",
+      sessionSeed: "abc",
+      slot: 2,
+    });
+    expect(nick).toMatch(/^(stranger|wanderer|visitor|friend|newcomer|guest)$/);
+    expect(
+      pickGuestNickname({
+        day: "2026-8-22",
+        sessionSeed: "abc",
+        slot: 2,
+      })
+    ).toBe(nick);
   });
 });

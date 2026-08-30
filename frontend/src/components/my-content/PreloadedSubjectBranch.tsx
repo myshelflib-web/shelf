@@ -2,21 +2,20 @@
 
 import { useRouter } from "next/navigation";
 import {
+  BookOpen,
   ChevronDown,
   ChevronRight,
   FileText,
   Lock,
-  Star,
 } from "lucide-react";
 import clsx from "clsx";
+import { FolderMark } from "@/components/FolderMark";
+import { folderTone } from "@/lib/folderTone";
 import { learnHref, learnScope } from "@/lib/learnContent";
-import { subjectHref, topicHref } from "@/lib/learnCatalog";
 import { isPremiumUser } from "@/lib/premium";
 import { ArticleSummary, Subject } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  PersonalPageReaderScope,
-} from "@/components/my-content/reader/types";
+import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
 
 export function PreloadedSubjectBranch({
   subject,
@@ -70,21 +69,16 @@ export function PreloadedSubjectBranch({
     router.push(href);
   };
 
-  const onSubjectActivate = () => {
-    onToggleSubject(subject.slug);
-    if (!workspaceMode) router.push(subjectHref(subject.slug));
-  };
-
   return (
-    <div className="mb-0.5">
+    <div className="mb-1 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)]/70 overflow-hidden">
       <div
         role="button"
         tabIndex={0}
-        onClick={onSubjectActivate}
+        onClick={() => onToggleSubject(subject.slug)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            onSubjectActivate();
+            onToggleSubject(subject.slug);
           }
         }}
         className={clsx(
@@ -101,7 +95,7 @@ export function PreloadedSubjectBranch({
             <ChevronRight className="w-3.5 h-3.5" />
           )}
         </span>
-        <span className="shrink-0 text-sm">{subject.icon ?? "📁"}</span>
+        <FolderMark seed={subject.id} size={14} />
         <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">
           {subject.name}
         </span>
@@ -122,24 +116,18 @@ export function PreloadedSubjectBranch({
               activeSubject === subject.slug &&
               activeTopic === topic.slug &&
               !activeArticle;
-
-            const onTopicActivate = () => {
-              onToggleTopic(subject.slug, topic.slug);
-              if (!workspaceMode) {
-                router.push(topicHref(subject.slug, topic.slug));
-              }
-            };
+            const tone = folderTone(topic.id);
 
             return (
               <div key={topic.id}>
                 <div
                   role="button"
                   tabIndex={0}
-                  onClick={onTopicActivate}
+                  onClick={() => onToggleTopic(subject.slug, topic.slug)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      onTopicActivate();
+                      onToggleTopic(subject.slug, topic.slug);
                     }
                   }}
                   className={clsx(
@@ -156,7 +144,10 @@ export function PreloadedSubjectBranch({
                       <ChevronRight className="w-3 h-3" />
                     )}
                   </span>
-                  <Star className="w-3 h-3 shrink-0 text-[var(--text-muted)] opacity-50" />
+                  <BookOpen
+                    className="w-3.5 h-3.5 shrink-0"
+                    style={{ color: tone.fg }}
+                  />
                   <span className="flex-1 min-w-0 truncate text-[13px] text-[var(--text-secondary)] text-left">
                     {topic.title}
                   </span>

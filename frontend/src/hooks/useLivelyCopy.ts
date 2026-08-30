@@ -8,6 +8,7 @@ import {
   getOrCreateSessionSeed,
   livelySlot,
   pickGreetingSubtitle,
+  pickGuestNickname,
   pickSalutation,
   pickSurfaceLine,
 } from "@/lib/livelyCopy";
@@ -39,6 +40,7 @@ export function useLivelyGreeting() {
   return {
     salutation: pickSalutation({ hour, sessionSeed, slot }),
     subtitle: pickGreetingSubtitle({ hour, sessionSeed, slot }),
+    guestNickname: pickGuestNickname({ sessionSeed, slot }),
     slot,
   };
 }

@@ -88,7 +88,7 @@ export const BLOG_EXPANSIONS_B: Record<string, BlogSection[]> = {
       heading: "/learn vs /my-content",
       paragraphs: [
         "Your private library lives at /my-content — uploads you control. /learn hosts admin-published curriculum: subject trees, official reading lists, and shared PDFs for competitive exams.",
-        "They do not mix automatically — import or copy links when you want personal notes beside curriculum.",
+        "They stay separate until you save a copy: preloaded articles are read-only in the catalog, and Save to library (or signing in after you read a PDF) puts a private copy in /my-content.",
       ],
     },
     {
@@ -100,7 +100,7 @@ export const BLOG_EXPANSIONS_B: Record<string, BlogSection[]> = {
     {
       heading: "Using curriculum with your library",
       paragraphs: [
-        "Read a /learn page in the same reader chrome as your uploads — highlights and Study AI work when licensing and processing allow.",
+        "Read a /learn page in the same reader chrome as your uploads. Save a copy when you want to edit annotations or keep the file in a personal collection.",
         "Build personal collections for mocks and notes; use /learn for baseline material you should not have to hunt on Telegram.",
       ],
     },

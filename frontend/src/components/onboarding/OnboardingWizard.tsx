@@ -11,6 +11,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { api } from "@/lib/api";
 import { AnalyticsEvents, track } from "@/lib/analytics";
 import { markOnboardingComplete } from "@/lib/onboarding";
+import { destinationAfterOnboarding, destinationAfterSignIn } from "@/lib/postAuthNavigation";
 import { getReadingGoalMinutes, setReadingGoalMinutes } from "@/lib/readingStats";
 import { STUDY_GOAL_GROUPS, STUDY_GOAL_LABELS } from "@/lib/studyGoal";
 import { StudyGoal } from "@/types";
@@ -76,7 +77,7 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
         studyGoal,
         chosePremium: false,
       });
-      router.replace(nextPath);
+      router.replace(await destinationAfterOnboarding(nextPath, studyGoal));
     } catch {
       markOnboardingComplete(user.id);
       completedRef.current = true;
@@ -85,7 +86,7 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
         chosePremium: false,
         hadError: true,
       });
-      router.replace(nextPath);
+      router.replace(await destinationAfterOnboarding(nextPath, studyGoal));
     } finally {
       setSaving(false);
     }
@@ -99,7 +100,9 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
       step: STEPS[step] ?? String(step),
       stepIndex: step,
     });
-    router.replace(nextPath);
+    void destinationAfterSignIn(nextPath).then((href) => {
+      router.replace(href);
+    });
   };
 
   const goToPremium = async () => {
@@ -117,7 +120,8 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
         studyGoal,
         chosePremium: true,
       });
-      router.replace(`/subscribe?next=${encodeURIComponent(nextPath)}`);
+      const dest = await destinationAfterOnboarding(nextPath, studyGoal);
+      router.replace(`/subscribe?next=${encodeURIComponent(dest)}`);
     } catch {
       markOnboardingComplete(user.id);
       completedRef.current = true;
@@ -126,7 +130,8 @@ export function OnboardingWizard({ nextPath }: { nextPath: string }) {
         chosePremium: true,
         hadError: true,
       });
-      router.replace(`/subscribe?next=${encodeURIComponent(nextPath)}`);
+      const dest = await destinationAfterOnboarding(nextPath, studyGoal);
+      router.replace(`/subscribe?next=${encodeURIComponent(dest)}`);
     } finally {
       setSaving(false);
     }

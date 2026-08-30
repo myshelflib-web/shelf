@@ -1,25 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Header } from "@/components/Header";
 import { LibrarySidePanel } from "@/components/my-content/LibrarySidePanel";
-import { LearnCatalogPane } from "@/components/learn/LearnCatalogPane";
-import { LearnCollectionPane } from "@/components/learn/LearnCollectionPane";
+import { LearnGuestWorkspace } from "@/components/learn/LearnGuestWorkspace";
 import { SignInPromptModal } from "@/components/learn/SignInPromptModal";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { ShelfExplorerFab } from "@/components/ShelfExplorerFab";
-import { useAuth } from "@/hooks/useAuth";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
 import { useIsPhone } from "@/hooks/useIsPhone";
 import { useLearnStudyGoal } from "@/hooks/useLearnStudyGoal";
-import { useLearnSubjects } from "@/hooks/useLearnSubjects";
-import {
-  featuredGoalFor,
-  groupSubjectsByGoal,
-  matchesSearch,
-  subjectHref,
-  topicHref,
-} from "@/lib/learnCatalog";
+import { subjectHref, topicHref } from "@/lib/learnCatalog";
 import { StudyGoal } from "@/types";
 
 export function LearnBrowseWorkspace({
@@ -32,36 +23,18 @@ export function LearnBrowseWorkspace({
   /** Pre-select a study track (e.g. /learn/tracks/gate). */
   initialGoal?: StudyGoal;
 }) {
-  const { user } = useAuth();
   const compactPortrait = useCompactPortrait();
   const isPhone = useIsPhone();
-  const { goal, setGuestGoal, showGoalPicker } = useLearnStudyGoal(initialGoal);
-  const { subjects, loading } = useLearnSubjects();
-  const [search, setSearch] = useState("");
+  const { setGuestGoal, showGoalPicker } = useLearnStudyGoal(initialGoal);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [signInFeature, setSignInFeature] = useState<string | null>(null);
 
-  const subject = subjects.find((s) => s.slug === subjectSlug);
-  const currentHref = topicSlug && subjectSlug
-    ? topicHref(subjectSlug, topicSlug)
-    : subjectSlug
-      ? subjectHref(subjectSlug)
-      : "/learn";
-
-  const catalogFiltered = useMemo(
-    () => subjects.filter((s) => matchesSearch(s, search)),
-    [subjects, search]
-  );
-
-  const featuredGoal = featuredGoalFor(goal, subject);
-  const groups = useMemo(
-    () => groupSubjectsByGoal(catalogFiltered, featuredGoal),
-    [catalogFiltered, featuredGoal]
-  );
-  const collectionGroups = useMemo(
-    () => groupSubjectsByGoal(subjects, featuredGoal),
-    [subjects, featuredGoal]
-  );
+  const currentHref =
+    topicSlug && subjectSlug
+      ? topicHref(subjectSlug, topicSlug)
+      : subjectSlug
+        ? subjectHref(subjectSlug)
+        : "/learn";
 
   const libraryExplorer = (
     <LibrarySidePanel
@@ -92,26 +65,7 @@ export function LearnBrowseWorkspace({
           {compactPortrait && !explorerOpen ? (
             <ShelfExplorerFab onClick={() => setExplorerOpen(true)} />
           ) : null}
-          {subjectSlug ? (
-            <LearnCollectionPane
-              subject={subject}
-              topicSlug={topicSlug}
-              groups={collectionGroups}
-              featuredGoal={featuredGoal}
-              loading={loading}
-            />
-          ) : (
-            <LearnCatalogPane
-              groups={groups}
-              filterGoal={goal}
-              onFilterGoalChange={setGuestGoal}
-              showGoalPicker={showGoalPicker}
-              search={search}
-              onSearchChange={setSearch}
-              loading={loading}
-              signedIn={Boolean(user)}
-            />
-          )}
+          <LearnGuestWorkspace />
         </main>
       </div>
 

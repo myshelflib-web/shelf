@@ -35,6 +35,7 @@ import {
   DocumentChromeActions,
   SharedByBanner,
 } from "./SharedDocChrome";
+import { PreloadedSaveBanner } from "./PreloadedSaveBanner";
 import { ApiError } from "@/lib/api";
 import { StudyPanel } from "@/components/StudyPanel";
 import { useFullscreen } from "@/hooks/useFullscreen";
@@ -1275,6 +1276,16 @@ export function DocumentPane({
                 onDelete={() => void handleDelete()}
               />
             </div>
+          )}
+
+          {isPreloadedDoc && showChrome && scope.kind === "learn" && (
+            <PreloadedSaveBanner
+              subjectSlug={scope.subjectSlug}
+              topicSlug={scope.topicSlug}
+              articleSlug={scope.articleSlug}
+              pageTitle={pageData.title}
+              onOpen={onNavigate}
+            />
           )}
 
           {pageData.access && !pageData.access.isOwner && showChrome && (

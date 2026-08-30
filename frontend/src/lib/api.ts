@@ -1215,6 +1215,19 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data ?? {}),
       }),
+    saveCurriculumArticle: (data: {
+      subjectSlug: string;
+      topicSlug: string;
+      articleSlug: string;
+    }) =>
+      request<{
+        page: { id: string; title: string; slug: string; contentType: string };
+        href: string;
+        alreadySaved: boolean;
+      }>("/api/my-content/from-curriculum", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
     updatePageTitle: (id: string, title: string) =>
       request<{ page: { id: string; title: string } }>(
         `/api/my-content/pages/${id}/title`,

@@ -1,3 +1,4 @@
+import { learnHref } from "@/lib/learnContent";
 import { LEARN_CATALOG_GOAL_LABELS } from "@/lib/studyGoal";
 import { Subject, StudyGoal } from "@/types";
 
@@ -101,4 +102,51 @@ export function subjectHref(subjectSlug: string): string {
 
 export function topicHref(subjectSlug: string, topicSlug: string): string {
   return `/learn/${subjectSlug}/${topicSlug}`;
+}
+
+export type LearnSearchHit = {
+  id: string;
+  title: string;
+  href: string;
+  snippet: string;
+};
+
+/** Local catalog search — not Study AI. */
+export function searchLearnCatalog(
+  subjects: Subject[],
+  q: string
+): LearnSearchHit[] {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return [];
+  const hits: LearnSearchHit[] = [];
+  for (const subject of subjects) {
+    if (subject.name.toLowerCase().includes(needle)) {
+      hits.push({
+        id: subject.id,
+        title: subject.name,
+        href: subjectHref(subject.slug),
+        snippet: "Collection",
+      });
+    }
+    for (const topic of subject.topics) {
+      if (topic.title.toLowerCase().includes(needle)) {
+        hits.push({
+          id: topic.id,
+          title: topic.title,
+          href: topicHref(subject.slug, topic.slug),
+          snippet: subject.name,
+        });
+      }
+      for (const article of topic.articles ?? []) {
+        if (!article.title.toLowerCase().includes(needle)) continue;
+        hits.push({
+          id: article.id,
+          title: article.title,
+          href: learnHref(subject.slug, topic.slug, article.slug),
+          snippet: `${subject.name} · ${topic.title}`,
+        });
+      }
+    }
+  }
+  return hits.slice(0, 12);
 }

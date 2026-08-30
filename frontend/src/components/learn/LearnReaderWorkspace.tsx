@@ -44,6 +44,7 @@ import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { api } from "@/lib/api";
 import { isReaderHref, softReplace } from "@/lib/softNavigate";
 import { getSelectedText, withShortcut } from "@/lib/hotkeys";
+import { rememberGuestLearnArticle } from "@/lib/guestLearnResume";
 import { SubjectProgress } from "@/types";
 
 const WARM_TABS_PER_PANE = 12;
@@ -113,6 +114,18 @@ export function LearnReaderWorkspace({
     : null;
   const pageData = focusedSnap?.pageData ?? null;
   const studyPageId = pageData?.id ?? null;
+
+  useEffect(() => {
+    if (user) return;
+    const scope =
+      focusedTab?.scope.kind === "learn" ? focusedTab.scope : routeScope;
+    rememberGuestLearnArticle(
+      scope.subjectSlug,
+      scope.topicSlug,
+      scope.articleSlug,
+      focusedTab?.title
+    );
+  }, [user, focusedTab, routeScope]);
 
   useEffect(() => {
     if (!user) {

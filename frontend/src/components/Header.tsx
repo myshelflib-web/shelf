@@ -128,6 +128,9 @@ export function Header() {
     : withShortcut("Search library", "mod+k");
   const libraryHref = useLibraryHref();
   const pathname = usePathname();
+  const guestLoginHref = pathname.startsWith("/learn")
+    ? `/login?next=${encodeURIComponent(pathname)}`
+    : "/login";
 
   useEffect(() => {
     setMobileNavOpen(false);
@@ -179,7 +182,7 @@ export function Header() {
   ) : (
     <>
       <Link
-        href="/login"
+        href={guestLoginHref}
         onClick={() => setMobileNavOpen(false)}
         className="btn-secondary w-full text-center text-sm py-2.5"
       >
@@ -355,7 +358,7 @@ export function Header() {
             </>
           ) : (
             <>
-              <Link href="/login" className="nav-link hidden md:inline text-sm px-2">
+              <Link href={guestLoginHref} className="nav-link hidden md:inline text-sm px-2">
                 Sign in
               </Link>
               <Link

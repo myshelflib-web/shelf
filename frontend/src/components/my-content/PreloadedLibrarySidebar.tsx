@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  ChevronDown,
-  ChevronRight,
   FoldVertical,
   FolderOpen,
   RefreshCw,
@@ -11,13 +9,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { STUDY_GOAL_LABELS } from "@/lib/studyGoal";
-import {
-  catalogGoalLabel,
-  featuredGoalFor,
-  groupSubjectsByGoal,
-  matchesSearch,
-  parseLearnPath,
-} from "@/lib/learnCatalog";
+import { matchesSearch, parseLearnPath, subjectGoal } from "@/lib/learnCatalog";
 import { GuestStudyGoalSelect } from "@/components/learn/GuestStudyGoalSelect";
 import { StudyGoal, SubjectProgress } from "@/types";
 import { ExplorerSidebarSkeleton } from "@/components/dashboard/DashboardSkeletons";
@@ -67,17 +59,11 @@ export function PreloadedLibrarySidebar({
   const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>(
     {}
   );
-  const [expandedGoals, setExpandedGoals] = useState<Record<string, boolean>>(
-    {}
-  );
 
   const browse = parseLearnPath(currentHref);
   const activeSubject = browse.subjectSlug;
   const activeTopic = browse.topicSlug;
   const activeArticle = browse.articleSlug;
-
-  const activeSubjectObj = subjects.find((s) => s.slug === activeSubject);
-  const featuredGoal = featuredGoalFor(studyGoal, activeSubjectObj);
 
   const getProgress = (slug: string) =>
     progressBySubject.find((p) => p.slug === slug);
@@ -95,39 +81,16 @@ export function PreloadedLibrarySidebar({
     }
   }, [activeSubject, activeTopic]);
 
-  useEffect(() => {
-    if (featuredGoal) {
-      setExpandedGoals((prev) =>
-        prev[featuredGoal] ? prev : { ...prev, [featuredGoal]: true }
-      );
-      return;
+  const filtered = useMemo(() => {
+    const byQuery = subjects.filter((s) => matchesSearch(s, query));
+    if (studyGoal === "GENERAL") return byQuery;
+    const forGoal = byQuery.filter((s) => subjectGoal(s) === studyGoal);
+    const active = subjects.find((s) => s.slug === activeSubject);
+    if (active && !forGoal.some((s) => s.id === active.id)) {
+      return [active, ...forGoal];
     }
-    if (subjects.length === 0) return;
-    setExpandedGoals((prev) => {
-      const next = { ...prev };
-      let changed = false;
-      for (const subject of subjects) {
-        const goal = subject.studyGoal ?? "GENERAL";
-        if (!next[goal]) {
-          next[goal] = true;
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [featuredGoal, subjects]);
-
-  const filtered = useMemo(
-    () => subjects.filter((s) => matchesSearch(s, query)),
-    [subjects, query]
-  );
-
-  const groups = useMemo(
-    () => groupSubjectsByGoal(filtered, featuredGoal),
-    [filtered, featuredGoal]
-  );
-
-  const searching = query.trim().length > 0;
+    return forGoal;
+  }, [subjects, query, studyGoal, activeSubject]);
 
   const toggleSubject = (slug: string) => {
     setExpandedSubjects((prev) => ({ ...prev, [slug]: !prev[slug] }));
@@ -138,14 +101,9 @@ export function PreloadedLibrarySidebar({
     setExpandedTopics((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const toggleGoal = (goal: StudyGoal) => {
-    setExpandedGoals((prev) => ({ ...prev, [goal]: !prev[goal] }));
-  };
-
   const collapseAll = () => {
     setExpandedSubjects({});
     setExpandedTopics({});
-    setExpandedGoals(featuredGoal ? { [featuredGoal]: true } : {});
   };
 
   return (
@@ -180,7 +138,7 @@ export function PreloadedLibrarySidebar({
             </button>
             <button
               type="button"
-              title="Collapse all subjects and topics"
+              title="Collapse all collections and topics"
               aria-label="Collapse all"
               onClick={collapseAll}
               className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
@@ -219,61 +177,33 @@ export function PreloadedLibrarySidebar({
             No preloaded material yet.
           </p>
         ) : (
-          <div className="space-y-2">
-            {groups.map((group) => {
-              const goalOpen =
-                searching || (expandedGoals[group.goal] ?? false);
-              const isFeatured = featuredGoal === group.goal;
+          <div className="space-y-0.5">
+            <div className="flex items-center justify-between gap-1 px-2 py-1">
+              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium">
+                Collections
+              </p>
+              <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
+                {filtered.length}
+              </span>
+            </div>
+            {filtered.map((subject) => {
+              const prog = getProgress(subject.slug);
               return (
-                <div key={group.goal}>
-                  <button
-                    type="button"
-                    onClick={() => toggleGoal(group.goal)}
-                    className="w-full flex items-center justify-between gap-1 px-2 py-1 rounded-md hover:bg-[var(--bg-elevated)]"
-                  >
-                    <span className="flex items-center gap-1 min-w-0">
-                      {goalOpen ? (
-                        <ChevronDown className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
-                      ) : (
-                        <ChevronRight className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
-                      )}
-                      <span
-                        className={clsx(
-                          "text-[10px] uppercase tracking-wide font-medium truncate",
-                          isFeatured
-                            ? "text-[var(--text-secondary)]"
-                            : "text-[var(--text-muted)]"
-                        )}
-                      >
-                        {catalogGoalLabel(group.goal)}
-                      </span>
-                    </span>
-                    <span className="text-[10px] text-[var(--text-muted)] tabular-nums shrink-0">
-                      {group.subjects.length}
-                    </span>
-                  </button>
-                  {goalOpen &&
-                    group.subjects.map((subject) => {
-                      const prog = getProgress(subject.slug);
-                      return (
-                        <PreloadedSubjectBranch
-                          key={subject.id}
-                          subject={subject}
-                          open={expandedSubjects[subject.slug] ?? false}
-                          expandedTopics={expandedTopics}
-                          activeSubject={activeSubject}
-                          activeTopic={activeTopic}
-                          activeArticle={activeArticle}
-                          completed={prog?.completed}
-                          total={prog?.total}
-                          workspaceMode={workspaceMode}
-                          onToggleSubject={toggleSubject}
-                          onToggleTopic={toggleTopic}
-                          onOpenPage={onOpenPage}
-                        />
-                      );
-                    })}
-                </div>
+                <PreloadedSubjectBranch
+                  key={subject.id}
+                  subject={subject}
+                  open={expandedSubjects[subject.slug] ?? false}
+                  expandedTopics={expandedTopics}
+                  activeSubject={activeSubject}
+                  activeTopic={activeTopic}
+                  activeArticle={activeArticle}
+                  completed={prog?.completed}
+                  total={prog?.total}
+                  workspaceMode={workspaceMode}
+                  onToggleSubject={toggleSubject}
+                  onToggleTopic={toggleTopic}
+                  onOpenPage={onOpenPage}
+                />
               );
             })}
           </div>

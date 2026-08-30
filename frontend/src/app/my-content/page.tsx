@@ -13,6 +13,7 @@ import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { ShelfExplorerFab } from "@/components/ShelfExplorerFab";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { api } from "@/lib/api";
+import { consumeGuestLearnImport } from "@/lib/consumeGuestLearnImport";
 import { getFocusedWorkspaceHref } from "@/components/my-content/reader/types";
 
 function MyContentDashboard() {
@@ -38,12 +39,23 @@ function MyContentDashboard() {
       setRestoringTabs(false);
       return;
     }
-    const href = getFocusedWorkspaceHref();
-    if (href) {
-      router.replace(href);
-      return;
-    }
-    setRestoringTabs(false);
+    let cancelled = false;
+    void consumeGuestLearnImport().then((href) => {
+      if (cancelled) return;
+      if (href) {
+        router.replace(href);
+        return;
+      }
+      const tabHref = getFocusedWorkspaceHref();
+      if (tabHref) {
+        router.replace(tabHref);
+        return;
+      }
+      setRestoringTabs(false);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [authLoading, user, router, searchParams]);
 
   // Deep-link ?add=… from older URLs

@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -18,6 +18,8 @@ import {
   otpResendLabel,
   useOtpResendCooldown,
 } from "@/hooks/useOtpResendCooldown";
+import { needsOnboarding } from "@/lib/onboarding";
+import { destinationAfterSignIn } from "@/lib/postAuthNavigation";
 
 export function safeNextPath(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/my-content";
@@ -53,20 +55,35 @@ export function LoginForm({
   const googleClientId = useGoogleClientId();
   const googleFromServer =
     Boolean(googleClientId) && !googleClientId.includes("your-google-client-id");
+  const handledAuthRef = useRef(false);
 
   useLayoutEffect(() => {
+    const params = new URLSearchParams(window.location.search);
     if (nextPathProp) {
       setNextPath(safeNextPath(nextPathProp));
-      return;
+    } else {
+      setNextPath(safeNextPath(params.get("next")));
     }
-    setNextPath(
-      safeNextPath(new URLSearchParams(window.location.search).get("next"))
-    );
+    if (params.get("register") === "1" || params.get("mode") === "register") {
+      setIsRegister(true);
+    }
   }, [nextPathProp]);
 
-  useLayoutEffect(() => {
-    if (embedded || !user) return;
-    router.replace(nextPath);
+  useEffect(() => {
+    if (embedded || !user || handledAuthRef.current) return;
+    handledAuthRef.current = true;
+    let cancelled = false;
+    void destinationAfterSignIn(nextPath).then((href) => {
+      if (cancelled) return;
+      if (needsOnboarding(user)) {
+        router.replace(`/onboarding?next=${encodeURIComponent(href)}`);
+        return;
+      }
+      router.replace(href);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [user, nextPath, router, embedded]);
 
   const resetRegisterOtp = () => {
@@ -120,16 +137,20 @@ export function LoginForm({
           setError("Enter the 6-digit verification code");
           return;
         }
+        handledAuthRef.current = true;
         await register(email, password, name, otp.trim());
       } else {
+        handledAuthRef.current = true;
         await login(email, password);
       }
+      const dest = await destinationAfterSignIn(nextPath);
       if (isRegister) {
-        router.push(`/onboarding?next=${encodeURIComponent(nextPath)}`);
+        router.push(`/onboarding?next=${encodeURIComponent(dest)}`);
         return;
       }
-      if (!embedded) router.push(nextPath);
+      if (!embedded) router.push(dest);
     } catch (err) {
+      handledAuthRef.current = false;
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
