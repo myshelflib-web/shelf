@@ -198,12 +198,12 @@ export function Header() {
   return (
     <>
     <header className="app-header shrink-0 border-b border-[var(--border)] bg-[var(--bg-primary)] sticky top-0 z-50">
-      <div className="app-header-inner flex items-center justify-between gap-4 w-full px-5 sm:px-6">
-        <div className="flex items-center gap-6 min-w-0">
+      <div className="app-header-inner w-full px-4 sm:px-6">
+        <div className="app-header-brand min-w-0">
           <Link
             href={user ? libraryHref : "/"}
             onClick={user ? onLibraryClick : undefined}
-            className="flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity"
+            className="app-header-logo flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity"
           >
             <ShelfLogo size={26} />
             <span className="font-semibold text-[17px] tracking-tight text-[var(--text-primary)]">
@@ -211,7 +211,14 @@ export function Header() {
             </span>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-1 text-[13px] text-[var(--text-secondary)]">
+          <div className="app-header-menu-slot md:hidden">
+            <HeaderMenuButton
+              open={mobileNavOpen}
+              onClick={() => setMobileNavOpen((open) => !open)}
+            />
+          </div>
+
+          <nav className="hidden md:flex items-center gap-1 text-[13px] text-[var(--text-secondary)] min-w-0">
             {user ? (
               <>
                 <NavItem
@@ -258,11 +265,7 @@ export function Header() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
-          <HeaderMenuButton
-            open={mobileNavOpen}
-            onClick={() => setMobileNavOpen((open) => !open)}
-          />
+        <div className="app-header-actions">
           {user && (
             <>
             <FocusMediaToolbarButtons />
@@ -345,10 +348,16 @@ export function Header() {
               <Link href="/login" className="nav-link hidden md:inline text-sm px-2">
                 Sign in
               </Link>
-              <Link href="/contact" className="btn-secondary hidden md:inline-flex text-sm py-2">
+              <Link
+                href="/contact"
+                className="btn-secondary hidden md:inline-flex text-sm py-2 max-md:!hidden"
+              >
                 Contact us
               </Link>
-              <Link href="/subscribe" className="btn-primary hidden md:inline-flex text-sm py-2">
+              <Link
+                href="/subscribe"
+                className="btn-primary hidden md:inline-flex text-sm py-2 max-md:!hidden"
+              >
                 Plans
               </Link>
             </>

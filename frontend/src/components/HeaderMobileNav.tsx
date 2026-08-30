@@ -23,11 +23,11 @@ export function HeaderMenuButton({
     <button
       type="button"
       onClick={onClick}
-      className="md:hidden p-2 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+      className="flex h-10 w-10 items-center justify-center rounded-lg text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-secondary)] transition-colors"
       aria-label={open ? "Close menu" : "Open menu"}
       aria-expanded={open}
     >
-      {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
     </button>
   );
 }
@@ -79,14 +79,21 @@ export function HeaderMobileNav({
 }) {
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
+    const scrollbarWidth =
+      window.innerWidth - document.documentElement.clientWidth;
+    const prevOverflow = document.body.style.overflow;
+    const prevPaddingRight = document.body.style.paddingRight;
     document.body.style.overflow = "hidden";
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
+      document.body.style.overflow = prevOverflow;
+      document.body.style.paddingRight = prevPaddingRight;
       window.removeEventListener("keydown", onKey);
     };
   }, [open, onClose]);

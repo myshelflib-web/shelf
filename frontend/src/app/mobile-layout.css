@@ -44,6 +44,11 @@ html[data-shelf-compact-portrait] .study-ai-sidebar-drawer-host .study-ai-sideba
 
 /* Phone only (max-width 767px) — see useIsPhone. */
 
+html[data-shelf-phone] main.overflow-y-auto,
+html[data-shelf-phone] .landing-page {
+  scrollbar-gutter: stable;
+}
+
 html[data-shelf-phone] .doc-chrome-bar {
   display: none;
 }
