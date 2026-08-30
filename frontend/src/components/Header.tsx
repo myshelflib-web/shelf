@@ -211,12 +211,14 @@ export function Header() {
             </span>
           </Link>
 
-          <div className="app-header-menu-slot md:hidden">
-            <HeaderMenuButton
-              open={mobileNavOpen}
-              onClick={() => setMobileNavOpen((open) => !open)}
-            />
-          </div>
+          {user ? (
+            <div className="app-header-menu-slot md:hidden">
+              <HeaderMenuButton
+                open={mobileNavOpen}
+                onClick={() => setMobileNavOpen((open) => !open)}
+              />
+            </div>
+          ) : null}
 
           <nav className="hidden md:flex items-center gap-1 text-[13px] text-[var(--text-secondary)] min-w-0">
             {user ? (
@@ -294,6 +296,14 @@ export function Header() {
             )}
             </>
           )}
+          {!user ? (
+            <div className="md:hidden">
+              <HeaderMenuButton
+                open={mobileNavOpen}
+                onClick={() => setMobileNavOpen((open) => !open)}
+              />
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={toggleTheme}
