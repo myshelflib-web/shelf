@@ -15,7 +15,6 @@ export function PdfPageNav({
   compact = false,
   phone = false,
   canDeletePages = false,
-  deletingPages = false,
   onGoToPage,
   onDeletePages,
 }: {
@@ -26,7 +25,6 @@ export function PdfPageNav({
   compact?: boolean;
   phone?: boolean;
   canDeletePages?: boolean;
-  deletingPages?: boolean;
   onGoToPage: (page: number) => void;
   onDeletePages?: (pages: number[]) => void | Promise<void>;
 }) {
@@ -149,15 +147,12 @@ export function PdfPageNav({
           numPages={numPages}
           currentPage={currentPage}
           canDeletePages={canDeletePages}
-          deleting={deletingPages}
           onGoToPage={onGoToPage}
-          onDeletePages={async (pages) => {
-            await onDeletePages?.(pages);
+          onDeletePages={(pages) => {
             setPreviewOpen(false);
+            void onDeletePages?.(pages);
           }}
-          onClose={() => {
-            if (!deletingPages) setPreviewOpen(false);
-          }}
+          onClose={() => setPreviewOpen(false)}
         />
       )}
     </div>

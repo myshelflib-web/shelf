@@ -25,6 +25,10 @@ export type ContentChange =
       type: "page-renamed";
       pageId: string;
       title: string;
+    }
+  | {
+      type: "page-deleted";
+      pageId: string;
     };
 
 export type OpenPageDetail = {
@@ -43,6 +47,10 @@ export function emitContentChanged(detail?: ContentChange) {
 
 export function emitPageRenamed(pageId: string, title: string) {
   emitContentChanged({ type: "page-renamed", pageId, title });
+}
+
+export function emitPageDeleted(pageId: string) {
+  emitContentChanged({ type: "page-deleted", pageId });
 }
 
 export function emitOpenPage(detail: OpenPageDetail) {

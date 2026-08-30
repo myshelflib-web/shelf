@@ -28,6 +28,7 @@ import { BulkDeleteModal } from "@/components/my-content/BulkDeleteModal";
 import {
   buildBulkDeletePayload,
   buildSelectionLabels,
+  pageSelectionKey,
   type ExplorerSelectionKey,
 } from "@/lib/explorerSelection";
 import { applyBulkDeleteToTree } from "@/lib/explorerBulkDeleteTree";
@@ -42,6 +43,7 @@ import {
 import { useAddContent } from "@/components/my-content/MyContentAddProvider";
 import { listSubjects } from "@/lib/offline/library";
 import { api } from "@/lib/api";
+import { removeCachedPdf } from "@/lib/pdfByteCache";
 import { listTasks } from "@/lib/offline/tasks";
 import { useScheduledPageHrefs } from "@/hooks/useScheduledPageHrefs";
 import clsx from "clsx";
@@ -60,6 +62,7 @@ import {
   contentChangeFromEvent,
   emitContentChanged,
   emitPageRenamed,
+  emitPageDeleted,
 } from "@/lib/contentEvents";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import { shelfSelectSidebarClass } from "@/lib/ui/fieldClasses";
@@ -170,7 +173,7 @@ export function MyContentSidebar({
   libraryModeTabs,
 }: MyContentSidebarProps) {
   const { openAdd } = useAddContent();
-  const { confirm } = useAppDialog();
+  const { confirm, alert } = useAppDialog();
   const router = useRouter();
 
   const [sortCriterion, setSortCriterion] = useState<SortCriterion>(readSortCriterion);
@@ -332,6 +335,8 @@ export function MyContentSidebar({
         setPinnedExtra((prev) =>
           syncPageInTree(prev, change.pageId, { title: change.title })
         );
+      } else if (change?.type === "page-deleted") {
+        load({ silent: true });
       } else {
         load({ silent: true });
       }
@@ -486,9 +491,26 @@ export function MyContentSidebar({
       danger: true,
     });
     if (!ok) return;
-    await api.myContent.deletePage(pageId);
-    emitContentChanged();
+    const prevSubjects = subjects;
+    const prevPinned = pinnedExtra;
+    const prevRootPages = rootPages;
+    const payload = buildBulkDeletePayload(new Set([pageSelectionKey(pageId)]));
+    setSubjects((s) => applyBulkDeleteToTree(payload, s, rootPages).subjects);
+    setPinnedExtra((p) => applyBulkDeleteToTree(payload, p, rootPages).subjects);
+    setRootPages((r) => applyBulkDeleteToTree(payload, subjects, r).rootPages);
+    emitPageDeleted(pageId);
     if (!workspaceMode) router.push("/my-content");
+    void removeCachedPdf(pageId);
+    void api.myContent.deletePage(pageId).catch(async () => {
+      setSubjects(prevSubjects);
+      setPinnedExtra(prevPinned);
+      setRootPages(prevRootPages);
+      emitContentChanged();
+      await alert({
+        title: "Delete failed",
+        message: `Could not delete "${title}". Refresh the library and try again.`,
+      });
+    });
   };
 
   const openPage = (page: UserPageSummary, href: string) => {

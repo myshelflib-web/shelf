@@ -58,6 +58,7 @@ import {
 } from "@/lib/deleteLibraryPdfPages";
 import { clearPdfDeleteUndos, countPdfDeleteUndos } from "@/lib/pdfDeleteUndo";
 import { useInkSurface } from "@/hooks/useInkSurface";
+import { useAppDialog } from "@/hooks/useAppDialog";
 import { PenCursor, usePenCursor } from "./PenCursor";
 import {
   clearNativeSelection,
@@ -68,7 +69,6 @@ import { PdfDeleteUndoBar } from "./PdfDeleteUndoBar";
 import { usePdfMarkUndo } from "./usePdfMarkUndo";
 import { usePdfWheelZoom } from "./usePdfWheelZoom";
 import { useHotkey } from "@/hooks/useHotkeys";
-import { useAppDialog } from "@/hooks/useAppDialog";
 import { useIsPhone } from "@/hooks/useIsPhone";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
@@ -216,7 +216,6 @@ export function PdfViewer({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [reloadToken, setReloadToken] = useState(0);
-  const [deletingPages, setDeletingPages] = useState(false);
   const [undoCount, setUndoCount] = useState(0);
   const [undoing, setUndoing] = useState(false);
   const [mode, setMode] = useState<ToolMode>("text");
@@ -795,31 +794,37 @@ export function PdfViewer({
   }, [canDeletePages, userTopicId, reloadToken]);
 
   const handleDeletePages = useCallback(
-    async (pages: number[]) => {
+    (pages: number[]) => {
       if (!canDeletePages || !numPages) return;
-      setDeletingPages(true);
-      try {
-        const { highlights: next, undoCount: n } = await deleteLibraryPdfPages({
-          pageId: userTopicId,
-          deletedPages: pages,
-          numPagesBefore: numPages,
-          highlightsBefore: highlights,
-          viewPdfPage: currentPageRef.current,
-        });
-        onHighlightsChange(next);
-        setUndoCount(n);
-        const keepBefore = Math.min(
-          currentPageRef.current,
-          Math.max(1, numPages - pages.length)
-        );
-        currentPageRef.current = keepBefore;
-        setCurrentPage(keepBefore);
-        setReloadToken((t) => t + 1);
-      } finally {
-        setDeletingPages(false);
-      }
+      void (async () => {
+        try {
+          const { highlights: next, undoCount: n } = await deleteLibraryPdfPages({
+            pageId: userTopicId,
+            deletedPages: pages,
+            numPagesBefore: numPages,
+            highlightsBefore: highlights,
+            viewPdfPage: currentPageRef.current,
+          });
+          onHighlightsChange(next);
+          setUndoCount(n);
+          const keepBefore = Math.min(
+            currentPageRef.current,
+            Math.max(1, numPages - pages.length)
+          );
+          currentPageRef.current = keepBefore;
+          setCurrentPage(keepBefore);
+          setReloadToken((t) => t + 1);
+        } catch (err) {
+          await alert({
+            title: "Delete failed",
+            message:
+              err instanceof Error ? err.message : "Could not delete PDF pages",
+          });
+        }
+      })();
     },
     [
+      alert,
       canDeletePages,
       highlights,
       numPages,
@@ -1677,7 +1682,6 @@ export function PdfViewer({
         numPages={numPages}
         pdfDoc={pdfDoc}
         canDeletePages={canDeletePages}
-        deletingPages={deletingPages}
         onGoToPage={scrollToPdfPage}
         onDeletePages={handleDeletePages}
         mode={mode}

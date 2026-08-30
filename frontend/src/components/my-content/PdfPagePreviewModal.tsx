@@ -234,12 +234,8 @@ export function PdfPagePreviewModal({
       danger: true,
     });
     if (!ok) return;
-    setError("");
-    try {
-      await onDeletePages(markedList);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not delete pages");
-    }
+    onClose();
+    void onDeletePages?.(markedList);
   };
 
   return (

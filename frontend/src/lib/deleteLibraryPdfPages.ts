@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import { removeCachedPdf } from "@/lib/pdfByteCache";
+import { peekCachedPdf, removeCachedPdf } from "@/lib/pdfByteCache";
 import { removePdfPages } from "@/lib/removePdfPages";
 import {
   countPdfDeleteUndos,
@@ -30,8 +30,10 @@ export async function deleteLibraryPdfPages(opts: {
     highlightsBefore,
     viewPdfPage,
   } = opts;
-  const blob = await api.myContent.getPdfBlob(pageId);
-  const bytes = await blob.arrayBuffer();
+  const peeked = await peekCachedPdf(pageId);
+  const bytes = peeked
+    ? peeked.data.slice(0)
+    : await api.myContent.getPdfBlob(pageId).then((blob) => blob.arrayBuffer());
 
   await pushPdfDeleteUndo({
     pageId,

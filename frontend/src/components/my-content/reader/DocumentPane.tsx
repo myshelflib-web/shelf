@@ -19,7 +19,8 @@ import { listHighlights } from "@/lib/offline/highlights";
 import { updatePageProgress } from "@/lib/offline/progress";
 import { requireOnline } from "@/lib/offline/notice";
 import { syncPageInTree } from "@/lib/myContentTree";
-import { emitContentChanged, emitPageRenamed } from "@/lib/contentEvents";
+import { emitContentChanged, emitPageRenamed, emitPageDeleted } from "@/lib/contentEvents";
+import { removeCachedPdf } from "@/lib/pdfByteCache";
 import {
   UserSubject,
   UserContentHighlight,
@@ -289,6 +290,8 @@ interface DocumentPaneProps {
   onCloseStudyAI?: () => void;
   onClipImage: (data: string, page: LoadedPage) => void;
   onNavigate: (href: string) => void;
+  /** Close this reader tab immediately after the user deletes the open page. */
+  onPageDeleted?: () => void;
   onDropPage: (tab: OpenTab) => void;
   onReadPercent: (pageId: string, percent: number) => void;
   signInGate?: {
@@ -312,6 +315,7 @@ export function DocumentPane({
   onCloseStudyAI,
   onClipImage,
   onNavigate,
+  onPageDeleted,
   onDropPage,
   onReadPercent,
   signInGate,
@@ -712,9 +716,20 @@ export function DocumentPane({
       danger: true,
     });
     if (!ok) return;
-    await api.myContent.deletePage(pageData.id);
-    onNavigate(afterDeletePath(scope));
-  }, [pageData, scope, onNavigate, confirm]);
+    const pageId = pageData.id;
+    const title = pageData.title;
+    if (onPageDeleted) onPageDeleted();
+    else onNavigate(afterDeletePath(scope));
+    emitPageDeleted(pageId);
+    void removeCachedPdf(pageId);
+    void api.myContent.deletePage(pageId).catch(async () => {
+      emitContentChanged();
+      await alert({
+        title: "Delete failed",
+        message: `Could not delete "${title}". Refresh the library and try again.`,
+      });
+    });
+  }, [pageData, scope, onNavigate, onPageDeleted, confirm, alert]);
 
   const startEditing = useCallback(() => {
     if (!pageData || pageData.isPreloaded) return;

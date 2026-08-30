@@ -53,7 +53,6 @@ type Props = {
   numPages: number;
   pdfDoc: PDFDocumentProxy | null;
   canDeletePages: boolean;
-  deletingPages: boolean;
   onGoToPage: (page: number) => void;
   onDeletePages: (pages: number[]) => void | Promise<void>;
   mode: PdfToolbarMode;
@@ -93,7 +92,6 @@ export function PdfToolbar(props: Props) {
     numPages,
     pdfDoc,
     canDeletePages,
-    deletingPages,
     onGoToPage,
     onDeletePages,
     mode,
@@ -149,7 +147,6 @@ export function PdfToolbar(props: Props) {
           numPages={numPages}
           pdfDoc={pdfDoc}
           canDeletePages={canDeletePages}
-          deletingPages={deletingPages}
           onGoToPage={onGoToPage}
           onDeletePages={onDeletePages}
         />

@@ -111,6 +111,7 @@ export function ReaderWorkspace({
     updateTabsByPageId,
     openInPane,
     closeTab,
+    closeTabsForPageId,
     splitWith,
     unsplit,
   } = workspace;
@@ -348,6 +349,21 @@ export function ReaderWorkspace({
     }
     router.replace(href);
   }, [routeScope, router]);
+
+  useEffect(() => {
+    const onDeleted = (e: Event) => {
+      const change = contentChangeFromEvent(e);
+      if (change?.type !== "page-deleted") return;
+      const { nextFocusHref, emptied } = closeTabsForPageId(change.pageId);
+      if (emptied) {
+        router.push("/my-content");
+        return;
+      }
+      if (nextFocusHref) syncReaderUrl(nextFocusHref);
+    };
+    window.addEventListener(SHELF_CONTENT_CHANGED, onDeleted);
+    return () => window.removeEventListener(SHELF_CONTENT_CHANGED, onDeleted);
+  }, [closeTabsForPageId, router, syncReaderUrl]);
 
   const onNavigate = useCallback(
     (href: string) => {
@@ -960,6 +976,7 @@ export function ReaderWorkspace({
                                 onCloseStudyAI={closeStudyAIPanel}
                                 onClipImage={onClipImage}
                                 onNavigate={onNavigate}
+                                onPageDeleted={() => handleCloseTab(pane.id, tab.key)}
                                 onDropPage={(t) => handleOpenTab(pane.id, t)}
                                 onReadPercent={onReadPercent}
                               />

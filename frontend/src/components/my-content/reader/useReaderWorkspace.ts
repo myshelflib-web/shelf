@@ -486,6 +486,50 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
     return { emptied, nextFocusHref };
   }, []);
 
+  const closeTabsForPageId = useCallback((pageId: string) => {
+    let nextFocusHref: string | null = null;
+    let emptied = false;
+    let emptiedState: ReaderWorkspaceState | null = null;
+
+    setState((prev) => {
+      let panes = prev.panes
+        .map((p) => {
+          const tabs = p.tabs.filter((t) => t.pageId !== pageId);
+          if (tabs.length === p.tabs.length) return p;
+          let activeTabKey = p.activeTabKey;
+          if (activeTabKey && !tabs.some((t) => t.key === activeTabKey)) {
+            const idx = p.tabs.findIndex((t) => t.key === activeTabKey);
+            const neighbor = tabs[Math.min(Math.max(0, idx), tabs.length - 1)];
+            activeTabKey = neighbor?.key ?? tabs[0]?.key ?? null;
+          }
+          return { ...p, tabs, activeTabKey };
+        })
+        .filter((p): p is ReaderPane => p != null && p.tabs.length > 0);
+
+      if (!panes.length) {
+        emptied = true;
+        emptiedState = emptyPanesWorkspace();
+        return emptiedState;
+      }
+
+      const focusedPaneId = panes.some((p) => p.id === prev.focusedPaneId)
+        ? prev.focusedPaneId
+        : panes[0]!.id;
+
+      const focused = panes.find((p) => p.id === focusedPaneId);
+      if (focused?.activeTabKey) {
+        const t = focused.tabs.find((x) => x.key === focused.activeTabKey);
+        if (t) nextFocusHref = t.href;
+      }
+
+      return { ...prev, panes, focusedPaneId };
+    });
+
+    if (emptied && emptiedState) persist(emptiedState);
+
+    return { emptied, nextFocusHref };
+  }, []);
+
   const splitWith = useCallback((tab: OpenTab) => {
     setState((prev) => {
       // Never show the same page in two panes — move the tab to the right.
@@ -658,6 +702,7 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
     openInPane,
     openInFocused,
     closeTab,
+    closeTabsForPageId,
     splitWith,
     unsplit,
     moveTab,
