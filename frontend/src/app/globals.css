@@ -3,6 +3,7 @@
 @import "tailwindcss/utilities";
 @import "katex/dist/katex.min.css";
 @import "./landing-page.css";
+@import "./mobile-layout.css";
 @import "./learn-page.css";
 @import "./onboarding-page.css";
 @import "./plans-page.css";

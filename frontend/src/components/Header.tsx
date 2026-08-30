@@ -34,6 +34,11 @@ import { ProfileMenu } from "@/components/ProfileMenu";
 import { NotificationsPopover } from "@/components/NotificationsPopover";
 import { OfflineStatusBadge } from "@/components/OfflineStatusBadge";
 import { FocusMediaToolbarButtons } from "@/components/my-content/reader/ReaderFocusDocks";
+import {
+  HeaderMenuButton,
+  HeaderMobileNav,
+  type HeaderMobileNavItem,
+} from "@/components/HeaderMobileNav";
 
 function NavItem({
   href,
@@ -115,12 +120,18 @@ export function Header() {
   const premium = isPremiumUser(user);
   const photo = user ? avatarSrc(user) : null;
   const [profileOpen, setProfileOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { openSearch, openHelp } = useHotkeysController();
   const touchPrimary = useTouchPrimaryUi();
   const searchTitle = touchPrimary
     ? "Search library"
     : withShortcut("Search library", "mod+k");
   const libraryHref = useLibraryHref();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [pathname]);
 
   const onLibraryClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     const next = getLibraryHref();
@@ -128,6 +139,61 @@ export function Header() {
       e.preventDefault();
     }
   };
+
+  const mobileNavItems: HeaderMobileNavItem[] = user
+    ? [
+        {
+          href: libraryHref,
+          icon: BookOpen,
+          label: "Library",
+          onNavigate: onLibraryClick,
+        },
+        { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+        { href: "/planner", icon: CalendarDays, label: "Planner" },
+        { href: "/quiz", icon: ListChecks, label: "Quiz" },
+        { href: "/study-ai", icon: MessageSquareText, label: "Study AI" },
+        ...(user.role === "ADMIN"
+          ? [{ href: "/admin", icon: Shield, label: "Admin" }]
+          : []),
+      ]
+    : [
+        { href: "/learn", icon: BookOpen, label: "Library" },
+        { href: "/blog", icon: Newspaper, label: "Blog" },
+        { href: "/quiz", icon: ListChecks, label: "Quiz" },
+        { href: "/about", icon: Info, label: "About" },
+        { href: "/features", icon: Sparkles, label: "Features" },
+        { href: "/contact", icon: MessageSquareText, label: "Contact us" },
+      ];
+
+  const mobileNavFooter = user ? (
+    !premium ? (
+      <Link
+        href="/subscribe"
+        onClick={() => setMobileNavOpen(false)}
+        className="flex items-center justify-center gap-1.5 rounded-[10px] bg-[var(--accent-subtle)] px-3 py-2.5 text-sm font-semibold text-[var(--accent)]"
+      >
+        <Sparkles className="w-4 h-4" />
+        Upgrade
+      </Link>
+    ) : null
+  ) : (
+    <>
+      <Link
+        href="/login"
+        onClick={() => setMobileNavOpen(false)}
+        className="btn-secondary w-full text-center text-sm py-2.5"
+      >
+        Sign in
+      </Link>
+      <Link
+        href="/subscribe"
+        onClick={() => setMobileNavOpen(false)}
+        className="btn-primary w-full text-center text-sm py-2.5"
+      >
+        Plans
+      </Link>
+    </>
+  );
 
   return (
     <>
@@ -145,11 +211,7 @@ export function Header() {
             </span>
           </Link>
 
-          <nav
-            className={`items-center gap-1 text-[13px] text-[var(--text-secondary)] ${
-              user ? "hidden md:flex" : "flex"
-            }`}
-          >
+          <nav className="hidden md:flex items-center gap-1 text-[13px] text-[var(--text-secondary)]">
             {user ? (
               <>
                 <NavItem
@@ -196,7 +258,11 @@ export function Header() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-0.5 sm:gap-1.5 shrink-0">
+          <HeaderMenuButton
+            open={mobileNavOpen}
+            onClick={() => setMobileNavOpen((open) => !open)}
+          />
           {user && (
             <>
             <FocusMediaToolbarButtons />
@@ -276,13 +342,13 @@ export function Header() {
             </>
           ) : (
             <>
-              <Link href="/login" className="nav-link hidden sm:inline text-sm px-2">
+              <Link href="/login" className="nav-link hidden md:inline text-sm px-2">
                 Sign in
               </Link>
-              <Link href="/contact" className="btn-secondary hidden sm:inline-flex text-sm py-2">
+              <Link href="/contact" className="btn-secondary hidden md:inline-flex text-sm py-2">
                 Contact us
               </Link>
-              <Link href="/subscribe" className="btn-primary text-sm py-2">
+              <Link href="/subscribe" className="btn-primary hidden md:inline-flex text-sm py-2">
                 Plans
               </Link>
             </>
@@ -290,6 +356,12 @@ export function Header() {
         </div>
       </div>
     </header>
+    <HeaderMobileNav
+      open={mobileNavOpen}
+      onClose={() => setMobileNavOpen(false)}
+      items={mobileNavItems}
+      footer={mobileNavFooter}
+    />
     {user && profileOpen && (
       <ProfileMenu
         user={user}

@@ -1,0 +1,77 @@
+/* Phone / tablet portrait — shared responsive chrome (see useCompactPortrait). */
+
+html[data-shelf-compact-portrait] .app-header-inner {
+  gap: 0.5rem;
+  padding-left: 0.875rem;
+  padding-right: 0.875rem;
+}
+
+html[data-shelf-compact-portrait] .app-header .nav-link {
+  display: none;
+}
+
+/* Reader: side panels become drawers — editor uses full width. */
+html[data-shelf-compact-portrait] .reader-shell-compact [data-panel]:not(#editor):not(#learn-editor) {
+  flex: 0 0 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  overflow: hidden;
+}
+
+html[data-shelf-compact-portrait] .reader-shell-compact #editor,
+html[data-shelf-compact-portrait] .reader-shell-compact #learn-editor {
+  flex: 1 1 100% !important;
+  min-width: 0 !important;
+}
+
+html[data-shelf-compact-portrait] .reader-shell-compact [data-separator] {
+  display: none !important;
+}
+
+/* Document title row: stack breadcrumbs; hide center progress on narrow screens. */
+html[data-shelf-compact-portrait] .doc-chrome-bar {
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 0.5rem !important;
+  padding-left: 0.75rem !important;
+  padding-right: 0.75rem !important;
+}
+
+html[data-shelf-compact-portrait] .doc-chrome-progress {
+  display: none;
+}
+
+/* Reader tab strip + toolbar: tighter on phones. */
+html[data-shelf-compact-portrait] .reader-workspace-toolbar {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+html[data-shelf-compact-portrait] .reader-workspace-toolbar button[aria-label="Split editor"],
+html[data-shelf-compact-portrait] .reader-workspace-toolbar button[aria-label="Unsplit editor"] {
+  display: none;
+}
+
+html[data-shelf-compact-portrait] .reader-bottom-bar {
+  bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+/* Study AI + explorer drawers sit above reader chrome. */
+.shelf-drawer-backdrop {
+  z-index: 68;
+}
+
+.shelf-drawer-panel {
+  z-index: 69;
+  top: 3rem;
+  bottom: 0;
+  max-height: calc(100dvh - 3rem);
+}
+
+/* Study AI page: thread list in a drawer on compact screens. */
+html[data-shelf-compact-portrait] .study-ai-sidebar-drawer-host .study-ai-sidebar {
+  display: flex !important;
+  width: 100%;
+  border-right: 0;
+}

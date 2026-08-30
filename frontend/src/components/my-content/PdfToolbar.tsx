@@ -19,6 +19,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { withShortcut } from "@/lib/hotkeys";
+import { useCompactPortrait } from "@/hooks/useCompactPortrait";
 import { INK_WIDTHS } from "@/lib/straightenStroke";
 import { PEN_COLORS } from "./BlankEditorToolbar";
 import {
@@ -110,6 +111,7 @@ export function PdfToolbar(props: Props) {
   const eraseBtnRef = useRef<HTMLButtonElement>(null);
   const [inkOpen, setInkOpen] = useState(false);
   const [eraseOpen, setEraseOpen] = useState(false);
+  const compactToolbar = useCompactPortrait();
 
   const closeExtras = () => {
     setInkOpen(false);
@@ -118,7 +120,7 @@ export function PdfToolbar(props: Props) {
   };
 
   return (
-    <EditorToolbarShell>
+    <EditorToolbarShell compact={compactToolbar}>
       <ToolGroup>
         <PdfPageNav
           compact

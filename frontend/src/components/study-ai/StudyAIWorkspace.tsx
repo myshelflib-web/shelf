@@ -29,11 +29,13 @@ import {
   positionPopover,
   type PopoverKind,
 } from "@/lib/studyAiWorkspaceUtils";
-import { Download, MoreHorizontal } from "lucide-react";
+import { Download, MoreHorizontal, PanelLeft } from "lucide-react";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { GreetingBlock } from "@/components/GreetingBlock";
 import { LivelyLine } from "@/components/LivelyLine";
 import { ShelfLogo } from "@/components/ShelfLogo";
+import { useCompactPortrait } from "@/hooks/useCompactPortrait";
+import { ShelfDrawer } from "@/components/ShelfDrawer";
 
 export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const router = useRouter();
@@ -66,6 +68,8 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const [renameValue, setRenameValue] = useState("");
   const [renaming, setRenaming] = useState(false);
   const [chatMenuThreadId, setChatMenuThreadId] = useState<string | null>(null);
+  const [threadsOpen, setThreadsOpen] = useState(false);
+  const compactPortrait = useCompactPortrait();
 
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -243,21 +247,37 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
     chat.messages.some((m) => !m.streaming && m.content.trim().length > 0) &&
     !chat.loading;
 
+  const sidebar = (
+    <StudyAiSidebar
+      threads={chat.threads}
+      threadsLoading={chat.threadsLoading}
+      searchQuery={searchQuery}
+      onSearchQuery={setSearchQuery}
+      activeId={chat.activeId}
+      onNewChat={chat.startNewChat}
+      onOpenMenu={(el, id) => openPopover("chat", el, id)}
+    />
+  );
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
       <div className="flex-1 min-h-0 flex">
-        <StudyAiSidebar
-          threads={chat.threads}
-          threadsLoading={chat.threadsLoading}
-          searchQuery={searchQuery}
-          onSearchQuery={setSearchQuery}
-          activeId={chat.activeId}
-          onNewChat={chat.startNewChat}
-          onOpenMenu={(el, id) => openPopover("chat", el, id)}
-        />
+        {!compactPortrait ? sidebar : null}
 
         <main className="flex-1 min-h-0 flex flex-col bg-[var(--bg-primary)]">
+          {compactPortrait ? (
+            <div className="shrink-0 flex items-center gap-2 border-b border-[var(--border)] px-4 py-2">
+              <button
+                type="button"
+                onClick={() => setThreadsOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-[9px] border border-[var(--border)] bg-[var(--bg-elevated)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)]"
+              >
+                <PanelLeft className="h-3.5 w-3.5" aria-hidden />
+                Chats
+              </button>
+            </div>
+          ) : null}
           {showConversationHeader && (
             <div className="shrink-0 h-[58px] border-b border-[var(--border)] bg-[var(--bg-primary)]/95 flex items-center px-5 sm:px-6 gap-2.5">
               <div className="min-w-0">
@@ -490,6 +510,14 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
           onClose={() => setSaveContent(null)}
         />
       )}
+
+      <ShelfDrawer
+        open={compactPortrait && threadsOpen}
+        onClose={() => setThreadsOpen(false)}
+        title="Chats"
+      >
+        <div className="study-ai-sidebar-drawer-host h-full">{sidebar}</div>
+      </ShelfDrawer>
     </div>
   );
 }

@@ -1118,7 +1118,7 @@ export function DocumentPane({
         <>
           {showChrome && (
             <div
-              className={`grid items-center gap-3 px-4 py-2.5 border-b border-[var(--border)] bg-[var(--bg-primary)] shrink-0 ${
+              className={`doc-chrome-bar grid items-center gap-3 px-4 py-2.5 border-b border-[var(--border)] bg-[var(--bg-primary)] shrink-0 ${
                 editing || liveBlank
                   ? "grid-cols-[minmax(0,1fr)_auto]"
                   : "grid-cols-[minmax(0,1fr)_minmax(6.5rem,11rem)_minmax(0,1fr)]"
@@ -1240,7 +1240,7 @@ export function DocumentPane({
               {!editing && !liveBlank && (
                 <ReadProgressBar
                   percent={liveReadPercent}
-                  className="justify-self-center max-w-[11rem] w-full"
+                  className="doc-chrome-progress justify-self-center max-w-[11rem] w-full"
                 />
               )}
               <DocumentChromeActions

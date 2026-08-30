@@ -20,25 +20,23 @@ export function ShelfDrawer({
 }) {
   if (!open) return null;
 
-  const panelClass =
+  const panelWidth =
     side === "left"
-      ? "left-0 w-[min(100vw,20rem)]"
+      ? "left-0 w-[min(100vw,20rem)] border-r"
       : wide
-        ? "right-0 w-[min(100vw,28rem)]"
-        : "right-0 w-[min(100vw,20rem)]";
+        ? "right-0 w-full sm:w-[min(100vw,28rem)] border-l"
+        : "right-0 w-[min(100vw,20rem)] border-l";
 
   return (
     <>
       <button
         type="button"
         aria-label="Close panel"
-        className="fixed inset-0 z-[60] bg-black/45"
+        className="shelf-drawer-backdrop fixed inset-0 bg-black/45"
         onClick={onClose}
       />
       <div
-        className={`fixed inset-y-0 z-[61] flex flex-col overflow-hidden border-[var(--border)] bg-[var(--bg-sidebar)] shadow-2xl ${panelClass} ${
-          side === "left" ? "border-r" : "border-l"
-        }`}
+        className={`shelf-drawer-panel fixed flex flex-col overflow-hidden border-[var(--border)] bg-[var(--bg-sidebar)] shadow-2xl ${panelWidth}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

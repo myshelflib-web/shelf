@@ -1,4 +1,3 @@
-/* Scoped warm marketing theme — only applies under .landing-page */
 .landing-page {
   --bg-primary: #f7f5f0;
   --bg-secondary: #fcfbf8;
@@ -40,6 +39,7 @@
   --lp-goal-impact-text: #7069c9;
   background: var(--bg-primary);
   color: var(--text-primary);
+  overflow-x: hidden;
 }
 
 .landing-btn {
@@ -1494,8 +1494,21 @@
   .landing-hero {
     padding: 38px 18px 34px;
   }
+  .landing-hero-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .landing-hero-actions .landing-btn {
+    width: 100%;
+  }
+  .landing-featurelist {
+    gap: 10px 14px;
+  }
+  .landing-preview {
+    max-width: 100%;
+  }
   .landing-preview-body {
-    height: 420px;
+    height: min(420px, 62vh);
   }
   .landing-mini-content {
     grid-template-columns: 1fr;

@@ -42,6 +42,7 @@ import { ReaderTabStrip } from "./ReaderTabStrip";
 import { useReaderWorkspace } from "./useReaderWorkspace";
 import { useHotkey } from "@/hooks/useHotkeys";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
+import { useReaderCompactInit } from "@/hooks/useReaderCompactInit";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { getSelectedText, withShortcut } from "@/lib/hotkeys";
 import { emitFocusNotebook } from "@/lib/shelfEvents";
@@ -451,6 +452,8 @@ export function ReaderWorkspace({
 
   const layoutCompact = compactPortrait || isNarrow;
 
+  useReaderCompactInit(layoutCompact, setLibraryCollapsed, setStudyAICollapsed);
+
   useEffect(() => {
     if (!layoutCompact) return;
     libraryPanelRef.current?.collapse();
@@ -693,7 +696,11 @@ export function ReaderWorkspace({
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
       <div className="flex flex-1 overflow-hidden min-h-0">
-        <Group orientation="horizontal" className="flex-1 min-h-0" id="reader-shell">
+        <Group
+          orientation="horizontal"
+          className={`flex-1 min-h-0 ${layoutCompact ? "reader-shell-compact" : ""}`}
+          id="reader-shell"
+        >
           <Panel
             id="library"
             panelRef={libraryPanelRef}
@@ -719,7 +726,7 @@ export function ReaderWorkspace({
 
           <Panel id="editor" minSize="30%" defaultSize="82%">
             <div className="relative h-full flex flex-col min-w-0 overflow-hidden bg-[var(--bg-primary)]">
-              <div className="flex items-center gap-1 px-2 py-1 border-b border-[var(--border)] shrink-0 bg-[var(--bg-secondary)] min-w-0">
+              <div className="reader-workspace-toolbar flex items-center gap-1 px-2 py-1 border-b border-[var(--border)] shrink-0 bg-[var(--bg-secondary)] min-w-0">
                 <div className="flex items-center gap-1 shrink-0">
                   <button
                     type="button"
@@ -949,6 +956,7 @@ export function ReaderWorkspace({
                   completed={pageData.completed}
                   onToggleComplete={focusedHandlers.handleToggleComplete}
                   onOpenStudyAI={() => {
+                    openStudyAIPanel();
                     askWithSelection();
                   }}
                   onScheduleRead={() => setScheduleOpen(true)}

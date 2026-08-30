@@ -37,6 +37,7 @@ import {
 } from "@/components/my-content/reader/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
+import { useReaderCompactInit } from "@/hooks/useReaderCompactInit";
 import { useLearnStudyGoal } from "@/hooks/useLearnStudyGoal";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { api } from "@/lib/api";
@@ -157,6 +158,8 @@ export function LearnReaderWorkspace({
   }, []);
 
   const layoutCompact = compactPortrait || isNarrow;
+
+  useReaderCompactInit(layoutCompact, setLibraryCollapsed, setStudyAICollapsed);
 
   useEffect(() => {
     if (!layoutCompact) return;
@@ -396,7 +399,11 @@ export function LearnReaderWorkspace({
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
       <div className="flex flex-1 overflow-hidden min-h-0">
-        <Group orientation="horizontal" className="flex-1 min-h-0" id="learn-reader-shell">
+        <Group
+          orientation="horizontal"
+          className={`flex-1 min-h-0 ${layoutCompact ? "reader-shell-compact" : ""}`}
+          id="learn-reader-shell"
+        >
           <Panel
             id="learn-library"
             panelRef={libraryPanelRef}
@@ -422,7 +429,7 @@ export function LearnReaderWorkspace({
 
           <Panel id="learn-editor" minSize="30%" defaultSize="58%">
             <div className="relative h-full flex flex-col min-w-0 overflow-hidden bg-[var(--bg-primary)]">
-              <div className="flex items-center gap-1 px-2 py-1 border-b border-[var(--border)] shrink-0 bg-[var(--bg-secondary)]">
+              <div className="reader-workspace-toolbar flex items-center gap-1 px-2 py-1 border-b border-[var(--border)] shrink-0 bg-[var(--bg-secondary)]">
                 <button
                   type="button"
                   className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
@@ -552,7 +559,10 @@ export function LearnReaderWorkspace({
                   onToggleComplete={() =>
                     void focusedHandlers.handleToggleComplete()
                   }
-                  onOpenStudyAI={askWithSelection}
+                  onOpenStudyAI={() => {
+                    openStudyAIPanel();
+                    askWithSelection();
+                  }}
                   showStudyAI
                   guestLocked={guestLocked}
                   onGuestLockedClick={promptSignIn}
