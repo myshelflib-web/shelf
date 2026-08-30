@@ -1749,8 +1749,15 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .app-header-brand {
   display: flex;
   align-items: center;
+  /* Tight on mobile (logo + hamburger); restore former gap-6 beside desktop nav. */
   gap: 0.125rem;
   min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .app-header-brand {
+    gap: 1.5rem;
+  }
 }
 
 .app-header-logo {
