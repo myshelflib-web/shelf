@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLivelyGreeting } from "@/hooks/useLivelyCopy";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { searchLearnCatalog, type LearnSearchHit } from "@/lib/learnCatalog";
+import { LibrarySuggestChips } from "@/components/LibrarySuggestChips";
 
 /**
  * Library-style empty mid-pane for the public /learn explorer.
@@ -87,7 +88,7 @@ export function LearnGuestWorkspace() {
           />
         </label>
 
-        {query.trim() && (
+        {query.trim() ? (
           <ul className="w-full mt-2 rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] overflow-hidden max-h-64 overflow-y-auto">
             {searching ? (
               <LibrarySearchHitsSkeleton />
@@ -119,6 +120,11 @@ export function LearnGuestWorkspace() {
               ))
             )}
           </ul>
+        ) : (
+          <LibrarySuggestChips
+            surface="learn"
+            onPick={(item) => setQuery(item.query)}
+          />
         )}
 
         <div className="mt-8 w-full grid grid-cols-1 sm:grid-cols-2 gap-2">

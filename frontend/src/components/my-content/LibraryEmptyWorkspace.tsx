@@ -17,6 +17,7 @@ import { SHELF_CONTENT_CHANGED, contentChangeFromEvent } from "@/lib/contentEven
 import { searchLibrary, LibrarySearchHit } from "@/lib/librarySearch";
 import { getLastRead, hydrateLastReads, LastRead } from "@/lib/tabViewState";
 import { withShortcut } from "@/lib/hotkeys";
+import { LibrarySuggestChips } from "@/components/LibrarySuggestChips";
 
 /**
  * Cursor-style empty mid-pane: search the library + add collection/page.
@@ -187,7 +188,7 @@ export function LibraryEmptyWorkspace() {
           />
         </label>
 
-        {query.trim() && (
+        {query.trim() ? (
           <ul className="w-full mt-2 rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] overflow-hidden max-h-64 overflow-y-auto">
             {searching ? (
               <LibrarySearchHitsSkeleton />
@@ -219,6 +220,11 @@ export function LibraryEmptyWorkspace() {
               ))
             )}
           </ul>
+        ) : (
+          <LibrarySuggestChips
+            surface="library"
+            onPick={(item) => setQuery(item.query)}
+          />
         )}
 
         <div className="mt-8 w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
