@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Header } from "@/components/Header";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
+import { IntentCoverageSection } from "@/components/seo/IntentCoverageSection";
 import type { ShelfFeature } from "@/lib/seo/featureTypes";
 import { FEATURE_CATEGORIES } from "@/lib/seo/featureCategories";
 import {
@@ -116,12 +117,15 @@ export function FeaturesHub() {
             <p className="text-[var(--text-secondary)] leading-relaxed max-w-2xl mx-auto">
               Granular guides to PDF libraries, YouTube lectures, Study AI, Quiz,
               Telegram import and send, Spotify focus audio, sharing, planner,
-              and more — for students and professionals in India and beyond.
+              and more — for students, teachers, and professionals.
             </p>
           </RevealOnScroll>
         </section>
 
+        <IntentCoverageSection />
+
         <div className="px-4 sm:px-6 pb-20 max-w-4xl mx-auto space-y-14">
+          <h2 className="text-xl font-semibold">Browse by product area</h2>
           {FEATURE_CATEGORIES.map((category) => {
             const items = SHELF_FEATURES.filter(
               (f) => f.category === category.id

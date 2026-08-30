@@ -1,6 +1,10 @@
 import type { MetadataRoute } from "next";
 import { BLOG_POSTS as STATIC_BLOG_POSTS } from "@/lib/blog/registry";
 import { getAllFeatureSlugs, getFeatureBySlug } from "@/lib/seo/featureCatalog";
+import {
+  INDEXABLE_LEARN_TRACKS,
+  learnTrackPath,
+} from "@/lib/seo/learnTrackSeo";
 import { getSiteUrl } from "@/lib/siteUrl";
 
 const API_URL =
@@ -94,5 +98,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const learnRoutes = await fetchLearnRoutes(siteUrl);
-  return [...staticRoutes, ...learnRoutes];
+  const trackRoutes: MetadataRoute.Sitemap = INDEXABLE_LEARN_TRACKS.map(
+    (goal) => ({
+      url: `${siteUrl}${learnTrackPath(goal)}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.88,
+    })
+  );
+  return [...staticRoutes, ...trackRoutes, ...learnRoutes];
 }

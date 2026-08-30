@@ -1,5 +1,6 @@
 import { getSiteUrl } from "@/lib/siteUrl";
 import { SOCIAL_SAME_AS } from "@/lib/socialLinks";
+import { PRODUCT_INTENT_CLUSTERS } from "@/lib/seo/intentCoverage";
 
 export function SiteJsonLd() {
   const siteUrl = getSiteUrl();
@@ -91,22 +92,9 @@ export function SiteJsonLd() {
       priceCurrency: "INR",
     },
     description:
-      "Personal study library app: PDF reader with highlights, AI study assistant grounded in your notes, study planner, and optional free curriculum.",
+      "Personal study library app: PDF reader with highlights, AI study assistant grounded in your notes, Share Shelf, study planner, and optional free curriculum on Learn.",
     url: siteUrl,
-    featureList: [
-      "Personal PDF library with collections and topics",
-      "PDF highlights and annotations",
-      "Study AI grounded in your uploads",
-      "Telegram PDF import and send",
-      "Spotify focus audio in the reader",
-      "Share study documents with classmates",
-      "Exam-style quiz from your notes",
-      "Multi-tab reader with split view",
-      "Study planner and calendar",
-      "Cross-device reading sync",
-      "Offline PWA install",
-      "Optional free curriculum on Learn",
-    ],
+    featureList: PRODUCT_INTENT_CLUSTERS.map((c) => c.label),
   };
 
   return (

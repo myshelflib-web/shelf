@@ -105,7 +105,7 @@ router.get(
         },
       },
       include: {
-        subject: { select: { name: true, slug: true, icon: true } },
+        subject: { select: { name: true, slug: true, icon: true, studyGoal: true } },
         articles: {
           where: { status: "PUBLISHED" },
           orderBy: { order: "asc" },
@@ -164,7 +164,7 @@ router.get(
           select: {
             title: true,
             slug: true,
-            subject: { select: { name: true, slug: true, icon: true } },
+            subject: { select: { name: true, slug: true, icon: true, studyGoal: true } },
           },
         },
       },
@@ -282,7 +282,7 @@ async function resolveArticleBySlugs(
         select: {
           title: true,
           slug: true,
-          subject: { select: { name: true, slug: true, icon: true } },
+          subject: { select: { name: true, slug: true, icon: true, studyGoal: true } },
         },
       },
     },

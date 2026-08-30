@@ -3,21 +3,21 @@ import { buildPost } from "../types";
 export const documentSharing = buildPost(
   {
     slug: "share-study-documents",
-    title: "Share Study Documents with Classmates on Shelf",
+    title: "Share Shelf Documents with Classmates — View, Edit & Links",
     description:
-      "Invite Shelf users to view or annotate a PDF or notebook, keep Shared with me in the library sidebar, and save your own copy when you need it.",
+      "Share Shelf PDFs and notebooks with classmates: invite by email, Can view or Can edit, Shared with me in the sidebar, optional view links, and save your own copy.",
     excerpt:
-      "Share a page with classmates by email, control view vs edit, open items from Shared with me, and save an independent copy to your library.",
+      "Share a Shelf page with classmates by email, control view vs edit, open items from Shared with me, and save an independent copy when you need it.",
     publishedAt: "2026-08-26",
-    updatedAt: "2026-08-29",
-    tags: ["library", "sharing", "collaboration", "pdf"],
+    updatedAt: "2026-08-30",
+    tags: ["library", "sharing", "collaboration", "pdf", "share shelf"],
     readingMinutes: 5,
   },
   [
     {
-      heading: "Share from the reader or the sidebar",
+      heading: "Share Shelf from the reader or the sidebar",
       paragraphs: [
-        "Open any page you own and tap Share in the document chrome, or hover a page in the library explorer and use the share icon. Collections and topics stay private — only individual pages (PDFs, notebooks, docs, and links) can be shared.",
+        "Open any page you own and tap Share in the document chrome, or hover a page in the library explorer and use the share icon. Collections and topics stay private — only individual pages (PDFs, notebooks, docs, and links) can be shared on Shelf.",
         "Add people by name or email. Shelf users get access immediately; others stay as pending invites until they join with that email. Choose Can view or Can edit for each person, then Save.",
       ],
     },
@@ -34,6 +34,13 @@ export const documentSharing = buildPost(
         "General access defaults to Restricted: only people you add can open the file. You can switch to Anyone with link · Can view for a signed-in Shelf link. Link access is view-only; named collaborators can still be editors.",
         "Need the actual PDF in a Telegram group? Share includes Send to Telegram — the file lands in your Shelf bot chat so you can forward it. Anyone with link also has Share link in Telegram for a view-only Shelf URL.",
         "Annotations stay per person. Viewers read the document; editors can highlight and mark up with their own strokes. Delete, rename, and replace remain owner-only.",
+      ],
+    },
+    {
+      heading: "Share Shelf for study groups and teachers",
+      paragraphs: [
+        "Classmates use Share Shelf to pass coaching PDFs without email attachments. Teachers and tutors can share lesson handouts with view access while keeping prep notes private in their own collections.",
+        "For a deeper educator workflow — lesson plan PDFs, worksheets, and prep annotations — see the teachers and tutors guide.",
       ],
     },
   ]

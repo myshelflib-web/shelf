@@ -9,6 +9,12 @@ import {
   countArticles,
   GoalGroup,
 } from "@/lib/learnCatalog";
+import {
+  INDEXABLE_LEARN_TRACKS,
+  LEARN_TRACK_SEO,
+  learnTrackPath,
+  trackSlugForGoal,
+} from "@/lib/seo/learnTrackSeo";
 import { StudyGoal } from "@/types";
 
 export function LearnCatalogPane({
@@ -41,8 +47,8 @@ export function LearnCatalogPane({
           <p className="learn-kicker">Free curriculum</p>
           <h1 className="page-title">Study library</h1>
           <p className="page-subtitle mt-2 max-w-xl">
-            Syllabus guides, NCERT packs, and past papers — the same explorer
-            you get after you sign in.{" "}
+            Syllabus guides, textbooks, and past papers — the same explorer you
+            get after you sign in. Pick a track below or browse everything.{" "}
             {signedIn ? (
               <>
                 Your uploads live in{" "}
@@ -56,10 +62,21 @@ export function LearnCatalogPane({
                 <Link href="/login" className="text-[var(--accent)]">
                   Sign in
                 </Link>{" "}
-                to keep highlights and open Study AI.
+                to keep highlights, share documents, and open Study AI.
               </>
             )}
           </p>
+          <nav className="learn-track-hub" aria-label="Exam track pages">
+            {INDEXABLE_LEARN_TRACKS.map((goal) => (
+              <Link
+                key={goal}
+                href={learnTrackPath(goal)}
+                className="learn-track-hub-link"
+              >
+                {LEARN_TRACK_SEO[goal].hubLabel}
+              </Link>
+            ))}
+          </nav>
         </header>
 
         <LearnCatalogToolbar
@@ -98,7 +115,18 @@ export function LearnCatalogPane({
             {groups.map((group) => (
               <section key={group.goal} className="learn-track-section">
                 <h2 className="learn-track-heading">
-                  {catalogGoalLabel(group.goal)}
+                  {trackSlugForGoal(group.goal) ? (
+                    <Link
+                      href={learnTrackPath(
+                        group.goal as Exclude<StudyGoal, "GENERAL">
+                      )}
+                      className="text-[var(--text-muted)] hover:text-[var(--accent)]"
+                    >
+                      {catalogGoalLabel(group.goal)}
+                    </Link>
+                  ) : (
+                    catalogGoalLabel(group.goal)
+                  )}
                 </h2>
                 <ul className="learn-subject-grid">
                   {group.subjects.map((subject) => (

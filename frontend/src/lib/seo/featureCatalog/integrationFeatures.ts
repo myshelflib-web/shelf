@@ -62,16 +62,19 @@ slug: "telegram-pdf-import",
 {
     slug: "document-sharing",
     category: "integrations",
-    title: "Share Study PDFs with Classmates on Shelf",
+    title: "Share Shelf Documents with Classmates | Shelf",
     metaDescription:
-      "Share PDF and notebook pages with classmates on Shelf. View or edit access, Shared with me in the sidebar, and save an independent copy to your library.",
+      "Share Shelf PDFs and notebooks with classmates — invite by email, view or edit access, Shared with me in the sidebar, optional view links, and save a copy.",
     keywords: [
+      "share shelf",
+      "share Shelf documents",
       "share PDF with classmates",
       "collaborative study documents",
       "shared with me study library",
       "study PDF sharing app",
+      "share notes with class",
     ],
-    headline: "Share pages with classmates",
+    headline: "Share Shelf with classmates",
     subhead:
       "Invite Shelf users by email with view or edit access. Recipients see Shared with me in their library; owners keep control of rename and delete.",
     bullets: [
@@ -81,7 +84,7 @@ slug: "telegram-pdf-import",
       "Save a copy, or send the PDF back to Telegram",
     ],
     paragraphs: [
-      "Study groups pass PDFs constantly. Shelf sharing keeps access controlled — annotations stay per person, and recipients can fork a copy when they need their own highlights. Send to Telegram from the same Share dialog when the group still lives in chat.",
+      "Search for “share Shelf” when you need controlled PDF sharing instead of chat attachments. Study groups pass coaching PDFs; teachers share lesson handouts. Annotations stay per person, and recipients can fork a copy when they need their own highlights.",
     ],
     relatedBlogSlug: "share-study-documents",
     ctaHref: "/login",

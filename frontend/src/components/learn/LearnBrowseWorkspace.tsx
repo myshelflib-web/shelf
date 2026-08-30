@@ -20,18 +20,22 @@ import {
   subjectHref,
   topicHref,
 } from "@/lib/learnCatalog";
+import { StudyGoal } from "@/types";
 
 export function LearnBrowseWorkspace({
   subjectSlug,
   topicSlug,
+  initialGoal,
 }: {
   subjectSlug?: string;
   topicSlug?: string;
+  /** Pre-select a study track (e.g. /learn/tracks/gate). */
+  initialGoal?: StudyGoal;
 }) {
   const { user } = useAuth();
   const compactPortrait = useCompactPortrait();
   const isPhone = useIsPhone();
-  const { goal, setGuestGoal, showGoalPicker } = useLearnStudyGoal();
+  const { goal, setGuestGoal, showGoalPicker } = useLearnStudyGoal(initialGoal);
   const { subjects, loading } = useLearnSubjects();
   const [search, setSearch] = useState("");
   const [explorerOpen, setExplorerOpen] = useState(false);

@@ -44,7 +44,7 @@ export function BlogListingJsonLd({ posts }: { posts: BlogPost[] }) {
     "@type": "Blog",
     name: "Shelf Blog",
     description:
-      "Guides for UPSC prep and personal study libraries: PDF highlights, Study AI, planner, and exam workflows.",
+      "Guides for personal study libraries: PDF highlights, Study AI, planner, sharing, and exam workflows.",
     url: `${siteUrl}/blog`,
     blogPost: posts.map((post) => ({
       "@type": "BlogPosting",

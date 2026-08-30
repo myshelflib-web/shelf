@@ -149,3 +149,132 @@
   font-size: 0.875rem;
   line-height: 1.6;
 }
+
+/* SEO track landing intro (/learn/tracks/*) */
+.learn-track-seo-intro {
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.learn-track-seo-inner {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: 1.25rem 1.25rem 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .learn-track-seo-inner {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+.learn-track-seo-breadcrumb {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.learn-track-seo-breadcrumb a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.learn-track-seo-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.learn-track-seo-title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+  margin: 0 0 0.5rem;
+}
+
+.learn-track-seo-lead {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  max-width: 42rem;
+  margin: 0 0 0.75rem;
+}
+
+.learn-track-seo-note {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.learn-track-seo-note a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.learn-track-seo-note a:hover {
+  text-decoration: underline;
+}
+
+.learn-track-seo-faq {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.learn-track-seo-faq-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0 0 0.75rem;
+}
+
+.learn-track-seo-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  margin: 0;
+}
+
+.learn-track-seo-faq-item dt {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 0.25rem;
+}
+
+.learn-track-seo-faq-item dd {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin: 0;
+  max-width: 42rem;
+}
+
+.learn-track-hub {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0 0.25rem;
+}
+
+.learn-track-hub-link {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.375rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.learn-track-hub-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}

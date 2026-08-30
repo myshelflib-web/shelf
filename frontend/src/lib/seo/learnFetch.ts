@@ -8,13 +8,14 @@ type LearnSubject = {
   name: string;
   slug: string;
   description?: string | null;
+  studyGoal?: string | null;
 };
 
 type LearnTopic = {
   title: string;
   slug: string;
   description?: string | null;
-  subject?: { name: string; slug: string };
+  subject?: { name: string; slug: string; studyGoal?: string | null };
 };
 
 type LearnArticle = {

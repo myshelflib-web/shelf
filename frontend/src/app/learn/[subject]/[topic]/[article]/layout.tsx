@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import { LearnArticleJsonLd } from "@/components/seo/LearnArticleJsonLd";
+import { LearnBreadcrumbJsonLd } from "@/components/seo/LearnBreadcrumbJsonLd";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { fetchLearnArticle, fetchLearnTopic } from "@/lib/seo/learnFetch";
+import {
+  learnArticleDescription,
+  learnPageKeywords,
+} from "@/lib/seo/learnTrackSeo";
+import { isStudyGoal } from "@/lib/studyGoal";
 
 type LayoutProps = {
   children: React.ReactNode;
@@ -20,14 +26,28 @@ export async function generateMetadata({
   const subjectName = topicData?.subject?.name ?? subject;
   const topicTitle = topicData?.title ?? topic;
   const articleTitle = articleData?.title ?? article;
+  const goal = isStudyGoal(topicData?.subject?.studyGoal)
+    ? topicData.subject.studyGoal
+    : null;
 
-  const description = `Read ${articleTitle} — ${topicTitle} in ${subjectName} on Shelf Learn. Free curriculum article with reader highlights when signed in.`;
+  const description = learnArticleDescription(
+    articleTitle,
+    topicTitle,
+    subjectName,
+    goal
+  );
 
   return buildPageMetadata({
     title: `${articleTitle} — ${topicTitle} | Shelf Learn`,
-    description: description.slice(0, 160),
+    description,
     path: `/learn/${subject}/${topic}/${article}`,
-    keywords: [articleTitle, topicTitle, subjectName, "free study article"],
+    keywords: learnPageKeywords(
+      goal,
+      articleTitle,
+      topicTitle,
+      subjectName,
+      "free study PDF"
+    ),
   });
 }
 
@@ -44,16 +64,36 @@ export default async function LearnArticleLayout({
   const subjectName = topicData?.subject?.name ?? subject;
   const topicTitle = topicData?.title ?? topic;
   const articleTitle = articleData?.title ?? article;
-  const description = `Read ${articleTitle} — ${topicTitle} in ${subjectName} on Shelf Learn. Free curriculum article with reader highlights when signed in.`;
+  const goal = isStudyGoal(topicData?.subject?.studyGoal)
+    ? topicData.subject.studyGoal
+    : null;
+  const description = learnArticleDescription(
+    articleTitle,
+    topicTitle,
+    subjectName,
+    goal
+  );
 
   return (
     <>
+      <LearnBreadcrumbJsonLd
+        crumbs={[
+          { name: "Learn", path: "/learn" },
+          { name: subjectName, path: `/learn/${subject}` },
+          { name: topicTitle, path: `/learn/${subject}/${topic}` },
+          {
+            name: articleTitle,
+            path: `/learn/${subject}/${topic}/${article}`,
+          },
+        ]}
+      />
       <LearnArticleJsonLd
         title={articleTitle}
-        description={description.slice(0, 160)}
+        description={description}
         path={`/learn/${subject}/${topic}/${article}`}
         subjectName={subjectName}
         topicName={topicTitle}
+        studyGoal={goal}
       />
       {children}
     </>

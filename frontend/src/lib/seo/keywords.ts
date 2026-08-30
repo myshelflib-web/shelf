@@ -24,7 +24,7 @@ export const SEO_KEYWORDS = {
     "UPSC study material",
     "NEET JEE notes organizer",
     "professional PDF workspace",
-    "teacher lesson materials",
+    "teacher resources for lesson notes",
     "language learning PDF notes",
   ],
   longTail: [
@@ -40,8 +40,10 @@ export const SEO_KEYWORDS = {
     "send PDF back to Telegram",
     "Spotify while reading PDF",
     "YouTube lecture notes",
+    "share Shelf documents",
     "share PDF with classmates",
     "exam quiz from your notes",
+    "teacher resources for preparing lesson notes",
   ],
 } as const;
 
@@ -141,9 +143,16 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "typed notes beside PDF",
   ],
   "free-exam-curriculum-learn": [
+    "GATE syllabus",
+    "UPSC syllabus",
+    "NEET PG syllabus",
     "free study curriculum",
+    "GATE previous papers",
+    "UPSC study material free",
+    "State PCS TNPSC",
+    "judiciary bare acts",
+    "CA study material",
     "open syllabus library",
-    "NCERT and exam packs",
   ],
   "shelf-premium-subscription": [
     "study app premium",
@@ -160,9 +169,12 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "import YouTube playlist study",
   ],
   "share-study-documents": [
+    "share shelf",
+    "share Shelf documents",
     "share PDF with classmates",
     "collaborative study documents",
     "shared with me study library",
+    "share notes with class",
   ],
   "telegram-save-pdfs": [
     "save Telegram PDF to library",
@@ -193,34 +205,49 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
   "college-students-lecture-notes": [
     "college lecture notes app",
     "university PDF organizer",
+    "college study notes app",
+    "organize lecture slides",
   ],
   "law-students-case-law-library": [
     "law student case briefs",
     "legal PDF annotation",
+    "law student PDF library",
+    "bare acts annotation app",
   ],
   "medical-and-science-pdf-workflow": [
     "medical student notes app",
     "science journal PDF reader",
+    "medical PDF annotation",
+    "science PDF study app",
   ],
   "research-papers-literature-notes": [
     "research paper highlighter",
     "literature review PDF tool",
+    "annotate research papers",
+    "academic PDF notes",
   ],
   "professionals-work-documents": [
     "professional PDF workspace",
     "annotate work documents",
+    "work PDF library app",
   ],
   "teachers-lesson-materials": [
+    "teacher resources for preparing lesson notes",
     "teacher lesson plan PDFs",
-    "educators study library",
+    "preparing lesson notes app",
+    "educator PDF library",
+    "tutor handout organizer",
+    "share lesson materials with students",
   ],
   "privacy-private-study-library": [
     "private PDF library",
     "secure study notes app",
+    "private study workspace",
   ],
   "shelf-vs-generic-chatbots": [
     "AI grounded in your notes",
     "chat with your PDFs vs ChatGPT",
+    "study AI from uploads only",
   ],
   "dark-mode-focused-reading": [
     "dark mode PDF reader",
@@ -233,10 +260,12 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
   "language-learning-with-pdfs": [
     "language learning PDF notes",
     "annotate textbooks foreign language",
+    "language study PDF app",
   ],
   "nonfiction-book-notes": [
     "book notes PDF app",
     "nonfiction reading highlights",
+    "annotate ebooks for learning",
   ],
   "search-your-entire-library": [
     "search PDF library",
@@ -259,18 +288,19 @@ export const HOME_TITLE =
   "Shelf — Personal Study Library | PDFs, YouTube Lectures, Study AI & Planner";
 
 export const HOME_DESCRIPTION =
-  "Build a private study library: upload PDFs, bring in YouTube lectures and playlists, highlight as you read, ask Study AI from your material, import from Telegram and send PDFs back, Spotify focus audio, share with classmates, exam-style quiz from your notes, and plan on one calendar. Browse free curriculum on Learn without sign-in.";
+  "Build a private study library: upload PDFs, bring in YouTube lectures and playlists, highlight as you read, ask Study AI from your material, Share Shelf with classmates, import from Telegram, plan on one calendar, and sit exam-style quizzes. Browse optional free curriculum on Learn without sign-in.";
 
-/** Homepage meta keywords — product surfaces + integrations + guest access. */
+/** Homepage meta keywords — product surfaces (no named exams). */
 export const HOME_PAGE_KEYWORDS: string[] = [
   ...DEFAULT_KEYWORDS,
+  "share shelf",
+  "chat with PDF",
   "YouTube lecture notes",
   "Telegram PDF import and send",
-  "Spotify study reader",
   "exam quiz from notes",
-  "free study curriculum",
-  "read PDF without login",
-  "personal study workspace",
+  "study planner app",
+  "mind map from PDF",
+  "teacher resources for lesson notes",
   "document sharing students",
   "offline PDF reader PWA",
 ];
@@ -279,26 +309,28 @@ export const FEATURES_HUB_TITLE =
   "Shelf Features — PDF Library, YouTube Lectures, Study AI, Quiz & More";
 
 export const FEATURES_HUB_DESCRIPTION =
-  "Explore every Shelf feature: personal PDF library, YouTube lectures, highlights, multi-tab reader, Study AI chat, exam quizzes, Telegram PDF import and send, Spotify focus audio, document sharing, planner, and offline PWA — for UPSC, NEET PG, GATE, and more.";
+  "Explore every Shelf feature: personal PDF library, Share Shelf, YouTube lectures, highlights, Study AI, exam quizzes, Telegram, Spotify, teacher lesson prep, planner, and offline PWA.";
 
 export const FEATURES_HUB_KEYWORDS = [
   "Shelf features",
-  "PDF study library",
-  "YouTube lecture notes",
+  "personal study library",
+  "share shelf",
+  "chat with PDF",
+  "PDF reader with highlights",
   "Study AI features",
-  "Telegram PDF import and send",
-  "Spotify study reader",
-  "share study PDFs",
   "exam quiz from notes",
-  "UPSC study app features",
-  "personal study workspace",
+  "study planner app",
+  "YouTube lecture notes",
+  "Telegram PDF import",
+  "teacher lesson resources",
+  "offline study app",
 ];
 
 export const LEARN_DESCRIPTION =
-  "Browse free curriculum packs — syllabus articles, textbooks, and topic guides. Open without signing up; sign in to keep a parallel private library of your own PDFs and notes.";
+  "Browse free curriculum packs for GATE, UPSC, State PCS, Judiciary, CA, and NEET PG — official PDFs, previous papers, bare acts, and open textbooks. Open without signing up; sign in for highlights and a private library.";
 
 export const BLOG_INDEX_DESCRIPTION =
-  "Long-form guides to Shelf: personal PDF libraries, YouTube lectures, highlights, Study AI, planner, reader workspace, and workflows for students, researchers, and professionals.";
+  "Long-form guides to Shelf: personal PDF libraries, YouTube lectures, highlights, Study AI, Share Shelf, planner, reader workspace, and workflows for students, teachers, researchers, and professionals.";
 
 export const QUIZ_TITLE =
   "Exam-Style Quiz from Your Notes — MCQ, Written & PYQ Practice | Shelf";

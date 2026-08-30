@@ -10,11 +10,18 @@ import {
 import { normalizeStudyGoal } from "@/lib/studyGoal";
 import { StudyGoal } from "@/types";
 
-export function useLearnStudyGoal() {
+export function useLearnStudyGoal(initialGoal?: StudyGoal) {
   const { user } = useAuth();
   const [filterGoal, setFilterGoal] = useState<StudyGoal>(() =>
-    readLearnCatalogFilter()
+    initialGoal ?? readLearnCatalogFilter()
   );
+
+  useEffect(() => {
+    if (initialGoal) {
+      writeLearnCatalogFilter(initialGoal);
+      setFilterGoal(initialGoal);
+    }
+  }, [initialGoal]);
 
   useEffect(() => {
     const sync = () => setFilterGoal(readLearnCatalogFilter());

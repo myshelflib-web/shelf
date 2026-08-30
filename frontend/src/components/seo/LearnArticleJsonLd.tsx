@@ -1,4 +1,6 @@
 import { getSiteUrl } from "@/lib/siteUrl";
+import { STUDY_GOAL_LABELS } from "@/lib/studyGoal";
+import { StudyGoal } from "@/types";
 
 type LearnArticleJsonLdProps = {
   title: string;
@@ -6,6 +8,7 @@ type LearnArticleJsonLdProps = {
   path: string;
   subjectName: string;
   topicName: string;
+  studyGoal?: StudyGoal | null;
 };
 
 export function LearnArticleJsonLd({
@@ -14,14 +17,25 @@ export function LearnArticleJsonLd({
   path,
   subjectName,
   topicName,
+  studyGoal,
 }: LearnArticleJsonLdProps) {
   const url = `${getSiteUrl()}${path}`;
+  const aboutName =
+    studyGoal && studyGoal !== "GENERAL"
+      ? STUDY_GOAL_LABELS[studyGoal]
+      : subjectName;
+
   const data = {
     "@context": "https://schema.org",
-    "@type": "Article",
+    "@type": ["Article", "LearningResource"],
     headline: title,
     description,
     url,
+    learningResourceType: "Reference material",
+    about: {
+      "@type": "Thing",
+      name: aboutName,
+    },
     isPartOf: {
       "@type": "WebPage",
       name: `${topicName} — ${subjectName}`,
@@ -36,7 +50,7 @@ export function LearnArticleJsonLd({
       name: "Shelf",
       url: getSiteUrl(),
     },
-    inLanguage: "en",
+    inLanguage: "en-IN",
     isAccessibleForFree: true,
   };
 

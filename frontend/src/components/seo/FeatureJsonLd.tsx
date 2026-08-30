@@ -1,6 +1,8 @@
 import { getSiteUrl } from "@/lib/siteUrl";
 import type { ShelfFeature } from "@/lib/seo/featureTypes";
 import { featurePagePath } from "@/lib/seo/featureCatalog";
+import { FaqJsonLd } from "@/components/seo/FaqJsonLd";
+import { intentFaqs } from "@/lib/seo/intentCoverage";
 
 export function FeatureJsonLd({ feature }: { feature: ShelfFeature }) {
   const siteUrl = getSiteUrl();
@@ -69,7 +71,7 @@ export function FeatureJsonLd({ feature }: { feature: ShelfFeature }) {
 export function FeaturesHubJsonLd({
   features,
 }: {
-  features: Pick<ShelfFeature, "slug" | "headline" | "metaDescription">[];
+  features: ShelfFeature[];
 }) {
   const siteUrl = getSiteUrl();
 
@@ -77,23 +79,26 @@ export function FeaturesHubJsonLd({
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "Shelf features",
-    description:
-      "PDF library, Study AI, Quiz, Telegram import and send, Spotify focus audio, document sharing, planner, and more.",
+      description:
+      "Every Shelf study and teaching workflow — PDF library, Share Shelf, Study AI, quiz, planner, and more.",
     url: `${siteUrl}/features`,
     numberOfItems: features.length,
     itemListElement: features.map((f, i) => ({
       "@type": "ListItem",
       position: i + 1,
       name: f.headline,
-      url: `${siteUrl}/features/${f.slug}`,
+      url: `${siteUrl}${featurePagePath(f)}`,
       description: f.metaDescription,
     })),
   };
 
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
-    />
+    <>
+      <FaqJsonLd faqs={intentFaqs()} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemList) }}
+      />
+    </>
   );
 }
