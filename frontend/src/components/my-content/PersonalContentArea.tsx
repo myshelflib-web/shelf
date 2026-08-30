@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect, type MutableRefObject } from "react";
 import { UserContentHighlight } from "@/types";
 import {
   createHighlight,
@@ -14,6 +14,7 @@ import { HighlightToolbar } from "../HighlightToolbar";
 import { HighlightNoteModal } from "../HighlightNoteModal";
 import { blankCanvasScrollTarget } from "@/lib/blankCanvas";
 import { LiveEditorRouter } from "./LiveEditorRouter";
+import type { SketchZoomCommands } from "./useSketchNotebookZoom";
 
 interface PersonalContentAreaProps {
   content: string;
@@ -34,7 +35,13 @@ interface PersonalContentAreaProps {
   onContentRoot?: (el: HTMLElement | null) => void;
   initialScrollTop?: number;
   initialScrollLeft?: number;
-  onViewStateChange?: (state: { scrollTop: number; scrollLeft?: number }) => void;
+  initialScale?: number;
+  zoomCommandsRef?: MutableRefObject<SketchZoomCommands | null>;
+  onViewStateChange?: (state: {
+    scrollTop: number;
+    scrollLeft?: number;
+    scale?: number;
+  }) => void;
   readOnly?: boolean;
   guestLocked?: boolean;
   onGuestLockedClick?: (feature: string) => void;
@@ -57,6 +64,8 @@ export function PersonalContentArea({
   onContentRoot,
   initialScrollTop,
   initialScrollLeft,
+  initialScale,
+  zoomCommandsRef,
   onViewStateChange,
   readOnly = false,
   guestLocked = false,
@@ -368,6 +377,10 @@ export function PersonalContentArea({
           onContentChange={onContentChange}
           onViewStateChange={onViewStateChange}
           compact={compactEditor}
+          initialScale={initialScale}
+          initialScrollTop={initialScrollTop}
+          initialScrollLeft={initialScrollLeft}
+          zoomCommandsRef={zoomCommandsRef}
         />
       </div>
     );

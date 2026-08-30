@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type MutableRefObject } from "react";
 import {
   BlankEditorToolbar,
   DEFAULT_PEN_COLOR,
@@ -13,14 +13,23 @@ import { DocEditor } from "./DocEditor";
 import { readCanvasBg } from "@/lib/blankCanvas";
 import { isDocEditorHtml } from "@/lib/docEditor";
 import { isSketchNotebookHtml } from "@/lib/sketchNotebook";
+import type { SketchZoomCommands } from "./useSketchNotebookZoom";
 
 interface LiveEditorRouterProps {
   content: string;
   userTopicId: string;
   onContentChange?: (html: string) => void;
-  onViewStateChange?: (state: { scrollTop: number; scrollLeft?: number }) => void;
+  onViewStateChange?: (state: {
+    scrollTop: number;
+    scrollLeft?: number;
+    scale?: number;
+  }) => void;
   /** Compact doc editor for side panels (e.g. lecture notes). */
   compact?: boolean;
+  initialScale?: number;
+  initialScrollTop?: number;
+  initialScrollLeft?: number;
+  zoomCommandsRef?: MutableRefObject<SketchZoomCommands | null>;
 }
 
 type EditorKind = "sketch" | "doc" | "blank";
@@ -38,6 +47,10 @@ export function LiveEditorRouter({
   onContentChange,
   onViewStateChange,
   compact = false,
+  initialScale,
+  initialScrollTop,
+  initialScrollLeft,
+  zoomCommandsRef,
 }: LiveEditorRouterProps) {
   // Latch kind + seed on first paint so parent re-renders never switch editors
   // or re-feed HTML into a live contentEditable (that steals the caret).
@@ -64,6 +77,10 @@ export function LiveEditorRouter({
         initialHtml={seed}
         onChange={(html) => onContentChange?.(html)}
         onViewStateChange={onViewStateChange}
+        initialScale={initialScale}
+        initialScrollTop={initialScrollTop}
+        initialScrollLeft={initialScrollLeft}
+        zoomCommandsRef={zoomCommandsRef}
       />
     );
   }

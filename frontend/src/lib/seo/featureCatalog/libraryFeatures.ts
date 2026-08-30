@@ -135,7 +135,7 @@ export const LIBRARY_FEATURES: ShelfFeature[] = [
     subhead:
       "Not every page is a PDF. Shelf supports sketch canvases and rich doc pages in the same collections as your uploaded files.",
     bullets: [
-      "Sketch pages for diagrams and handwriting",
+      "Sketch pages for diagrams and handwriting — pinch or Ctrl+scroll to zoom",
       "Doc pages for structured typed notes",
       "Live in collections alongside PDFs",
       "Open in the same tabbed reader workspace",

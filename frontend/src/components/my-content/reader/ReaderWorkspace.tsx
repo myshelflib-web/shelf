@@ -598,13 +598,16 @@ export function ReaderWorkspace({
     enabled: readerReady && !modalEditing && isPdf,
   });
   useHotkey("-", () => focusedHandlers?.pdfZoomOut(), {
-    enabled: readerReady && !modalEditing && isPdf,
+    enabled: readerReady && !modalEditing,
+    allowWhenSuppressed: true,
   });
   useHotkey("=", () => focusedHandlers?.pdfZoomIn(), {
-    enabled: readerReady && !modalEditing && isPdf,
+    enabled: readerReady && !modalEditing,
+    allowWhenSuppressed: true,
   });
   useHotkey("+", () => focusedHandlers?.pdfZoomIn(), {
-    enabled: readerReady && !modalEditing && isPdf,
+    enabled: readerReady && !modalEditing,
+    allowWhenSuppressed: true,
   });
   useHotkey("m", () => focusedHandlers?.pdfToggleNight(), {
     enabled: readerReady && !modalEditing && isPdf,

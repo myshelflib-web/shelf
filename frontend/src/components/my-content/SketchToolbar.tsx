@@ -10,6 +10,8 @@ import {
   Plus,
   Redo2,
   Undo2,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import {
   SKETCH_BACKGROUNDS,
@@ -51,6 +53,8 @@ interface SketchToolbarProps {
   canRedo: boolean;
   onUndo: () => void;
   onRedo: () => void;
+  scale: number;
+  zoomBy: (delta: number) => void;
 }
 
 export function SketchToolbar({
@@ -73,6 +77,8 @@ export function SketchToolbar({
   canRedo,
   onUndo,
   onRedo,
+  scale,
+  zoomBy,
 }: SketchToolbarProps) {
   const penBtnRef = useRef<HTMLButtonElement>(null);
   const [penOpen, setPenOpen] = useState(false);
@@ -212,6 +218,25 @@ export function SketchToolbar({
         </ToolBtn>
         <ToolBtn label="Redo (⌘⇧Z)" disabled={!canRedo} onClick={onRedo}>
           <Redo2 className="w-[17px] h-[17px]" />
+        </ToolBtn>
+      </ToolGroup>
+
+      <ToolSep />
+
+      <ToolGroup>
+        <ToolBtn label="Zoom out (-)" onClick={() => zoomBy(-0.15)}>
+          <ZoomOut className="w-[17px] h-[17px]" />
+        </ToolBtn>
+        <ToolMuted>
+          <span
+            className="min-w-9 text-center tabular-nums inline-block text-[11px]"
+            title={`Zoom ${Math.round(scale * 100)}% · pinch or Ctrl+scroll`}
+          >
+            {Math.round(scale * 100)}%
+          </span>
+        </ToolMuted>
+        <ToolBtn label="Zoom in (=)" onClick={() => zoomBy(0.15)}>
+          <ZoomIn className="w-[17px] h-[17px]" />
         </ToolBtn>
       </ToolGroup>
     </EditorToolbarShell>

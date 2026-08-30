@@ -311,7 +311,7 @@ export const HOTKEY_HELP: Array<{
       { keys: ["f"], label: "Fullscreen" },
       { keys: ["left", "right"], label: "Previous / next PDF page" },
       { keys: ["j", "k"], label: "Next / previous PDF page" },
-      { keys: ["-", "="], label: "Zoom out / in (pinch or Ctrl+scroll)" },
+      { keys: ["-", "="], label: "Zoom out / in (PDF or notebook; pinch or Ctrl+scroll)" },
       { keys: ["m"], label: "PDF night mode" },
     ],
   },

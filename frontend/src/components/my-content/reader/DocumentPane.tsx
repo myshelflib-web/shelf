@@ -6,6 +6,7 @@ import { PersonalContentArea } from "@/components/my-content/PersonalContentArea
 import { PdfViewer, type PdfViewerCommands } from "@/components/my-content/PdfViewer";
 import { EmbedViewer } from "@/components/my-content/EmbedViewer";
 import { VideoPageView } from "@/components/my-content/VideoPageView";
+import type { SketchZoomCommands } from "@/components/my-content/useSketchNotebookZoom";
 import { api, getStoredUser } from "@/lib/api";
 import {
   AnalyticsEvents,
@@ -337,6 +338,7 @@ export function DocumentPane({
   const [dropActive, setDropActive] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
   const pdfCommandsRef = useRef<PdfViewerCommands | null>(null);
+  const sketchZoomRef = useRef<SketchZoomCommands | null>(null);
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen(shellRef);
   const [fsAiOpen, setFsAiOpen] = useState(false);
   const [fsAiWidth, setFsAiWidth] = useState(FS_AI_WIDTH_DEFAULT);
@@ -975,8 +977,14 @@ export function DocumentPane({
       navHref: (pageSlug: string) => navHref(scope, pageSlug),
       reloadPage,
       toggleFullscreen,
-      pdfZoomIn: () => pdfCommandsRef.current?.zoomIn(),
-      pdfZoomOut: () => pdfCommandsRef.current?.zoomOut(),
+      pdfZoomIn: () => {
+        pdfCommandsRef.current?.zoomIn();
+        sketchZoomRef.current?.zoomIn();
+      },
+      pdfZoomOut: () => {
+        pdfCommandsRef.current?.zoomOut();
+        sketchZoomRef.current?.zoomOut();
+      },
       pdfToggleNight: () => pdfCommandsRef.current?.toggleNight(),
       pdfNextPage: () => pdfCommandsRef.current?.nextPage(),
       pdfPrevPage: () => pdfCommandsRef.current?.prevPage(),
@@ -1423,6 +1431,8 @@ export function DocumentPane({
                   onContentRoot={setContentRoot}
                   initialScrollTop={savedView?.scrollTop}
                   initialScrollLeft={savedView?.scrollLeft}
+                  initialScale={savedView?.scale}
+                  zoomCommandsRef={sketchZoomRef}
                   onViewStateChange={persistView}
                 />
                 {pageData.isLocked && (

@@ -5,11 +5,11 @@ export const sketchAndDoc = buildPost(
     slug: "sketch-notebook-and-doc-pages",
     title: "Sketch Notebooks and Rich Text Doc Pages on Shelf",
     description:
-      "Create multi-page sketch notebooks with ruled or grid paper, or typed Doc pages with headings and lists. Import TXT, MD, and DOCX into your library.",
+      "Create multi-page sketch notebooks with ruled or grid paper, zoom in on handwriting, or typed Doc pages with headings and lists. Import TXT, MD, and DOCX into your library.",
     excerpt:
       "Beyond PDF uploads: draw on A4 sheets, type structured notes, or import existing documents — all live beside PDFs in your collections.",
     publishedAt: "2026-02-11",
-    updatedAt: "2026-08-29",
+    updatedAt: "2026-08-30",
     tags: ["notebook", "sketch", "doc editor", "notes"],
     readingMinutes: 6,
   },
@@ -23,7 +23,7 @@ export const sketchAndDoc = buildPost(
     {
       heading: "Sketch notebooks",
       paragraphs: [
-        "Notebook pages use fixed A4 sheets with ruled, grid, or blank paper and a GoodNotes-style color palette. Add sheets with + Page when a diagram spills over. Legacy blank-canvas pages (combined type and draw) still open for older content.",
+        "Notebook pages use fixed A4 sheets with ruled, grid, or blank paper and a GoodNotes-style color palette. Pinch, Ctrl+scroll, or the toolbar +/- buttons zoom the sheet without interrupting pencil strokes or two-finger scroll. Add sheets with + Page when a diagram spills over. Legacy blank-canvas pages (combined type and draw) still open for older content.",
       ],
     },
     {

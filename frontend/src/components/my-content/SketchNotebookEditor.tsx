@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
 import type { BlankPt, BlankStroke } from "@/lib/blankCanvas";
 import { canvasBgTone, canvasFgColor, pointsToPath } from "@/lib/blankCanvas";
 import { parseSvgPathPoints, polylineHitsPoint } from "@/lib/eraseHit";
@@ -10,9 +10,14 @@ import {
   isPrimaryInkPointer,
   shouldPreventInkPointerDown,
 } from "@/lib/inkSurface";
+import { clientToSketchPoint } from "@/lib/sketchPagePoint";
 import { useInkGestures } from "./useInkGestures";
 import { useStrokeDraft } from "./useStrokeDraft";
 import { useWindowPenStroke } from "./useWindowPenStroke";
+import {
+  useSketchNotebookZoom,
+  type SketchZoomCommands,
+} from "./useSketchNotebookZoom";
 import {
   DEFAULT_PEN_COLOR,
   DEFAULT_PEN_SIZE,
@@ -33,13 +38,25 @@ import {
 interface SketchNotebookEditorProps {
   initialHtml: string;
   onChange: (html: string) => void;
-  onViewStateChange?: (state: { scrollTop: number; scrollLeft: number }) => void;
+  onViewStateChange?: (state: {
+    scrollTop: number;
+    scrollLeft: number;
+    scale?: number;
+  }) => void;
+  initialScale?: number;
+  initialScrollTop?: number;
+  initialScrollLeft?: number;
+  zoomCommandsRef?: MutableRefObject<SketchZoomCommands | null>;
 }
 
 export function SketchNotebookEditor({
   initialHtml,
   onChange,
   onViewStateChange,
+  initialScale,
+  initialScrollTop,
+  initialScrollLeft,
+  zoomCommandsRef,
 }: SketchNotebookEditorProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [viewportEl, setViewportEl] = useState<HTMLDivElement | null>(null);
@@ -96,7 +113,15 @@ export function SketchNotebookEditor({
   }, [refreshUndoUi]);
 
   useInkSurface(viewportRef, true);
-  useInkGestures(viewportEl, true);
+  const setInkDrawing = useInkGestures(viewportEl, true);
+  const { scale, zoomBy } = useSketchNotebookZoom({
+    viewport: viewportEl,
+    initialScale,
+    initialScrollTop,
+    initialScrollLeft,
+    onViewStateChange,
+    commandsRef: zoomCommandsRef,
+  });
 
   const emit = useCallback((next: SketchNotebook) => {
     notebookRef.current = next;
@@ -176,12 +201,8 @@ export function SketchNotebookEditor({
     refreshUndoUi();
   }, [refreshUndoUi, syncActivePaths]);
 
-  const localPoint = (clientX: number, clientY: number): BlankPt => {
-    const el = surfaceRef.current;
-    if (!el) return { x: 0, y: 0 };
-    const r = el.getBoundingClientRect();
-    return { x: clientX - r.left, y: clientY - r.top };
-  };
+  const localPoint = (clientX: number, clientY: number): BlankPt =>
+    clientToSketchPoint(surfaceRef.current, clientX, clientY);
 
   const finishErase = (e: React.PointerEvent) => {
     if (strokePointerId.current !== null && strokePointerId.current !== e.pointerId) {
@@ -190,6 +211,7 @@ export function SketchNotebookEditor({
     strokePointerId.current = null;
     if (!drawing.current) return;
     drawing.current = false;
+    setInkDrawing(false);
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     } catch {
@@ -208,6 +230,7 @@ export function SketchNotebookEditor({
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
       strokePointerId.current = e.pointerId;
       drawing.current = true;
+      setInkDrawing(true);
       gestureUndoPushed.current = false;
       eraseStrokesAt(pt);
       return;
@@ -225,6 +248,7 @@ export function SketchNotebookEditor({
       localize: (x, y) => localPoint(x, y),
       paint: (pts) => paintDraft(pts),
       finish: (pts) => {
+        setInkDrawing(false);
         if (pts.length < 2) {
           paintDraft(null);
           return;
@@ -244,6 +268,7 @@ export function SketchNotebookEditor({
         });
       },
     });
+    setInkDrawing(true);
   };
 
   const onDrawMove = (e: React.PointerEvent) => {
@@ -343,6 +368,8 @@ export function SketchNotebookEditor({
         canRedo={canRedo}
         onUndo={undo}
         onRedo={redo}
+        scale={scale}
+        zoomBy={zoomBy}
       />
       <div
         ref={bindViewport}
@@ -354,64 +381,80 @@ export function SketchNotebookEditor({
           onViewStateChangeRef.current?.({
             scrollTop: vp.scrollTop,
             scrollLeft: vp.scrollLeft,
+            scale,
           });
         }}
       >
-        <div className="flex items-start justify-center min-h-full p-6">
+        <div
+          data-pdf-zoom-content
+          className="flex items-start justify-center min-h-full p-6"
+        >
           <div
-            ref={surfaceRef}
-            className={`shelf-sketch-page sketch-page-sheet ${sketchTemplateClass(template)}`}
-            data-template={template}
-            data-bg={bg}
-            data-bg-tone={canvasBgTone(bg)}
-            data-w={SKETCH_PAGE_W}
-            data-h={SKETCH_PAGE_H}
+            data-page={1}
+            className="relative shrink-0 overflow-hidden"
             style={{
-              width: SKETCH_PAGE_W,
-              height: SKETCH_PAGE_H,
-              backgroundColor: bg,
-              color: canvasFgColor(bg),
+              width: SKETCH_PAGE_W * scale,
+              height: SKETCH_PAGE_H * scale,
             }}
-            onPointerDown={onDrawDown}
-            onPointerMove={onDrawMove}
-            onPointerUp={onDrawUp}
-            onPointerCancel={onDrawUp}
-            onContextMenu={(e) => e.preventDefault()}
           >
-            <svg
-              className="blank-draw-layer"
-              width={SKETCH_PAGE_W}
-              height={SKETCH_PAGE_H}
-              viewBox={`0 0 ${SKETCH_PAGE_W} ${SKETCH_PAGE_H}`}
+            <div
+              ref={surfaceRef}
+              className={`shelf-sketch-page sketch-page-sheet ${sketchTemplateClass(template)}`}
+              data-template={template}
+              data-bg={bg}
+              data-bg-tone={canvasBgTone(bg)}
+              data-w={SKETCH_PAGE_W}
+              data-h={SKETCH_PAGE_H}
+              style={{
+                width: SKETCH_PAGE_W,
+                height: SKETCH_PAGE_H,
+                backgroundColor: bg,
+                color: canvasFgColor(bg),
+                transform:
+                  Math.abs(scale - 1) < 0.0001 ? undefined : `scale(${scale})`,
+                transformOrigin: "top left",
+              }}
+              onPointerDown={onDrawDown}
+              onPointerMove={onDrawMove}
+              onPointerUp={onDrawUp}
+              onPointerCancel={onDrawUp}
+              onContextMenu={(e) => e.preventDefault()}
             >
-              {paths.map((p, i) => (
+              <svg
+                className="blank-draw-layer"
+                width={SKETCH_PAGE_W}
+                height={SKETCH_PAGE_H}
+                viewBox={`0 0 ${SKETCH_PAGE_W} ${SKETCH_PAGE_H}`}
+              >
+                {paths.map((p, i) => (
+                  <path
+                    key={i}
+                    className="blank-draw-stroke"
+                    d={p.d}
+                    fill="none"
+                    stroke={p.color}
+                    strokeWidth={p.width}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                ))}
+                <g ref={(el) => bindLiveGroup(0, el)} aria-hidden />
                 <path
-                  key={i}
-                  className="blank-draw-stroke"
-                  d={p.d}
+                  ref={draftPathRef}
+                  className="blank-draw-stroke opacity-80"
                   fill="none"
-                  stroke={p.color}
-                  strokeWidth={p.width}
+                  stroke={penColor}
+                  strokeWidth={penSize}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-              ))}
-              <g ref={(el) => bindLiveGroup(0, el)} aria-hidden />
-              <path
-                ref={draftPathRef}
-                className="blank-draw-stroke opacity-80"
-                fill="none"
-                stroke={penColor}
-                strokeWidth={penSize}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
+              </svg>
+            </div>
           </div>
         </div>
       </div>
       <p className="shrink-0 text-center text-[11px] text-[var(--text-muted)] py-1.5 border-t border-[var(--border)]">
-        Sketch notebook — draw on the page · add pages with + Page · autosaves
+        Sketch notebook — draw on the page · pinch or Ctrl+scroll to zoom · add pages with + Page · autosaves
       </p>
     </div>
   );
