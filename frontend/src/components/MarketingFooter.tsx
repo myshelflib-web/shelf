@@ -23,7 +23,9 @@ export function MarketingFooter({ variant }: { variant?: "landing" }) {
           </nav>
           <div className="landing-footer-meta">
             <SocialLinks variant="landing" />
-            <p className="landing-footer-copy">© {new Date().getFullYear()} Shelf</p>
+            <p className="landing-footer-copy">
+              © {new Date().getFullYear()} Shelf
+            </p>
           </div>
         </div>
       </footer>

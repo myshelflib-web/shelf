@@ -3,10 +3,10 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/",
-    name: "Shelf — Your study library",
+    name: "Shelf (myshelflib) — Your study library",
     short_name: "Shelf",
     description:
-      "Personal study library for students & professionals: PDF highlights, Study AI on your notes, planner, and optional free curriculum. Install as PWA.",
+      "Shelf / My Shelf Lib (myshelflib): personal study library with PDF highlights, Study AI on your notes, planner, and optional free curriculum. Install as PWA.",
     start_url: "/my-content",
     scope: "/",
     display: "standalone",

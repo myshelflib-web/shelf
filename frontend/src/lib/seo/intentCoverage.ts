@@ -64,13 +64,7 @@ export const HOME_INTENT_FAQ_IDS = [
 
 export function homeIntentFaqs(): Array<{ question: string; answer: string }> {
   const byId = new Map(INTENT_CLUSTERS.map((c) => [c.id, c]));
-  const faqs: Array<{ question: string; answer: string }> = [
-    {
-      question: "What is Shelf?",
-      answer:
-        "Shelf is a personal study library and learning workspace: upload PDFs, bring in YouTube lectures, highlight as you read, ask Study AI from your material, Share Shelf with classmates, plan revision, and sit exam-style quizzes. Optional free curriculum is available on Learn when you want it.",
-    },
-  ];
+  const faqs: Array<{ question: string; answer: string }> = [];
   for (const id of HOME_INTENT_FAQ_IDS) {
     const c = byId.get(id);
     if (!c) continue;

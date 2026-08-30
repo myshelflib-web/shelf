@@ -1,6 +1,12 @@
 import { getSiteUrl } from "@/lib/siteUrl";
 import { SOCIAL_SAME_AS } from "@/lib/socialLinks";
 import { PRODUCT_INTENT_CLUSTERS } from "@/lib/seo/intentCoverage";
+import {
+  BRAND_ALTERNATE_NAMES,
+  BRAND_NAME,
+  BRAND_TAGLINE,
+} from "@/lib/seo/brandIdentity";
+import { BrandSeoSignals } from "@/components/seo/BrandSeoSignals";
 
 export function SiteJsonLd() {
   const siteUrl = getSiteUrl();
@@ -9,8 +15,8 @@ export function SiteJsonLd() {
   const organization = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "Shelf",
-    alternateName: "myshelflib",
+    name: BRAND_NAME,
+    alternateName: [...BRAND_ALTERNATE_NAMES],
     url: siteUrl,
     logo: {
       "@type": "ImageObject",
@@ -19,23 +25,22 @@ export function SiteJsonLd() {
       height: 192,
     },
     image: `${siteUrl}/icons/shelf-icon-2048.png`,
-    description:
-      "Personal study library with PDF highlights, YouTube lectures, Study AI, and a planner — for students, professionals, researchers, and lifelong learners.",
+    description: BRAND_TAGLINE,
     sameAs: SOCIAL_SAME_AS,
   };
 
   const website = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "Shelf",
-    alternateName: "myshelflib.com",
+    name: BRAND_NAME,
+    alternateName: [...BRAND_ALTERNATE_NAMES],
     url: siteUrl,
-    description:
-      "Upload PDFs, bring in YouTube lectures, highlight as you read, ask Study AI from your material, and plan work on one calendar. Optional free curriculum packs included.",
+    description: BRAND_TAGLINE,
     inLanguage: "en-IN",
     publisher: {
       "@type": "Organization",
-      name: "Shelf",
+      name: BRAND_NAME,
+      alternateName: [...BRAND_ALTERNATE_NAMES],
       logo: {
         "@type": "ImageObject",
         url: logoUrl,
@@ -64,7 +69,7 @@ export function SiteJsonLd() {
       },
       {
         "@type": "WebPage",
-        name: "About",
+        name: "About Shelf",
         url: `${siteUrl}/about`,
       },
       {
@@ -83,7 +88,8 @@ export function SiteJsonLd() {
   const software = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "Shelf",
+    name: BRAND_NAME,
+    alternateName: [...BRAND_ALTERNATE_NAMES],
     applicationCategory: "EducationalApplication",
     operatingSystem: "Web, iOS, Android",
     offers: {
@@ -91,8 +97,7 @@ export function SiteJsonLd() {
       price: "0",
       priceCurrency: "INR",
     },
-    description:
-      "Personal study library app: PDF reader with highlights, AI study assistant grounded in your notes, Share Shelf, study planner, and optional free curriculum on Learn.",
+    description: BRAND_TAGLINE,
     url: siteUrl,
     featureList: PRODUCT_INTENT_CLUSTERS.map((c) => c.label),
   };
@@ -111,6 +116,7 @@ export function SiteJsonLd() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(software) }}
       />
+      <BrandSeoSignals />
     </>
   );
 }

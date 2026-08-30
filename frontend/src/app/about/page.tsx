@@ -3,6 +3,7 @@ import { Header } from "@/components/Header";
 import { LandingFeatureGrid } from "@/components/LandingFeatureGrid";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
+import { BrandSeoSignals } from "@/components/seo/BrandSeoSignals";
 import { ArrowRight } from "lucide-react";
 
 export default function AboutPage() {
@@ -10,6 +11,7 @@ export default function AboutPage() {
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
       <main className="flex-1 min-h-0 overflow-y-auto">
+        <BrandSeoSignals />
         <section className="relative px-4 sm:px-6 py-16 sm:py-24 max-w-3xl mx-auto text-center overflow-hidden">
           <div className="hero-glow" aria-hidden />
           <RevealOnScroll>
@@ -21,9 +23,9 @@ export default function AboutPage() {
               <span className="text-[var(--accent)]">serious study</span>
             </h1>
             <p className="text-base sm:text-lg text-[var(--text-secondary)] leading-relaxed max-w-2xl mx-auto">
-              Shelf is a personal study workspace — not a content catalog. Upload your
-              own PDFs and notes, highlight as you read, ask Study AI from your
-              material, and keep tasks on one calendar.
+              Shelf is a personal study workspace — not a content catalog. Upload
+              your own PDFs and notes, highlight as you read, ask Study AI from
+              your material, and keep tasks on one calendar.
             </p>
           </RevealOnScroll>
         </section>

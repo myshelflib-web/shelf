@@ -2,14 +2,21 @@ import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "About Shelf — Personal study library for serious reading",
+  title: "About Shelf (myshelflib) — My Shelf Lib study library",
   description:
-    "Shelf is a personal study workspace for any goal. Upload PDFs, highlight notes, ask Study AI from your material, and plan work — used by students, researchers, teachers, and professionals.",
+    "About Shelf — also known as My Shelf Lib / myshelflib. A personal study workspace: upload PDFs, highlight notes, ask Study AI from your material, and plan work for any goal.",
   keywords: [
-    "about Shelf study app",
+    "about Shelf",
+    "myshelflib",
+    "my shelf lib",
+    "my shelf",
+    "shel",
+    "sheld",
+    "shelflib",
+    "myshelf",
+    "Shelf library",
     "personal PDF library",
     "Study AI for students",
-    "UPSC NEET study workspace",
     "private study notes app",
   ],
   path: "/about",

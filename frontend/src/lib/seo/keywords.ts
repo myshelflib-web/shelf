@@ -2,6 +2,8 @@
  * SEO keywords for Shelf — multi-audience personal study library.
  * Exam prep is one audience among many (students, professionals, researchers).
  */
+import { BRAND_KEYWORDS } from "./brandIdentity";
+
 export const SEO_KEYWORDS = {
   product: [
     "personal study library",
@@ -285,13 +287,14 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
 };
 
 export const HOME_TITLE =
-  "Shelf — Personal Study Library | PDFs, YouTube Lectures, Study AI & Planner";
+  "Shelf (myshelflib) — Personal Study Library | PDFs, Study AI & Planner";
 
 export const HOME_DESCRIPTION =
-  "Build a private study library: upload PDFs, bring in YouTube lectures and playlists, highlight as you read, ask Study AI from your material, Share Shelf with classmates, import from Telegram, plan on one calendar, and sit exam-style quizzes. Browse optional free curriculum on Learn without sign-in.";
+  "Shelf — also called My Shelf Lib / myshelflib — is a personal study library: upload PDFs and YouTube lectures, highlight as you read, ask Study AI from your notes, Share Shelf with classmates, and plan on one calendar.";
 
-/** Homepage meta keywords — product surfaces (no named exams). */
+/** Homepage meta keywords — brand discovery (incl. misspellings) + product. */
 export const HOME_PAGE_KEYWORDS: string[] = [
+  ...BRAND_KEYWORDS,
   ...DEFAULT_KEYWORDS,
   "share shelf",
   "chat with PDF",
@@ -299,10 +302,7 @@ export const HOME_PAGE_KEYWORDS: string[] = [
   "Telegram PDF import and send",
   "exam quiz from notes",
   "study planner app",
-  "mind map from PDF",
   "teacher resources for lesson notes",
-  "document sharing students",
-  "offline PDF reader PWA",
 ];
 
 export const FEATURES_HUB_TITLE =

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getSiteUrl } from "@/lib/siteUrl";
 import { DEFAULT_KEYWORDS } from "./keywords";
+import { BRAND_KEYWORDS } from "./brandIdentity";
 
 const OG_IMAGE = "/icons/shelf-icon-2048.png";
 
@@ -36,7 +37,7 @@ export function buildPageMetadata({
       title,
       description,
       url: canonical,
-      siteName: "Shelf",
+      siteName: "Shelf | myshelflib",
       locale: "en_IN",
       type: "website",
       images: [
@@ -44,7 +45,7 @@ export function buildPageMetadata({
           url: OG_IMAGE,
           width: 2048,
           height: 2048,
-          alt: "Shelf — personal study library",
+          alt: "Shelf (myshelflib) — personal study library",
         },
       ],
     },
@@ -75,15 +76,16 @@ export function rootLayoutMetadata(): Metadata {
   return {
     metadataBase: new URL(siteUrl),
     title: {
-      default: "Shelf — Your study library",
+      default: "Shelf (myshelflib) — Your study library",
       template: "%s · Shelf",
     },
     description:
-      "Personal PDF study library with highlights, Study AI on your notes, a revision planner, and optional free curriculum — for any subject or goal.",
-    keywords: DEFAULT_KEYWORDS,
+      "Shelf (My Shelf Lib / myshelflib) — personal PDF study library with highlights, Study AI on your notes, a revision planner, and optional free curriculum.",
+    keywords: [...BRAND_KEYWORDS, ...DEFAULT_KEYWORDS],
     applicationName: "Shelf",
     authors: [{ name: "Shelf", url: siteUrl }],
     creator: "Shelf",
+    publisher: "Shelf",
     // Google SERP favicon: square PNG, multiple of 48px (SVG often ignored).
     icons: {
       icon: [
@@ -95,7 +97,7 @@ export function rootLayoutMetadata(): Metadata {
       shortcut: ["/icons/favicon-48.png"],
     },
     openGraph: {
-      siteName: "Shelf",
+      siteName: "Shelf | myshelflib",
       locale: "en_IN",
       type: "website",
       images: [
@@ -103,7 +105,7 @@ export function rootLayoutMetadata(): Metadata {
           url: OG_IMAGE,
           width: 2048,
           height: 2048,
-          alt: "Shelf — personal study library for PDFs, highlights, and Study AI",
+          alt: "Shelf (myshelflib) — personal study library for PDFs, highlights, and Study AI",
         },
       ],
     },

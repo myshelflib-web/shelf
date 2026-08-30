@@ -1,10 +1,14 @@
 import { getSiteUrl } from "@/lib/siteUrl";
-import { homeIntentFaqs, PRODUCT_INTENT_CLUSTERS } from "@/lib/seo/intentCoverage";
+import {
+  homeIntentFaqs,
+  PRODUCT_INTENT_CLUSTERS,
+} from "@/lib/seo/intentCoverage";
+import { BRAND_FAQS } from "@/lib/seo/brandIdentity";
 import { FaqJsonLd } from "@/components/seo/FaqJsonLd";
 
 export function HomePageJsonLd() {
   const siteUrl = getSiteUrl();
-  const faqs = homeIntentFaqs();
+  const faqs = [...BRAND_FAQS, ...homeIntentFaqs()];
 
   const itemList = {
     "@context": "https://schema.org",
