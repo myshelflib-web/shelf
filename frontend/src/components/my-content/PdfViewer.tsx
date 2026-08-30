@@ -39,7 +39,13 @@ import {
   penStroke,
   pointsToPath,
 } from "./pdfViewerHelpers";
-import { getCachedPdf, scheduleFullPdfCache } from "@/lib/pdfByteCache";
+import {
+  getCachedPdf,
+  peekCachedPdf,
+  reconcileCachedPdfVersion,
+  removeCachedPdf,
+  scheduleFullPdfCache,
+} from "@/lib/pdfByteCache";
 import {
   PDF_IO_ROOT_MARGIN,
   pdfInitialProbePages,
@@ -355,24 +361,29 @@ export function PdfViewer({
 
     (async () => {
       try {
-        const source = getPdfSourceRef.current
-          ? await getPdfSourceRef.current()
-          : await api.myContent.getPdfUrl(userTopicId);
-        if (cancelled) return;
-        sourceUrlRef.current = source.url;
-        const version = source.version;
-        const cached = await getCachedPdf(userTopicId, version);
+        const peeked = await peekCachedPdf(userTopicId);
         if (cancelled) return;
 
-        if (cached) {
-          loaded = await pdfjs.getDocument({
-            data: cached.slice(0),
-            isEvalSupported: true,
-            isOffscreenCanvasSupported: true,
-          }).promise;
-        } else {
-          // Range-request streaming: PDF.js fetches byte chunks from S3.
-          loaded = await pdfjs.getDocument({
+        const openFromPresign = async (): Promise<pdfjs.PDFDocumentProxy | null> => {
+          const source = getPdfSourceRef.current
+            ? await getPdfSourceRef.current()
+            : await api.myContent.getPdfUrl(userTopicId);
+          if (cancelled) return null;
+          sourceUrlRef.current = source.url;
+          const version = source.version;
+
+          const cached = await getCachedPdf(userTopicId, version);
+          if (cancelled) return null;
+
+          if (cached) {
+            return pdfjs.getDocument({
+              data: cached.slice(0),
+              isEvalSupported: true,
+              isOffscreenCanvasSupported: true,
+            }).promise;
+          }
+
+          const doc = await pdfjs.getDocument({
             url: source.url,
             withCredentials: false,
             rangeChunkSize: 65536 * 2,
@@ -381,15 +392,49 @@ export function PdfViewer({
             isEvalSupported: true,
             isOffscreenCanvasSupported: true,
           }).promise;
+          if (cancelled) {
+            doc.destroy();
+            return null;
+          }
           cancelCacheFill = scheduleFullPdfCache(
             userTopicId,
             version,
             source.url
           );
+          return doc;
+        };
+
+        if (peeked) {
+          sourceUrlRef.current = null;
+          try {
+            loaded = await pdfjs.getDocument({
+              data: peeked.data.slice(0),
+              isEvalSupported: true,
+              isOffscreenCanvasSupported: true,
+            }).promise;
+          } catch {
+            await removeCachedPdf(userTopicId);
+            loaded = await openFromPresign();
+          }
+
+          void (async () => {
+            try {
+              const source = getPdfSourceRef.current
+                ? await getPdfSourceRef.current()
+                : await api.myContent.getPdfUrl(userTopicId);
+              if (cancelled) return;
+              sourceUrlRef.current = source.url;
+              await reconcileCachedPdfVersion(userTopicId, source.version);
+            } catch {
+              /* download / presign can wait */
+            }
+          })();
+        } else {
+          loaded = await openFromPresign();
         }
 
-        if (cancelled) {
-          loaded.destroy();
+        if (cancelled || !loaded) {
+          loaded?.destroy();
           return;
         }
         const startPage = pdfResumePage(
@@ -978,6 +1023,14 @@ export function PdfViewer({
           }
 
           paintedAtScale.current.set(pageNum, scale);
+
+          const total = pdfDoc.numPages;
+          if (pageNum > 1) {
+            void pdfDoc.getPage(pageNum - 1).catch(() => undefined);
+          }
+          if (pageNum < total) {
+            void pdfDoc.getPage(pageNum + 1).catch(() => undefined);
+          }
 
           const textLayer = wrap.querySelector(
             ".pdf-text-layer"

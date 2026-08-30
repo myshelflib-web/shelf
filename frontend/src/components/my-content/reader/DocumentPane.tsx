@@ -372,6 +372,7 @@ export function DocumentPane({
   const viewRef = useRef<TabViewState>({});
   const pageIdRef = useRef<string | null>(null);
   const pageLoadGen = useRef(0);
+  const loadedHrefRef = useRef<string | null>(null);
 
   const currentHref = scopeHref(scope);
   const [savedView, setSavedView] = useState<TabViewState | undefined>(() =>
@@ -429,14 +430,20 @@ export function DocumentPane({
 
   const reloadPage = useCallback(() => {
     const gen = ++pageLoadGen.current;
-    setLoading(true);
-    setHighlights([]);
+    const href = currentHref;
+    const sameDocument =
+      loadedHrefRef.current === href && pageIdRef.current != null;
+    if (!sameDocument) {
+      setLoading(true);
+      setHighlights([]);
+    }
     fetchPage(scope)
       .then((result) => {
         if (gen !== pageLoadGen.current) return;
         const { page, navigation, isPreloaded, isLocked, subjectMeta, topicMeta, access, accessDenied } =
           result;
         if (accessDenied) {
+          loadedHrefRef.current = href;
           setPageData({
             id: page.id,
             title: page.title,
@@ -494,6 +501,7 @@ export function DocumentPane({
         setLiveReadPercent(loaded.readPercent);
         lastPersistedPercent.current = loaded.readPercent;
         pageIdRef.current = loaded.id;
+        loadedHrefRef.current = href;
         if (!isPreloaded && scope.kind !== "learn") {
           const contentType = loaded.contentType ?? "HTML";
           track(AnalyticsEvents.readerOpened, {
@@ -570,6 +578,7 @@ export function DocumentPane({
       .catch(() => {
         if (gen !== pageLoadGen.current) return;
         pageIdRef.current = null;
+        loadedHrefRef.current = null;
         setPageData(null);
         setLiveReadPercent(0);
         setLoading(false);

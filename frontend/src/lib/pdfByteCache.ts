@@ -8,7 +8,7 @@ const MAX_BYTES = 80 * 1024 * 1024;
 
 export type PdfCacheMeta = {
   pageId: string;
-  /** Invalidation token — typically Content-Length or ETag */
+  /** Invalidation token — pdfKey (+ file size for library pages). */
   version: string;
   byteLength: number;
   lastAccess: number;
@@ -17,6 +17,13 @@ export type PdfCacheMeta = {
 type PdfCacheRecord = PdfCacheMeta & {
   data: ArrayBuffer;
 };
+
+/** Stable content id — ignores legacy timestamp suffixes on cache versions. */
+export function pdfContentFingerprint(version: string): string {
+  const parts = version.split(":");
+  if (parts.length >= 2) return `${parts[0]}:${parts[1]}`;
+  return parts[0] ?? version;
+}
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -63,6 +70,22 @@ async function withStore<T>(
   }
 }
 
+/** Return cached bytes + version without requiring a presign round-trip. */
+export async function peekCachedPdf(
+  pageId: string
+): Promise<{ version: string; data: ArrayBuffer } | null> {
+  try {
+    const row = await withStore("readonly", (store) =>
+      idbReq<PdfCacheRecord | undefined>(store.get(pageId))
+    );
+    if (!row?.data?.byteLength) return null;
+    void touchCachedPdf(pageId);
+    return { version: row.version, data: row.data };
+  } catch {
+    return null;
+  }
+}
+
 /** Return cached PDF bytes if version matches. */
 export async function getCachedPdf(
   pageId: string,
@@ -73,11 +96,35 @@ export async function getCachedPdf(
       idbReq<PdfCacheRecord | undefined>(store.get(pageId))
     );
     if (!row || row.version !== version) return null;
-    // Touch lastAccess in background
     void touchCachedPdf(pageId);
     return row.data;
   } catch {
     return null;
+  }
+}
+
+/** Align stored version with the server or drop bytes when the PDF was replaced. */
+export async function reconcileCachedPdfVersion(
+  pageId: string,
+  serverVersion: string
+): Promise<void> {
+  try {
+    await withStore("readwrite", async (store) => {
+      const row = await idbReq<PdfCacheRecord | undefined>(store.get(pageId));
+      if (!row) return;
+      const local = pdfContentFingerprint(row.version);
+      const remote = pdfContentFingerprint(serverVersion);
+      if (local !== remote) {
+        store.delete(pageId);
+        return;
+      }
+      if (row.version !== serverVersion) {
+        row.version = serverVersion;
+        store.put(row);
+      }
+    });
+  } catch {
+    /* ignore */
   }
 }
 
@@ -159,25 +206,6 @@ export async function removeCachedPdf(pageId: string): Promise<void> {
   }
 }
 
-const VISITED_KEY_PREFIX = "shelf:pdf-seen:";
-
-function hasOpenedPdfBefore(pageId: string): boolean {
-  try {
-    return localStorage.getItem(`${VISITED_KEY_PREFIX}${pageId}`) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function markPdfOpened(pageId: string): void {
-  try {
-    localStorage.setItem(`${VISITED_KEY_PREFIX}${pageId}`, "1");
-  }
-  catch {
-    /* ignore */
-  }
-}
-
 async function downloadAndCachePdf(
   pageId: string,
   version: string,
@@ -190,18 +218,14 @@ async function downloadAndCachePdf(
 }
 
 /**
- * Fill IndexedDB only on revisits, deferred until the browser is idle.
- * First open skips the background full download to save bandwidth.
+ * Fill IndexedDB in the background (deferred until idle) so revisits and
+ * in-session page turns avoid extra S3 range requests.
  */
 export function scheduleFullPdfCache(
   pageId: string,
   version: string,
   url: string
 ): () => void {
-  const revisit = hasOpenedPdfBefore(pageId);
-  markPdfOpened(pageId);
-  if (!revisit) return () => undefined;
-
   let cancelled = false;
   const run = () => {
     if (cancelled) return;

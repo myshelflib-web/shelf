@@ -1682,7 +1682,7 @@ router.get("/pages/:id/pdf-url", async (req: Request, res: Response) => {
     res.json({
       url,
       expiresIn: PDF_PRESIGN_EXPIRES_SEC,
-      version: `${page.pdfKey}:${page.fileSizeBytes}:${page.updatedAt.getTime()}`,
+      version: `${page.pdfKey}:${page.fileSizeBytes}`,
     });
   } catch (err) {
     req.log?.error("my_content.pdf_presign_failed", errorFields(err));

@@ -332,7 +332,7 @@ async function sendArticlePdfUrl(req: Request, res: Response) {
     res.json({
       url,
       expiresIn: PDF_PRESIGN_EXPIRES_SEC,
-      version: `${resolved.article.pdfKey}:${resolved.article.updatedAt.getTime()}`,
+      version: resolved.article.pdfKey,
     });
   } catch {
     res.status(500).json({ error: "Could not open PDF" });
