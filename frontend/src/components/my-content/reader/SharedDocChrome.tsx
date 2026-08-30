@@ -110,6 +110,7 @@ export function DocumentChromeActions({
   onToggleClip,
   showShare,
   onShare,
+  showStar = true,
   starred,
   onToggleStar,
   showDelete,
@@ -124,6 +125,7 @@ export function DocumentChromeActions({
   onToggleClip: () => void;
   showShare: boolean;
   onShare: () => void;
+  showStar?: boolean;
   starred: boolean;
   onToggleStar: () => void;
   showDelete: boolean;
@@ -167,7 +169,9 @@ export function DocumentChromeActions({
         </button>
       )}
       {showShare && <ShareChromeButton onClick={onShare} />}
-      <StarChromeButton starred={starred} onClick={onToggleStar} />
+      {showStar && (
+        <StarChromeButton starred={starred} onClick={onToggleStar} />
+      )}
       {showDelete && (
         <button
           type="button"

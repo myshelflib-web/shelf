@@ -1224,6 +1224,7 @@ export const api = {
         page: { id: string; title: string; slug: string; contentType: string };
         href: string;
         alreadySaved: boolean;
+        status: string;
       }>("/api/my-content/from-curriculum", {
         method: "POST",
         body: JSON.stringify(data),

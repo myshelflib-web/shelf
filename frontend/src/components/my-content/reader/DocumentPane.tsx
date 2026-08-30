@@ -36,6 +36,10 @@ import {
   SharedByBanner,
 } from "./SharedDocChrome";
 import { PreloadedSaveBanner } from "./PreloadedSaveBanner";
+import {
+  promptPreloadedSave,
+  resolveAnnotationLock,
+} from "@/lib/preloadedReadOnly";
 import { ApiError } from "@/lib/api";
 import { StudyPanel } from "@/components/StudyPanel";
 import { useFullscreen } from "@/hooks/useFullscreen";
@@ -704,7 +708,8 @@ export function DocumentPane({
   }, [pageData, scope, onNavigate, confirm]);
 
   const startEditing = useCallback(() => {
-    if (!pageData || pageData.contentType === "PDF") return;
+    if (!pageData || pageData.isPreloaded) return;
+    if (pageData.contentType === "PDF") return;
     if (pageData.contentType === "VIDEO") return;
     if (pageData.contentType === "LINK") {
       setDraftTitle(pageData.title);
@@ -936,10 +941,18 @@ export function DocumentPane({
       : undefined;
   const guestLocked =
     Boolean(signInGate?.active) ||
-    Boolean(pageData?.access && !pageData.access.canAnnotate);
+    Boolean(pageData?.access && !pageData.access.canAnnotate) ||
+    isPreloadedDoc;
+  const { gate: annotationGate } = resolveAnnotationLock({
+    signInGateActive: Boolean(signInGate?.active),
+    canAnnotate: pageData?.access?.canAnnotate,
+    isPreloaded: isPreloadedDoc,
+  });
   const onGuestLockedClick = signInGate?.active
     ? (feature: string) => signInGate.prompt(feature)
-    : undefined;
+    : annotationGate === "save-to-library"
+      ? () => promptPreloadedSave()
+      : undefined;
 
   useEffect(() => {
     if (editing) setHtmlClip(false);
@@ -1267,6 +1280,7 @@ export function DocumentPane({
                   (!pageData.access || pageData.access.isOwner)
                 }
                 onShare={() => setShareOpen(true)}
+                showStar={!isPreloadedDoc}
                 starred={pageData.starred}
                 onToggleStar={() => void handleToggleStar()}
                 showDelete={
@@ -1336,6 +1350,7 @@ export function DocumentPane({
                   onHighlightsChange={setHighlights}
                   guestLocked={guestLocked}
                   onGuestLockedClick={onGuestLockedClick}
+                  annotationGate={annotationGate}
                   onAskSelection={(text, image, attach) =>
                     openStudyAI(text, image, attach)
                   }
@@ -1349,7 +1364,9 @@ export function DocumentPane({
                     isPhone && showChrome
                       ? {
                           starred: pageData.starred,
-                          onToggleStar: () => void handleToggleStar(),
+                          onToggleStar: isPreloadedDoc
+                            ? undefined
+                            : () => void handleToggleStar(),
                           onShare:
                             !isPreloadedDoc &&
                             (!pageData.access || pageData.access.isOwner)

@@ -482,6 +482,7 @@ export function ReaderWorkspace({
   const modalEditing = editing && !liveEdit;
   const readerReady = Boolean(user && !authLoading && focusedPane);
   const isPdf = focusedSnap?.pageData?.contentType === "PDF";
+  const isPreloaded = focusedSnap?.pageData?.isPreloaded ?? false;
 
   const toggleLibrary = useCallback(() => {
     const next = !state.libraryCollapsed;
@@ -550,7 +551,7 @@ export function ReaderWorkspace({
   useHotkey("}", () => cycleTab(1), { enabled: readerReady && !modalEditing });
   useHotkey("w", closeFocusedTab, { enabled: readerReady && !modalEditing });
   useHotkey("e", () => focusedHandlers?.startEditing(), {
-    enabled: readerReady && !modalEditing && !isPdf && !liveEdit,
+    enabled: readerReady && !modalEditing && !isPdf && !liveEdit && !isPreloaded,
   });
   useHotkey("mod+s", () => {
     if (focusedSnap?.pageData?.contentType === "HTML") {
@@ -570,7 +571,7 @@ export function ReaderWorkspace({
     enabled: readerReady && !modalEditing,
   });
   useHotkey("*", () => void focusedHandlers?.handleToggleStar(), {
-    enabled: readerReady && !modalEditing,
+    enabled: readerReady && !modalEditing && !isPreloaded,
   });
   useHotkey("x", () => void focusedHandlers?.handleToggleComplete(), {
     enabled: readerReady && !modalEditing,
@@ -988,7 +989,7 @@ export function ReaderWorkspace({
                     pageData.contentType === "HTML" && !liveEdit
                   }
                   onEdit={
-                    isPdf || liveEdit
+                    isPdf || liveEdit || isPreloaded
                       ? undefined
                       : focusedHandlers.startEditing
                   }

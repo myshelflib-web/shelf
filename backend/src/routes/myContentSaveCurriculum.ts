@@ -1,8 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { authMiddleware } from "../middleware/auth.js";
-import { scheduleIndexPage } from "../services/libraryIndex.js";
-import { getFromS3, getObjectBuffer, uploadToS3 } from "../services/s3.js";
-import { compressAndUploadToS3 } from "../utils/s3ObjectCompress.js";
+import { finishCurriculumLibraryCopy } from "../services/curriculumLibraryCopy.js";
 import { pageHref, userDocPrefix } from "../utils/docPaths.js";
 import { errorFields } from "../utils/logger.js";
 import { isPremiumUser } from "../utils/paywall.js";
@@ -13,7 +11,6 @@ import {
   type PageSlugScope,
 } from "../utils/pageScope.js";
 import prisma from "../utils/prisma.js";
-import { assertStorageRoom, QuotaError } from "../utils/quotas.js";
 import { userSelect } from "../utils/publicUser.js";
 import { slugify } from "../utils/slugify.js";
 import { curriculumSourceUrl } from "../utils/curriculumCopy.js";
@@ -126,6 +123,7 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
       },
       href: pageHref(notebook?.slug, topic?.slug, already.slug),
       alreadySaved: true,
+      status: already.status,
     });
     return;
   }
@@ -145,43 +143,10 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
     userSubjectId: collection.id,
   };
 
-  let storedBytes = 0;
-  let pdfKey: string | null = null;
-  let contentUrl: string | null = null;
   const slug = await uniquePageSlug(scope, article.title);
   const docPrefix = userDocPrefix(userId, collection.slug, null, slug);
-
-  try {
-    if (article.pdfKey) {
-      const { buffer } = await getObjectBuffer(article.pdfKey);
-      storedBytes += buffer.length;
-      assertStorageRoom(me, storedBytes);
-      pdfKey = `${docPrefix}/source.pdf`;
-      const uploaded = await compressAndUploadToS3(
-        pdfKey,
-        buffer,
-        "application/pdf"
-      );
-      storedBytes = uploaded.byteLength;
-    } else {
-      assertStorageRoom(me, 0);
-    }
-    if (article.contentUrl) {
-      const html = await getFromS3(article.contentUrl);
-      contentUrl = `${docPrefix}/content.html`;
-      await uploadToS3(contentUrl, html, "text/html; charset=utf-8");
-    }
-  } catch (err) {
-    if (err instanceof QuotaError) {
-      res.status(err.status).json({ error: err.message });
-      return;
-    }
-    req.log?.error("curriculum.save_s3_failed", errorFields(err));
-    res.status(500).json({ error: "Could not copy file" });
-    return;
-  }
-
   const order = await nextPageOrder(scope);
+
   const created = await prisma.userTopic.create({
     data: {
       userId,
@@ -190,22 +155,16 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
       title: article.title,
       slug,
       contentType: article.pdfKey ? "PDF" : "HTML",
-      pdfKey,
-      contentUrl,
+      pdfKey: article.pdfKey ? `${docPrefix}/source.pdf` : null,
+      contentUrl: article.contentUrl ? `${docPrefix}/content.html` : null,
       sourceUrl: marker,
-      fileSizeBytes: storedBytes,
-      status: "PUBLISHED",
+      fileSizeBytes: 0,
+      status: "PROCESSING",
       order,
     },
   });
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { storageUsedBytes: { increment: storedBytes } },
-  });
-
-  scheduleIndexPage(created.id);
-  res.status(201).json({
+  res.status(202).json({
     page: {
       id: created.id,
       title: created.title,
@@ -214,6 +173,22 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
     },
     href: pageHref(collection.slug, null, created.slug),
     alreadySaved: false,
+    status: "PROCESSING",
+  });
+
+  void finishCurriculumLibraryCopy({
+    userId,
+    pageId: created.id,
+    article: {
+      id: article.id,
+      pdfKey: article.pdfKey,
+      contentUrl: article.contentUrl,
+    },
+    docPrefix,
+    me,
+    log: req.log,
+  }).catch((err) => {
+    req.log?.error("curriculum.save_async_unhandled", errorFields(err));
   });
 });
 

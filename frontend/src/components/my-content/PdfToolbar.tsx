@@ -23,6 +23,8 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { withShortcut } from "@/lib/hotkeys";
+import type { AnnotationGate } from "@/lib/preloadedReadOnly";
+import { lockedFeatureLabel } from "@/lib/preloadedReadOnly";
 import { useIsPhone } from "@/hooks/useIsPhone";
 import { INK_WIDTHS } from "@/lib/straightenStroke";
 import { PEN_COLORS } from "./BlankEditorToolbar";
@@ -41,7 +43,7 @@ export type PdfToolbarMode = "text" | "pen" | "ink" | "erase" | "clip";
 
 export type PdfPhoneChrome = {
   starred: boolean;
-  onToggleStar: () => void;
+  onToggleStar?: () => void;
   onShare?: () => void;
   onDelete?: () => void;
 };
@@ -59,6 +61,7 @@ type Props = {
     mode: PdfToolbarMode | ((m: PdfToolbarMode) => PdfToolbarMode)
   ) => void;
   guestLocked: boolean;
+  annotationGate?: AnnotationGate | null;
   lockedTool: string;
   blocked: (feature: string) => boolean | void;
   penCursorHide: () => void;
@@ -96,6 +99,7 @@ export function PdfToolbar(props: Props) {
     mode,
     setMode,
     guestLocked,
+    annotationGate,
     lockedTool,
     blocked,
     penCursorHide,
@@ -158,7 +162,10 @@ export function PdfToolbar(props: Props) {
           {...btn}
           label={
             guestLocked
-              ? "Sign in to highlight or ask Study AI"
+              ? lockedFeatureLabel(
+                  annotationGate,
+                  "highlight or ask Study AI"
+                )
               : "Select text to highlight or ask Study AI"
           }
           active={mode === "text"}
@@ -175,7 +182,7 @@ export function PdfToolbar(props: Props) {
           ref={inkBtnRef}
           label={
             guestLocked
-              ? "Sign in to write on the page"
+              ? lockedFeatureLabel(annotationGate, "write on the page")
               : "Pen — underline or write on the page"
           }
           active={mode === "ink"}
@@ -200,7 +207,7 @@ export function PdfToolbar(props: Props) {
           ref={penSettingsBtnRef}
           label={
             guestLocked
-              ? "Sign in to highlight with pen"
+              ? lockedFeatureLabel(annotationGate, "highlight with pen")
               : "Draw highlighter strokes on the page"
           }
           active={mode === "pen"}
@@ -223,7 +230,11 @@ export function PdfToolbar(props: Props) {
         <ToolBtn
           {...btn}
           ref={eraseBtnRef}
-          label={guestLocked ? "Sign in to erase highlights" : "Eraser"}
+          label={
+            guestLocked
+              ? lockedFeatureLabel(annotationGate, "erase highlights")
+              : "Eraser"
+          }
           active={mode === "erase"}
           className={lockedTool}
           aria-disabled={guestLocked}
@@ -247,7 +258,7 @@ export function PdfToolbar(props: Props) {
             {...btn}
             label={
               guestLocked
-                ? "Sign in to clip regions"
+                ? lockedFeatureLabel(annotationGate, "clip regions")
                 : "Clip a region of the page as an image"
             }
             active={mode === "clip"}
@@ -377,23 +388,25 @@ export function PdfToolbar(props: Props) {
                 <Share2 className="w-[17px] h-[17px]" />
               </ToolBtn>
             ) : null}
-            <ToolBtn
-              {...btn}
-              label={withShortcut(
-                phoneChrome.starred ? "Remove star" : "Star this page",
-                "*"
-              )}
-              active={phoneChrome.starred}
-              className={phoneChrome.starred ? "text-amber-400" : undefined}
-              onClick={phoneChrome.onToggleStar}
-            >
-              <Star
-                className={clsx(
-                  "w-[17px] h-[17px]",
-                  phoneChrome.starred && "fill-amber-400"
+            {phoneChrome.onToggleStar ? (
+              <ToolBtn
+                {...btn}
+                label={withShortcut(
+                  phoneChrome.starred ? "Remove star" : "Star this page",
+                  "*"
                 )}
-              />
-            </ToolBtn>
+                active={phoneChrome.starred}
+                className={phoneChrome.starred ? "text-amber-400" : undefined}
+                onClick={phoneChrome.onToggleStar}
+              >
+                <Star
+                  className={clsx(
+                    "w-[17px] h-[17px]",
+                    phoneChrome.starred && "fill-amber-400"
+                  )}
+                />
+              </ToolBtn>
+            ) : null}
             {phoneChrome.onDelete ? (
               <ToolBtn {...btn} label="Delete page" onClick={phoneChrome.onDelete}>
                 <Trash2 className="w-[17px] h-[17px]" />

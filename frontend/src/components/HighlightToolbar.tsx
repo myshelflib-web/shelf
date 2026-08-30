@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { FileText, Sparkles, X } from "lucide-react";
 import { withShortcut } from "@/lib/hotkeys";
+import type { AnnotationGate } from "@/lib/preloadedReadOnly";
+import { lockedFeatureLabel } from "@/lib/preloadedReadOnly";
 
 /** Soft pastels matching the highlight menu reference */
 export const HIGHLIGHT_COLORS = [
@@ -24,6 +26,7 @@ interface HighlightToolbarProps {
   showColors?: boolean;
   /** Account-only — controls stay visible but muted; clicks call onLockedClick. */
   locked?: boolean;
+  lockedGate?: AnnotationGate | null;
   onLockedClick?: (feature: string) => void;
 }
 
@@ -36,6 +39,7 @@ export function HighlightToolbar({
   onClose,
   showColors = true,
   locked = false,
+  lockedGate = null,
   onLockedClick,
 }: HighlightToolbarProps) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -96,7 +100,11 @@ export function HighlightToolbar({
                 background: c.hex,
                 boxShadow: "inset 0 0 0 1px rgba(0,0,0,0.15)",
               }}
-              title={locked ? `Sign in to highlight (${c.id})` : `Highlight ${c.id}`}
+              title={
+                locked
+                  ? lockedFeatureLabel(lockedGate, `highlight (${c.id})`)
+                  : `Highlight ${c.id}`
+              }
               aria-label={`Highlight ${c.id}`}
               aria-disabled={locked}
             />
@@ -119,7 +127,11 @@ export function HighlightToolbar({
             locked ? "cursor-not-allowed opacity-70" : "hover:opacity-90"
           }`}
           style={{ color: "#e8c547" }}
-          title={locked ? "Sign in to add a note" : "Add a note"}
+          title={
+            locked
+              ? lockedFeatureLabel(lockedGate, "add a note")
+              : "Add a note"
+          }
           aria-disabled={locked}
         >
           <FileText className="w-3.5 h-3.5" strokeWidth={2} />
@@ -144,7 +156,7 @@ export function HighlightToolbar({
           style={{ color: "#b8a4f8" }}
           title={
             locked
-              ? "Sign in to ask Study AI"
+              ? lockedFeatureLabel(lockedGate, "ask Study AI")
               : withShortcut("Ask Study AI about this selection", "mod+l")
           }
           aria-disabled={locked}

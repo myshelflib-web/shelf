@@ -10,6 +10,7 @@ import {
 } from "@/lib/offline/highlights";
 import { canvasToJpegDataUrl } from "@/lib/pdfPageImage";
 import { UserContentHighlight } from "@/types";
+import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { HighlightToolbar } from "../HighlightToolbar";
 import { HighlightNoteModal } from "../HighlightNoteModal";
 import { Loader2 } from "lucide-react";
@@ -108,6 +109,7 @@ interface PdfViewerProps {
   /** Account-only annotate tools — visible but muted for guests. */
   guestLocked?: boolean;
   onGuestLockedClick?: (feature: string) => void;
+  annotationGate?: AnnotationGate | null;
   /** Owner library PDFs — page delete via thumbnail grid. */
   canEditPdf?: boolean;
   phoneChrome?: PdfPhoneChrome;
@@ -144,6 +146,7 @@ export function PdfViewer({
   onReadProgress,
   guestLocked = false,
   onGuestLockedClick,
+  annotationGate = null,
   canEditPdf,
   phoneChrome,
 }: PdfViewerProps) {
@@ -1627,6 +1630,7 @@ export function PdfViewer({
         mode={mode}
         setMode={setMode}
         guestLocked={guestLocked}
+        annotationGate={annotationGate}
         lockedTool={lockedTool}
         blocked={blocked}
         penCursorHide={penCursor.hide}
@@ -1900,6 +1904,7 @@ export function PdfViewer({
         <HighlightToolbar
           rect={toolbar.rect}
           locked={guestLocked}
+          lockedGate={annotationGate}
           onLockedClick={onGuestLockedClick}
           onHighlight={handleHighlight}
           onNote={() => {
@@ -1929,6 +1934,7 @@ export function PdfViewer({
           rect={activeHighlight.rect}
           showColors
           locked={guestLocked}
+          lockedGate={annotationGate}
           onLockedClick={onGuestLockedClick}
           onHighlight={() => {
             removeHighlight(activeHighlight.highlight.id);
