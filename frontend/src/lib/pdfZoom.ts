@@ -204,3 +204,51 @@ export function clearPdfVisualZoom(content: HTMLElement) {
   content.style.transform = "";
   content.style.transformOrigin = "";
 }
+
+/** Finger contacts only — Apple Pencil reports as stylus and must not pinch. */
+export type PdfPinchTouch = {
+  clientX: number;
+  clientY: number;
+  touchType?: string;
+};
+
+export function pdfPinchFingers<T extends PdfPinchTouch>(touches: ArrayLike<T>): T[] {
+  const fingers: T[] = [];
+  for (let i = 0; i < touches.length; i++) {
+    const touch = touches[i]!;
+    if (touch.touchType === "stylus" || touch.touchType === "pen") continue;
+    fingers.push(touch);
+  }
+  return fingers;
+}
+
+export function pdfPinchDistance(a: PdfPinchTouch, b: PdfPinchTouch): number {
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+}
+
+export function pdfPinchCentre(a: PdfPinchTouch, b: PdfPinchTouch): {
+  x: number;
+  y: number;
+} {
+  return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
+}
+
+/** Ignore finger-spread jitter during two-finger pan so scroll stays put. */
+export const PDF_PINCH_DEADZONE_RATIO = 0.06;
+export const PDF_PINCH_DEADZONE_PX = 12;
+
+export function isPdfPinch(originDist: number, currentDist: number): boolean {
+  if (!(originDist > 0) || !(currentDist > 0)) return false;
+  const delta = Math.abs(currentDist - originDist);
+  if (delta < PDF_PINCH_DEADZONE_PX) return false;
+  return Math.abs(currentDist / originDist - 1) >= PDF_PINCH_DEADZONE_RATIO;
+}
+
+export function nextPdfPinchScale(
+  originScale: number,
+  originDist: number,
+  currentDist: number
+): number {
+  if (!(originDist > 0) || !(currentDist > 0)) return clampPdfScale(originScale);
+  return clampPdfScale(originScale * (currentDist / originDist));
+}

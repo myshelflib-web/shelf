@@ -15,8 +15,13 @@ import {
   capturePdfZoomAnchor,
   clearPdfVisualZoom,
   clampPdfScale,
+  isPdfPinch,
   isPdfZoomWheel,
+  nextPdfPinchScale,
   nextPdfWheelScale,
+  pdfPinchCentre,
+  pdfPinchDistance,
+  pdfPinchFingers,
   pdfVisualZoomOrigin,
   pdfZoomContentEl,
   PDF_ZOOM_COMMIT_MS,
@@ -30,9 +35,13 @@ type GestureLike = Event & {
 };
 
 /**
- * Zoom the PDF with trackpad pinch, Ctrl/Cmd + mouse wheel, or toolbar +/-.
- * CSS-scales during the gesture; PDF.js canvases re-render after it settles.
- * After layout, the same sheet point stays under the cursor (or viewport center).
+ * Zoom the PDF with trackpad pinch, iPad two-finger pinch, Ctrl/Cmd + mouse
+ * wheel, or toolbar +/-. CSS-scales during the gesture; PDF.js canvases
+ * re-render after it settles. After layout, the same sheet point stays under
+ * the cursor (or pinch midpoint).
+ *
+ * Two-finger pan/scroll and pencil strokes are owned elsewhere — this hook
+ * only reads finger span for pinch and never starts ink or scroll.
  */
 export function usePdfWheelZoom(
   root: HTMLElement | null,
@@ -54,6 +63,10 @@ export function usePdfWheelZoom(
   const anchorRef = useRef<PdfZoomAnchor | null>(null);
   const gestureOriginRef = useRef(1);
   const gestureActiveRef = useRef(false);
+  const touchPinchActiveRef = useRef(false);
+  const touchPinchLiveRef = useRef(false);
+  const pinchOriginScaleRef = useRef(1);
+  const pinchOriginDistRef = useRef(0);
   const liveOriginRef = useRef<{ x: number; y: number } | null>(null);
   const lastClientRef = useRef({ x: 0, y: 0 });
   const commitTimerRef = useRef(0);
@@ -119,7 +132,7 @@ export function usePdfWheelZoom(
       if (!isPdfZoomWheel(e)) return;
       e.preventDefault();
       if (root.dataset.inkDrawing === "1") return;
-      if (gestureActiveRef.current) return;
+      if (gestureActiveRef.current || touchPinchActiveRef.current) return;
       paintVisual(
         nextPdfWheelScale(scaleRef.current, e.deltaY, e.deltaMode),
         e.clientX,
@@ -130,12 +143,14 @@ export function usePdfWheelZoom(
 
     const onGestureStart = (e: Event) => {
       e.preventDefault();
+      if (touchPinchActiveRef.current) return;
       gestureActiveRef.current = true;
       gestureOriginRef.current = scaleRef.current;
     };
 
     const onGestureChange = (e: Event) => {
       e.preventDefault();
+      if (touchPinchActiveRef.current) return;
       if (root.dataset.inkDrawing === "1") return;
       const ge = e as GestureLike;
       if (typeof ge.scale !== "number" || !Number.isFinite(ge.scale)) return;
@@ -149,12 +164,63 @@ export function usePdfWheelZoom(
 
     const onGestureEnd = (e: Event) => {
       e.preventDefault();
+      if (touchPinchActiveRef.current) return;
       gestureActiveRef.current = false;
       commit(false);
     };
 
+    const endTouchPinch = () => {
+      if (!touchPinchActiveRef.current) return;
+      touchPinchActiveRef.current = false;
+      touchPinchLiveRef.current = false;
+      pinchOriginDistRef.current = 0;
+      commit(false);
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      const fingers = pdfPinchFingers(e.touches);
+      if (fingers.length < 2) {
+        endTouchPinch();
+        return;
+      }
+      const a = fingers[0]!;
+      const b = fingers[1]!;
+      touchPinchActiveRef.current = true;
+      touchPinchLiveRef.current = false;
+      pinchOriginScaleRef.current = scaleRef.current;
+      pinchOriginDistRef.current = pdfPinchDistance(a, b);
+      lastClientRef.current = pdfPinchCentre(a, b);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (root.dataset.inkDrawing === "1") return;
+      const fingers = pdfPinchFingers(e.touches);
+      if (fingers.length < 2 || pinchOriginDistRef.current <= 0) return;
+      if (e.cancelable) e.preventDefault();
+      const a = fingers[0]!;
+      const b = fingers[1]!;
+      const dist = pdfPinchDistance(a, b);
+      if (!touchPinchLiveRef.current) {
+        if (!isPdfPinch(pinchOriginDistRef.current, dist)) return;
+        touchPinchLiveRef.current = true;
+      }
+      const centre = pdfPinchCentre(a, b);
+      paintVisual(
+        nextPdfPinchScale(pinchOriginScaleRef.current, pinchOriginDistRef.current, dist),
+        centre.x,
+        centre.y
+      );
+      scheduleCommit();
+    };
+
+    const onTouchEnd = (e: TouchEvent) => {
+      const fingers = pdfPinchFingers(e.touches);
+      if (fingers.length >= 2) return;
+      endTouchPinch();
+    };
+
     const onPointerDown = () => {
-      if (gestureActiveRef.current) return;
+      if (gestureActiveRef.current || touchPinchActiveRef.current) return;
       if (pendingScaleRef.current == null) return;
       if (pendingScaleRef.current === laidOutScaleRef.current) return;
       commit(true);
@@ -165,6 +231,10 @@ export function usePdfWheelZoom(
     root.addEventListener("gesturestart", onGestureStart, gestureOpts);
     root.addEventListener("gesturechange", onGestureChange, gestureOpts);
     root.addEventListener("gestureend", onGestureEnd, gestureOpts);
+    root.addEventListener("touchstart", onTouchStart, { passive: true });
+    root.addEventListener("touchmove", onTouchMove, { passive: false });
+    root.addEventListener("touchend", onTouchEnd, { passive: true });
+    root.addEventListener("touchcancel", onTouchEnd, { passive: true });
     root.addEventListener("pointerdown", onPointerDown, { capture: true });
     return () => {
       window.clearTimeout(commitTimerRef.current);
@@ -172,6 +242,10 @@ export function usePdfWheelZoom(
       root.removeEventListener("gesturestart", onGestureStart);
       root.removeEventListener("gesturechange", onGestureChange);
       root.removeEventListener("gestureend", onGestureEnd);
+      root.removeEventListener("touchstart", onTouchStart);
+      root.removeEventListener("touchmove", onTouchMove);
+      root.removeEventListener("touchend", onTouchEnd);
+      root.removeEventListener("touchcancel", onTouchEnd);
       root.removeEventListener("pointerdown", onPointerDown, true);
     };
   }, [root]);

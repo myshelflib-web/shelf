@@ -6,9 +6,14 @@ import {
   capturePdfZoomAnchorFromBoxes,
   clearPdfVisualZoom,
   clampPdfScale,
+  isPdfPinch,
   isPdfZoomWheel,
+  nextPdfPinchScale,
   nextPdfWheelScale,
   nextPdfZoomScroll,
+  pdfPinchCentre,
+  pdfPinchDistance,
+  pdfPinchFingers,
   pdfVisualZoomOrigin,
   pickPdfZoomPage,
 } from "./pdfZoom";
@@ -105,5 +110,40 @@ describe("pdf visual zoom", () => {
     clearPdfVisualZoom(el);
     expect(style.transform).toBe("");
     expect(style.transformOrigin).toBe("");
+  });
+});
+
+describe("pdf pinch fingers", () => {
+  it("ignores Apple Pencil stylus contacts", () => {
+    const fingers = pdfPinchFingers([
+      { clientX: 10, clientY: 20, touchType: "stylus" },
+      { clientX: 40, clientY: 80 },
+      { clientX: 80, clientY: 120, touchType: "direct" },
+    ]);
+    expect(fingers).toHaveLength(2);
+    expect(fingers[0]?.clientX).toBe(40);
+    expect(fingers[1]?.clientX).toBe(80);
+  });
+
+  it("measures span and midpoint between two fingers", () => {
+    const a = { clientX: 0, clientY: 0 };
+    const b = { clientX: 30, clientY: 40 };
+    expect(pdfPinchDistance(a, b)).toBe(50);
+    expect(pdfPinchCentre(a, b)).toEqual({ x: 15, y: 20 });
+  });
+});
+
+describe("pdf pinch scale", () => {
+  it("ignores small spread changes so two-finger pan does not zoom", () => {
+    expect(isPdfPinch(100, 105)).toBe(false);
+    expect(isPdfPinch(100, 88)).toBe(true);
+    expect(isPdfPinch(100, 120)).toBe(true);
+  });
+
+  it("scales from the span at pinch start and stays in range", () => {
+    expect(nextPdfPinchScale(1, 100, 150)).toBe(1.5);
+    expect(nextPdfPinchScale(1, 100, 50)).toBe(0.5);
+    expect(nextPdfPinchScale(1, 100, 400)).toBe(PDF_SCALE_MAX);
+    expect(nextPdfPinchScale(1, 0, 50)).toBe(1);
   });
 });
