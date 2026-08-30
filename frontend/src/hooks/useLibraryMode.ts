@@ -14,8 +14,8 @@ import {
 export function useLibraryMode() {
   const { user } = useAuth();
   const { goal } = useLearnStudyGoal();
-  const showPreloaded = goalHasPreloadedLibrary(goal);
   const isGuest = !user;
+  const showPreloaded = isGuest || goalHasPreloadedLibrary(goal);
 
   const [preferred, setPreferred] = useState<LibraryMode>("personal");
 
@@ -27,11 +27,13 @@ export function useLibraryMode() {
 
   const setMode = useCallback(
     (next: LibraryMode) => {
-      if (next === "preloaded" && !goalHasPreloadedLibrary(goal)) return;
+      if (next === "preloaded" && !isGuest && !goalHasPreloadedLibrary(goal)) {
+        return;
+      }
       setPreferred(next);
       writeLibraryMode(next);
     },
-    [goal]
+    [goal, isGuest]
   );
 
   return { mode, setMode, showPreloaded, goal, isGuest };

@@ -1,33 +1,31 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
-  FileText,
   FoldVertical,
   FolderOpen,
-  Lock,
   RefreshCw,
   Search,
-  Star,
 } from "lucide-react";
 import clsx from "clsx";
-import { useAuth } from "@/hooks/useAuth";
-import { api } from "@/lib/api";
-import { isPremiumUser } from "@/lib/premium";
-import { learnHref, learnScope } from "@/lib/learnContent";
 import { STUDY_GOAL_LABELS } from "@/lib/studyGoal";
+import {
+  catalogGoalLabel,
+  featuredGoalFor,
+  groupSubjectsByGoal,
+  matchesSearch,
+  parseLearnPath,
+} from "@/lib/learnCatalog";
 import { GuestStudyGoalSelect } from "@/components/learn/GuestStudyGoalSelect";
-import { ArticleSummary, StudyGoal, Subject, SubjectProgress } from "@/types";
+import { StudyGoal, SubjectProgress } from "@/types";
 import { ExplorerSidebarSkeleton } from "@/components/dashboard/DashboardSkeletons";
 import { LibraryModeTabs } from "@/components/my-content/LibraryModeTabs";
-import {
-  PersonalPageReaderScope,
-  scopeFromHref,
-} from "@/components/my-content/reader/types";
+import { PreloadedSubjectBranch } from "@/components/my-content/PreloadedSubjectBranch";
+import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
 import { LibraryMode } from "@/lib/libraryMode";
+import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 
 interface PreloadedLibrarySidebarProps {
   mode: LibraryMode;
@@ -61,11 +59,7 @@ export function PreloadedLibrarySidebar({
   onOpenPage,
   className,
 }: PreloadedLibrarySidebarProps) {
-  const router = useRouter();
-  const { user } = useAuth();
-  const isPremium = isPremiumUser(user);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { subjects, loading, reload } = useLearnSubjects();
   const [query, setQuery] = useState("");
   const [expandedSubjects, setExpandedSubjects] = useState<
     Record<string, boolean>
@@ -73,29 +67,20 @@ export function PreloadedLibrarySidebar({
   const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>(
     {}
   );
+  const [expandedGoals, setExpandedGoals] = useState<Record<string, boolean>>(
+    {}
+  );
 
-  const activeScope = currentHref ? scopeFromHref(currentHref) : null;
-  const activeSubject =
-    activeScope?.kind === "learn" ? activeScope.subjectSlug : undefined;
-  const activeTopic =
-    activeScope?.kind === "learn" ? activeScope.topicSlug : undefined;
-  const activeArticle =
-    activeScope?.kind === "learn" ? activeScope.articleSlug : undefined;
+  const browse = parseLearnPath(currentHref);
+  const activeSubject = browse.subjectSlug;
+  const activeTopic = browse.topicSlug;
+  const activeArticle = browse.articleSlug;
+
+  const activeSubjectObj = subjects.find((s) => s.slug === activeSubject);
+  const featuredGoal = featuredGoalFor(studyGoal, activeSubjectObj);
 
   const getProgress = (slug: string) =>
     progressBySubject.find((p) => p.slug === slug);
-
-  const load = useCallback(() => {
-    api.subjects
-      .list(studyGoal !== "GENERAL" ? { studyGoal } : undefined)
-      .then((res) => setSubjects(res.subjects))
-      .catch(() => setSubjects([]))
-      .finally(() => setLoading(false));
-  }, [studyGoal]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
 
   useEffect(() => {
     if (!activeSubject) return;
@@ -104,21 +89,45 @@ export function PreloadedLibrarySidebar({
     );
     if (activeTopic) {
       const key = `${activeSubject}:${activeTopic}`;
-      setExpandedTopics((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
+      setExpandedTopics((prev) =>
+        prev[key] ? prev : { ...prev, [key]: true }
+      );
     }
   }, [activeSubject, activeTopic]);
 
-  const filtered = subjects.filter(
-    (s) =>
-      s.name.toLowerCase().includes(query.toLowerCase()) ||
-      s.topics.some(
-        (t) =>
-          t.title.toLowerCase().includes(query.toLowerCase()) ||
-          (t.articles ?? []).some((a) =>
-            a.title.toLowerCase().includes(query.toLowerCase())
-          )
-      )
+  useEffect(() => {
+    if (featuredGoal) {
+      setExpandedGoals((prev) =>
+        prev[featuredGoal] ? prev : { ...prev, [featuredGoal]: true }
+      );
+      return;
+    }
+    if (subjects.length === 0) return;
+    setExpandedGoals((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const subject of subjects) {
+        const goal = subject.studyGoal ?? "GENERAL";
+        if (!next[goal]) {
+          next[goal] = true;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [featuredGoal, subjects]);
+
+  const filtered = useMemo(
+    () => subjects.filter((s) => matchesSearch(s, query)),
+    [subjects, query]
   );
+
+  const groups = useMemo(
+    () => groupSubjectsByGoal(filtered, featuredGoal),
+    [filtered, featuredGoal]
+  );
+
+  const searching = query.trim().length > 0;
 
   const toggleSubject = (slug: string) => {
     setExpandedSubjects((prev) => ({ ...prev, [slug]: !prev[slug] }));
@@ -129,61 +138,15 @@ export function PreloadedLibrarySidebar({
     setExpandedTopics((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const toggleGoal = (goal: StudyGoal) => {
+    setExpandedGoals((prev) => ({ ...prev, [goal]: !prev[goal] }));
+  };
+
   const collapseAll = () => {
     setExpandedSubjects({});
     setExpandedTopics({});
+    setExpandedGoals(featuredGoal ? { [featuredGoal]: true } : {});
   };
-
-  const openArticle = (
-    subjectSlug: string,
-    topicSlug: string,
-    article: ArticleSummary
-  ) => {
-    const href = learnHref(subjectSlug, topicSlug, article.slug);
-    const scope = learnScope(subjectSlug, topicSlug, article.slug);
-    if (workspaceMode && onOpenPage) {
-      onOpenPage({
-        href,
-        title: article.title,
-        pageId: article.id,
-        scope,
-      });
-      return;
-    }
-    router.push(href);
-  };
-
-  const renderArticleRow = (
-    subjectSlug: string,
-    topicSlug: string,
-    article: ArticleSummary,
-    isActive: boolean
-  ) => (
-    <div
-      key={article.id}
-      role="button"
-      tabIndex={0}
-      onClick={() => openArticle(subjectSlug, topicSlug, article)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          openArticle(subjectSlug, topicSlug, article);
-        }
-      }}
-      className={clsx(
-        "library-row group flex items-center gap-1 rounded-md text-[13px] min-w-0 px-1.5 py-1 cursor-pointer",
-        isActive
-          ? "bg-[var(--accent-light)] text-[var(--accent)]"
-          : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
-      )}
-    >
-      <FileText className="w-3.5 h-3.5 shrink-0 opacity-60" />
-      <span className="flex-1 truncate">{article.title}</span>
-      {article.isPremium && !isPremium && (
-        <Lock className="w-3 h-3 shrink-0 text-amber-500" />
-      )}
-    </div>
-  );
 
   return (
     <aside
@@ -208,10 +171,12 @@ export function PreloadedLibrarySidebar({
               type="button"
               title="Refresh preloaded list"
               aria-label="Refresh"
-              onClick={load}
+              onClick={() => void reload(true)}
               className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
             >
-              <RefreshCw className={clsx("w-4 h-4", loading && "animate-spin")} />
+              <RefreshCw
+                className={clsx("w-4 h-4", loading && "animate-spin")}
+              />
             </button>
             <button
               type="button"
@@ -251,112 +216,63 @@ export function PreloadedLibrarySidebar({
           <ExplorerSidebarSkeleton />
         ) : filtered.length === 0 ? (
           <p className="px-3 py-6 text-sm text-center text-[var(--text-muted)]">
-            No preloaded material for this goal yet.
+            No preloaded material yet.
           </p>
         ) : (
-          <div className="space-y-0.5">
-            <div className="flex items-center justify-between gap-1 px-2 py-1">
-              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium">
-                Subjects
-              </p>
-              <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
-                {filtered.length}
-              </span>
-            </div>
-            {filtered.map((subject) => {
-              const open = expandedSubjects[subject.slug] ?? false;
-              const prog = getProgress(subject.slug);
+          <div className="space-y-2">
+            {groups.map((group) => {
+              const goalOpen =
+                searching || (expandedGoals[group.goal] ?? false);
+              const isFeatured = featuredGoal === group.goal;
               return (
-                <div key={subject.id} className="mb-0.5">
-                  <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => toggleSubject(subject.slug)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        toggleSubject(subject.slug);
-                      }
-                    }}
-                    className="group flex items-center gap-0.5 px-1.5 py-1 rounded-md cursor-pointer hover:bg-[var(--bg-elevated)]"
+                <div key={group.goal}>
+                  <button
+                    type="button"
+                    onClick={() => toggleGoal(group.goal)}
+                    className="w-full flex items-center justify-between gap-1 px-2 py-1 rounded-md hover:bg-[var(--bg-elevated)]"
                   >
-                    <span className="p-0.5 text-[var(--text-muted)] shrink-0">
-                      {open ? (
-                        <ChevronDown className="w-3.5 h-3.5" />
+                    <span className="flex items-center gap-1 min-w-0">
+                      {goalOpen ? (
+                        <ChevronDown className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
                       ) : (
-                        <ChevronRight className="w-3.5 h-3.5" />
+                        <ChevronRight className="w-3 h-3 text-[var(--text-muted)] shrink-0" />
                       )}
-                    </span>
-                    <span className="shrink-0 text-sm">{subject.icon}</span>
-                    <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">
-                      {subject.name}
-                    </span>
-                    {prog && (
-                      <span className="text-[10px] text-[var(--text-muted)] shrink-0 tabular-nums">
-                        {prog.completed}/{prog.total}
+                      <span
+                        className={clsx(
+                          "text-[10px] uppercase tracking-wide font-medium truncate",
+                          isFeatured
+                            ? "text-[var(--text-secondary)]"
+                            : "text-[var(--text-muted)]"
+                        )}
+                      >
+                        {catalogGoalLabel(group.goal)}
                       </span>
-                    )}
-                  </div>
-
-                  {open && (
-                    <div className="ml-3 pl-2 border-l border-[var(--border)] space-y-0.5 mt-0.5">
-                      {subject.topics.map((topic) => {
-                        const tKey = `${subject.slug}:${topic.slug}`;
-                        const tOpen = expandedTopics[tKey] ?? false;
-                        const articles = topic.articles ?? [];
-                        return (
-                          <div key={topic.id}>
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              onClick={() =>
-                                toggleTopic(subject.slug, topic.slug)
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  e.preventDefault();
-                                  toggleTopic(subject.slug, topic.slug);
-                                }
-                              }}
-                              className="group flex items-center gap-0.5 px-1.5 py-1 rounded-md cursor-pointer hover:bg-[var(--bg-elevated)]"
-                            >
-                              <span className="p-0.5 text-[var(--text-muted)] shrink-0">
-                                {tOpen ? (
-                                  <ChevronDown className="w-3 h-3" />
-                                ) : (
-                                  <ChevronRight className="w-3 h-3" />
-                                )}
-                              </span>
-                              <Star className="w-3 h-3 shrink-0 text-[var(--text-muted)] opacity-50" />
-                              <span className="flex-1 min-w-0 truncate text-[13px] text-[var(--text-secondary)] text-left">
-                                {topic.title}
-                              </span>
-                              <span className="text-[10px] text-[var(--text-muted)] shrink-0">
-                                {articles.length}
-                              </span>
-                            </div>
-
-                            {tOpen && articles.length > 0 && (
-                              <div className="ml-3 pl-2 border-l border-[var(--border)] space-y-0.5 mt-0.5">
-                                {articles.map((article) => {
-                                  const isActive =
-                                    activeSubject === subject.slug &&
-                                    activeTopic === topic.slug &&
-                                    activeArticle === article.slug;
-                                  return renderArticleRow(
-                                    subject.slug,
-                                    topic.slug,
-                                    article,
-                                    isActive
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                    </span>
+                    <span className="text-[10px] text-[var(--text-muted)] tabular-nums shrink-0">
+                      {group.subjects.length}
+                    </span>
+                  </button>
+                  {goalOpen &&
+                    group.subjects.map((subject) => {
+                      const prog = getProgress(subject.slug);
+                      return (
+                        <PreloadedSubjectBranch
+                          key={subject.id}
+                          subject={subject}
+                          open={expandedSubjects[subject.slug] ?? false}
+                          expandedTopics={expandedTopics}
+                          activeSubject={activeSubject}
+                          activeTopic={activeTopic}
+                          activeArticle={activeArticle}
+                          completed={prog?.completed}
+                          total={prog?.total}
+                          workspaceMode={workspaceMode}
+                          onToggleSubject={toggleSubject}
+                          onToggleTopic={toggleTopic}
+                          onOpenPage={onOpenPage}
+                        />
+                      );
+                    })}
                 </div>
               );
             })}

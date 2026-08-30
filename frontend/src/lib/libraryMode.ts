@@ -23,13 +23,13 @@ export function writeLibraryMode(mode: LibraryMode) {
   }
 }
 
-/** Force personal when General; guests stay on preloaded when available. */
+/** Guests always see preloaded curriculum. Signed-in General stays personal. */
 export function resolveLibraryMode(
   goal: StudyGoal | null | undefined,
   preferred: LibraryMode,
   isGuest = false
 ): LibraryMode {
-  if (!goalHasPreloadedLibrary(goal)) return "personal";
   if (isGuest) return "preloaded";
+  if (!goalHasPreloadedLibrary(goal)) return "personal";
   return preferred;
 }
