@@ -41,11 +41,9 @@ import { useIsPhone } from "@/hooks/useIsPhone";
 import { useReaderCompactInit } from "@/hooks/useReaderCompactInit";
 import { useLearnStudyGoal } from "@/hooks/useLearnStudyGoal";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
-import { api } from "@/lib/api";
 import { isReaderHref, softReplace } from "@/lib/softNavigate";
 import { getSelectedText, withShortcut } from "@/lib/hotkeys";
 import { rememberGuestLearnArticle } from "@/lib/guestLearnResume";
-import { SubjectProgress } from "@/types";
 
 const WARM_TABS_PER_PANE = 12;
 
@@ -63,9 +61,6 @@ export function LearnReaderWorkspace({
   const libraryPanelRef = usePanelRef();
   const studyAIPanelRef = usePanelRef();
 
-  const [progressBySubject, setProgressBySubject] = useState<SubjectProgress[]>(
-    []
-  );
   const [signInFeature, setSignInFeature] = useState<string | null>(null);
   const [askSelection, setAskSelection] = useState<string | null>(null);
   const [askImage, setAskImage] = useState<string | undefined>();
@@ -126,17 +121,6 @@ export function LearnReaderWorkspace({
       focusedTab?.title
     );
   }, [user, focusedTab, routeScope]);
-
-  useEffect(() => {
-    if (!user) {
-      setProgressBySubject([]);
-      return;
-    }
-    api.progress
-      .summary()
-      .then(({ progressBySubject: progress }) => setProgressBySubject(progress))
-      .catch(() => {});
-  }, [user]);
 
   useEffect(() => {
     const panel = libraryPanelRef.current;
@@ -327,7 +311,6 @@ export function LearnReaderWorkspace({
     <LibrarySidePanel
       currentHref={scopeHref(routeScope)}
       workspaceMode
-      progressBySubject={progressBySubject}
       showGoalPicker={showGoalPicker}
       onStudyGoalChange={setGuestGoal}
       onGuestPersonalClick={() =>

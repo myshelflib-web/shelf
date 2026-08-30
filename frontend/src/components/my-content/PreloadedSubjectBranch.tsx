@@ -24,8 +24,6 @@ export function PreloadedSubjectBranch({
   activeSubject,
   activeTopic,
   activeArticle,
-  completed,
-  total,
   workspaceMode,
   onToggleSubject,
   onToggleTopic,
@@ -37,8 +35,6 @@ export function PreloadedSubjectBranch({
   activeSubject?: string;
   activeTopic?: string;
   activeArticle?: string;
-  completed?: number;
-  total?: number;
   workspaceMode: boolean;
   onToggleSubject: (slug: string) => void;
   onToggleTopic: (subjectSlug: string, topicSlug: string) => void;
@@ -70,7 +66,7 @@ export function PreloadedSubjectBranch({
   };
 
   return (
-    <div className="mb-1 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)]/70 overflow-hidden">
+    <div className="mb-0.5">
       <div
         role="button"
         tabIndex={0}
@@ -99,11 +95,6 @@ export function PreloadedSubjectBranch({
         <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">
           {subject.name}
         </span>
-        {typeof completed === "number" && typeof total === "number" && (
-          <span className="text-[10px] text-[var(--text-muted)] shrink-0 tabular-nums">
-            {completed}/{total}
-          </span>
-        )}
       </div>
 
       {open && (
@@ -150,9 +141,6 @@ export function PreloadedSubjectBranch({
                   />
                   <span className="flex-1 min-w-0 truncate text-[13px] text-[var(--text-secondary)] text-left">
                     {topic.title}
-                  </span>
-                  <span className="text-[10px] text-[var(--text-muted)] shrink-0">
-                    {articles.length}
                   </span>
                 </div>
 

@@ -9,7 +9,7 @@ import { SignInPromptModal } from "@/components/learn/SignInPromptModal";
 import { useLibraryMode } from "@/hooks/useLibraryMode";
 import { useAuth } from "@/hooks/useAuth";
 import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
-import { SubjectProgress, StudyGoal, UserSubject } from "@/types";
+import { StudyGoal, UserSubject } from "@/types";
 import { LibraryMode } from "@/lib/libraryMode";
 
 interface LibrarySidePanelProps {
@@ -20,7 +20,6 @@ interface LibrarySidePanelProps {
   currentHref?: string;
   enablePageDrag?: boolean;
   workspaceMode?: boolean;
-  progressBySubject?: SubjectProgress[];
   showGoalPicker?: boolean;
   onStudyGoalChange?: (goal: StudyGoal) => void;
   onOpenPage?: (payload: {
@@ -43,7 +42,6 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
   const {
     onGuestPersonalClick,
     returnTo: returnToProp,
-    progressBySubject,
     showGoalPicker,
     onStudyGoalChange,
     ...sidebarProps
@@ -87,7 +85,6 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
           studyGoal={goal}
           currentHref={sidebarProps.currentHref}
           workspaceMode={sidebarProps.workspaceMode}
-          progressBySubject={progressBySubject}
           showGoalPicker={showGoalPicker}
           onStudyGoalChange={onStudyGoalChange}
           onOpenPage={sidebarProps.onOpenPage}

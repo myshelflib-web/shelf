@@ -11,7 +11,7 @@ import clsx from "clsx";
 import { STUDY_GOAL_LABELS } from "@/lib/studyGoal";
 import { matchesSearch, parseLearnPath, subjectGoal } from "@/lib/learnCatalog";
 import { GuestStudyGoalSelect } from "@/components/learn/GuestStudyGoalSelect";
-import { StudyGoal, SubjectProgress } from "@/types";
+import { StudyGoal } from "@/types";
 import { ExplorerSidebarSkeleton } from "@/components/dashboard/DashboardSkeletons";
 import { LibraryModeTabs } from "@/components/my-content/LibraryModeTabs";
 import { PreloadedSubjectBranch } from "@/components/my-content/PreloadedSubjectBranch";
@@ -26,7 +26,6 @@ interface PreloadedLibrarySidebarProps {
   studyGoal: StudyGoal;
   currentHref?: string;
   workspaceMode?: boolean;
-  progressBySubject?: SubjectProgress[];
   showGoalPicker?: boolean;
   onStudyGoalChange?: (goal: StudyGoal) => void;
   onOpenPage?: (payload: {
@@ -45,7 +44,6 @@ export function PreloadedLibrarySidebar({
   studyGoal,
   currentHref,
   workspaceMode = false,
-  progressBySubject = [],
   showGoalPicker = false,
   onStudyGoalChange,
   onOpenPage,
@@ -64,9 +62,6 @@ export function PreloadedLibrarySidebar({
   const activeSubject = browse.subjectSlug;
   const activeTopic = browse.topicSlug;
   const activeArticle = browse.articleSlug;
-
-  const getProgress = (slug: string) =>
-    progressBySubject.find((p) => p.slug === slug);
 
   useEffect(() => {
     if (!activeSubject) return;
@@ -178,16 +173,12 @@ export function PreloadedLibrarySidebar({
           </p>
         ) : (
           <div className="space-y-0.5">
-            <div className="flex items-center justify-between gap-1 px-2 py-1">
+            <div className="px-2 py-1">
               <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium">
                 Collections
               </p>
-              <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
-                {filtered.length}
-              </span>
             </div>
             {filtered.map((subject) => {
-              const prog = getProgress(subject.slug);
               return (
                 <PreloadedSubjectBranch
                   key={subject.id}
@@ -197,8 +188,6 @@ export function PreloadedLibrarySidebar({
                   activeSubject={activeSubject}
                   activeTopic={activeTopic}
                   activeArticle={activeArticle}
-                  completed={prog?.completed}
-                  total={prog?.total}
                   workspaceMode={workspaceMode}
                   onToggleSubject={toggleSubject}
                   onToggleTopic={toggleTopic}
