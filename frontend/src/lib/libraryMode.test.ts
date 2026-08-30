@@ -9,9 +9,15 @@ describe("resolveLibraryMode", () => {
 
   it("forces signed-in General users onto personal", () => {
     expect(resolveLibraryMode("GENERAL", "preloaded", false)).toBe("personal");
+    expect(resolveLibraryMode("GENERAL", null, false)).toBe("personal");
   });
 
-  it("honors preferred mode for signed-in exam goals", () => {
+  it("defaults signed-in exam goals to preloaded when unset", () => {
+    expect(resolveLibraryMode("GATE", null, false)).toBe("preloaded");
+    expect(resolveLibraryMode("UPSC", null, false)).toBe("preloaded");
+  });
+
+  it("honors an explicit Personal choice for signed-in exam goals", () => {
     expect(resolveLibraryMode("GATE", "personal", false)).toBe("personal");
     expect(resolveLibraryMode("GATE", "preloaded", false)).toBe("preloaded");
   });

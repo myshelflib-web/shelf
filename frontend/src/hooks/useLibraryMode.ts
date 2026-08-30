@@ -13,11 +13,12 @@ import {
 
 export function useLibraryMode() {
   const { user } = useAuth();
-  const { goal } = useLearnStudyGoal();
+  const { goal: filterGoal, accountGoal } = useLearnStudyGoal();
   const isGuest = !user;
+  const goal = isGuest ? filterGoal : (accountGoal ?? "GENERAL");
   const showPreloaded = isGuest || goalHasPreloadedLibrary(goal);
 
-  const [preferred, setPreferred] = useState<LibraryMode>("personal");
+  const [preferred, setPreferred] = useState<LibraryMode | null>(null);
 
   useEffect(() => {
     setPreferred(readLibraryMode());

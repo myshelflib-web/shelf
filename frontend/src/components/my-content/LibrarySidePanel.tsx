@@ -49,7 +49,7 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
 
   const pathname = usePathname();
   const { user, loading: authLoading } = useAuth();
-  const { mode, setMode, showPreloaded, goal } = useLibraryMode();
+  const { mode, setMode, showPreloaded, goal, isGuest } = useLibraryMode();
   const [signInFeature, setSignInFeature] = useState<string | null>(null);
 
   const handleModeChange = useCallback(
@@ -85,7 +85,7 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
           studyGoal={goal}
           currentHref={sidebarProps.currentHref}
           workspaceMode={sidebarProps.workspaceMode}
-          showGoalPicker={showGoalPicker}
+          showGoalPicker={Boolean(showGoalPicker) && isGuest}
           onStudyGoalChange={onStudyGoalChange}
           onOpenPage={sidebarProps.onOpenPage}
           className={sidebarProps.className}

@@ -5,13 +5,14 @@ export type LibraryMode = "personal" | "preloaded";
 
 export const LIBRARY_MODE_KEY = "shelf:library-mode";
 
-export function readLibraryMode(): LibraryMode {
-  if (typeof window === "undefined") return "personal";
+export function readLibraryMode(): LibraryMode | null {
+  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(LIBRARY_MODE_KEY);
-    return raw === "preloaded" ? "preloaded" : "personal";
+    if (raw === "preloaded" || raw === "personal") return raw;
+    return null;
   } catch {
-    return "personal";
+    return null;
   }
 }
 
@@ -35,13 +36,14 @@ export function seedLibraryModeForNewUser(goal: StudyGoal | null | undefined) {
   }
 }
 
-/** Guests always see preloaded curriculum. Signed-in General stays personal. */
+/** Guests always see preloaded. Signed-in General stays personal.
+ *  Exam goals default to preloaded until the user picks Personal. */
 export function resolveLibraryMode(
   goal: StudyGoal | null | undefined,
-  preferred: LibraryMode,
+  preferred: LibraryMode | null,
   isGuest = false
 ): LibraryMode {
   if (isGuest) return "preloaded";
   if (!goalHasPreloadedLibrary(goal)) return "personal";
-  return preferred;
+  return preferred ?? "preloaded";
 }

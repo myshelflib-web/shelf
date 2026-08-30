@@ -17,7 +17,6 @@ import { SHELF_CONTENT_CHANGED, contentChangeFromEvent } from "@/lib/contentEven
 import { searchLibrary, LibrarySearchHit } from "@/lib/librarySearch";
 import { getLastRead, hydrateLastReads, LastRead } from "@/lib/tabViewState";
 import { withShortcut } from "@/lib/hotkeys";
-import { LibrarySuggestChips } from "@/components/LibrarySuggestChips";
 
 /**
  * Cursor-style empty mid-pane: search the library + add collection/page.
@@ -165,15 +164,7 @@ export function LibraryEmptyWorkspace() {
           </div>
         )}
 
-        {!query.trim() ? (
-          <LibrarySuggestChips
-            surface="library"
-            className={bootLoading || showResume ? "mt-4" : "mt-8"}
-            onPick={(item) => setQuery(item.query)}
-          />
-        ) : null}
-
-        <label className={`relative w-full ${query.trim() ? "mt-8" : "mt-3"}`}>
+        <label className="relative w-full mt-8">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
           <input
             value={query}
@@ -196,7 +187,7 @@ export function LibraryEmptyWorkspace() {
           />
         </label>
 
-        {query.trim() ? (
+        {query.trim() && (
           <ul className="w-full mt-2 rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] overflow-hidden max-h-64 overflow-y-auto">
             {searching ? (
               <LibrarySearchHitsSkeleton />
@@ -228,7 +219,7 @@ export function LibraryEmptyWorkspace() {
               ))
             )}
           </ul>
-        ) : null}
+        )}
 
         <div className="mt-8 w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
           <button
