@@ -7,6 +7,7 @@ import {
   BRAND_TAGLINE,
 } from "@/lib/seo/brandIdentity";
 import { BrandSeoSignals } from "@/components/seo/BrandSeoSignals";
+import { SiteNavigationJsonLd } from "@/components/seo/SiteNavigationJsonLd";
 
 export function SiteJsonLd() {
   const siteUrl = getSiteUrl();
@@ -117,6 +118,7 @@ export function SiteJsonLd() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(software) }}
       />
       <BrandSeoSignals />
+      <SiteNavigationJsonLd />
     </>
   );
 }
