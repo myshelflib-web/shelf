@@ -13,7 +13,6 @@ import { LibrarySidePanel } from "@/components/my-content/LibrarySidePanel";
 import { ReaderBottomBar } from "@/components/ReaderBottomBar";
 import { ScheduleReadModal } from "@/components/ScheduleReadModal";
 import { ClipSaveModal } from "@/components/my-content/ClipSaveModal";
-import { StudyPanel } from "@/components/StudyPanel";
 import { useAuth } from "@/hooks/useAuth";
 import { useReadingTimer } from "@/hooks/useReadingTimer";
 import { useScheduledPageHrefs } from "@/hooks/useScheduledPageHrefs";
@@ -32,12 +31,11 @@ import {
   PanelLeft,
   PanelRightClose,
   PanelRight,
-  Sparkles,
-  X,
+  Highlighter,
   Columns2,
 } from "lucide-react";
-import Link from "next/link";
 import { DocumentPane, DocumentPaneHandlers, DocumentPaneSnapshot, LoadedPage } from "./DocumentPane";
+import { ReaderRightPanel, type ReaderRightPanelTab } from "./ReaderRightPanel";
 import { ReaderTabStrip } from "./ReaderTabStrip";
 import { useReaderWorkspace } from "./useReaderWorkspace";
 import { useHotkey } from "@/hooks/useHotkeys";
@@ -86,6 +84,7 @@ export function ReaderWorkspace({
   const [clipImage, setClipImage] = useState<string | null>(null);
   const [clipPage, setClipPage] = useState<LoadedPage | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [rightPanelTab, setRightPanelTab] = useState<ReaderRightPanelTab>("study-ai");
   const [snapshots, setSnapshots] = useState<
     Record<string, DocumentPaneSnapshot>
   >({});
@@ -320,6 +319,7 @@ export function ReaderWorkspace({
   }, [state.studyAICollapsed, studyAIPanelRef, compactPortrait]);
 
   const openStudyAIPanel = useCallback(() => {
+    setRightPanelTab("study-ai");
     setStudyAICollapsed(false);
     if (compactPortrait) return;
     const panel = studyAIPanelRef.current;
@@ -339,6 +339,11 @@ export function ReaderWorkspace({
     setAskImage(undefined);
     setAttachNote(undefined);
   }, [setStudyAICollapsed, studyAIPanelRef]);
+
+  const openHighlightsPanel = useCallback(() => {
+    setRightPanelTab("highlights");
+    openStudyAIPanel();
+  }, [openStudyAIPanel]);
 
   const syncReaderUrl = useCallback((href: string) => {
     if (href === scopeHref(routeScope)) return;
@@ -657,64 +662,26 @@ export function ReaderWorkspace({
   );
 
   const studyAIShell = (
-    <div className="h-full flex flex-col border-l border-[var(--border)] bg-[var(--bg-elevated)] overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-4 pt-3 pb-2 shrink-0 border-b border-[var(--border-subtle)]">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--accent-light)] text-[var(--accent)] shrink-0">
-            <Sparkles className="w-3.5 h-3.5" />
-          </span>
-          <div className="min-w-0">
-            <h2 className="text-[13px] font-semibold text-[var(--text-primary)] leading-tight">
-              Study AI
-            </h2>
-            <p className="text-[11px] text-[var(--text-muted)] truncate">
-              {studyEmbed
-                ? "Ask about this linked page"
-                : askSelection
-                  ? "Ask about the highlight"
-                  : "Ask about this file"}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Link
-            href="/study-ai"
-            className="text-[11px] text-[var(--accent)] hover:underline px-1"
-          >
-            All chats
-          </Link>
-          <button
-            type="button"
-            onClick={closeStudyAIPanel}
-            className="p-1.5 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)]"
-            title="Hide Study AI"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-      <div className="flex-1 min-h-0 flex flex-col overflow-hidden px-4 py-3">
-        {studyPageId ? (
-          <StudyPanel
-            userTopicId={studyPageId}
-            selection={askSelection}
-            imageBase64={askImage}
-            getPageImage={() => focusedHandlers?.capturePdfPage() ?? ""}
-            onClearSelection={() => {
-              setAskSelection(null);
-              setAskImage(undefined);
-              setAttachNote(undefined);
-            }}
-            onAttachNote={attachNote}
-            embedMode={studyEmbed}
-          />
-        ) : (
-          <p className="text-sm text-[var(--text-muted)]">
-            Open a page to ask Study AI about it.
-          </p>
-        )}
-      </div>
-    </div>
+    <ReaderRightPanel
+      tab={rightPanelTab}
+      onTabChange={setRightPanelTab}
+      onClose={closeStudyAIPanel}
+      studyPageId={studyPageId}
+      studyEmbed={studyEmbed}
+      askSelection={askSelection}
+      askImage={askImage}
+      attachNote={attachNote}
+      onClearSelection={() => {
+        setAskSelection(null);
+        setAskImage(undefined);
+        setAttachNote(undefined);
+      }}
+      capturePdfPage={() => focusedHandlers?.capturePdfPage() ?? ""}
+      highlights={focusedSnap?.highlights ?? []}
+      highlightsHydrating={focusedSnap?.highlightsHydrating ?? false}
+      isPdf={isPdf}
+      onHighlightSelect={(h) => focusedHandlers?.scrollToHighlight(h)}
+    />
   );
 
   return (
@@ -858,6 +825,15 @@ export function ReaderWorkspace({
                   <button
                     type="button"
                     className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
+                    title="Show highlights & notes"
+                    aria-label="Show highlights and notes"
+                    onClick={openHighlightsPanel}
+                  >
+                    <Highlighter className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
                     title={
                       state.studyAICollapsed
                         ? withShortcut("Show Study AI panel", "mod+j")
@@ -959,7 +935,10 @@ export function ReaderWorkspace({
                                         snap.scrollContainer &&
                                       old.contentRoot === snap.contentRoot &&
                                       old.pdfPage === snap.pdfPage &&
-                                      old.pdfNumPages === snap.pdfNumPages
+                                      old.pdfNumPages === snap.pdfNumPages &&
+                                      old.highlights === snap.highlights &&
+                                      old.highlightsHydrating ===
+                                        snap.highlightsHydrating
                                     ) {
                                       return prev;
                                     }
@@ -1056,7 +1035,9 @@ export function ReaderWorkspace({
         onClose={closeStudyAIPanel}
         side="right"
         wide
-        title="Study AI"
+        title={
+          rightPanelTab === "highlights" ? "Highlights & notes" : "Study AI"
+        }
         fullScreen={isPhone}
       >
         {studyAIShell}

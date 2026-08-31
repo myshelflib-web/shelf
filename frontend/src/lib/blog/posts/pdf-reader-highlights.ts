@@ -9,6 +9,7 @@ export const pdfReaderHighlights = buildPost(
     excerpt:
       "Shelf treats every uploaded PDF as a first-class document: color highlights, pen markup, text selection, and notes that stay attached to the page.",
     publishedAt: "2026-01-18",
+    updatedAt: "2026-08-31",
     tags: ["pdf", "highlights", "reader", "annotations"],
     readingMinutes: 7,
   },
@@ -36,6 +37,13 @@ export const pdfReaderHighlights = buildPost(
         "Keyboard shortcuts for page navigation in the reader",
         "Schedule reading creates a planner task linked back to the page",
         "Undo for recent PDF page deletes within a session",
+      ],
+    },
+    {
+      heading: "Highlights & notes panel",
+      paragraphs: [
+        "Open the right panel and switch to Highlights to browse every mark on the current page as snippets — highlighted text, ink strokes, and attached notes together. The list loads in the background while you keep reading; skeleton rows appear only on a fresh page with nothing cached yet.",
+        "Click any snippet to jump back to that spot in the PDF or HTML document. PDFs scroll to the correct page and vertical position; long lists paginate so the panel stays fast on heavily annotated papers.",
       ],
     },
     {

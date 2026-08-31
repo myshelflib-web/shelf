@@ -16,6 +16,10 @@ import {
 } from "@/lib/analytics";
 import { captureVisibleSketchPage } from "@/lib/captureSketchPage";
 import { listHighlights } from "@/lib/offline/highlights";
+import {
+  highlightPageOffset,
+  scrollHtmlHighlight,
+} from "@/lib/highlightNavigation";
 import { updatePageProgress } from "@/lib/offline/progress";
 import { requireOnline } from "@/lib/offline/notice";
 import { syncPageInTree } from "@/lib/myContentTree";
@@ -238,6 +242,8 @@ export type DocumentPaneSnapshot = {
   pdfPage: number | null;
   pdfNumPages: number | null;
   readPercent: number;
+  highlights: UserContentHighlight[];
+  highlightsHydrating: boolean;
 };
 
 export type DocumentPaneHandlers = {
@@ -264,6 +270,7 @@ export type DocumentPaneHandlers = {
   pdfPrevPage: () => void;
   /** PDF canvas JPEG, or sketch notebook sheet when the open page is ink. */
   capturePdfPage: () => string;
+  scrollToHighlight: (highlight: UserContentHighlight) => void;
 };
 
 interface DocumentPaneProps {
@@ -325,6 +332,7 @@ export function DocumentPane({
   const scope = tab.scope;
   const [pageData, setPageData] = useState<LoadedPage | null>(null);
   const [highlights, setHighlights] = useState<UserContentHighlight[]>([]);
+  const [highlightsHydrating, setHighlightsHydrating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -440,6 +448,7 @@ export function DocumentPane({
     if (!sameDocument) {
       setLoading(true);
       setHighlights([]);
+      setHighlightsHydrating(true);
     }
     fetchPage(scope)
       .then((result) => {
@@ -557,7 +566,10 @@ export function DocumentPane({
         }
         // Show the document immediately; hydrate highlights in the background.
         setLoading(false);
-        if (isPreloaded) return;
+        if (isPreloaded) {
+          setHighlightsHydrating(false);
+          return;
+        }
         void (async () => {
           try {
             const hl = await listHighlights(page.id);
@@ -576,6 +588,8 @@ export function DocumentPane({
               if (gen !== pageLoadGen.current) return;
               setHighlights([]);
             }
+          } finally {
+            if (gen === pageLoadGen.current) setHighlightsHydrating(false);
           }
         })();
       })
@@ -696,6 +710,22 @@ export function DocumentPane({
       );
     },
     [pageData, isFullscreen, onAskStudyAI]
+  );
+
+  const scrollToHighlight = useCallback(
+    (highlight: UserContentHighlight) => {
+      if (pageData?.contentType === "PDF") {
+        pdfCommandsRef.current?.scrollToHighlight(
+          highlight.pageNumber ?? 1,
+          highlightPageOffset(highlight)
+        );
+        return;
+      }
+      if (scrollEl && contentRoot) {
+        scrollHtmlHighlight(scrollEl, contentRoot, highlight.id);
+      }
+    },
+    [pageData?.contentType, scrollEl, contentRoot]
   );
 
   const { handleToggleComplete, handleToggleStar } = useDocumentPaneFlags({
@@ -1032,6 +1062,7 @@ export function DocumentPane({
         const host = shellRef.current;
         return host ? captureVisibleSketchPage(host) : "";
       },
+      scrollToHighlight,
     });
   }, [
     focused,
@@ -1043,6 +1074,7 @@ export function DocumentPane({
     handleToggleStar,
     handleDelete,
     openStudyAI,
+    scrollToHighlight,
     scope,
     reloadPage,
     toggleFullscreen,
@@ -1075,6 +1107,8 @@ export function DocumentPane({
       pdfPage: pdfInfo?.page ?? null,
       pdfNumPages: pdfInfo?.numPages ?? null,
       readPercent: liveReadPercent,
+      highlights,
+      highlightsHydrating,
     });
   }, [
     focused,
@@ -1092,6 +1126,8 @@ export function DocumentPane({
     contentRoot,
     pdfInfo,
     liveReadPercent,
+    highlights,
+    highlightsHydrating,
   ]);
 
   const isPdf = pageData?.contentType === "PDF";

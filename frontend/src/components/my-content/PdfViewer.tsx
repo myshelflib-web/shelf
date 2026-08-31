@@ -91,6 +91,8 @@ export type PdfViewerCommands = {
   prevPage: () => void;
   /** JPEG of the on-screen PDF page for Study AI when the file has no text. */
   captureVisiblePage: () => string;
+  /** Scroll to a page and optional normalized Y offset (0–1 within the page). */
+  scrollToHighlight: (page: number, pageOffset?: number) => void;
 };
 
 interface PdfViewerProps {
@@ -776,6 +778,25 @@ export function PdfViewer({
     setCurrentPage(next);
   }, [numPages]);
 
+  const scrollToPdfHighlight = useCallback(
+    (page: number, pageOffset = 0) => {
+      const root = scrollRef.current;
+      const max = numPages || 1;
+      const next = Math.min(max, Math.max(1, page));
+      const el = pageRefs.current.get(next);
+      if (root && el) {
+        const offset = Math.min(1, Math.max(0, pageOffset));
+        root.scrollTo({
+          top: Math.max(0, el.offsetTop + offset * el.offsetHeight - 48),
+          behavior: "smooth",
+        });
+      }
+      currentPageRef.current = next;
+      setCurrentPage(next);
+    },
+    [numPages]
+  );
+
   const canDeletePages =
     canEditPdf ?? (!getPdfSource && !guestLocked);
 
@@ -903,11 +924,12 @@ export function PdfViewer({
         const canvas = canvasRefs.current.get(currentPageRef.current);
         return canvas ? canvasToJpegDataUrl(canvas) : "";
       },
+      scrollToHighlight: scrollToPdfHighlight,
     };
     return () => {
       commandsRef.current = null;
     };
-  }, [commandsRef, zoomBy, scrollToPdfPage, toggleDarkPdf, pageLayout]);
+  }, [commandsRef, zoomBy, scrollToPdfPage, scrollToPdfHighlight, toggleDarkPdf, pageLayout]);
 
   usePdfReadProgressSync(
     scrollRoot,
