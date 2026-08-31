@@ -46,6 +46,7 @@ import {
   removeCachedPdf,
   scheduleFullPdfCache,
 } from "@/lib/pdfByteCache";
+import { openPdfDocument } from "@/lib/openPdfDocument";
 import {
   PDF_IO_ROOT_MARGIN,
   pdfInitialProbePages,
@@ -216,6 +217,7 @@ export function PdfViewer({
     {}
   );
   const [loading, setLoading] = useState(true);
+  const [loadPercent, setLoadPercent] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [reloadToken, setReloadToken] = useState(0);
   const [undoCount, setUndoCount] = useState(0);
@@ -355,6 +357,7 @@ export function PdfViewer({
     probedPagesRef.current.clear();
     setViewRestored(false);
     setLoading(true);
+    setLoadPercent(null);
     setError("");
     setPdfDoc(null);
     setNumPages(0);
@@ -362,6 +365,10 @@ export function PdfViewer({
 
     (async () => {
       try {
+        const reportProgress = (percent: number) => {
+          if (!cancelled) setLoadPercent(percent);
+        };
+
         const peeked = await peekCachedPdf(userTopicId);
         if (cancelled) return;
 
@@ -377,22 +384,30 @@ export function PdfViewer({
           if (cancelled) return null;
 
           if (cached) {
-            return pdfjs.getDocument({
-              data: cached.slice(0),
-              isEvalSupported: true,
-              isOffscreenCanvasSupported: true,
-            }).promise;
+            return openPdfDocument(
+              pdfjs,
+              {
+                data: cached.slice(0),
+                isEvalSupported: true,
+                isOffscreenCanvasSupported: true,
+              },
+              ({ percent }) => reportProgress(percent)
+            );
           }
 
-          const doc = await pdfjs.getDocument({
-            url: source.url,
-            withCredentials: false,
-            rangeChunkSize: 65536 * 2,
-            disableAutoFetch: true,
-            disableStream: false,
-            isEvalSupported: true,
-            isOffscreenCanvasSupported: true,
-          }).promise;
+          const doc = await openPdfDocument(
+            pdfjs,
+            {
+              url: source.url,
+              withCredentials: false,
+              rangeChunkSize: 65536 * 2,
+              disableAutoFetch: true,
+              disableStream: false,
+              isEvalSupported: true,
+              isOffscreenCanvasSupported: true,
+            },
+            ({ percent }) => reportProgress(percent)
+          );
           if (cancelled) {
             doc.destroy();
             return null;
@@ -408,11 +423,15 @@ export function PdfViewer({
         if (peeked) {
           sourceUrlRef.current = null;
           try {
-            loaded = await pdfjs.getDocument({
-              data: peeked.data.slice(0),
-              isEvalSupported: true,
-              isOffscreenCanvasSupported: true,
-            }).promise;
+            loaded = await openPdfDocument(
+              pdfjs,
+              {
+                data: peeked.data.slice(0),
+                isEvalSupported: true,
+                isOffscreenCanvasSupported: true,
+              },
+              ({ percent }) => reportProgress(percent)
+            );
           } catch {
             await removeCachedPdf(userTopicId);
             loaded = await openFromPresign();
@@ -444,7 +463,8 @@ export function PdfViewer({
         );
         const sizes: Record<number, { w: number; h: number }> = {};
         let resumePage: pdfjs.PDFPageProxy | null = null;
-        for (const pageNum of pdfInitialProbePages(startPage, loaded.numPages)) {
+        const probePages = pdfInitialProbePages(startPage, loaded.numPages);
+        for (const pageNum of probePages) {
           if (cancelled) {
             loaded.destroy();
             return;
@@ -1670,9 +1690,29 @@ export function PdfViewer({
 
   if (loading || !pdfDoc) {
     return (
-      <div className="flex-1 flex items-center justify-center text-[var(--text-muted)]">
-        <Loader2 className="w-5 h-5 animate-spin mr-2" />
-        Loading PDF…
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+        <div className="flex items-center text-sm">
+          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+          Loading PDF…
+          {loadPercent != null && loadPercent > 0 ? (
+            <span className="ml-1.5 tabular-nums">{loadPercent}%</span>
+          ) : null}
+        </div>
+        {loadPercent != null && loadPercent > 0 ? (
+          <div
+            className="h-1 w-48 overflow-hidden rounded-full bg-[var(--border)]"
+            role="progressbar"
+            aria-valuenow={loadPercent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="PDF load progress"
+          >
+            <div
+              className="h-full rounded-full bg-[var(--accent)] transition-[width] duration-150 ease-out"
+              style={{ width: `${loadPercent}%` }}
+            />
+          </div>
+        ) : null}
       </div>
     );
   }
