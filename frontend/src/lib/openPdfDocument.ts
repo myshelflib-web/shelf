@@ -15,7 +15,13 @@ export function openPdfDocument(
 ): Promise<pdfjs.PDFDocumentProxy> {
   const task = pdfjsModule.getDocument(src);
   if (onProgress) {
-    task.onProgress = ({ loaded, total }) => {
+    task.onProgress = ({
+      loaded,
+      total,
+    }: {
+      loaded: number;
+      total: number;
+    }) => {
       const percent =
         total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
       onProgress({ loaded, total, percent });
