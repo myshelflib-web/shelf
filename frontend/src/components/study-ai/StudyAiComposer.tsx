@@ -16,6 +16,7 @@ import { StudyAiCommandsModal } from "./StudyAiCommandsModal";
 import { StudyAiSuggestChips } from "./StudyAiSuggestChips";
 import { StudyAiThinkingMenu } from "./StudyAiThinkingMenu";
 import { StudyAiToolsMenu } from "./StudyAiToolsMenu";
+import { StudyAiWebSearchToggle } from "./StudyAiWebSearchToggle";
 import type { StudyDepth } from "@/lib/studyDepth";
 
 export function StudyAiComposer({
@@ -40,6 +41,8 @@ export function StudyAiComposer({
   depth,
   onDepthChange,
   isPremium,
+  webSearch,
+  onWebSearchChange,
   quizLaunch,
   suggestMode = "suggest",
   showSuggestions = true,
@@ -65,6 +68,8 @@ export function StudyAiComposer({
   depth: StudyDepth;
   onDepthChange: (depth: StudyDepth) => void;
   isPremium: boolean;
+  webSearch: boolean;
+  onWebSearchChange: (enabled: boolean) => void;
   quizLaunch?: QuizLaunch;
   suggestMode?: "suggest" | "followup";
   showSuggestions?: boolean;
@@ -263,6 +268,12 @@ export function StudyAiComposer({
               value={depth}
               onChange={onDepthChange}
               isPremium={isPremium}
+              disabled={loading}
+            />
+            <StudyAiWebSearchToggle
+              scope="library"
+              enabled={webSearch}
+              onChange={onWebSearchChange}
               disabled={loading}
             />
             <input

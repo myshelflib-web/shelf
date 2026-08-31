@@ -1478,6 +1478,7 @@ export const api = {
       imageBase64?: string;
       persist?: boolean;
       threadId?: string;
+      webSearch?: boolean;
       history?: Array<{
         role: "user" | "assistant";
         content: string;
@@ -1514,6 +1515,7 @@ export const api = {
           content: string;
           imageBase64?: string;
         }>;
+        webSearch?: boolean;
       },
       handlers: StudySseHandlers & { signal?: AbortSignal } = {}
     ) => {
@@ -1583,7 +1585,7 @@ export const api = {
     sendChatMessage: (
       id: string,
       content: string,
-      opts?: { imageBase64?: string; prompt?: string; depth?: "quick" | "standard" | "deep" }
+      opts?: { imageBase64?: string; prompt?: string; depth?: "quick" | "standard" | "deep"; webSearch?: boolean }
     ) =>
       request<{
         userMessage: import("@/types").ChatMessage;
@@ -1598,6 +1600,7 @@ export const api = {
           prompt: opts?.prompt,
           imageBase64: opts?.imageBase64,
           depth: opts?.depth,
+          webSearch: opts?.webSearch,
         }),
       }),
     sendChatMessageStream: async (
@@ -1607,6 +1610,7 @@ export const api = {
         imageBase64?: string;
         prompt?: string;
         depth?: "quick" | "standard" | "deep";
+        webSearch?: boolean;
         signal?: AbortSignal;
         onStatus?: StudySseHandlers["onStatus"];
         onDelta?: StudySseHandlers["onDelta"];
@@ -1618,6 +1622,7 @@ export const api = {
         prompt: opts.prompt,
         imageBase64: opts.imageBase64,
         depth: opts.depth,
+        webSearch: opts.webSearch,
       };
       const handlers: StudySseHandlers & { signal?: AbortSignal } = {
         onStatus: opts.onStatus,

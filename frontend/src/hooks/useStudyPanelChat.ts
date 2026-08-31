@@ -29,6 +29,7 @@ export function useStudyPanelChat({
   memoryLimit,
   userId,
   depth,
+  webSearch,
 }: {
   articleId?: string;
   userTopicId?: string;
@@ -39,6 +40,7 @@ export function useStudyPanelChat({
   memoryLimit: number;
   userId?: string;
   depth: StudyDepth;
+  webSearch: boolean;
 }) {
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<StudyPanelTurn[]>([]);
@@ -221,6 +223,7 @@ export function useStudyPanelChat({
             persist: true,
             threadId: threadIdRef.current ?? undefined,
             depth,
+            webSearch,
           },
           {
             signal: ac.signal,
@@ -315,6 +318,7 @@ export function useStudyPanelChat({
       onGuestLockedClick,
       trimMemory,
       depth,
+      webSearch,
     ]
   );
 

@@ -24,6 +24,7 @@ import { api } from "@/lib/api";
 import { downloadChatPdf } from "@/lib/exportAnswer";
 import { isPremiumUser } from "@/lib/premium";
 import { getStoredStudyDepth, resolveStudyDepth, type StudyDepth } from "@/lib/studyDepth";
+import { getStoredStudyWebSearch } from "@/lib/studyWebSearch";
 import { normalizeContextKind } from "@/lib/studyAiContextLabel";
 import {
   positionPopover,
@@ -45,6 +46,9 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const [depth, setDepth] = useState<StudyDepth>(() =>
     getStoredStudyDepth(isPremiumUser(user))
   );
+  const [webSearch, setWebSearch] = useState(() =>
+    getStoredStudyWebSearch("library")
+  );
 
   useEffect(() => {
     setDepth((d) => resolveStudyDepth(d, isPremiumUser(user)));
@@ -55,6 +59,7 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
     userId: user?.id,
     memoryLimit,
     depth,
+    webSearch,
   });
 
   const [input, setInput] = useState("");
@@ -429,6 +434,8 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
             depth={depth}
             onDepthChange={setDepth}
             isPremium={isPremiumUser(user)}
+            webSearch={webSearch}
+            onWebSearchChange={setWebSearch}
             suggestMode={
               chat.messages.some((m) => m.role === "assistant" && m.content)
                 ? "followup"

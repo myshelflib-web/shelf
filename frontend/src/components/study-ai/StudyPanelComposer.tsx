@@ -15,6 +15,7 @@ import { StudyAiCommandsModal } from "./StudyAiCommandsModal";
 import { StudyAiSuggestChips } from "./StudyAiSuggestChips";
 import { StudyAiThinkingMenu } from "./StudyAiThinkingMenu";
 import { StudyAiToolsMenu } from "./StudyAiToolsMenu";
+import { StudyAiWebSearchToggle } from "./StudyAiWebSearchToggle";
 import type { StudyDepth } from "@/lib/studyDepth";
 
 const lockedChip =
@@ -34,6 +35,8 @@ export function StudyPanelComposer({
   depth,
   onDepthChange,
   isPremium,
+  webSearch,
+  onWebSearchChange,
 }: {
   panel: Panel;
   guestLocked?: boolean;
@@ -45,6 +48,8 @@ export function StudyPanelComposer({
   depth: StudyDepth;
   onDepthChange: (depth: StudyDepth) => void;
   isPremium: boolean;
+  webSearch: boolean;
+  onWebSearchChange: (enabled: boolean) => void;
   contextImage: (userImg?: string) => {
     image?: string;
     ephemeral: boolean;
@@ -239,6 +244,13 @@ export function StudyPanelComposer({
             value={depth}
             onChange={onDepthChange}
             isPremium={isPremium}
+            compact
+            disabled={panel.busy || guestLocked}
+          />
+          <StudyAiWebSearchToggle
+            scope="page"
+            enabled={webSearch}
+            onChange={onWebSearchChange}
             compact
             disabled={panel.busy || guestLocked}
           />

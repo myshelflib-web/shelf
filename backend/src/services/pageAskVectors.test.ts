@@ -60,6 +60,7 @@ describe("studyToolLoopOpts", () => {
       depth: "quick",
       depthConfig: cfg,
       toolsEnabled: true,
+      webSearchEnabled: false,
     });
     expect(opts.enabled).toBe(true);
     expect(opts.llm).toBeUndefined();
@@ -72,6 +73,7 @@ describe("studyToolLoopOpts", () => {
       depth: "standard",
       depthConfig: cfg,
       toolsEnabled: true,
+      webSearchEnabled: true,
     });
     expect(opts.llm?.model).toBe(cfg.model);
     expect(opts.maxToolRounds).toBe(cfg.toolRounds);

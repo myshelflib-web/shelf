@@ -1,12 +1,17 @@
 import type { PreparedPageAsk } from "./pageAskPrepare.js";
+import { studyToolsForRequest } from "./studyToolFilter.js";
 
 /** Quick = legacy fast path (default model + token cap). Standard/Deep pass depth LLM opts. */
 export function studyToolLoopOpts(
-  prepared: Pick<PreparedPageAsk, "depth" | "depthConfig" | "toolsEnabled">,
+  prepared: Pick<
+    PreparedPageAsk,
+    "depth" | "depthConfig" | "toolsEnabled" | "webSearchEnabled" | "user"
+  >,
   signal?: AbortSignal
 ): {
   enabled: boolean;
   signal?: AbortSignal;
+  tools: ReturnType<typeof studyToolsForRequest>;
   llm?: {
     model: string;
     maxTokens: number;
@@ -14,8 +19,17 @@ export function studyToolLoopOpts(
   };
   maxToolRounds?: number;
 } {
-  const base = { enabled: prepared.toolsEnabled, signal };
-  if (prepared.depth === "quick") return base;
+  const tools = studyToolsForRequest({
+    webSearch: prepared.webSearchEnabled,
+    studyGoal: prepared.user?.studyGoal,
+  });
+  const base = { enabled: prepared.toolsEnabled, signal, tools };
+  if (prepared.depth === "quick") {
+    return {
+      ...base,
+      maxToolRounds: prepared.webSearchEnabled ? 2 : undefined,
+    };
+  }
   return {
     ...base,
     llm: {

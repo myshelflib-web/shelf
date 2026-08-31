@@ -56,6 +56,7 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
     prompt?: string;
     imageBase64?: string;
     depth?: string;
+    webSearch?: boolean;
   };
   const content = String(body.content ?? "").trim();
   const prompt = String(body.prompt ?? content).trim();
@@ -137,6 +138,7 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
         thread.contextKind === "PAGE" ? thread.contextPageId : null,
       depth,
       toolsEnabled: ragToolsEnabled(displayContent),
+      webSearch: body.webSearch !== false,
     });
 
     const assistantMsg = await prisma.chatMessage.create({
@@ -186,6 +188,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
     prompt?: string;
     imageBase64?: string;
     depth?: string;
+    webSearch?: boolean;
   };
   const content = String(body.content ?? "").trim();
   const prompt = String(body.prompt ?? content).trim();
@@ -295,6 +298,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
         thread.contextKind === "PAGE" ? thread.contextPageId : null,
       depth,
       toolsEnabled: ragToolsEnabled(displayContent),
+      webSearch: body.webSearch !== false,
     })) {
       if (clientGone) break;
       if (ev.type === "status") {

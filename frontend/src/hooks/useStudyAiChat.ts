@@ -27,11 +27,13 @@ export function useStudyAiChat({
   userId,
   memoryLimit,
   depth,
+  webSearch,
 }: {
   threadId?: string;
   userId?: string;
   memoryLimit: number;
   depth: StudyDepth;
+  webSearch: boolean;
 }) {
   const router = useRouter();
   const [threads, setThreads] = useState<ChatThreadSummary[]>([]);
@@ -217,6 +219,7 @@ export function useStudyAiChat({
             imageBase64: image,
             prompt: modelPrompt,
             depth,
+            webSearch,
             signal: ac.signal,
             onStatus: (_stage, detail, extra) => {
               const line = detail || "Working…";
@@ -326,7 +329,7 @@ export function useStudyAiChat({
         }
       }
     },
-    [memoryLimit, refreshThreads, depth]
+    [memoryLimit, refreshThreads, depth, webSearch]
   );
 
   useEffect(() => {

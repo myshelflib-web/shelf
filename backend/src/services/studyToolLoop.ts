@@ -5,6 +5,7 @@ import {
   type ChatMessage,
   type ChatToolCall,
 } from "./llm.js";
+import type { ChatToolDef } from "./llmTypes.js";
 import {
   executeStudyTool,
   STUDY_TOOLS,
@@ -81,7 +82,7 @@ function llmCallOpts(
   llmOpts: StudyLlmOpts | undefined,
   apiKeyRoute: ApiKeyRoute,
   extra?: {
-    tools?: typeof STUDY_TOOLS;
+    tools?: ChatToolDef[];
     toolChoice?: "auto" | "none";
     signal?: AbortSignal;
     metricsFlow?: string;
@@ -104,12 +105,14 @@ export async function completeWithStudyTools(
     citations?: LibraryCitation[];
     signal?: AbortSignal;
     enabled?: boolean;
+    tools?: ChatToolDef[];
     llm?: StudyLlmOpts;
     maxToolRounds?: number;
     metricsFlow?: string;
   }
 ): Promise<ToolChatResult> {
   const enabled = opts?.enabled !== false;
+  const toolDefs = opts?.tools ?? STUDY_TOOLS;
   let working = messages;
   let citations = opts?.citations ?? [];
   let tokens = 0;
@@ -125,7 +128,7 @@ export async function completeWithStudyTools(
       const result = await completeChat(
         working,
         llmCallOpts(llmOpts, apiKeyRoute, {
-          tools: useTools ? STUDY_TOOLS : undefined,
+          tools: useTools ? toolDefs : undefined,
           toolChoice: useTools ? "auto" : "none",
           signal: opts?.signal,
           metricsFlow: opts?.metricsFlow ?? "study_tools",
@@ -191,12 +194,14 @@ export async function* streamWithStudyTools(
     citations?: LibraryCitation[];
     signal?: AbortSignal;
     enabled?: boolean;
+    tools?: ChatToolDef[];
     llm?: StudyLlmOpts;
     maxToolRounds?: number;
     metricsFlow?: string;
   }
 ): AsyncGenerator<ToolStreamEvent> {
   const enabled = opts?.enabled !== false;
+  const toolDefs = opts?.tools ?? STUDY_TOOLS;
   let working = messages;
   let citations = opts?.citations ?? [];
   let tokens = 0;
@@ -219,7 +224,7 @@ export async function* streamWithStudyTools(
       for await (const ev of streamChat(
         working,
         llmCallOpts(llmOpts, apiKeyRoute, {
-          tools: useTools ? STUDY_TOOLS : undefined,
+          tools: useTools ? toolDefs : undefined,
           toolChoice: useTools ? "auto" : "none",
           signal: opts?.signal,
           metricsFlow: opts?.metricsFlow ?? "study_tools",

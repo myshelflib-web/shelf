@@ -40,12 +40,13 @@ function promptForMode(
   question: string | undefined,
   hasSelection: boolean,
   withTools: boolean,
+  webSearch: boolean,
   depth: StudyDepth
 ): { system: string; user: string; mergeInstruction: string } {
   const system = pageAskSystemPrompt(
     studyGoal,
     { name: learnerName },
-    { withTools, depth }
+    { withTools, webSearch: withTools && webSearch, depth }
   );
 
   const scopeNote = hasSelection

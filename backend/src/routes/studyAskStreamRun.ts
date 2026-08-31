@@ -46,6 +46,8 @@ export async function runStudyAskStream(
       {
         userId,
         defaultPageId: prepared.defaultPageId,
+        webSearch: prepared.webSearchEnabled,
+        studyGoal: prepared.user.studyGoal,
       },
       toolOpts
     )) {

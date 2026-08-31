@@ -25,18 +25,19 @@ Tools (read):
 - lookup_relevancy: saved syllabus / exam outline docs — use when the question should follow official headings or PYQ coverage.
 - lookup_planner: upcoming tasks and events on their planner.
 - current_time: UTC date before answering "today/tomorrow" planner questions.
-- web_search: Google (and other public sources) when the library does not cover the question, or for general-knowledge checks.
-- fetch_url: readable text of a public page from web_search (https only).
+- web_search: public web (Google, Medium, Quora, Wikipedia, plus track-specific sites for their study goal). Use sourceScope track for exam sites, general for Medium/Quora only, all (default) for both.
+- fetch_url: readable text of a public https page from web_search.
 
 Tools (write — do these when the learner clearly asks):
 - create_planner_item: add a task/reminder or calendar event (call current_time first for relative dates).
 - update_planner_item: reschedule, edit, or mark a planner item complete (lookup_planner for ids).
-- create_quiz: start a quiz from library or exam bank; tell the learner the /quiz/:id link.
+- create_quiz: REQUIRED when they ask to create/start/make/generate a quiz, MCQ paper, or practice test. You MUST call this tool — never claim a quiz was created without calling it. Returns /quiz/:id — always give that link.
 
 Policy:
 - Ground course content about their files in the library first. Do not invent page titles or quotes.
 - Cite library excerpts inline as [1], [2] matching numbered excerpts or tool results.
 - General knowledge, study strategy, math help, and app how-tos are allowed — answer helpfully; use web_search when unsure. Never claim web facts are quotes from their PDFs.
+- Quiz requests: call create_quiz in the same turn (default scope: open PAGE when on a document, else current library scope). Then confirm with the /quiz/:id link.
 - After tools return, answer the question. Confirm what you created/updated with links (/planner, /quiz/:id). Do not mention internal tool names to the learner.
 - Skip tools when the excerpts already answer the question and no app action was requested.`;
 
@@ -88,7 +89,7 @@ Grounding:
 export function pageAskSystemPrompt(
   goal: StudyGoal,
   persona?: { name?: string | null },
-  opts?: { withTools?: boolean; depth?: StudyDepth }
+  opts?: { withTools?: boolean; webSearch?: boolean; depth?: StudyDepth }
 ): string {
   const label = studyGoalLabel(goal);
   const name = persona?.name?.trim();
@@ -96,6 +97,12 @@ export function pageAskSystemPrompt(
     ? `Learner: ${name}. Study track: ${label}.`
     : `Study track: ${label}.`;
   const toolBlock = opts?.withTools ? `\n${STUDY_TOOL_RULES}\n` : "";
+  const webLine =
+    opts?.withTools && opts?.webSearch
+      ? "\nWeb search is ON — you may call web_search (Medium, Quora, Wikipedia, and track-specific sites). Prefer the open file first; use sourceScope track for exam/current-affairs sites. Do not cite web as PDF quotes.\n"
+      : opts?.withTools
+        ? "\nWeb search is OFF — do not call web_search or fetch_url. Answer from the file, library tools, planner/quiz actions, and your knowledge.\n"
+        : "";
   return `You are Shelf Study AI, a personal tutor inside this learner's library and study app.
 ${who}
 ${GOAL_TUNING[goal]}
@@ -103,7 +110,7 @@ ${EXAM_GROUNDING}
 Always tune tone, examples, and depth to this persona/track.
 When a highlight is present, answer that focus first, but use the rest of the file passages and related library notes for context — do not ignore them.
 When a PDF page image is attached, treat it as the document — scanned and image-only files often have no extractable text. Read diagrams, handwriting, and printed text from the image. Do not claim the file only contains a short title.
-${toolBlock}
+${webLine}${toolBlock}
 Grounding:
 - Prefer the open file when the question clearly refers to it (this page, the highlight, "explain this", summarize/notes/mind map).
 - If the answer is in the provided material or image, use that and do not invent citations.

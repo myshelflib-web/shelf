@@ -57,6 +57,8 @@ export type PageAskInput = {
   depth?: string;
   imageBase64?: string;
   history?: PageAskHistoryTurn[];
+  /** Reader toggle: allow Google / public web tools (default false). */
+  webSearch?: boolean;
 };
 
 export function resolvePageAskQuestion(input: PageAskInput): string {
@@ -73,6 +75,8 @@ export type PreparedPageAsk = {
   packedChars: number;
   /** Tools enabled for free-form ask (not summarize/notes/mindmap). */
   toolsEnabled: boolean;
+  /** web_search + fetch_url available for this ask (reader toggle). */
+  webSearchEnabled: boolean;
   /** Open page id for quiz/default scope (personal library only). */
   defaultPageId: string | null;
   chatMessages: ChatMessage[];
@@ -285,6 +289,7 @@ export async function preparePageAsk(
   const depthConfig = studyDepthConfig(depth);
 
   const toolsEnabled = resolvedMode === "ask" && !expandedPrompt;
+  const webSearchEnabled = toolsEnabled && input.webSearch === true;
 
   const messages = promptForMode(
     resolvedMode,
@@ -295,6 +300,7 @@ export async function preparePageAsk(
     userQuestion,
     hasSelection,
     toolsEnabled,
+    webSearchEnabled,
     depth
   );
 
@@ -381,6 +387,7 @@ export async function preparePageAsk(
     needVectors,
     packedChars: packed.charsUsed,
     toolsEnabled,
+    webSearchEnabled,
     defaultPageId: pageIdForVectors,
     chatMessages,
     user: {

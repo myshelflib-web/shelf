@@ -16,6 +16,7 @@ import {
   streamWithStudyTools,
   type StudyLlmOpts,
 } from "./studyToolLoop.js";
+import { studyToolsForRequest } from "./studyToolFilter.js";
 import { parseStudyDepth, studyDepthConfig } from "./studyDepth.js";
 import { logger } from "../utils/logger.js";
 import { studyFlow } from "../utils/flowLog.js";
@@ -50,6 +51,8 @@ export type RagAskOpts = {
   depth?: string;
   /** False for slash commands (/flashcards, /pyq) that need markdown, not tools. */
   toolsEnabled?: boolean;
+  /** When false, omit web_search and fetch_url (reader PDF toggle). Default true. */
+  webSearch?: boolean;
   /** Grafana flow label (default study_chat). */
   metricsFlow?: string;
 };
@@ -78,12 +81,15 @@ type PreparedRag = {
   llm: StudyLlmOpts;
   maxToolRounds: number;
   toolsEnabled: boolean;
+  tools: ReturnType<typeof studyToolsForRequest>;
 };
 
 async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
   const depth = parseStudyDepth(opts.depth);
   const depthCfg = studyDepthConfig(depth);
   const toolsEnabled = opts.toolsEnabled !== false;
+  const webSearch = opts.webSearch !== false;
+  const tools = studyToolsForRequest({ webSearch, studyGoal: opts.studyGoal });
   const searchQuery = rewriteSearchQuery(opts.query, opts.history);
   const excerpts = await retrieveLibrary(opts.userId, searchQuery, {
     pageIds: opts.pageIds,
@@ -143,6 +149,7 @@ async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
     },
     maxToolRounds: depthCfg.toolRounds,
     toolsEnabled,
+    tools,
   };
 }
 
@@ -151,6 +158,8 @@ function toolCtx(opts: RagAskOpts) {
     userId: opts.userId,
     pageIds: opts.pageIds,
     defaultPageId: opts.defaultPageId ?? null,
+    webSearch: opts.webSearch !== false,
+    studyGoal: opts.studyGoal,
   };
 }
 
@@ -164,6 +173,7 @@ export async function answerWithRag(opts: RagAskOpts): Promise<RagResult> {
     citations: prepared.citations,
     signal: opts.signal,
     enabled: prepared.toolsEnabled,
+    tools: prepared.tools,
     llm: prepared.llm,
     maxToolRounds: prepared.maxToolRounds,
     metricsFlow: opts.metricsFlow ?? "study_chat",
@@ -215,6 +225,7 @@ export async function* streamAnswerWithRag(
       citations: prepared.citations,
       signal: opts.signal,
       enabled: prepared.toolsEnabled,
+      tools: prepared.tools,
       llm: prepared.llm,
       maxToolRounds: prepared.maxToolRounds,
       metricsFlow: opts.metricsFlow ?? "study_chat",

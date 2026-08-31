@@ -48,6 +48,8 @@ type AskBody = {
   mode?: string;
   depth?: string;
   imageBase64?: string;
+  /** Allow web_search / fetch_url while reading a PDF (default off). */
+  webSearch?: boolean;
   /** Save this exchange to Study AI history (reader panel). */
   persist?: boolean;
   /** Existing thread to append to; a page thread is reused/created otherwise. */
@@ -133,6 +135,7 @@ router.post("/ask", async (req: Request, res: Response) => {
       depth: body.depth,
       imageBase64: body.imageBase64,
       history: body.history,
+      webSearch: body.webSearch,
     });
 
     await assertLlmBudget(userId, 1);
@@ -160,6 +163,8 @@ router.post("/ask", async (req: Request, res: Response) => {
           {
             userId,
             defaultPageId: prepared.defaultPageId,
+            webSearch: prepared.webSearchEnabled,
+            studyGoal: prepared.user.studyGoal,
           },
           { ...studyToolLoopOpts(prepared), metricsFlow: "study_ask" }
         );
@@ -172,6 +177,8 @@ router.post("/ask", async (req: Request, res: Response) => {
         {
           userId,
           defaultPageId: prepared.defaultPageId,
+          webSearch: prepared.webSearchEnabled,
+          studyGoal: prepared.user.studyGoal,
         },
         { ...studyToolLoopOpts(prepared), metricsFlow: "study_ask" }
       );
@@ -276,6 +283,7 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
         depth: body.depth,
         imageBase64: body.imageBase64,
         history: body.history,
+        webSearch: body.webSearch,
       },
       (stage, detail) => send("status", { stage, detail })
     );

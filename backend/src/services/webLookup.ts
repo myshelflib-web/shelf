@@ -1,3 +1,4 @@
+import { StudyGoal } from "@prisma/client";
 import { fetchWithRetry } from "../utils/fetchRetry.js";
 import { logger, errorFields } from "../utils/logger.js";
 import {
@@ -6,10 +7,21 @@ import {
   googleCustomSearchHits,
   type WebHit,
 } from "./googleWebSearch.js";
+import {
+  siteRestrictClause,
+  webSourceProfile,
+  type WebSourceScope,
+} from "./webSourceProfiles.js";
 
 const UA = "ShelfStudyAI/1.0 (study-ai; https://github.com/shelf)";
 
-async function wikipediaHits(query: string): Promise<WebHit[]> {
+export type WebLookupOpts = {
+  timeoutMs?: number;
+  studyGoal?: StudyGoal | null;
+  sourceScope?: WebSourceScope;
+};
+
+async function wikipediaHits(query: string, timeoutMs = 8_000): Promise<WebHit[]> {
   const searchUrl =
     "https://en.wikipedia.org/w/api.php?" +
     new URLSearchParams({
@@ -20,7 +32,7 @@ async function wikipediaHits(query: string): Promise<WebHit[]> {
       format: "json",
     }).toString();
   const res = await fetchWithRetry(searchUrl, {
-    timeoutMs: 8_000,
+    timeoutMs,
     headers: { "User-Agent": UA, Accept: "application/json" },
   });
   if (!res.ok) return [];
@@ -39,7 +51,7 @@ async function wikipediaHits(query: string): Promise<WebHit[]> {
   return hits;
 }
 
-async function duckDuckGoHits(query: string): Promise<WebHit[]> {
+async function duckDuckGoHits(query: string, timeoutMs = 8_000): Promise<WebHit[]> {
   const url =
     "https://api.duckduckgo.com/?" +
     new URLSearchParams({
@@ -49,7 +61,7 @@ async function duckDuckGoHits(query: string): Promise<WebHit[]> {
       skip_disambig: "1",
     }).toString();
   const res = await fetchWithRetry(url, {
-    timeoutMs: 8_000,
+    timeoutMs,
     headers: { "User-Agent": UA, Accept: "application/json" },
   });
   if (!res.ok) return [];
@@ -78,28 +90,135 @@ async function duckDuckGoHits(query: string): Promise<WebHit[]> {
   return hits;
 }
 
-export async function webLookup(query: string): Promise<string> {
-  const q = query.trim().slice(0, 200);
-  if (!q) return "No search query provided.";
-  try {
-    const cse = await googleCustomSearchHits(q);
-    if (cse.length) return formatWebHits(cse);
+function dedupeHits(hits: WebHit[]): WebHit[] {
+  const seen = new Set<string>();
+  const out: WebHit[] = [];
+  for (const h of hits) {
+    const key = (h.url || h.title).toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(h);
+  }
+  return out;
+}
 
-    const grounded = await geminiGoogleSearchText(q);
-    if (grounded) return grounded;
+async function openWebHits(
+  query: string,
+  domains: readonly string[],
+  timeoutMs: number
+): Promise<WebHit[]> {
+  const site = siteRestrictClause(domains, 5);
+  if (site) {
+    const restricted = await googleCustomSearchHits(query, {
+      siteRestrict: site,
+    });
+    if (restricted.length) return restricted;
+  }
+  const broad = await googleCustomSearchHits(query);
+  if (broad.length) {
+    if (domains.length === 0) return broad;
+    const allowed = new Set(domains.map((d) => d.toLowerCase()));
+    const filtered = broad.filter((h) => {
+      try {
+        const host = new URL(h.url).hostname.replace(/^www\./, "");
+        return [...allowed].some((d) => host === d || host.endsWith(`.${d}`));
+      } catch {
+        return false;
+      }
+    });
+    if (filtered.length) return filtered;
+  }
+  const siteHint = domains.slice(0, 8).join(", ");
+  const grounded = await geminiGoogleSearchText(query, { siteHint });
+  if (grounded) {
+    return [{ title: "Web summary", url: "", snippet: grounded }];
+  }
+  const [wiki, ddg] = await Promise.allSettled([
+    wikipediaHits(query, timeoutMs),
+    duckDuckGoHits(query, timeoutMs),
+  ]);
+  return [
+    ...(wiki.status === "fulfilled" ? wiki.value : []),
+    ...(ddg.status === "fulfilled" ? ddg.value : []),
+  ];
+}
 
-    const [wiki, ddg] = await Promise.allSettled([
-      wikipediaHits(q),
-      duckDuckGoHits(q),
-    ]);
-    const hits: WebHit[] = [
-      ...(wiki.status === "fulfilled" ? wiki.value : []),
-      ...(ddg.status === "fulfilled" ? ddg.value : []),
-    ].slice(0, 4);
-    if (hits.length === 0) {
+async function collectHits(
+  query: string,
+  scope: WebSourceScope,
+  profile: ReturnType<typeof webSourceProfile>,
+  timeoutMs: number
+): Promise<{ track: WebHit[]; general: WebHit[] }> {
+  const tasks: Promise<{ kind: "track" | "general"; hits: WebHit[] }>[] = [];
+
+  if (scope === "all" || scope === "track") {
+    tasks.push(
+      openWebHits(query, profile.preferredDomains, timeoutMs).then((hits) => ({
+        kind: "track" as const,
+        hits,
+      }))
+    );
+  }
+  if (scope === "all" || scope === "general") {
+    tasks.push(
+      openWebHits(query, profile.generalDomains, timeoutMs).then((hits) => ({
+        kind: "general" as const,
+        hits,
+      }))
+    );
+  }
+
+  const settled = await Promise.allSettled(tasks);
+  let track: WebHit[] = [];
+  let general: WebHit[] = [];
+  for (const row of settled) {
+    if (row.status !== "fulfilled") continue;
+    if (row.value.kind === "track") track = row.value.hits;
+    else general = row.value.hits;
+  }
+  return { track, general };
+}
+
+function formatScopedHits(
+  track: WebHit[],
+  general: WebHit[],
+  scope: WebSourceScope,
+  profileLabel: string
+): string {
+  const parts: string[] = [];
+  if (scope !== "general" && track.length) {
+    parts.push(
+      `${profileLabel} sources:\n${formatWebHits(track.slice(0, 4))}`
+    );
+  }
+  if (scope !== "track" && general.length) {
+    parts.push(
+      `General web (Medium, Quora, etc.):\n${formatWebHits(general.slice(0, 4))}`
+    );
+  }
+  if (parts.length === 0) {
+    const merged = dedupeHits([...track, ...general]).slice(0, 4);
+    if (merged.length === 0) {
       return "No public web results. Answer from the library or say you are unsure.";
     }
-    return formatWebHits(hits);
+    return formatWebHits(merged);
+  }
+  return parts.join("\n\n");
+}
+
+export async function webLookup(
+  query: string,
+  opts?: WebLookupOpts
+): Promise<string> {
+  const q = query.trim().slice(0, 200);
+  if (!q) return "No search query provided.";
+  const timeoutMs = opts?.timeoutMs ?? 5_000;
+  const scope = opts?.sourceScope ?? "all";
+  const profile = webSourceProfile(opts?.studyGoal);
+
+  try {
+    const { track, general } = await collectHits(q, scope, profile, timeoutMs);
+    return formatScopedHits(track, general, scope, profile.label);
   } catch (err) {
     logger.warn("study.web_lookup_failed", errorFields(err));
     return "Web search is unavailable right now. Rely on the library excerpts.";

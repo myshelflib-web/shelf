@@ -7,6 +7,7 @@ import { extractPageBody } from "./libraryIndex.js";
 import { retrieveLibrary, type Excerpt } from "./ragRetrieve.js";
 import { packLibraryExcerpts } from "../utils/ragPack.js";
 import { webLookup } from "./webLookup.js";
+import { parseWebSourceScope } from "./webSourceProfiles.js";
 import {
   currentTimeLookup,
   fetchPublicUrl,
@@ -379,15 +380,34 @@ export async function executeStudyTool(
   if (name === "list_library") return listLibrary(ctx);
   if (name === "lookup_planner") return lookupPlanner(ctx);
   if (name === "web_search") {
+    if (ctx.webSearch === false) {
+      return {
+        text: "Web search is off for this question. Answer from the open file, library tools, and your knowledge.",
+      };
+    }
     const query = String(args.query ?? "").trim();
-    return { text: await webLookup(query) };
+    const sourceScope = parseWebSourceScope(args.sourceScope);
+    return {
+      text: await webLookup(query, {
+        timeoutMs: 5_000,
+        studyGoal: ctx.studyGoal,
+        sourceScope,
+      }),
+    };
   }
   if (name === "lookup_highlights") return lookupHighlights(ctx, args);
   if (name === "lookup_recent_pages") return lookupRecentPages(ctx);
   if (name === "lookup_starred") return lookupStarred(ctx);
   if (name === "lookup_collection") return lookupCollection(ctx, args);
   if (name === "lookup_relevancy") return lookupRelevancy(ctx, args);
-  if (name === "fetch_url") return fetchPublicUrl(args);
+  if (name === "fetch_url") {
+    if (ctx.webSearch === false) {
+      return {
+        text: "Web fetch is off for this question. Answer without opening external URLs.",
+      };
+    }
+    return fetchPublicUrl(args);
+  }
   if (name === "current_time") return currentTimeLookup();
   const action = await executeStudyActionTool(name, rawArgs, ctx);
   if (action) return action;

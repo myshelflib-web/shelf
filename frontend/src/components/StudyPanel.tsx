@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Download, Layers, MessageSquareText, X } from "lucide-react";
 import { isPremiumUser } from "@/lib/premium";
 import { getStoredStudyDepth, resolveStudyDepth, type StudyDepth } from "@/lib/studyDepth";
+import { getStoredStudyWebSearch } from "@/lib/studyWebSearch";
 import { StudyAIContent } from "@/lib/studyAiMarkdown";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudyPanelChat } from "@/hooks/useStudyPanelChat";
@@ -50,6 +51,9 @@ export function StudyPanel({
   const [depth, setDepth] = useState<StudyDepth>(() =>
     getStoredStudyDepth(isPremiumUser(user))
   );
+  const [webSearch, setWebSearch] = useState(() =>
+    getStoredStudyWebSearch("page")
+  );
   const [pasted, setPasted] = useState("");
   const [attached, setAttached] = useState(false);
   const [saveContent, setSaveContent] = useState<string | null>(null);
@@ -70,6 +74,7 @@ export function StudyPanel({
     memoryLimit,
     userId: user?.id,
     depth,
+    webSearch,
   });
 
   useEffect(() => {
@@ -319,6 +324,8 @@ export function StudyPanel({
         depth={depth}
         onDepthChange={setDepth}
         isPremium={isPremiumUser(user)}
+        webSearch={webSearch}
+        onWebSearchChange={setWebSearch}
       />
 
       {flashcardsMd && (
