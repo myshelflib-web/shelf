@@ -28,6 +28,15 @@ import {
 import { PenSettingsPanel } from "./PenSettingsPanel";
 import { PEN_COLORS } from "./BlankEditorToolbar";
 import { PdfToolbar, type PdfPhoneChrome } from "./PdfToolbar";
+import { HighlightsToolbarPopover } from "./HighlightsToolbarPopover";
+import {
+  extractHighlightPdfText,
+  isGenericHighlightText,
+  mergeNormRects,
+  highlightRegionRects,
+  extractPdfTextInRegion,
+} from "@/lib/pdfRegionText";
+import { highlightPageOffset } from "@/lib/highlightNavigation";
 import { usePdfReadProgressSync } from "./PdfReadProgress";
 import { useInkGestures } from "./useInkGestures";
 import { useWindowPenStroke } from "./useWindowPenStroke";
@@ -115,6 +124,7 @@ interface PdfViewerProps {
   commandsRef?: MutableRefObject<PdfViewerCommands | null>;
   onPageInfo?: (info: { page: number; numPages: number }) => void;
   onReadProgress?: (percent: number) => void;
+  highlightsHydrating?: boolean;
   /** Account-only annotate tools — visible but muted for guests. */
   guestLocked?: boolean;
   onGuestLockedClick?: (feature: string) => void;
@@ -153,6 +163,7 @@ export function PdfViewer({
   commandsRef,
   onPageInfo,
   onReadProgress,
+  highlightsHydrating = false,
   guestLocked = false,
   onGuestLockedClick,
   annotationGate = null,
@@ -268,6 +279,13 @@ export function PdfViewer({
   } = useWindowPenStroke();
   const highlightsRef = useRef(highlights);
   highlightsRef.current = highlights;
+  const enrichedHighlightIds = useRef(new Set<string>());
+  const renderPageRef = useRef<(pageNum: number) => Promise<void>>(() =>
+    Promise.resolve()
+  );
+  const probePageSizeOnlyRef = useRef<(pageNum: number) => Promise<void>>(() =>
+    Promise.resolve()
+  );
   const droppedHighlightIds = useRef(new Set<string>());
   const eraseSessionRef = useRef<UserContentHighlight[]>([]);
   const {
@@ -803,16 +821,37 @@ export function PdfViewer({
       const root = scrollRef.current;
       const max = numPages || 1;
       const next = Math.min(max, Math.max(1, page));
-      const el = pageRefs.current.get(next);
-      if (root && el) {
-        const offset = Math.min(1, Math.max(0, pageOffset));
-        root.scrollTo({
-          top: Math.max(0, el.offsetTop + offset * el.offsetHeight - 48),
-          behavior: "smooth",
-        });
-      }
-      currentPageRef.current = next;
-      setCurrentPage(next);
+      const offset = Math.min(1, Math.max(0, pageOffset));
+
+      const applyScroll = () => {
+        const el = pageRefs.current.get(next);
+        if (root && el) {
+          root.scrollTop = Math.max(
+            0,
+            el.offsetTop + offset * el.offsetHeight - 48
+          );
+        }
+        currentPageRef.current = next;
+        setCurrentPage(next);
+      };
+
+      void probePageSizeOnlyRef.current(next);
+      if (next > 1) void probePageSizeOnlyRef.current(next - 1);
+      if (next < max) void probePageSizeOnlyRef.current(next + 1);
+
+      const paintTarget = renderPageRef.current(next);
+      if (next > 1) void renderPageRef.current(next - 1);
+      if (next < max) void renderPageRef.current(next + 1);
+
+      applyScroll();
+
+      void probePageSizeOnlyRef.current(next).then(() => {
+        requestAnimationFrame(applyScroll);
+      });
+
+      void paintTarget.then(() => {
+        requestAnimationFrame(applyScroll);
+      });
     },
     [numPages]
   );
@@ -950,6 +989,50 @@ export function PdfViewer({
       commandsRef.current = null;
     };
   }, [commandsRef, zoomBy, scrollToPdfPage, scrollToPdfHighlight, toggleDarkPdf, pageLayout]);
+
+  useEffect(() => {
+    enrichedHighlightIds.current.clear();
+  }, [userTopicId]);
+
+  useEffect(() => {
+    if (!pdfDoc) return;
+    const stale = highlights.filter(
+      (h) =>
+        isGenericHighlightText(h.text) && !enrichedHighlightIds.current.has(h.id)
+    );
+    if (!stale.length) return;
+    let cancelled = false;
+    void (async () => {
+      const updates = new Map<string, string>();
+      for (const h of stale) {
+        enrichedHighlightIds.current.add(h.id);
+        try {
+          const text = await extractHighlightPdfText(pdfDoc, h);
+          if (text.trim()) updates.set(h.id, text.trim());
+        } catch {
+          /* ignore per-highlight failures */
+        }
+      }
+      if (cancelled || updates.size === 0) return;
+      const next = highlights.map((h) => {
+        const text = updates.get(h.id);
+        return text ? { ...h, text } : h;
+      });
+      if (next.some((h, i) => h.text !== highlights[i]?.text)) {
+        onHighlightsChange(next);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pdfDoc, highlights, onHighlightsChange]);
+
+  const jumpToHighlight = useCallback(
+    (h: UserContentHighlight) => {
+      scrollToPdfHighlight(h.pageNumber ?? 1, highlightPageOffset(h));
+    },
+    [scrollToPdfHighlight]
+  );
 
   usePdfReadProgressSync(
     scrollRoot,
@@ -1105,6 +1188,9 @@ export function PdfViewer({
     },
     [pdfDoc, scale]
   );
+
+  renderPageRef.current = renderPage;
+  probePageSizeOnlyRef.current = probePageSizeOnly;
 
   useEffect(() => {
     if (!pdfDoc || numPages === 0) return;
@@ -1658,23 +1744,51 @@ export function PdfViewer({
         });
         paintDraft(pageNum, []);
         queueMicrotask(() => {
-          persistHighlight(ink ? inkColor : colorId, undefined, {
-            kind: "REGION",
-            text: ink ? "Ink stroke" : "Highlighted region",
-            rect: new DOMRect(0, 0, 0, 0),
-            pageNumber: pageNum,
-            position: {
-              type: "pen",
-              tool: ink ? "ink" : "highlight",
-              points,
-              width,
-              opacity,
-              color: ink ? inkColor : undefined,
-            },
-          });
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => clearLive(pageNum, bridge));
-          });
+          void (async () => {
+            let text = ink ? "Ink stroke" : "";
+            if (!ink && pdfDoc) {
+              const region = mergeNormRects(
+                highlightRegionRects({
+                  id: "draft",
+                  userTopicId,
+                  text: "",
+                  startOffset: 0,
+                  endOffset: 0,
+                  color: colorId,
+                  kind: "REGION",
+                  pageNumber: pageNum,
+                  position: {
+                    type: "pen",
+                    tool: "highlight",
+                    points,
+                    width,
+                    opacity,
+                  },
+                })
+              );
+              text = await extractPdfTextInRegion(pdfDoc, pageNum, region);
+            }
+            if (!text.trim()) {
+              text = ink ? "Ink stroke" : "Highlighted region";
+            }
+            persistHighlight(ink ? inkColor : colorId, undefined, {
+              kind: "REGION",
+              text,
+              rect: new DOMRect(0, 0, 0, 0),
+              pageNumber: pageNum,
+              position: {
+                type: "pen",
+                tool: ink ? "ink" : "highlight",
+                points,
+                width,
+                opacity,
+                color: ink ? inkColor : undefined,
+              },
+            });
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => clearLive(pageNum, bridge));
+            });
+          })();
         });
       },
     });
@@ -1773,6 +1887,9 @@ export function PdfViewer({
         darkPdf={darkPdf}
         toggleDarkPdf={toggleDarkPdf}
         phoneChrome={phoneChrome}
+        highlights={highlights}
+        highlightsHydrating={highlightsHydrating}
+        onHighlightSelect={jumpToHighlight}
       />
 
       <div className="relative flex-1 flex flex-col min-h-0">

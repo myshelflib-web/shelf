@@ -40,10 +40,10 @@ export const pdfReaderHighlights = buildPost(
       ],
     },
     {
-      heading: "Highlights & notes panel",
+      heading: "Highlights & notes list",
       paragraphs: [
-        "Open the right panel and switch to Highlights to browse every mark on the current page as snippets — highlighted text, ink strokes, and attached notes together. The list loads in the background while you keep reading; skeleton rows appear only on a fresh page with nothing cached yet.",
-        "Click any snippet to jump back to that spot in the PDF or HTML document. PDFs scroll to the correct page and vertical position; long lists paginate so the panel stays fast on heavily annotated papers.",
+        "Use the list button in the PDF toolbar to browse every mark on the current page — highlighted text, pen strokes, and attached notes. The list loads in the background while you keep reading.",
+        "Click any snippet to jump back to that spot in the PDF or HTML document. PDFs scroll to the correct page and position; long lists paginate so heavily annotated papers stay fast.",
       ],
     },
     {

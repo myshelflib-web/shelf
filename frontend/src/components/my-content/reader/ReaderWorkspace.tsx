@@ -31,11 +31,10 @@ import {
   PanelLeft,
   PanelRightClose,
   PanelRight,
-  Highlighter,
   Columns2,
 } from "lucide-react";
 import { DocumentPane, DocumentPaneHandlers, DocumentPaneSnapshot, LoadedPage } from "./DocumentPane";
-import { ReaderRightPanel, type ReaderRightPanelTab } from "./ReaderRightPanel";
+import { ReaderRightPanel } from "./ReaderRightPanel";
 import { ReaderTabStrip } from "./ReaderTabStrip";
 import { useReaderWorkspace } from "./useReaderWorkspace";
 import { useHotkey } from "@/hooks/useHotkeys";
@@ -84,7 +83,6 @@ export function ReaderWorkspace({
   const [clipImage, setClipImage] = useState<string | null>(null);
   const [clipPage, setClipPage] = useState<LoadedPage | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
-  const [rightPanelTab, setRightPanelTab] = useState<ReaderRightPanelTab>("study-ai");
   const [snapshots, setSnapshots] = useState<
     Record<string, DocumentPaneSnapshot>
   >({});
@@ -319,7 +317,6 @@ export function ReaderWorkspace({
   }, [state.studyAICollapsed, studyAIPanelRef, compactPortrait]);
 
   const openStudyAIPanel = useCallback(() => {
-    setRightPanelTab("study-ai");
     setStudyAICollapsed(false);
     if (compactPortrait) return;
     const panel = studyAIPanelRef.current;
@@ -339,11 +336,6 @@ export function ReaderWorkspace({
     setAskImage(undefined);
     setAttachNote(undefined);
   }, [setStudyAICollapsed, studyAIPanelRef]);
-
-  const openHighlightsPanel = useCallback(() => {
-    setRightPanelTab("highlights");
-    openStudyAIPanel();
-  }, [openStudyAIPanel]);
 
   const syncReaderUrl = useCallback((href: string) => {
     if (href === scopeHref(routeScope)) return;
@@ -663,8 +655,6 @@ export function ReaderWorkspace({
 
   const studyAIShell = (
     <ReaderRightPanel
-      tab={rightPanelTab}
-      onTabChange={setRightPanelTab}
       onClose={closeStudyAIPanel}
       studyPageId={studyPageId}
       studyEmbed={studyEmbed}
@@ -677,10 +667,6 @@ export function ReaderWorkspace({
         setAttachNote(undefined);
       }}
       capturePdfPage={() => focusedHandlers?.capturePdfPage() ?? ""}
-      highlights={focusedSnap?.highlights ?? []}
-      highlightsHydrating={focusedSnap?.highlightsHydrating ?? false}
-      isPdf={isPdf}
-      onHighlightSelect={(h) => focusedHandlers?.scrollToHighlight(h)}
     />
   );
 
@@ -822,15 +808,6 @@ export function ReaderWorkspace({
                 )}
 
                 <div className="flex items-center gap-1 shrink-0 pl-1">
-                  <button
-                    type="button"
-                    className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
-                    title="Show highlights & notes"
-                    aria-label="Show highlights and notes"
-                    onClick={openHighlightsPanel}
-                  >
-                    <Highlighter className="w-4 h-4" />
-                  </button>
                   <button
                     type="button"
                     className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
@@ -1035,9 +1012,7 @@ export function ReaderWorkspace({
         onClose={closeStudyAIPanel}
         side="right"
         wide
-        title={
-          rightPanelTab === "highlights" ? "Highlights & notes" : "Study AI"
-        }
+        title="Study AI"
         fullScreen={isPhone}
       >
         {studyAIShell}

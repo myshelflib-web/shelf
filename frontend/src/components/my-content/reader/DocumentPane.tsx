@@ -1408,6 +1408,7 @@ export function DocumentPane({
                   fileName={pageData.title}
                   highlights={highlights}
                   onHighlightsChange={setHighlights}
+                  highlightsHydrating={highlightsHydrating}
                   guestLocked={guestLocked}
                   onGuestLockedClick={onGuestLockedClick}
                   annotationGate={annotationGate}

@@ -71,14 +71,15 @@ export function HighlightsPanel({
               No highlights yet
             </p>
             <p className="text-xs text-[var(--text-muted)] mt-1 max-w-[220px]">
-              Select text or use the highlighter on this page — they will appear
-              here as snippets you can jump back to.
+              Select text or highlight on the page — snippets show up in the
+              toolbar list so you can jump back anytime.
             </p>
           </div>
         ) : (
           slice.map((h) => {
             const snippet = highlightSnippetText(h);
             const note = h.note?.trim();
+            const showNote = Boolean(note && note !== snippet);
             return (
               <button
                 key={h.id}
@@ -107,7 +108,7 @@ export function HighlightsPanel({
                         </span>
                       ) : null}
                     </div>
-                    {note ? (
+                    {showNote ? (
                       <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-snug text-[var(--text-secondary)] line-clamp-2">
                         <StickyNote className="w-3 h-3 shrink-0 mt-0.5 text-[var(--text-muted)]" />
                         <span>{note}</span>

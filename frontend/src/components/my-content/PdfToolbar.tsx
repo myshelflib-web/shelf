@@ -38,6 +38,8 @@ import {
 } from "./EditorToolbarChrome";
 import { PdfPageNav } from "./PdfPageNav";
 import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
+import { HighlightsToolbarPopover } from "./HighlightsToolbarPopover";
+import type { UserContentHighlight } from "@/types";
 
 export type PdfToolbarMode = "text" | "pen" | "ink" | "erase" | "clip";
 
@@ -84,6 +86,9 @@ type Props = {
   darkPdf: boolean;
   toggleDarkPdf: () => void;
   phoneChrome?: PdfPhoneChrome;
+  highlights?: UserContentHighlight[];
+  highlightsHydrating?: boolean;
+  onHighlightSelect?: (highlight: UserContentHighlight) => void;
 };
 
 export function PdfToolbar(props: Props) {
@@ -120,6 +125,9 @@ export function PdfToolbar(props: Props) {
     darkPdf,
     toggleDarkPdf,
     phoneChrome,
+    highlights = [],
+    highlightsHydrating = false,
+    onHighlightSelect,
   } = props;
 
   const inkBtnRef = useRef<HTMLButtonElement>(null);
@@ -250,6 +258,15 @@ export function PdfToolbar(props: Props) {
         >
           <Eraser className="w-[17px] h-[17px]" />
         </ToolBtn>
+        {onHighlightSelect ? (
+          <HighlightsToolbarPopover
+            highlights={highlights}
+            hydrating={highlightsHydrating}
+            isPdf
+            phone={isPhone}
+            onSelect={onHighlightSelect}
+          />
+        ) : null}
         {showClip && (
           <ToolBtn
             {...btn}

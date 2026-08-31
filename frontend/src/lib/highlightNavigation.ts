@@ -1,4 +1,5 @@
 import type { UserContentHighlight } from "@/types";
+import { isGenericHighlightText } from "@/lib/pdfRegionText";
 
 /** Normalized Y within a PDF page (0–1) for scroll targeting. */
 export function highlightPageOffset(h: UserContentHighlight): number {
@@ -31,12 +32,24 @@ export function sortHighlightsForPanel(
 
 export function highlightSnippetText(h: UserContentHighlight, max = 140): string {
   const raw = h.text?.trim();
-  if (raw) {
+  const note = h.note?.trim();
+
+  if (raw && !isGenericHighlightText(raw)) {
     if (raw.length <= max) return raw;
     return `${raw.slice(0, max - 1).trimEnd()}…`;
   }
-  if (h.position?.type === "pen" && h.position.tool === "ink") return "Ink stroke";
-  if (h.kind === "REGION") return "Highlighted region";
+
+  if (note) {
+    if (note.length <= max) return note;
+    return `${note.slice(0, max - 1).trimEnd()}…`;
+  }
+
+  if (h.position?.type === "pen" && h.position.tool === "ink") {
+    return h.pageNumber ? `Ink drawing · p.${h.pageNumber}` : "Ink drawing";
+  }
+  if (h.kind === "REGION" || h.position?.points?.length) {
+    return h.pageNumber ? `Marked section · p.${h.pageNumber}` : "Marked section";
+  }
   return "Highlight";
 }
 
