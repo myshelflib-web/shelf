@@ -5,6 +5,7 @@ import { authMiddleware } from "../middleware/auth.js";
 import { isPremiumUser } from "../utils/paywall.js";
 import { logger } from "../utils/logger.js";
 import { metrics } from "../utils/metrics.js";
+import { billingFlow, reqLog } from "../utils/flowLog.js";
 import { getBillingPlans, resolvePlan } from "../services/billing/plans.js";
 import { findValidCoupon, CouponError } from "../services/billing/coupons.js";
 import { priceOrder, MIN_CHARGE_PAISE } from "../services/billing/pricing.js";
@@ -236,6 +237,12 @@ router.post("/create-order", authMiddleware, async (req: Request, res: Response)
         providerPaymentId: `credit_${payment.id}`,
       });
 
+      billingFlow.checkoutOk(reqLog(req), {
+        userId: user.id,
+        freeActivation: true,
+        coinsApplied: priced.coinsApplied,
+      });
+
       res.json({
         freeActivation: true,
         success: true,
@@ -294,6 +301,11 @@ router.post("/create-order", authMiddleware, async (req: Request, res: Response)
     });
 
     metrics.inc("razorpay_orders_total", { ok: true });
+    billingFlow.checkoutStart(reqLog(req), {
+      userId: user.id,
+      orderId: order.id,
+      amountPaise: order.amount,
+    });
     (req.log ?? logger).info("razorpay.order.created", {
       orderId: order.id,
       userId: user.id,

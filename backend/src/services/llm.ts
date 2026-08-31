@@ -1,4 +1,5 @@
 import { logger } from "../utils/logger.js";
+import { llmFlow } from "../utils/flowLog.js";
 import {
   apiKeyHint,
   chatModelCandidates,
@@ -398,7 +399,7 @@ export async function completeChat(
   messages: ChatMessage[],
   opts?: Omit<ChatRequestOpts, "stream">
 ): Promise<ChatResult> {
-  const { response } = await openChatWithFallbacks(messages, {
+  const { response, model } = await openChatWithFallbacks(messages, {
     stream: false,
     ...opts,
   });
@@ -421,11 +422,19 @@ export async function completeChat(
   const tokens =
     data.usage?.total_tokens ??
     (data.usage?.prompt_tokens ?? 0) + (data.usage?.completion_tokens ?? 0);
-  return {
+  const result = {
     text,
     tokens: tokens || Math.ceil((text.length + 200) / 4),
     toolCalls,
   };
+  llmFlow.ok(logger, {
+    model,
+    tokens: result.tokens,
+    stream: false,
+    toolCalls: toolCalls?.length ?? 0,
+    apiKeyRoute: opts?.apiKeyRoute,
+  });
+  return result;
 }
 
 export type StreamChatEvent =

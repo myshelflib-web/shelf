@@ -9,15 +9,6 @@ import {
 } from "../utils/logContext.js";
 import { clientIpFromRequest } from "../utils/logRedact.js";
 
-declare global {
-  namespace Express {
-    interface Request {
-      requestId?: string;
-      log?: ReturnType<typeof logger.child>;
-    }
-  }
-}
-
 function traceResponseHeaders(res: Response): void {
   const { traceId } = activeTraceFields();
   if (traceId) {
@@ -35,10 +26,6 @@ export function requestContext(
   const clientIp = clientIpFromRequest(
     req.headers as unknown as Record<string, unknown>
   );
-  const userAgent =
-    typeof req.headers["user-agent"] === "string"
-      ? req.headers["user-agent"].slice(0, 160)
-      : undefined;
 
   req.requestId = requestId;
   res.setHeader("x-request-id", requestId);
@@ -58,11 +45,7 @@ export function requestContext(
         path: req.path,
       });
 
-      req.log.debug("http.request.start", {
-        clientIp,
-        userAgent,
-        contentLength: req.headers["content-length"] ?? null,
-      });
+      req.log.debug("http.request.start", { clientIp });
 
       const start = Date.now();
       res.on("finish", () => {

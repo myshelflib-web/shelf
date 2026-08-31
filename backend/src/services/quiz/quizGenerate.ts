@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "../../utils/prisma.js";
 import { completeChat } from "../llm.js";
 import { logger, errorFields } from "../../utils/logger.js";
+import { quizFlow } from "../../utils/flowLog.js";
 import {
   assertLlmRoom,
 } from "../../utils/quotas.js";
@@ -227,7 +228,13 @@ export async function generateQuizPaper(quizId: string): Promise<void> {
         },
       });
     });
+    quizFlow.generateOk(logger, {
+      quizId,
+      questionCount: drafts.length,
+      sourceKind: quiz.sourceKind,
+    });
   } catch (err) {
+    quizFlow.generateFailed(logger, err, { quizId });
     logger.error("quiz.generate.failed", { quizId, ...errorFields(err) });
     const message = userFacingQuizParseError(err);
     await prisma.quiz

@@ -4,6 +4,7 @@ import prisma from "../../utils/prisma.js";
 import { completeChat, type ChatContentPart } from "../llm.js";
 import { getObjectBuffer } from "../s3.js";
 import { logger, errorFields } from "../../utils/logger.js";
+import { quizFlow } from "../../utils/flowLog.js";
 import { assertLlmBudget, chargeLlmTokens } from "../../utils/llmUsage.js";
 import { parseGradeJson } from "./quizParse.js";
 import { billedQuizTokens } from "./quizTokens.js";
@@ -130,5 +131,12 @@ export async function gradeQuiz(quizId: string, userId: string): Promise<void> {
       status: "GRADED",
       submittedAt: quiz.submittedAt ?? new Date(),
     },
+  });
+
+  quizFlow.graded(logger, {
+    quizId,
+    userId,
+    questionCount: quiz.questions.length,
+    llmTokensBilled: billed,
   });
 }

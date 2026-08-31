@@ -13,6 +13,7 @@ import {
   normalizePastedBody,
   titleFromFilename,
 } from "../utils/relevancyExtract.js";
+import { reqLog, studyFlow } from "../utils/flowLog.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -96,6 +97,11 @@ router.post("/relevancy-docs", async (req: Request, res: Response) => {
         source: "PASTE",
       },
       select: { ...docListSelect, body: true },
+    });
+    studyFlow.relevancySaved(reqLog(req), {
+      docId: doc.id,
+      source: "PASTE",
+      title: doc.title,
     });
     res.status(201).json({ doc });
   } catch (err) {

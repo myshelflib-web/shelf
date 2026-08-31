@@ -11,6 +11,7 @@ import {
   deleteChatMessage,
   truncateChatMessages,
 } from "../services/chatThreads.js";
+import { reqLog, studyFlow } from "../utils/flowLog.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -53,6 +54,7 @@ router.post("/chats", async (req: Request, res: Response) => {
     },
     select: threadContextSelect,
   });
+  studyFlow.threadCreated(reqLog(req), { threadId: thread.id, title: thread.title });
   res.status(201).json({ thread });
 });
 
@@ -202,6 +204,7 @@ router.delete("/chats/:id", async (req: Request, res: Response) => {
     return;
   }
   await prisma.chatThread.delete({ where: { id: existing.id } });
+  studyFlow.threadDeleted(reqLog(req), { threadId: existing.id });
   res.json({ success: true });
 });
 

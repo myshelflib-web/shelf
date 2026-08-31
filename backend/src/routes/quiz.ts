@@ -27,6 +27,7 @@ import {
   shouldReveal,
   toClientQuiz,
 } from "../services/quiz/quizSerialize.js";
+import { quizFlow, reqLog } from "../utils/flowLog.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -181,6 +182,14 @@ router.post("/", upload.single("file"), async (req: Request, res: Response) => {
   });
 
   scheduleQuizGeneration(quiz.id);
+  quizFlow.generateStart(reqLog(req), {
+    quizId: quiz.id,
+    sourceKind,
+    mcqCount,
+    writtenCount,
+    difficulty,
+    contextKind,
+  });
   res.status(201).json({ quiz: await toClientQuiz(quiz, false) });
 });
 
@@ -310,6 +319,7 @@ router.post("/:id/submit", async (req: Request, res: Response) => {
   try {
     await gradeQuiz(quiz.id, req.user!.userId);
   } catch (err) {
+    quizFlow.gradeFailed(reqLog(req), err, { quizId: quiz.id });
     if (err instanceof QuotaError) {
       res.status(err.status).json({ error: err.message });
       return;
@@ -321,6 +331,11 @@ router.post("/:id/submit", async (req: Request, res: Response) => {
   }
 
   const next = await loadOwnedQuiz(req.user!.userId, quiz.id);
+  quizFlow.submitted(reqLog(req), {
+    quizId: quiz.id,
+    endedReason,
+    questionCount: next?.questions.length ?? 0,
+  });
   res.json({ quiz: await toClientQuiz(next!, true) });
 });
 

@@ -1,8 +1,13 @@
 import "dotenv/config";
+import { randomUUID } from "crypto";
 import { processPdf } from "./processor.js";
 import { errorFields, logger } from "./utils/logger.js";
 import { metrics } from "./utils/metrics.js";
 import { withRetry } from "./utils/retry.js";
+import {
+  getLogContext,
+  runWithLogContextAsync,
+} from "./utils/logContext.js";
 
 export interface ProcessingJob {
   type: "admin" | "user";
@@ -54,6 +59,13 @@ function internalHeaders(): Record<string, string> {
   };
   if (process.env.INTERNAL_SECRET) {
     headers["x-internal-secret"] = process.env.INTERNAL_SECRET;
+  }
+  const ctx = getLogContext();
+  if (ctx.requestId) {
+    headers["x-request-id"] = ctx.requestId;
+  }
+  if (ctx.traceId) {
+    headers["traceparent"] = `00-${ctx.traceId}-${ctx.spanId ?? "0000000000000000"}-01`;
   }
   return headers;
 }
@@ -130,57 +142,67 @@ export async function runJob(job: ProcessingJob): Promise<void> {
     return;
   }
 
-  inFlight.add(job.topicId);
-  const log = logger.child({
-    jobId: job.topicId,
-    type: job.type,
-    pdfKey: job.pdfKey,
-    subjectSlug: job.subjectSlug,
-    topicSlug: job.topicSlug,
-    articleSlug: job.articleSlug,
-  });
-  const start = Date.now();
-
-  log.info("worker.job.start");
-  metrics.inc("worker_jobs_started_total", { type: job.type });
-
-  try {
-    const { contentKey } = await processPdf({
-      topicId: job.topicId,
-      pdfKey: job.pdfKey,
-      subjectSlug: job.subjectSlug,
-      topicSlug: job.topicSlug,
+  return runWithLogContextAsync(
+    {
+      jobId: job.topicId,
+      requestId: randomUUID(),
       userId: job.userId,
-      type: job.type,
-    });
+    },
+    async () => {
+      inFlight.add(job.topicId);
+      const log = logger.child({
+        jobId: job.topicId,
+        type: job.type,
+        pdfKey: job.pdfKey,
+        subjectSlug: job.subjectSlug,
+        topicSlug: job.topicSlug,
+        articleSlug: job.articleSlug,
+        userId: job.userId,
+      });
+      const start = Date.now();
 
-    await notifyProcessed(job, { contentUrl: contentKey, status: "PUBLISHED" });
+      log.info("worker.job.start");
+      metrics.inc("worker_jobs_started_total", { type: job.type });
 
-    const durationMs = Date.now() - start;
-    metrics.inc("worker_jobs_total", { type: job.type, status: "PUBLISHED" });
-    metrics.observe("worker_job_duration_ms", durationMs, {
-      type: job.type,
-      status: "PUBLISHED",
-    });
-    log.info("worker.job.ok", { contentKey, durationMs });
-  } catch (err) {
-    const durationMs = Date.now() - start;
-    metrics.inc("worker_jobs_total", { type: job.type, status: "FAILED" });
-    metrics.observe("worker_job_duration_ms", durationMs, {
-      type: job.type,
-      status: "FAILED",
-    });
-    log.error("worker.job.failed", { durationMs, ...errorFields(err) });
+      try {
+        const { contentKey } = await processPdf({
+          topicId: job.topicId,
+          pdfKey: job.pdfKey,
+          subjectSlug: job.subjectSlug,
+          topicSlug: job.topicSlug,
+          userId: job.userId,
+          type: job.type,
+        });
 
-    try {
-      await notifyProcessed(job, { status: "FAILED" });
-    } catch (notifyErr) {
-      metrics.inc("worker_callback_failures_total", { type: job.type });
-      log.error("worker.job.failed_callback", errorFields(notifyErr));
+        await notifyProcessed(job, { contentUrl: contentKey, status: "PUBLISHED" });
+
+        const durationMs = Date.now() - start;
+        metrics.inc("worker_jobs_total", { type: job.type, status: "PUBLISHED" });
+        metrics.observe("worker_job_duration_ms", durationMs, {
+          type: job.type,
+          status: "PUBLISHED",
+        });
+        log.info("worker.job.ok", { contentKey, durationMs });
+      } catch (err) {
+        const durationMs = Date.now() - start;
+        metrics.inc("worker_jobs_total", { type: job.type, status: "FAILED" });
+        metrics.observe("worker_job_duration_ms", durationMs, {
+          type: job.type,
+          status: "FAILED",
+        });
+        log.error("worker.job.failed", { durationMs, ...errorFields(err) });
+
+        try {
+          await notifyProcessed(job, { status: "FAILED" });
+        } catch (notifyErr) {
+          metrics.inc("worker_callback_failures_total", { type: job.type });
+          log.error("worker.job.failed_callback", errorFields(notifyErr));
+        }
+      } finally {
+        inFlight.delete(job.topicId);
+      }
     }
-  } finally {
-    inFlight.delete(job.topicId);
-  }
+  );
 }
 
 export async function pollAndProcess(): Promise<void> {

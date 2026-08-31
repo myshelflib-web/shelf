@@ -25,7 +25,9 @@ Express + TypeScript (`"type": "module"`), Prisma 6, PostgreSQL. Entry: `src/ind
 
 Health: `GET /health`, `GET /metrics`. JSON body limit 10mb. CORS from `CORS_ORIGIN` (comma-separated).
 
-## Grafana (OpenTelemetry)
+## Logging & tracing
+
+Structured JSON logs via `utils/logger.ts`. Every HTTP request gets `requestId` (`x-request-id` header) and OpenTelemetry `traceId`/`spanId` when OTLP is enabled. `AsyncLocalStorage` (`utils/logContext.ts`) auto-attaches context to all logs; auth adds `userId`/`userRole`. Secrets/PII are redacted (`utils/logRedact.ts`) — never log passwords, tokens, or raw JWTs. Use `req.log` in routes when available; background jobs use `runWithLogContext` / `logger.child({ jobId })`.
 
 When `OTEL_EXPORTER_OTLP_ENDPOINT` (+ `OTEL_EXPORTER_OTLP_HEADERS` for Grafana Cloud) is set, `src/instrumentation.ts` exports traces, auto HTTP metrics, and app logs to Grafana via OTLP. Custom counters/histograms (`utils/metrics.ts`) dual-write to OTLP when enabled. Loaded via `--import` before the app (`npm run dev` / `npm start`). Local stack: `docker compose --profile observability up -d` → Grafana on `:3001`, OTLP on `:4318`. See `.env.example`.
 

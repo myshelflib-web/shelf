@@ -27,12 +27,20 @@ function getToken(): string | null {
   return localStorage.getItem("token");
 }
 
+function newRequestId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
+    "x-request-id": newRequestId(),
     ...(options.headers as Record<string, string>),
   };
 
@@ -312,6 +320,7 @@ async function postStudySse(
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
+        "x-request-id": newRequestId(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(body),

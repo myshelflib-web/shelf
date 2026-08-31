@@ -8,6 +8,7 @@ import {
   parseRecurrence,
 } from "../utils/recurrence.js";
 import { rangedTaskWhere, mergeRangedTasks } from "../utils/plannerTasks.js";
+import { plannerFlow, reqLog } from "../utils/flowLog.js";
 
 function parseKind(value: unknown): StudyItemKind {
   return value === "EVENT" ? StudyItemKind.EVENT : StudyItemKind.TASK;
@@ -167,6 +168,13 @@ router.post("/", async (req: Request, res: Response) => {
     include: taskInclude,
   });
 
+  plannerFlow.created(reqLog(req), {
+    taskId: task.id,
+    kind: itemKind,
+    hasDueAt: Boolean(due),
+    recurrence: rec,
+  });
+
   res.status(201).json({ task: serialize(task) });
 });
 
@@ -269,6 +277,12 @@ router.patch("/:id", async (req: Request, res: Response) => {
     include: taskInclude,
   });
 
+  if (completed === true && !existing.completed) {
+    plannerFlow.completed(reqLog(req), { taskId: task.id, kind: task.kind });
+  } else {
+    plannerFlow.updated(reqLog(req), { taskId: task.id, kind: task.kind });
+  }
+
   res.json({ task: serialize(task) });
 });
 
@@ -282,6 +296,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
     return;
   }
   await prisma.studyTask.delete({ where: { id } });
+  plannerFlow.deleted(reqLog(req), { taskId: id, kind: existing.kind });
   res.json({ success: true });
 });
 

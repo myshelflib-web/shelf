@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
+import { enrichLogContext } from "../utils/logContext.js";
+import { logger } from "../utils/logger.js";
 
 export interface AuthPayload {
   userId: string;
@@ -15,6 +17,10 @@ declare global {
   }
 }
 
+function attachUserContext(req: Request, user: AuthPayload): void {
+  enrichLogContext({ userId: user.userId, userRole: user.role });
+}
+
 export function signToken(payload: AuthPayload): string {
   return jwt.sign(payload, process.env.JWT_SECRET!, { expiresIn: "7d" });
 }
@@ -24,8 +30,10 @@ export function authMiddleware(
   res: Response,
   next: NextFunction
 ): void {
+  const log = req.log ?? logger;
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
+    log.warn("auth.denied", { reason: "missing_bearer" });
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
@@ -33,8 +41,11 @@ export function authMiddleware(
   try {
     const token = header.slice(7);
     req.user = jwt.verify(token, process.env.JWT_SECRET!) as AuthPayload;
+    attachUserContext(req, req.user);
+    log.debug("auth.ok", { userRole: req.user.role });
     next();
   } catch {
+    log.warn("auth.denied", { reason: "invalid_token" });
     res.status(401).json({ error: "Invalid token" });
   }
 }
@@ -45,6 +56,7 @@ export function optionalAuthMiddleware(
   _res: Response,
   next: NextFunction
 ): void {
+  const log = req.log ?? logger;
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
     next();
@@ -54,8 +66,10 @@ export function optionalAuthMiddleware(
   try {
     const token = header.slice(7);
     req.user = jwt.verify(token, process.env.JWT_SECRET!) as AuthPayload;
+    attachUserContext(req, req.user);
+    log.debug("auth.optional_ok", { userRole: req.user.role });
   } catch {
-    /* treat as guest */
+    log.debug("auth.optional_guest", { reason: "invalid_token" });
   }
   next();
 }
@@ -65,7 +79,9 @@ export function adminMiddleware(
   res: Response,
   next: NextFunction
 ): void {
+  const log = req.log ?? logger;
   if (req.user?.role !== "ADMIN") {
+    log.warn("auth.admin_denied", { userRole: req.user?.role ?? null });
     res.status(403).json({ error: "Admin access required" });
     return;
   }

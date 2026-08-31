@@ -16,6 +16,7 @@ import {
 } from "../services/email/index.js";
 import { userSelect } from "../utils/publicUser.js";
 import { issueAuthResponse } from "./authHelpers.js";
+import { reqLog, userFlow } from "../utils/flowLog.js";
 
 const router = Router();
 
@@ -70,6 +71,7 @@ router.post("/register/send-otp", async (req: Request, res: Response) => {
       purpose: "SIGNUP",
       name: name?.trim(),
     });
+    userFlow.otpSent(reqLog(req), { purpose: "SIGNUP", email: normalized });
     res.json({ ok: true, message: "Verification code sent" });
   } catch (err) {
     if (jsonOtpSendError(res, err)) return;
@@ -114,12 +116,22 @@ router.post("/register", async (req: Request, res: Response) => {
     select: userSelect,
   });
 
+  userFlow.created(reqLog(req), {
+    userId: user.id,
+    authMethod: "email_otp",
+    email: normalized,
+  });
+
   sendEmailInBackground({
     to: user.email,
     ...welcomeEmail(user.name),
   });
 
-  issueAuthResponse(res, user, 201);
+  issueAuthResponse(res, user, {
+    req,
+    authMethod: "email_otp",
+    status: 201,
+  });
 });
 
 router.post("/forgot-password/send-otp", async (req: Request, res: Response) => {
@@ -209,6 +221,8 @@ router.post("/forgot-password/reset", async (req: Request, res: Response) => {
     where: { id: user.id },
     data: { passwordHash: await bcrypt.hash(newPassword, 12) },
   });
+
+  userFlow.passwordReset(reqLog(req), { userId: user.id, email: normalized });
 
   res.json({ ok: true, message: "Password updated" });
 });

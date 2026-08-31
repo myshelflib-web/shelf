@@ -18,6 +18,8 @@ import { QuotaError, assertStorageRoom } from "../utils/quotas.js";
 import { param } from "../utils/param.js";
 import { issueAuthResponse } from "./authHelpers.js";
 import authEmailOtpRoutes from "./authEmailOtp.js";
+import { logger, errorFields } from "../utils/logger.js";
+import { reqLog, userFlow } from "../utils/flowLog.js";
 
 const router = Router();
 router.use(authEmailOtpRoutes);
@@ -37,8 +39,10 @@ function isHttpUrl(value: string): boolean {
 }
 
 router.post("/login", async (req: Request, res: Response) => {
+  const log = req.log ?? logger;
   const { email, password } = req.body;
   if (!email || !password) {
+    log.warn("auth.login.failed", { reason: "missing_fields" });
     res.status(400).json({ error: "Email and password required" });
     return;
   }
@@ -52,6 +56,10 @@ router.post("/login", async (req: Request, res: Response) => {
       !stored?.passwordHash ||
       !(await bcrypt.compare(password, stored.passwordHash))
     ) {
+      log.warn("auth.login.failed", {
+        reason: stored && !stored.passwordHash ? "google_only_account" : "invalid_credentials",
+        email,
+      });
       res.status(401).json({
         error: stored && !stored.passwordHash
           ? "This account uses Google sign-in"
@@ -60,10 +68,11 @@ router.post("/login", async (req: Request, res: Response) => {
       return;
     }
 
-    issueAuthResponse(res, stored);
+    issueAuthResponse(res, stored, { req, authMethod: "password" });
   } catch (err) {
     const message = err instanceof Error ? err.message : "";
     if (message.includes("Can't reach database server")) {
+      log.error("auth.login.failed", { reason: "database_unavailable", ...errorFields(err) });
       res.status(503).json({
         error:
           "Database is not running. Start Postgres with docker compose up -d postgres, then try again.",
@@ -75,8 +84,10 @@ router.post("/login", async (req: Request, res: Response) => {
 });
 
 router.post("/google", async (req: Request, res: Response) => {
+  const log = req.log ?? logger;
   const { credential } = req.body;
   if (!credential) {
+    log.warn("auth.google.failed", { reason: "missing_credential" });
     res.status(400).json({ error: "Google credential required" });
     return;
   }
@@ -102,7 +113,7 @@ router.post("/google", async (req: Request, res: Response) => {
         },
         select: userSelect,
       });
-      issueAuthResponse(res, user);
+      issueAuthResponse(res, user, { req, authMethod: "google" });
       return;
     }
 
@@ -121,8 +132,19 @@ router.post("/google", async (req: Request, res: Response) => {
       ...welcomeEmail(user.name),
     });
 
-    issueAuthResponse(res, user, 201);
+    userFlow.created(reqLog(req), {
+      userId: user.id,
+      authMethod: "google",
+      email: profile.email,
+    });
+
+    issueAuthResponse(res, user, {
+      req,
+      authMethod: "google",
+      status: 201,
+    });
   } catch (err) {
+    log.warn("auth.google.failed", errorFields(err));
     const message = toUserFacingError(
       err instanceof Error ? err.message : "Google authentication failed",
       "Google sign-in failed"
@@ -234,11 +256,17 @@ router.patch("/me", authMiddleware, async (req: Request, res: Response) => {
     data,
     select: userSelect,
   });
+  userFlow.updated(reqLog(req), {
+    userId: user.id,
+    fields: Object.keys(data),
+  });
   res.json({ user: toPublicUser(user) });
 });
 
 router.delete("/me", authMiddleware, async (req: Request, res: Response) => {
-  await prisma.user.delete({ where: { id: req.user!.userId } });
+  const userId = req.user!.userId;
+  userFlow.deleted(reqLog(req), { userId });
+  await prisma.user.delete({ where: { id: userId } });
   res.json({ ok: true });
 });
 

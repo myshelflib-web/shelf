@@ -1,5 +1,7 @@
 import { logs, SeverityNumber } from "@opentelemetry/api-logs";
+import { getLogContext } from "./logContext.js";
 import { otelAttributes, otelExportEnabled } from "./otelBridge.js";
+import { sanitizeLogFields } from "./logRedact.js";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -33,6 +35,13 @@ export interface LogFields {
   [key: string]: unknown;
 }
 
+function mergeFields(fields?: LogFields): LogFields {
+  return sanitizeLogFields({
+    ...getLogContext(),
+    ...fields,
+  }) as LogFields;
+}
+
 function emitOtel(level: LogLevel, message: string, fields?: LogFields): void {
   if (!otelExportEnabled()) return;
 
@@ -47,12 +56,13 @@ function emitOtel(level: LogLevel, message: string, fields?: LogFields): void {
 function write(level: LogLevel, message: string, fields?: LogFields): void {
   if (!shouldLog(level)) return;
 
+  const merged = mergeFields(fields);
   const entry = {
     ts: new Date().toISOString(),
     level,
     service: process.env.SERVICE_NAME ?? "backend",
     msg: message,
-    ...fields,
+    ...merged,
   };
 
   const line = JSON.stringify(entry);
@@ -64,7 +74,7 @@ function write(level: LogLevel, message: string, fields?: LogFields): void {
     console.log(line);
   }
 
-  emitOtel(level, message, fields);
+  emitOtel(level, message, merged);
 }
 
 export const logger = {
@@ -86,11 +96,11 @@ export const logger = {
 
 export function errorFields(err: unknown): LogFields {
   if (err instanceof Error) {
-    return {
+    return sanitizeLogFields({
       errName: err.name,
       errMessage: err.message,
       errStack: err.stack,
-    };
+    }) as LogFields;
   }
   return { errMessage: String(err) };
 }

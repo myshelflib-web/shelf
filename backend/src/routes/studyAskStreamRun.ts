@@ -2,7 +2,8 @@ import type { PreparedPageAsk } from "../services/pageAskPrepare.js";
 import { streamMapReduceAnswer } from "../services/mapReduceSummary.js";
 import { streamWithStudyTools } from "../services/studyToolLoop.js";
 import { studyToolLoopOpts } from "../services/studyToolOpts.js";
-import { logger, errorFields } from "../utils/logger.js";
+import { errorFields, logger } from "../utils/logger.js";
+import { studyFlow } from "../utils/flowLog.js";
 
 function finishingDetail(model?: string, answer?: string): string | null {
   if (!answer?.trim()) return null;
@@ -25,6 +26,14 @@ export async function runStudyAskStream(
   const { prepared, userId, signal } = opts;
   let tokens = 0;
   let answer = "";
+
+  studyFlow.streamStart(logger, {
+    userId,
+    mode: prepared.resolvedMode,
+    depth: prepared.depth,
+    mapReduce: prepared.useMapReduce,
+    toolsEnabled: prepared.toolsEnabled,
+  });
 
   const toolOpts = studyToolLoopOpts(prepared, signal);
 
@@ -93,6 +102,13 @@ export async function runStudyAskStream(
   } else {
     await consumeToolStream();
   }
+
+  studyFlow.streamOk(logger, {
+    userId,
+    tokens,
+    answerChars: answer.length,
+    mode: prepared.resolvedMode,
+  });
 
   return { answer, tokens };
 }

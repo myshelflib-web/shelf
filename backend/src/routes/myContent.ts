@@ -44,6 +44,7 @@ import {
 import { parsePublicHttpUrl } from "../utils/publicUrl.js";
 import { parseBytesRange } from "../utils/byteRange.js";
 import { errorFields } from "../utils/logger.js";
+import { contentFlow, reqLog } from "../utils/flowLog.js";
 import {
   hasParsedPageView,
   parsePageView,
@@ -683,6 +684,14 @@ router.post("/uploads/init", async (req: Request, res: Response) => {
 
   try {
     const uploadUrl = await getPresignedPutUrl(key, putType);
+    contentFlow.uploadInit(reqLog(req), {
+      kind,
+      size,
+      slug,
+      title,
+      userSubjectId: parent.userSubjectId,
+      userTopicGroupId: parent.userTopicGroupId,
+    });
     res.json({
       uploadUrl,
       headers: { "Content-Type": putType },
@@ -805,6 +814,12 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
         select: pageSelect,
       });
       scheduleIndexPage(page.id);
+      contentFlow.uploadComplete(reqLog(req), {
+        pageId: page.id,
+        kind: "pdf",
+        slug: page.slug,
+        bytes: storedBytes,
+      });
       res.status(201).json({
         page,
         message: "PDF uploaded. Open the page to read it.",
@@ -854,6 +869,12 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
       select: pageSelect,
     });
     scheduleIndexPage(page.id);
+    contentFlow.uploadComplete(reqLog(req), {
+      pageId: page.id,
+      kind: claims.kind,
+      slug: page.slug,
+      bytes: htmlBytes,
+    });
     res.status(201).json({ page, message: "File converted and ready to read." });
   } catch (err) {
     if (chargedBytes > 0) {
@@ -864,6 +885,7 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
       res.status(err.status).json({ error: err.message });
       return;
     }
+    contentFlow.uploadFailed(reqLog(req), err, { kind: claims.kind, slug: claims.slug });
     req.log?.error("my_content.upload_complete_failed", errorFields(err));
     res.status(500).json({ error: "Could not finish upload" });
   }
@@ -1062,6 +1084,11 @@ router.post("/subjects", async (req: Request, res: Response) => {
     include: notebookTreeInclude,
   });
 
+  contentFlow.collectionCreated(reqLog(req), {
+    collectionId: subject.id,
+    slug: subject.slug,
+  });
+
   res.status(201).json({ subject: shapeSubject(subject) });
 });
 
@@ -1105,6 +1132,12 @@ router.post("/subjects/:subjectId/topic-groups", async (req: Request, res: Respo
       order,
     },
     include: { pages: { select: pageSelect } },
+  });
+
+  contentFlow.topicCreated(reqLog(req), {
+    topicId: group.id,
+    collectionId: subject.id,
+    slug: group.slug,
   });
 
   res.status(201).json({ topicGroup: group });
@@ -2086,6 +2119,11 @@ router.delete("/pages/:id", async (req: Request, res: Response) => {
   await deletePageAssets(userId, page);
   scheduleDeletePageVectors(page.id);
   await prisma.userTopic.delete({ where: { id: page.id } });
+  contentFlow.pageDeleted(reqLog(req), {
+    pageId: page.id,
+    slug: page.slug,
+    contentType: page.contentType,
+  });
   res.json({ success: true });
 });
 

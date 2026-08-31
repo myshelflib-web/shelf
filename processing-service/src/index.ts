@@ -1,6 +1,7 @@
 import "dotenv/config";
 // Shelf PDF processing worker entrypoint
 import express from "express";
+import { requestContext } from "./middleware/requestContext.js";
 import {
   enqueueJob,
   getInFlightCount,
@@ -16,6 +17,7 @@ const app = express();
 const PORT = process.env.PORT ?? 4001;
 
 app.use(express.json());
+app.use(requestContext);
 
 app.get("/health", (_req, res) => {
   res.json({
@@ -36,6 +38,7 @@ app.get("/metrics", (_req, res) => {
 });
 
 app.post("/process", async (req, res) => {
+  const log = req.log!;
   const { topicId, pdfKey, subjectSlug, topicSlug, type, userId, articleSlug } =
     req.body;
 
@@ -55,28 +58,31 @@ app.post("/process", async (req, res) => {
   };
 
   metrics.inc("manual_process_requests_total");
-  logger.info("manual.process.queued", {
+  log.info("manual.process.queued", {
     topicId,
     type: job.type,
     pdfKey,
+    userId: userId ?? null,
   });
 
   res.json({ status: "queued", topicId });
 
   enqueueJob(job).catch((err) =>
-    logger.error("manual.process.failed", {
+    log.error("manual.process.failed", {
       topicId,
       ...errorFields(err),
     })
   );
 });
 
-app.post("/poll", async (_req, res) => {
+app.post("/poll", async (req, res) => {
+  const log = req.log!;
   try {
     await pollAndProcess();
+    log.info("manual.poll.ok", { inFlight: getInFlightCount() });
     res.json({ status: "polled", inFlight: getInFlightCount() });
   } catch (err) {
-    logger.error("manual.poll.failed", errorFields(err));
+    log.error("manual.poll.failed", errorFields(err));
     res.status(500).json({ error: "Poll failed" });
   }
 });

@@ -17,6 +17,8 @@ import {
   type StudyLlmOpts,
 } from "./studyToolLoop.js";
 import { parseStudyDepth, studyDepthConfig } from "./studyDepth.js";
+import { logger } from "../utils/logger.js";
+import { studyFlow } from "../utils/flowLog.js";
 
 export type { LibraryCitation };
 
@@ -151,6 +153,10 @@ function toolCtx(opts: RagAskOpts) {
 }
 
 export async function answerWithRag(opts: RagAskOpts): Promise<RagResult> {
+  studyFlow.ragStart(logger, {
+    userId: opts.userId,
+    scopeLabel: opts.scopeLabel ?? null,
+  });
   const prepared = await prepareRagAsk(opts);
   const result = await completeWithStudyTools(prepared.messages, toolCtx(opts), {
     citations: prepared.citations,
@@ -158,6 +164,11 @@ export async function answerWithRag(opts: RagAskOpts): Promise<RagResult> {
     enabled: prepared.toolsEnabled,
     llm: prepared.llm,
     maxToolRounds: prepared.maxToolRounds,
+  });
+  studyFlow.ragOk(logger, {
+    userId: opts.userId,
+    matchCount: result.citations.length,
+    tokens: result.tokens,
   });
   return {
     answer: result.text,
