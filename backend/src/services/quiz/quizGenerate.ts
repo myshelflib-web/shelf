@@ -23,7 +23,7 @@ import type { ApiKeyRoute } from "../apiKeyRoute.js";
 const generating = new Set<string>();
 
 async function chargeTokens(userId: string, tokens: number): Promise<void> {
-  await chargeLlmTokens(userId, tokens);
+  await chargeLlmTokens(userId, tokens, "quiz_generate");
 }
 
 export async function prepareQuizUser(userId: string) {
@@ -89,6 +89,7 @@ async function callQuizModel(input: {
     maxTokens: 2048,
     temperature: 0.45,
     apiKeyRoute: input.apiKeyRoute,
+    metricsFlow: "quiz_generate",
   });
   await input.bill.charge(firstPrompt, result);
   try {
@@ -109,6 +110,7 @@ async function callQuizModel(input: {
       maxTokens: 2048,
       temperature: 0.15,
       apiKeyRoute: input.apiKeyRoute,
+      metricsFlow: "quiz_generate",
     });
     await input.bill.charge(retryPrompt, retry);
     return parseGeneratedQuiz(retry.text);

@@ -1,5 +1,5 @@
 import { logger, errorFields } from "../utils/logger.js";
-import { fetchWithTimeout } from "../utils/timeout.js";
+import { fetchWithRetry } from "../utils/fetchRetry.js";
 import {
   acquireGeminiChatSlot,
   parseGeminiRetryMs,
@@ -76,7 +76,7 @@ export async function ocrJpegBuffer(jpeg: Buffer): Promise<string | null> {
   await acquireGeminiChatSlot();
 
   const timeoutMs = Number(process.env.PDF_OCR_TIMEOUT_MS ?? 45_000);
-  const res = await fetchWithTimeout(path, {
+  const res = await fetchWithRetry(path, {
     method: "POST",
     timeoutMs,
     headers: {

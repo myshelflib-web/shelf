@@ -1,4 +1,5 @@
 import prisma from "./prisma.js";
+import { recordQuotaCharge } from "./appMetrics.js";
 import {
   assertLlmRoom,
   shouldResetLlmWindow,
@@ -54,7 +55,8 @@ export async function assertLlmBudget(
 /** Bill tokens after a successful LLM call. */
 export async function chargeLlmTokens(
   userId: string,
-  tokens: number
+  tokens: number,
+  flow?: string
 ): Promise<void> {
   if (!Number.isFinite(tokens) || tokens <= 0) return;
 
@@ -64,4 +66,6 @@ export async function chargeLlmTokens(
     where: { id: userId },
     data: { llmTokensUsed: { increment: tokens } },
   });
+
+  recordQuotaCharge({ flow, tokens });
 }

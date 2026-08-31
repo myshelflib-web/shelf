@@ -13,6 +13,8 @@ interface GoogleSignInButtonProps {
   onError?: (message: string) => void;
   /** Where to go after a successful Google sign-in. */
   redirectTo?: string;
+  /** Fired when the Google credential exchange with Shelf is in progress. */
+  onSigningInChange?: (signingIn: boolean) => void;
 }
 
 function GoogleIcon() {
@@ -43,7 +45,11 @@ export function isGoogleSignInConfigured(): boolean {
   return Boolean(clientId) && !clientId.includes("your-google-client-id");
 }
 
-export function GoogleSignInButton({ onError, redirectTo = "/my-content" }: GoogleSignInButtonProps) {
+export function GoogleSignInButton({
+  onError,
+  redirectTo = "/my-content",
+  onSigningInChange,
+}: GoogleSignInButtonProps) {
   const { loginWithGoogle } = useAuth();
   const router = useRouter();
   const { ref: containerRef, width: buttonWidth } = useSocialSignInWidth();
@@ -57,10 +63,12 @@ export function GoogleSignInButton({ onError, redirectTo = "/my-content" }: Goog
     }
 
     setLoading(true);
+    onSigningInChange?.(true);
     try {
       await loginWithGoogle(response.credential);
       router.push(redirectTo);
     } catch (err) {
+      onSigningInChange?.(false);
       onError?.(
         toUserFacingError(
           err instanceof Error ? err.message : "Google sign-in failed",

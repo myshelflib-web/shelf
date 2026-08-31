@@ -60,7 +60,7 @@ async function gradeOpenAnswer(
       { role: "system", content: gradeWrittenSystemPrompt(goal) },
       { role: "user", content: parts },
     ],
-    { maxTokens: 512, temperature: 0.1, apiKeyRoute }
+    { maxTokens: 512, temperature: 0.1, apiKeyRoute, metricsFlow: "quiz_grade" }
   );
   const parsed = parseGradeJson(result.text);
   return {
@@ -122,7 +122,7 @@ export async function gradeQuiz(quizId: string, userId: string): Promise<void> {
   }
 
   if (billed > 0) {
-    await chargeLlmTokens(userId, billed);
+    await chargeLlmTokens(userId, billed, "quiz_grade");
   }
 
   await prisma.quiz.update({

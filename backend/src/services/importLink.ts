@@ -1,5 +1,6 @@
 import { parsePublicHttpUrl } from "../utils/publicUrl.js";
-import { TimeoutError, fetchWithTimeout } from "../utils/timeout.js";
+import { fetchWithRetry } from "../utils/fetchRetry.js";
+import { TimeoutError } from "../utils/timeout.js";
 import {
   PDF_IMPORT_MAX_BYTES,
   formatImportedHtml,
@@ -270,7 +271,7 @@ async function fetchFollowingRedirects(
 
     let res: Response;
     try {
-      res = await fetchWithTimeout(safe, {
+      res = await fetchWithRetry(safe, {
         method: "GET",
         redirect: "manual",
         timeoutMs: FETCH_TIMEOUT_MS,
@@ -510,7 +511,7 @@ export async function checkUrlEmbeddable(
 
     let res: Response;
     try {
-      res = await fetchWithTimeout(safe, {
+      res = await fetchWithRetry(safe, {
         method: "GET",
         redirect: "manual",
         timeoutMs: EMBED_CHECK_TIMEOUT_MS,

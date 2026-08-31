@@ -273,6 +273,8 @@ Do **not** put them only in local `.env` if you want production telemetry. Add t
 4. Repeat on the **processing service** with `OTEL_SERVICE_NAME=shelf-processing-service` (same endpoint + headers).
 5. Save → Render redeploys. In Grafana: **Explore** → Loki for logs, **Metrics** for counters/histograms, **Traces** for request spans. No OTEL vars needed on **Vercel** (frontend is not instrumented yet).
 
+**Dashboards:** metric names, PromQL examples, and suggested panel layout → [`docs/OBSERVABILITY.md`](OBSERVABILITY.md).
+
 **Verify on Render:** after deploy, open backend **Logs** and search for `"msg":"otel.started"`. If missing, the Docker image is not loading `instrumentation.js` (backend/processing Dockerfiles must start Node with `--import ./dist/instrumentation.js`).
 
 **Local dev:** `docker compose --profile observability up -d` → Grafana UI at [http://localhost:3001](http://localhost:3001), OTLP HTTP at `http://localhost:4318` (no auth header). Set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` in `backend/.env` and `processing-service/.env`.

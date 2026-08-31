@@ -1,3 +1,5 @@
+import { fetchWithRetry } from "../../utils/fetchRetry.js";
+
 const RAZORPAY_BASE = "https://api.razorpay.com/v1";
 
 export class RazorpayError extends Error {
@@ -29,8 +31,10 @@ export async function razorpayRequest<T>(
   path: string,
   body?: unknown
 ): Promise<T> {
-  const res = await fetch(`${RAZORPAY_BASE}${path}`, {
+  const res = await fetchWithRetry(`${RAZORPAY_BASE}${path}`, {
     method,
+    timeoutMs: 25_000,
+    retry: { label: `razorpay.${method.toLowerCase()}`, attempts: 4 },
     headers: {
       "Content-Type": "application/json",
       Authorization: authHeader(),

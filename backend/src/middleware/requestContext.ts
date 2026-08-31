@@ -8,6 +8,7 @@ import {
   runWithLogContext,
 } from "../utils/logContext.js";
 import { clientIpFromRequest } from "../utils/logRedact.js";
+import { httpRouteGroup, httpStatusClass } from "../utils/appMetrics.js";
 
 declare global {
   namespace Express {
@@ -75,10 +76,14 @@ export function requestContext(
         metrics.inc("http_requests_total", {
           method: req.method,
           status: res.statusCode,
+          route_group: httpRouteGroup(req.path),
+          status_class: httpStatusClass(res.statusCode),
         });
         metrics.observe("http_request_duration_ms", durationMs, {
           method: req.method,
           status: res.statusCode,
+          route_group: httpRouteGroup(req.path),
+          status_class: httpStatusClass(res.statusCode),
         });
 
         const level =

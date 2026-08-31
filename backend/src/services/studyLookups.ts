@@ -2,7 +2,7 @@ import prisma from "../utils/prisma.js";
 import { pageHref } from "../utils/docPaths.js";
 import { htmlToPlainText, truncateText } from "../utils/htmlText.js";
 import { parsePublicHttpUrl } from "../utils/publicUrl.js";
-import { fetchWithTimeout } from "../utils/timeout.js";
+import { fetchWithRetry } from "../utils/fetchRetry.js";
 import type { StudyToolContext, StudyToolResult } from "./studyTools.js";
 
 const UA = "ShelfStudyAI/1.0 (study-ai; https://github.com/shelf)";
@@ -224,7 +224,7 @@ export async function lookupRelevancy(
 async function fetchPublicOnce(url: string): Promise<Response> {
   let current = url;
   for (let hop = 0; hop < FETCH_HOPS; hop++) {
-    const res = await fetchWithTimeout(current, {
+    const res = await fetchWithRetry(current, {
       timeoutMs: 8_000,
       redirect: "manual",
       headers: {

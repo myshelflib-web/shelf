@@ -8,6 +8,8 @@ import { isFreshIndexLease } from "./libraryIndexText.js";
 import { isVectorConfigured } from "./vectorStore.js";
 import { logger, errorFields } from "../utils/logger.js";
 import { isTransientError, withRetry } from "../utils/retry.js";
+import { withDbRetry } from "../utils/dbRetry.js";
+import { recordVectorIndexPage } from "../utils/appMetrics.js";
 import { TimeoutError, withTimeout } from "../utils/timeout.js";
 
 const DEFAULT_INTERVAL_MS = 120_000;
@@ -72,6 +74,7 @@ function isFreshLeaseRow(hash: string, updatedAt: Date): boolean {
 }
 
 export async function findPagesNeedingIndex(batchSize: number): Promise<string[]> {
+  return withDbRetry(async () => {
   const neverIndexed = await prisma.userTopic.findMany({
     where: { status: "PUBLISHED", vectorIndex: null },
     select: { id: true },
@@ -152,12 +155,15 @@ export async function findPagesNeedingIndex(batchSize: number): Promise<string[]
     ...outdated.map((r) => r.pageId),
     ...stale,
   ];
+  }, { label: "vector_index.find_pages" });
 }
 
 async function indexPageWithReliability(pageId: string): Promise<void> {
   const pageTimeoutMs = envNum("VECTOR_INDEX_PAGE_TIMEOUT_MS", DEFAULT_PAGE_TIMEOUT_MS);
   const attempts = envNum("VECTOR_INDEX_PAGE_ATTEMPTS", DEFAULT_PAGE_ATTEMPTS);
+  const started = Date.now();
 
+  try {
   await withRetry(
     () =>
       withTimeout(
@@ -176,6 +182,17 @@ async function indexPageWithReliability(pageId: string): Promise<void> {
       },
     }
   );
+  recordVectorIndexPage({
+    ok: true,
+    durationMs: Date.now() - started,
+  });
+  } catch (err) {
+    recordVectorIndexPage({
+      ok: false,
+      durationMs: Date.now() - started,
+    });
+    throw err;
+  }
 }
 
 export async function runVectorIndexBatch(batchSize?: number): Promise<number> {
@@ -199,10 +216,14 @@ export async function runVectorIndexBatch(batchSize?: number): Promise<number> {
 
   if (pageIds.length === 0) {
     consecutiveFailures = 0;
-    const [published, indexed] = await Promise.all([
-      prisma.userTopic.count({ where: { status: "PUBLISHED" } }),
-      prisma.pageVectorIndex.count(),
-    ]);
+    const [published, indexed] = await withDbRetry(
+      () =>
+        Promise.all([
+          prisma.userTopic.count({ where: { status: "PUBLISHED" } }),
+          prisma.pageVectorIndex.count(),
+        ]),
+      { label: "vector_index.idle_counts" }
+    );
     logger.info("vector_worker.idle", {
       publishedPages: published,
       indexedPages: indexed,

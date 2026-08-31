@@ -23,6 +23,13 @@ describe("metrics", () => {
     expect(h.avgMs).toBe(20);
   });
 
+  it("accumulates fractional sums", () => {
+    metrics.add("tokens", 100, { flow: "chat" });
+    metrics.add("tokens", 50.5, { flow: "chat" });
+    const snap = metrics.snapshot();
+    expect(snap.sums["tokens{flow=chat}"].value).toBe(150.5);
+  });
+
   it("times successful and failed async work", async () => {
     await metrics.time("op", async () => 1, { name: "ok" });
     await expect(

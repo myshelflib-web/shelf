@@ -50,6 +50,8 @@ export type RagAskOpts = {
   depth?: string;
   /** False for slash commands (/flashcards, /pyq) that need markdown, not tools. */
   toolsEnabled?: boolean;
+  /** Grafana flow label (default study_chat). */
+  metricsFlow?: string;
 };
 
 /** Slash bubbles use /cmd labels — answer in text, not via tool calls. */
@@ -164,6 +166,7 @@ export async function answerWithRag(opts: RagAskOpts): Promise<RagResult> {
     enabled: prepared.toolsEnabled,
     llm: prepared.llm,
     maxToolRounds: prepared.maxToolRounds,
+    metricsFlow: opts.metricsFlow ?? "study_chat",
   });
   studyFlow.ragOk(logger, {
     userId: opts.userId,
@@ -214,6 +217,7 @@ export async function* streamAnswerWithRag(
       enabled: prepared.toolsEnabled,
       llm: prepared.llm,
       maxToolRounds: prepared.maxToolRounds,
+      metricsFlow: opts.metricsFlow ?? "study_chat",
     }
   )) {
     if (ev.type === "status") {

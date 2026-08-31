@@ -1,5 +1,5 @@
 import { logger } from "../utils/logger.js";
-import { fetchWithTimeout } from "../utils/timeout.js";
+import { fetchWithRetry } from "../utils/fetchRetry.js";
 import type { VectorHit, VectorPayload, VectorPoint } from "./vectorStoreTypes.js";
 import { isVectorConfigured } from "./vectorStoreTypes.js";
 
@@ -23,7 +23,7 @@ function headers(): Record<string, string> {
 
 async function qdrant(path: string, init: RequestInit): Promise<Response> {
   const timeoutMs = Number(process.env.VECTOR_DB_TIMEOUT_MS ?? 20_000);
-  return fetchWithTimeout(`${baseUrl()}${path}`, {
+  return fetchWithRetry(`${baseUrl()}${path}`, {
     ...init,
     timeoutMs,
     headers: { ...headers(), ...(init.headers as Record<string, string> | undefined) },

@@ -1,4 +1,5 @@
-import { fetchWithTimeout, TimeoutError } from "../utils/timeout.js";
+import { fetchWithRetry } from "../utils/fetchRetry.js";
+import { TimeoutError } from "../utils/timeout.js";
 import { logger } from "../utils/logger.js";
 
 const API_BASE = "https://api.telegram.org";
@@ -63,7 +64,7 @@ async function callApi<T>(
   const token = botToken();
   if (!token) throw new Error("TELEGRAM_BOT_TOKEN is not set");
 
-  const res = await fetchWithTimeout(`${API_BASE}/bot${token}/${method}`, {
+  const res = await fetchWithRetry(`${API_BASE}/bot${token}/${method}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
@@ -127,7 +128,7 @@ export async function sendTelegramDocument(opts: {
     form.append("caption", opts.caption.slice(0, 1024));
   }
 
-  const res = await fetchWithTimeout(`${API_BASE}/bot${token}/sendDocument`, {
+  const res = await fetchWithRetry(`${API_BASE}/bot${token}/sendDocument`, {
     method: "POST",
     body: form,
     timeoutMs: SEND_MS,
@@ -153,7 +154,7 @@ export async function downloadTelegramFile(
   }
 
   const token = botToken()!;
-  const res = await fetchWithTimeout(
+  const res = await fetchWithRetry(
     `${API_BASE}/file/bot${token}/${meta.file_path}`,
     { timeoutMs: FETCH_MS }
   );

@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from "../utils/timeout.js";
+import { fetchWithRetry } from "../utils/fetchRetry.js";
 import { logger, errorFields } from "../utils/logger.js";
 import {
   formatWebHits,
@@ -19,7 +19,7 @@ async function wikipediaHits(query: string): Promise<WebHit[]> {
       namespace: "0",
       format: "json",
     }).toString();
-  const res = await fetchWithTimeout(searchUrl, {
+  const res = await fetchWithRetry(searchUrl, {
     timeoutMs: 8_000,
     headers: { "User-Agent": UA, Accept: "application/json" },
   });
@@ -48,7 +48,7 @@ async function duckDuckGoHits(query: string): Promise<WebHit[]> {
       no_html: "1",
       skip_disambig: "1",
     }).toString();
-  const res = await fetchWithTimeout(url, {
+  const res = await fetchWithRetry(url, {
     timeoutMs: 8_000,
     headers: { "User-Agent": UA, Accept: "application/json" },
   });

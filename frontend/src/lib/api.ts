@@ -1,5 +1,6 @@
 import { clearAccountLocalState } from "@/lib/accountLocalState";
 import { compressFormDataFiles, compressUploadFile, shouldCompressUpload } from "@/lib/compressUploadFile";
+import { fetchWithRetry } from "@/lib/fetchRetry";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { toUserFacingError } from "@/lib/userFacingError";
 
@@ -52,7 +53,7 @@ async function request<T>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetchWithRetry(`${API_URL}${path}`, {
     cache: "no-store",
     ...options,
     headers,
@@ -100,7 +101,7 @@ export type PresignedPdf = {
 };
 
 async function fetchStorageBlob(url: string): Promise<Blob> {
-  const res = await fetch(url).catch(() => {
+  const res = await fetchWithRetry(url).catch(() => {
     throw new ApiError(
       toUserFacingError(
         "Cannot reach storage. Check that MinIO/R2 is running and bucket CORS allows this site.",
@@ -313,10 +314,11 @@ async function postStudySse(
   const token = getToken();
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, {
+    res = await fetchWithRetry(`${API_URL}${path}`, {
       method: "POST",
       cache: "no-store",
       signal: handlers.signal,
+      retrySafeMethods: false,
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",

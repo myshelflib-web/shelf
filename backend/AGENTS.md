@@ -29,7 +29,7 @@ Health: `GET /health`, `GET /metrics`. JSON body limit 10mb. CORS from `CORS_ORI
 
 Structured JSON logs via `utils/logger.ts`. Every HTTP request gets `requestId` (`x-request-id` header) and OpenTelemetry `traceId`/`spanId` when OTLP is enabled. `AsyncLocalStorage` (`utils/logContext.ts`) auto-attaches context to all logs; auth adds `userId`/`userRole`. Secrets/PII are redacted (`utils/logRedact.ts`) — never log passwords, tokens, or raw JWTs. Use `req.log` in routes when available; background jobs use `runWithLogContext` / `logger.child({ jobId })`.
 
-When `OTEL_EXPORTER_OTLP_ENDPOINT` (+ `OTEL_EXPORTER_OTLP_HEADERS` for Grafana Cloud) is set, `src/instrumentation.ts` exports traces, auto HTTP metrics, and app logs to Grafana via OTLP. Custom counters/histograms (`utils/metrics.ts`) dual-write to OTLP when enabled. Loaded via `--import` before the app (`npm run dev` / `npm start`). Local stack: `docker compose --profile observability up -d` → Grafana on `:3001`, OTLP on `:4318`. See `.env.example`.
+When `OTEL_EXPORTER_OTLP_ENDPOINT` (+ `OTEL_EXPORTER_OTLP_HEADERS` for Grafana Cloud) is set, `src/instrumentation.ts` exports traces, auto HTTP metrics, and app logs to Grafana via OTLP. Custom counters/histograms (`utils/metrics.ts`) dual-write to OTLP when enabled. **Product metrics** (`utils/appMetrics.ts`): LLM tokens/cost by flow, embeddings, vector search/index, HTTP `route_group` availability. See `docs/OBSERVABILITY.md` for Grafana dashboard queries.
 
 ## Study AI
 
@@ -83,3 +83,13 @@ Curriculum **Subject → Topic → Article** is separate from collections.
 - `param(req, "id")` for route params. Structured logs via `utils/logger.ts`.
 - Vitest next to utils (`*.test.ts`). Lint: `eslint src --max-warnings=0`.
 - Do not put secrets in the repo. Env: `backend/.env.example`.
+
+## Reliability
+
+Shared helpers in `utils/retry.ts`, `utils/fetchRetry.ts`, `utils/dbRetry.ts`, `utils/timeout.ts`:
+
+- **`withRetry`** — exponential backoff + jitter for transient errors (network, AWS throttling, 429/5xx on thrown status objects). Used by S3, vector indexing, LLM fallbacks.
+- **`fetchWithRetry`** — `fetch` + timeout + backoff on network errors and HTTP 429/5xx. Use for outbound HTTP (Qdrant, Razorpay, Telegram, web lookups). Emits `fetch_retries_total`.
+- **`withDbRetry`** — retries transient Prisma codes (`P1001`, `P1002`, `P1008`, `P1017`, `P2024`). Emits `db_retries_total`.
+- **Gemini embeddings** keep custom 429 `Retry-After` pacing in `services/embeddings.ts` (do not replace with generic short backoff).
+- Frontend: `frontend/src/lib/fetchRetry.ts` — GET/HEAD retry 429/502/503/504; POST/PATCH/DELETE only retry network failures (no duplicate mutations).

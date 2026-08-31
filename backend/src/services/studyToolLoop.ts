@@ -80,7 +80,12 @@ export type ToolChatResult = {
 function llmCallOpts(
   llmOpts: StudyLlmOpts | undefined,
   apiKeyRoute: ApiKeyRoute,
-  extra?: { tools?: typeof STUDY_TOOLS; toolChoice?: "auto" | "none"; signal?: AbortSignal }
+  extra?: {
+    tools?: typeof STUDY_TOOLS;
+    toolChoice?: "auto" | "none";
+    signal?: AbortSignal;
+    metricsFlow?: string;
+  }
 ) {
   return {
     ...extra,
@@ -101,6 +106,7 @@ export async function completeWithStudyTools(
     enabled?: boolean;
     llm?: StudyLlmOpts;
     maxToolRounds?: number;
+    metricsFlow?: string;
   }
 ): Promise<ToolChatResult> {
   const enabled = opts?.enabled !== false;
@@ -122,6 +128,7 @@ export async function completeWithStudyTools(
           tools: useTools ? STUDY_TOOLS : undefined,
           toolChoice: useTools ? "auto" : "none",
           signal: opts?.signal,
+          metricsFlow: opts?.metricsFlow ?? "study_tools",
         })
       );
       tokens += result.tokens;
@@ -155,6 +162,7 @@ export async function completeWithStudyTools(
     llmCallOpts(llmOpts, apiKeyRoute, {
       toolChoice: "none",
       signal: opts?.signal,
+      metricsFlow: opts?.metricsFlow ?? "study_tools",
     })
   );
   return {
@@ -185,6 +193,7 @@ export async function* streamWithStudyTools(
     enabled?: boolean;
     llm?: StudyLlmOpts;
     maxToolRounds?: number;
+    metricsFlow?: string;
   }
 ): AsyncGenerator<ToolStreamEvent> {
   const enabled = opts?.enabled !== false;
@@ -213,6 +222,7 @@ export async function* streamWithStudyTools(
           tools: useTools ? STUDY_TOOLS : undefined,
           toolChoice: useTools ? "auto" : "none",
           signal: opts?.signal,
+          metricsFlow: opts?.metricsFlow ?? "study_tools",
         })
       )) {
         if (opts?.signal?.aborted) break;

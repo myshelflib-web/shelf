@@ -44,6 +44,8 @@ export type ChatRequestOpts = {
   model?: string;
   /** Paid Gemini key for Premium/admin; free key for Free plan users. */
   apiKeyRoute?: ApiKeyRoute;
+  /** Observability flow label for Grafana (study_chat, quiz_generate, …). */
+  metricsFlow?: string;
 };
 
 export type ChatResult = {

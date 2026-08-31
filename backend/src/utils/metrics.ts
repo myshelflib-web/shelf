@@ -12,6 +12,11 @@ interface CounterEntry {
   labels: MetricLabels;
 }
 
+interface SumEntry {
+  value: number;
+  labels: MetricLabels;
+}
+
 interface HistogramEntry {
   count: number;
   sumMs: number;
@@ -30,6 +35,7 @@ function labelKey(name: string, labels?: MetricLabels): string {
 }
 
 const counters = new Map<string, CounterEntry>();
+const sums = new Map<string, SumEntry>();
 const histograms = new Map<string, HistogramEntry>();
 const startedAt = Date.now();
 
@@ -70,6 +76,20 @@ export const metrics = {
     }
 
     otelCounter(name)?.add(by, otelAttributes(labels));
+  },
+
+  /** Cumulative sum for tokens, USD estimates, and other fractional totals. */
+  add(name: string, value: number, labels?: MetricLabels): void {
+    if (!Number.isFinite(value) || value === 0) return;
+    const key = labelKey(name, labels);
+    const existing = sums.get(key);
+    if (existing) {
+      existing.value += value;
+    } else {
+      sums.set(key, { value, labels: labels ?? {} });
+    }
+
+    otelCounter(name)?.add(value, otelAttributes(labels));
   },
 
   observe(name: string, durationMs: number, labels?: MetricLabels): void {
@@ -118,6 +138,11 @@ export const metrics = {
       counterOut[key] = { value: entry.value, labels: entry.labels };
     }
 
+    const sumOut: Record<string, { value: number; labels: MetricLabels }> = {};
+    for (const [key, entry] of sums) {
+      sumOut[key] = { value: entry.value, labels: entry.labels };
+    }
+
     const histogramOut: Record<
       string,
       {
@@ -143,12 +168,14 @@ export const metrics = {
     return {
       uptimeSec: Math.floor((Date.now() - startedAt) / 1000),
       counters: counterOut,
+      sums: sumOut,
       histograms: histogramOut,
     };
   },
 
   reset(): void {
     counters.clear();
+    sums.clear();
     histograms.clear();
   },
 };

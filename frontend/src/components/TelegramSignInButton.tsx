@@ -26,6 +26,8 @@ export type TelegramAuthUser = {
 interface TelegramSignInButtonProps {
   onError?: (message: string) => void;
   redirectTo?: string;
+  /** Fired when the Telegram auth exchange with Shelf is in progress. */
+  onSigningInChange?: (signingIn: boolean) => void;
 }
 
 declare global {
@@ -48,6 +50,7 @@ function TelegramMark({ className }: { className?: string }) {
 export function TelegramSignInButton({
   onError,
   redirectTo = "/my-content",
+  onSigningInChange,
 }: TelegramSignInButtonProps) {
   const fromContext = useTelegramBotUsername();
   const { loginWithTelegram } = useAuth();
@@ -55,6 +58,7 @@ export function TelegramSignInButton({
   const { ref: widthRef, width: containerWidth } = useSocialSignInWidth();
   const widgetHostRef = useRef<HTMLDivElement>(null);
   const onErrorRef = useRef(onError);
+  const onSigningInChangeRef = useRef(onSigningInChange);
   const loginRef = useRef(loginWithTelegram);
   const redirectRef = useRef(redirectTo);
   const [fromApi, setFromApi] = useState<string | null>(null);
@@ -65,6 +69,7 @@ export function TelegramSignInButton({
   const [widgetScale, setWidgetScale] = useState(1);
 
   onErrorRef.current = onError;
+  onSigningInChangeRef.current = onSigningInChange;
   loginRef.current = loginWithTelegram;
   redirectRef.current = redirectTo;
 
@@ -100,10 +105,12 @@ export function TelegramSignInButton({
 
     window.onShelfTelegramAuth = async (user) => {
       setLoading(true);
+      onSigningInChangeRef.current?.(true);
       try {
         await loginRef.current(user);
         router.push(redirectRef.current);
       } catch (err) {
+        onSigningInChangeRef.current?.(false);
         onErrorRef.current?.(
           toUserFacingError(
             err instanceof Error ? err.message : "Telegram sign-in failed",

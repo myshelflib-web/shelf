@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { processPdf } from "./processor.js";
 import { errorFields, logger } from "./utils/logger.js";
 import { metrics } from "./utils/metrics.js";
-import { withRetry } from "./utils/retry.js";
+import { fetchWithRetry } from "./utils/fetchRetry.js";
 import {
   getLogContext,
   runWithLogContextAsync,
@@ -71,31 +71,23 @@ function internalHeaders(): Record<string, string> {
 }
 
 async function fetchPendingJobs(): Promise<ProcessingJob[]> {
-  return withRetry(
-    async () => {
-      const response = await fetch(
-        `${process.env.BACKEND_URL}/api/internal/pending-processing`,
-        { headers: internalHeaders() }
-      );
-
-      if (!response.ok) {
-        const err = new Error(
-          `Failed to fetch pending jobs: ${response.status}`
-        ) as Error & { status?: number };
-        err.status = response.status;
-        throw err;
-      }
-
-      const data = (await response.json()) as { jobs: ProcessingJob[] };
-      return data.jobs ?? [];
-    },
+  const response = await fetchWithRetry(
+    `${process.env.BACKEND_URL}/api/internal/pending-processing`,
     {
-      label: "fetch.pending_jobs",
-      attempts: 4,
-      delayMs: 300,
-      onRetry: () => metrics.inc("worker_retries_total", { op: "fetch_jobs" }),
+      headers: internalHeaders(),
+      timeoutMs: 30_000,
+      retry: {
+        label: "fetch.pending_jobs",
+        attempts: 4,
+        delayMs: 300,
+        onRetry: () =>
+          metrics.inc("worker_retries_total", { op: "fetch_jobs" }),
+      },
     }
   );
+
+  const data = (await response.json()) as { jobs: ProcessingJob[] };
+  return data.jobs ?? [];
 }
 
 async function notifyProcessed(
@@ -107,30 +99,19 @@ async function notifyProcessed(
       ? `/api/internal/user-topics/${job.topicId}/processed`
       : `/api/internal/topics/${job.topicId}/processed`;
 
-  await withRetry(
-    async () => {
-      const response = await fetch(`${process.env.BACKEND_URL}${callbackPath}`, {
-        method: "POST",
-        headers: internalHeaders(),
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const err = new Error(
-          `Callback failed: ${response.status}`
-        ) as Error & { status?: number };
-        err.status = response.status;
-        throw err;
-      }
-    },
-    {
+  await fetchWithRetry(`${process.env.BACKEND_URL}${callbackPath}`, {
+    method: "POST",
+    headers: internalHeaders(),
+    body: JSON.stringify(payload),
+    timeoutMs: 30_000,
+    retry: {
       label: "notify.processed",
       attempts: 4,
       delayMs: 300,
       onRetry: () =>
         metrics.inc("worker_retries_total", { op: "notify_processed" }),
-    }
-  );
+    },
+  });
 }
 
 export async function runJob(job: ProcessingJob): Promise<void> {

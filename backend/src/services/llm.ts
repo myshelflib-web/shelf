@@ -1,5 +1,6 @@
 import { logger } from "../utils/logger.js";
 import { llmFlow } from "../utils/flowLog.js";
+import { recordLlmCall } from "../utils/appMetrics.js";
 import {
   apiKeyHint,
   chatModelCandidates,
@@ -399,6 +400,9 @@ export async function completeChat(
   messages: ChatMessage[],
   opts?: Omit<ChatRequestOpts, "stream">
 ): Promise<ChatResult> {
+  const flow = opts?.metricsFlow ?? "other";
+  const started = Date.now();
+  try {
   const { response, model } = await openChatWithFallbacks(messages, {
     stream: false,
     ...opts,
@@ -434,7 +438,29 @@ export async function completeChat(
     toolCalls: toolCalls?.length ?? 0,
     apiKeyRoute: opts?.apiKeyRoute,
   });
+  recordLlmCall({
+    flow,
+    model,
+    ok: true,
+    stream: false,
+    durationMs: Date.now() - started,
+    tokens: result.tokens,
+    promptTokens: data.usage?.prompt_tokens,
+    completionTokens: data.usage?.completion_tokens,
+    apiKeyRoute: opts?.apiKeyRoute,
+  });
   return result;
+  } catch (err) {
+    recordLlmCall({
+      flow,
+      model: opts?.model ?? "unknown",
+      ok: false,
+      stream: false,
+      durationMs: Date.now() - started,
+      apiKeyRoute: opts?.apiKeyRoute,
+    });
+    throw err;
+  }
 }
 
 export type StreamChatEvent =
@@ -447,10 +473,16 @@ export async function* streamChat(
   messages: ChatMessage[],
   opts?: Omit<ChatRequestOpts, "stream">
 ): AsyncGenerator<StreamChatEvent> {
-  const { response, model } = await openChatWithFallbacks(messages, {
+  const flow = opts?.metricsFlow ?? "other";
+  const started = Date.now();
+  let model = opts?.model ?? "unknown";
+  try {
+  const opened = await openChatWithFallbacks(messages, {
     stream: true,
     ...opts,
   });
+  model = opened.model;
+  const { response } = opened;
   if (!response.body) {
     throw new Error("Study AI returned an empty stream.");
   }
@@ -517,9 +549,31 @@ export async function* streamChat(
     throw new Error("Study AI returned an empty response.");
   }
 
+  const tokens = Math.ceil((full.length + 200) / 4);
+  recordLlmCall({
+    flow,
+    model,
+    ok: true,
+    stream: true,
+    durationMs: Date.now() - started,
+    tokens,
+    apiKeyRoute: opts?.apiKeyRoute,
+  });
+
   yield {
     type: "done",
-    tokens: Math.ceil((full.length + 200) / 4),
+    tokens,
     model,
   };
+  } catch (err) {
+    recordLlmCall({
+      flow,
+      model,
+      ok: false,
+      stream: true,
+      durationMs: Date.now() - started,
+      apiKeyRoute: opts?.apiKeyRoute,
+    });
+    throw err;
+  }
 }

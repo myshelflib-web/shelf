@@ -160,7 +160,7 @@ router.post("/chats/:id/messages", async (req: Request, res: Response) => {
       data: { title: nextTitle, updatedAt: new Date() },
     });
 
-    await chargeLlmTokens(userId, result.tokens);
+    await chargeLlmTokens(userId, result.tokens, "study_chat");
 
     res.json({
       userMessage: userMsg,
@@ -378,7 +378,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
       data: { title: nextTitle, updatedAt: new Date() },
     });
     if (tokens > 0) {
-      await chargeLlmTokens(userId, tokens);
+      await chargeLlmTokens(userId, tokens, "study_chat");
     }
 
     if (!clientGone && assistantMsg) {

@@ -23,6 +23,7 @@ import {
   chatHistoryWindow,
 } from "../utils/quotas.js";
 import { assertLlmBudget, chargeLlmTokens } from "../utils/llmUsage.js";
+import { recordProductFlow } from "../utils/appMetrics.js";
 import {
   studyAiFailureStub,
   toUserFacingStudyError,
@@ -160,7 +161,7 @@ router.post("/ask", async (req: Request, res: Response) => {
             userId,
             defaultPageId: prepared.defaultPageId,
           },
-          studyToolLoopOpts(prepared)
+          { ...studyToolLoopOpts(prepared), metricsFlow: "study_ask" }
         );
         answer = result.text;
         tokens = result.tokens;
@@ -172,15 +173,21 @@ router.post("/ask", async (req: Request, res: Response) => {
           userId,
           defaultPageId: prepared.defaultPageId,
         },
-        studyToolLoopOpts(prepared)
+        { ...studyToolLoopOpts(prepared), metricsFlow: "study_ask" }
       );
       answer = result.text;
       tokens = result.tokens;
     }
 
-    await chargeLlmTokens(userId, tokens);
+    await chargeLlmTokens(userId, tokens, "study_ask");
 
     const durationMs = Date.now() - askStarted;
+    recordProductFlow({
+      domain: "study",
+      action: "ask",
+      ok: true,
+      durationMs,
+    });
     logger.info("study.ask.ok", {
       durationMs,
       usedVectors: prepared.needVectors,
@@ -297,9 +304,15 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
     tokens = streamResult.tokens;
     answer = streamResult.answer;
 
-    await chargeLlmTokens(userId, tokens);
+    await chargeLlmTokens(userId, tokens, "study_ask_stream");
 
     const durationMs = Date.now() - askStarted;
+    recordProductFlow({
+      domain: "study",
+      action: "ask_stream",
+      ok: true,
+      durationMs,
+    });
     logger.info("study.ask.stream.ok", {
       durationMs,
       usedVectors: prepared.needVectors,
@@ -424,9 +437,15 @@ router.post("/library-ask", async (req: Request, res: Response) => {
       userId,
       query,
       studyGoal: user.studyGoal ?? "GENERAL",
+      metricsFlow: "study_library_ask",
     });
 
-    await chargeLlmTokens(userId, result.tokens);
+    await chargeLlmTokens(userId, result.tokens, "study_library_ask");
+    recordProductFlow({
+      domain: "study",
+      action: "library_ask",
+      ok: true,
+    });
 
     res.json({
       answer: result.answer,

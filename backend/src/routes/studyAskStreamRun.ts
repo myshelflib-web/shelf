@@ -35,7 +35,10 @@ export async function runStudyAskStream(
     toolsEnabled: prepared.toolsEnabled,
   });
 
-  const toolOpts = studyToolLoopOpts(prepared, signal);
+  const toolOpts = {
+    ...studyToolLoopOpts(prepared, signal),
+    metricsFlow: "study_ask_stream" as const,
+  };
 
   const consumeToolStream = async () => {
     for await (const ev of streamWithStudyTools(

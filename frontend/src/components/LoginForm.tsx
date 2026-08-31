@@ -11,6 +11,7 @@ import { useGoogleClientId } from "@/components/GoogleAuthProvider";
 import { TelegramSignInButton } from "@/components/TelegramSignInButton";
 import { isDevEnvironment } from "@/lib/userFacingError";
 import { ShelfLogo } from "@/components/ShelfLogo";
+import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { api, ApiError } from "@/lib/api";
 import { OtpDigitInput } from "@/components/OtpDigitInput";
 import { isValidEmailFormat } from "@/lib/email";
@@ -51,6 +52,8 @@ export function LoginForm({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [socialSigningIn, setSocialSigningIn] = useState(false);
+  const [completingSignIn, setCompletingSignIn] = useState(false);
   const { remaining, coolingDown, start, clear } = useOtpResendCooldown();
   const googleClientId = useGoogleClientId();
   const googleFromServer =
@@ -68,6 +71,17 @@ export function LoginForm({
       setIsRegister(true);
     }
   }, [nextPathProp]);
+
+  useEffect(() => {
+    if (!socialSigningIn && !user) {
+      setCompletingSignIn(false);
+    }
+  }, [socialSigningIn, user]);
+
+  const handleSocialSigningIn = (signingIn: boolean) => {
+    setSocialSigningIn(signingIn);
+    if (signingIn) setCompletingSignIn(true);
+  };
 
   useEffect(() => {
     if (embedded || !user || handledAuthRef.current) return;
@@ -163,6 +177,27 @@ export function LoginForm({
   const socialRedirect = embedded
     ? nextPath
     : `/onboarding?next=${encodeURIComponent(nextPath)}`;
+
+  const showSignInLoading =
+    socialSigningIn || completingSignIn || (!embedded && Boolean(user));
+
+  if (showSignInLoading) {
+    const loadingLabel = socialSigningIn
+      ? "Signing in"
+      : user
+        ? "Opening library"
+        : "Loading";
+    return (
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-3">
+            <ShelfLogo size={40} />
+          </div>
+          <ThinkingIndicator label={loadingLabel} className="justify-center" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md">
@@ -307,11 +342,13 @@ export function LoginForm({
               <GoogleSignInButton
                 onError={setError}
                 redirectTo={socialRedirect}
+                onSigningInChange={handleSocialSigningIn}
               />
             ) : null}
             <TelegramSignInButton
               onError={setError}
               redirectTo={socialRedirect}
+              onSigningInChange={handleSocialSigningIn}
             />
           </div>
         </>

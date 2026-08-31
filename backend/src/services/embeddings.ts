@@ -1,4 +1,6 @@
 import { logger } from "../utils/logger.js";
+import { recordEmbeddingCall } from "../utils/appMetrics.js";
+import { estimateTokens } from "../utils/quotas.js";
 import { fetchWithTimeout } from "../utils/timeout.js";
 import { SHELF_GEMINI } from "./shelfGeminiModels.js";
 import {
@@ -230,11 +232,10 @@ async function embedTextsGeminiNative(
   return out;
 }
 
-export async function embedTexts(
+async function embedTextsImpl(
   texts: string[],
   opts?: { task?: EmbedTask; apiKeyRoute?: ApiKeyRoute; userId?: string }
 ): Promise<number[][]> {
-  if (texts.length === 0) return [];
   const task = opts?.task;
 
   const baseUrl = embeddingBaseUrl();
@@ -342,6 +343,39 @@ export async function embedTexts(
   };
   const rows = [...(data.data ?? [])].sort((a, b) => a.index - b.index);
   return rows.map((r) => r.embedding);
+}
+
+export async function embedTexts(
+  texts: string[],
+  opts?: { task?: EmbedTask; apiKeyRoute?: ApiKeyRoute; userId?: string }
+): Promise<number[][]> {
+  if (texts.length === 0) return [];
+  const started = Date.now();
+  const model = embeddingModel();
+  const taskLabel = opts?.task ?? "unknown";
+  const tokenEstimate = texts.reduce((sum, t) => sum + estimateTokens(t), 0);
+  try {
+    const vectors = await embedTextsImpl(texts, opts);
+    recordEmbeddingCall({
+      task: taskLabel,
+      model,
+      ok: true,
+      durationMs: Date.now() - started,
+      textCount: texts.length,
+      tokenEstimate,
+    });
+    return vectors;
+  } catch (err) {
+    recordEmbeddingCall({
+      task: taskLabel,
+      model,
+      ok: false,
+      durationMs: Date.now() - started,
+      textCount: texts.length,
+      tokenEstimate,
+    });
+    throw err;
+  }
 }
 
 export function logEmbeddingConfig(): void {

@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from "../utils/timeout.js";
+import { fetchWithRetry } from "../utils/fetchRetry.js";
 import { truncateText } from "../utils/htmlText.js";
 import { logger } from "../utils/logger.js";
 import {
@@ -104,7 +104,7 @@ export async function googleCustomSearchHits(
       q: query,
       num: "5",
     }).toString();
-  const res = await fetchWithTimeout(url, {
+  const res = await fetchWithRetry(url, {
     timeoutMs: 8_000,
     headers: { "User-Agent": UA, Accept: "application/json" },
   });
@@ -134,7 +134,7 @@ export async function geminiGoogleSearchText(
   const slug = chatModel().replace(/^models\//, "");
   const path = `${geminiNativeBaseUrl()}/models/${slug}:generateContent`;
   await acquireGeminiChatSlot();
-  const res = await fetchWithTimeout(path, {
+  const res = await fetchWithRetry(path, {
     method: "POST",
     timeoutMs: 20_000,
     headers: {

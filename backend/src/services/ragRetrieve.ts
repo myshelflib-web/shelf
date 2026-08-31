@@ -3,6 +3,7 @@ import { pageHref } from "../utils/docPaths.js";
 import { getFromS3 } from "./s3.js";
 import { htmlToPlainText, truncateText } from "../utils/htmlText.js";
 import { logger, errorFields } from "../utils/logger.js";
+import { recordVectorSearch } from "../utils/appMetrics.js";
 import { embedTexts } from "./embeddings.js";
 import {
   isVectorConfigured,
@@ -163,6 +164,7 @@ export async function retrieveLibrary(
   const keywordPromise = keywordExcerpts(userId, query, pageIds);
 
   if (isVectorConfigured()) {
+    const searchStarted = Date.now();
     try {
       const [vector] = await embedTexts([query], { task: "query", userId });
       const hits = await searchVectors(vector, userId, VECTOR_HIT_LIMIT, {
@@ -176,9 +178,24 @@ export async function retrieveLibrary(
           vectorExcerpts,
           keywords.slice(0, KEYWORD_BLEND),
         ]);
-        return diversifyExcerpts(fused, MAX_EXCERPTS, MAX_PER_PAGE);
+        const results = diversifyExcerpts(fused, MAX_EXCERPTS, MAX_PER_PAGE);
+        recordVectorSearch({
+          ok: true,
+          durationMs: Date.now() - searchStarted,
+          hits: results.length,
+        });
+        return results;
       }
+      recordVectorSearch({
+        ok: true,
+        durationMs: Date.now() - searchStarted,
+        hits: 0,
+      });
     } catch (err) {
+      recordVectorSearch({
+        ok: false,
+        durationMs: Date.now() - searchStarted,
+      });
       logger.error("rag.vector_retrieve_failed", errorFields(err));
     }
   }

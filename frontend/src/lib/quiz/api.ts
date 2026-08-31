@@ -1,5 +1,6 @@
 import { API_URL, ApiError } from "@/lib/api";
 import { compressUploadFile } from "@/lib/compressUploadFile";
+import { fetchWithRetry } from "@/lib/fetchRetry";
 import { toUserFacingError } from "@/lib/userFacingError";
 import type { Quiz, QuizSummary } from "./types";
 
@@ -18,7 +19,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetchWithRetry(`${API_URL}${path}`, {
     cache: "no-store",
     ...options,
     headers,

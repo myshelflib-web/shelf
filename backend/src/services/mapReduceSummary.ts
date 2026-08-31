@@ -110,6 +110,7 @@ export async function* streamMapReduceAnswer(
             signal: opts.signal,
             temperature: 0.2,
             apiKeyRoute: "paid",
+            metricsFlow: "study_map_reduce",
           }
         );
         return { i, text: result.text, tokens: result.tokens };
@@ -151,6 +152,7 @@ ${mapSummaries.filter(Boolean).join("\n\n")}`;
       temperature: cfg.temperature,
       signal: opts.signal,
       apiKeyRoute: "paid",
+      metricsFlow: "study_map_reduce",
     }
   )) {
     if (ev.type === "delta") {

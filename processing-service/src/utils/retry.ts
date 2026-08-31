@@ -46,6 +46,7 @@ export function isTransientError(err: unknown): boolean {
   if (
     [
       "TimeoutError",
+      "AbortError",
       "NetworkingError",
       "ECONNRESET",
       "ECONNREFUSED",
@@ -58,9 +59,13 @@ export function isTransientError(err: unknown): boolean {
       "RequestTimeout",
       "ServiceUnavailable",
       "InternalError",
-      "fetch failed",
+      "PriorRequestNotComplete",
     ].some((c) => code.includes(c) || message.includes(c.toLowerCase()))
   ) {
+    return true;
+  }
+
+  if (/timed out|rate limited|quota exceeded|econnreset|fetch failed/i.test(message)) {
     return true;
   }
 
