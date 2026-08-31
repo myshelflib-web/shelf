@@ -92,16 +92,20 @@ export function textFromGeminiGrounding(data: {
 
 /** Programmable Search Engine JSON API — does not consume Gemini chat RPM. */
 export async function googleCustomSearchHits(
-  query: string
+  query: string,
+  opts?: { siteRestrict?: string }
 ): Promise<WebHit[]> {
   const cfg = googleCseConfig();
   if (!cfg) return [];
+  const q = opts?.siteRestrict
+    ? `${opts.siteRestrict} ${query}`.trim()
+    : query;
   const url =
     "https://www.googleapis.com/customsearch/v1?" +
     new URLSearchParams({
       key: cfg.key,
       cx: cfg.cx,
-      q: query,
+      q: q.slice(0, 256),
       num: "5",
     }).toString();
   const res = await fetchWithRetry(url, {
@@ -127,7 +131,8 @@ export async function googleCustomSearchHits(
  * Uses one Flash-Lite request — paced by the chat RPM limiter.
  */
 export async function geminiGoogleSearchText(
-  query: string
+  query: string,
+  opts?: { siteHint?: string }
 ): Promise<string | null> {
   const apiKey = llmApiKey();
   if (!apiKey || !isGeminiBaseUrl(llmBaseUrl())) return null;
@@ -147,7 +152,9 @@ export async function geminiGoogleSearchText(
           role: "user",
           parts: [
             {
-              text: `Search the public web and list the key facts for: ${query}. Cite source URLs. Be concise.`,
+              text: opts?.siteHint
+                ? `Search the public web for: ${query}. Prefer these sources when relevant: ${opts.siteHint}. Cite source URLs. Be concise.`
+                : `Search the public web and list the key facts for: ${query}. Cite source URLs. Be concise.`,
             },
           ],
         },

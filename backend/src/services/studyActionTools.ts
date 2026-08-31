@@ -1,4 +1,4 @@
-import { StudyItemKind } from "@prisma/client";
+import { StudyItemKind, StudyGoal } from "@prisma/client";
 import prisma from "../utils/prisma.js";
 import { masterId, parseRecurrence } from "../utils/recurrence.js";
 import {
@@ -15,6 +15,7 @@ import {
   parseProctored,
   parseSourceKind,
   parseTimeLimitSec,
+  type QuizDifficulty,
 } from "./quiz/quizLimits.js";
 import {
   prepareQuizUser,
@@ -97,19 +98,23 @@ export const STUDY_ACTION_TOOLS: ChatToolDef[] = [
     function: {
       name: "create_quiz",
       description:
-        "Start generating a Shelf quiz from the library (or exam bank). Returns a /quiz/:id link; generation continues in the background.",
+        "REQUIRED when the learner asks to create, start, make, or generate a quiz, MCQ paper, or practice test. Call this tool — do not only describe a quiz in text. Returns /quiz/:id.",
       parameters: {
         type: "object",
         properties: {
           focusTopic: {
             type: "string",
-            description: "Optional topic focus for the paper.",
+            description: "Topic or chapter focus from their question.",
           },
           difficulty: {
             type: "string",
             enum: ["EASY", "MEDIUM", "HARD", "EXAM"],
+            description: "Default EXAM for exam tracks.",
           },
-          mcqCount: { type: "number", description: "MCQ count (0–20, default 5)." },
+          mcqCount: {
+            type: "number",
+            description: "MCQ count (1–20, default 5).",
+          },
           writtenCount: {
             type: "number",
             description: "Written count (0–8, default 2).",
@@ -121,7 +126,7 @@ export const STUDY_ACTION_TOOLS: ChatToolDef[] = [
           proctored: {
             type: "boolean",
             description:
-              "True (default) for fullscreen exam sitting; false for practice with tab switches allowed.",
+              "False for casual practice; true (default) for exam-style sitting.",
           },
           sourceKind: {
             type: "string",
@@ -132,7 +137,7 @@ export const STUDY_ACTION_TOOLS: ChatToolDef[] = [
             type: "string",
             enum: ["LIBRARY", "NOTEBOOK", "TOPIC", "PAGE"],
             description:
-              "Scope. Default PAGE when chatting on a document, else LIBRARY.",
+              "Quiz scope. Omit on a document — defaults to PAGE for the open file.",
           },
           contextPageId: { type: "string" },
           contextNotebookId: { type: "string" },
@@ -296,6 +301,11 @@ function parseContextKind(raw: unknown): ChatContextKind {
   return "LIBRARY";
 }
 
+function defaultQuizDifficulty(goal: StudyGoal | null | undefined): QuizDifficulty {
+  if (goal && goal !== "GENERAL") return "EXAM";
+  return "MEDIUM";
+}
+
 async function createQuiz(
   ctx: StudyToolContext,
   args: Record<string, unknown>
@@ -307,7 +317,14 @@ async function createQuiz(
     };
   }
 
-  const difficulty = parseDifficulty(args.difficulty ?? "MEDIUM");
+  const user = await prisma.user.findUnique({
+    where: { id: ctx.userId },
+    select: { studyGoal: true },
+  });
+  const difficulty =
+    args.difficulty !== undefined && args.difficulty !== null && args.difficulty !== ""
+      ? parseDifficulty(args.difficulty)
+      : defaultQuizDifficulty(user?.studyGoal);
   const { mcqCount, writtenCount } = clampQuestionCounts(
     args.mcqCount === undefined ? 5 : Number(args.mcqCount),
     args.writtenCount === undefined ? 2 : Number(args.writtenCount)
@@ -323,6 +340,8 @@ async function createQuiz(
 
   if (!args.contextKind && ctx.defaultPageId) {
     contextKind = "PAGE";
+    contextPageId = ctx.defaultPageId;
+  } else if (contextKind === "PAGE" && !contextPageId && ctx.defaultPageId) {
     contextPageId = ctx.defaultPageId;
   }
 
@@ -359,7 +378,9 @@ async function createQuiz(
   const quiz = await prisma.quiz.create({
     data: {
       userId: ctx.userId,
-      title: "Generating quiz…",
+      title: focusTopic
+        ? `Quiz: ${focusTopic.slice(0, 80)}`
+        : "Generating quiz…",
       sourceKind,
       contextKind,
       contextNotebookId: contextKind === "LIBRARY" ? null : contextNotebookId,
@@ -378,7 +399,7 @@ async function createQuiz(
 
   scheduleQuizGeneration(quiz.id);
   return {
-    text: `Quiz started (id: ${quiz.id}). Open /quiz/${quiz.id} — questions generate in the background. Tell the learner the link.`,
+    text: `Quiz created (id: ${quiz.id}). Open /quiz/${quiz.id} — questions generate in the background (usually under a minute). Tell the learner to open that link.`,
   };
 }
 
