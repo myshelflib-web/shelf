@@ -99,12 +99,13 @@ app.use(
       callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
-    allowedHeaders: ["Authorization", "Content-Type", "Range"],
+    allowedHeaders: ["Authorization", "Content-Type", "Range", "x-request-id"],
     exposedHeaders: [
       "Accept-Ranges",
       "Content-Range",
       "Content-Length",
       "Content-Type",
+      "x-request-id",
     ],
   })
 );
