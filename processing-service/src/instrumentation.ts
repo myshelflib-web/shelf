@@ -66,6 +66,17 @@ if (endpoint) {
 
   sdk.start();
 
+  console.log(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      level: "info",
+      msg: "otel.started",
+      service: serviceName,
+      endpoint,
+      signals: ["traces", "metrics", "logs"],
+    })
+  );
+
   const shutdown = () => {
     Promise.all([
       sdk.shutdown().catch(() => undefined),

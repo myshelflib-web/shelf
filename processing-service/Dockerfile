@@ -23,4 +23,4 @@ COPY --from=build /app/package.json ./
 EXPOSE 4001
 
 # Runtime secrets (BACKEND_URL, INTERNAL_SECRET, S3_*) injected at deploy time.
-CMD ["node", "dist/index.js"]
+CMD ["node", "--import", "./dist/instrumentation.js", "dist/index.js"]

@@ -29,4 +29,4 @@ COPY --from=build /app/prisma ./prisma
 EXPOSE 4000
 
 # Secrets via runtime env. Migrations run automatically on container start.
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node --import ./dist/instrumentation.js dist/index.js"]
