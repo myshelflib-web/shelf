@@ -147,3 +147,33 @@ curl -s localhost:4000/metrics | jq '.sums, .counters | keys'
 ```
 
 Grafana UI: http://localhost:3001
+
+---
+
+## Frontend errors (PostHog)
+
+The Next.js app reports client issues to **PostHog** when `NEXT_PUBLIC_ANALYTICS_KEY` is set (`frontend/src/lib/analytics/`).
+
+| Event | When |
+|---|---|
+| `api_request_failed` | Any failed `api.ts` / quiz API call (network or HTTP error) |
+| `study_sse` failures | Study AI stream HTTP/network errors (property `source`) |
+| `client_error` | Uncaught JS errors |
+| `unhandled_rejection` | Unhandled promise rejections (via `client_error` + `kind`) |
+| `component_error` | React Error Boundary catch |
+| `chunk_load_failed` | Next.js lazy-chunk / dynamic import failures |
+| `$exception` | PostHog native exception autocapture (enabled in SDK init) |
+
+Every API failure includes `request_id` — paste into Grafana logs:
+
+```logql
+{service_name="shelf-backend"} | json | requestId="<request_id from PostHog>"
+```
+
+**PostHog dashboard ideas:**
+- Trend: `api_request_failed` by `path` and `status`
+- Trend: `component_error` + `chunk_load_failed`
+- Session replay: filter users who fired `api_request_failed` in the last hour
+- Breakdown: errors by `route` (page URL path)
+
+Existing product failure events still fire: `upload_error`, `study_ai_stream_error`, `quiz_generation_failed`, `pdf_processing_failed`.

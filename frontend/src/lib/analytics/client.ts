@@ -75,6 +75,14 @@ export function pageview(
   provider.pageview(url, properties);
 }
 
+export function captureException(
+  error: Error,
+  properties?: AnalyticsProperties
+): void {
+  if (!initialized) initAnalytics();
+  provider.captureException?.(error, properties);
+}
+
 /** Test hook — not used in production UI */
 export function __setAnalyticsProviderForTests(next: AnalyticsProvider): void {
   provider = next;

@@ -1,4 +1,5 @@
 import { API_URL, ApiError } from "@/lib/api";
+import { reportApiFailure } from "@/lib/analytics/errors";
 import { compressUploadFile } from "@/lib/compressUploadFile";
 import { fetchWithRetry } from "@/lib/fetchRetry";
 import { toUserFacingError } from "@/lib/userFacingError";
@@ -9,9 +10,18 @@ function getToken(): string | null {
   return localStorage.getItem("token");
 }
 
+function newRequestId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
+  const requestId = newRequestId();
   const headers: Record<string, string> = {
+    "x-request-id": requestId,
     ...(options.headers as Record<string, string>),
   };
   if (!(options.body instanceof FormData)) {
@@ -24,14 +34,29 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     ...options,
     headers,
   }).catch(() => {
-    throw new ApiError("Cannot reach the server.", 0);
+    const message = "Cannot reach the server.";
+    reportApiFailure({
+      path,
+      method: options.method ?? "GET",
+      status: 0,
+      message,
+      requestId,
+      source: "quiz_api",
+    });
+    throw new ApiError(message, 0);
   });
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: "Request failed" }));
-    throw new ApiError(
-      toUserFacingError(error.error ?? "Request failed"),
-      res.status
-    );
+    const message = toUserFacingError(error.error ?? "Request failed");
+    reportApiFailure({
+      path,
+      method: options.method ?? "GET",
+      status: res.status,
+      message,
+      requestId,
+      source: "quiz_api",
+    });
+    throw new ApiError(message, res.status);
   }
   return (await res.json()) as T;
 }

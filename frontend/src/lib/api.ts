@@ -1,6 +1,7 @@
 import { clearAccountLocalState } from "@/lib/accountLocalState";
 import { compressFormDataFiles, compressUploadFile, shouldCompressUpload } from "@/lib/compressUploadFile";
 import { fetchWithRetry } from "@/lib/fetchRetry";
+import { reportApiFailure } from "@/lib/analytics/errors";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { toUserFacingError } from "@/lib/userFacingError";
 
@@ -53,29 +54,40 @@ async function request<T>(
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  const requestId = headers["x-request-id"];
+
   const res = await fetchWithRetry(`${API_URL}${path}`, {
     cache: "no-store",
     ...options,
     headers,
   }).catch(() => {
-    throw new ApiError(
-      toUserFacingError(
-        "Cannot reach the server. Check that the backend is running and NEXT_PUBLIC_API_URL is correct.",
-        "Couldn’t reach the server. Check your connection and try again."
-      ),
-      0,
+    const message = toUserFacingError(
+      "Cannot reach the server. Check that the backend is running and NEXT_PUBLIC_API_URL is correct.",
+      "Couldn’t reach the server. Check your connection and try again."
     );
+    reportApiFailure({
+      path,
+      method: options.method ?? "GET",
+      status: 0,
+      message,
+      requestId,
+    });
+    throw new ApiError(message, 0);
   });
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: "Request failed" }));
     const retryAfterSec =
       typeof error.retryAfterSec === "number" ? error.retryAfterSec : undefined;
-    throw new ApiError(
-      toUserFacingError(error.error ?? "Request failed"),
-      res.status,
-      retryAfterSec
-    );
+    const message = toUserFacingError(error.error ?? "Request failed");
+    reportApiFailure({
+      path,
+      method: options.method ?? "GET",
+      status: res.status,
+      message,
+      requestId,
+    });
+    throw new ApiError(message, res.status, retryAfterSec);
   }
 
   const text = await res.text();
@@ -102,15 +114,27 @@ export type PresignedPdf = {
 
 async function fetchStorageBlob(url: string): Promise<Blob> {
   const res = await fetchWithRetry(url).catch(() => {
-    throw new ApiError(
-      toUserFacingError(
-        "Cannot reach storage. Check that MinIO/R2 is running and bucket CORS allows this site.",
-        "Could not load this file. Please try again."
-      ),
-      0
+    const message = toUserFacingError(
+      "Cannot reach storage. Check that MinIO/R2 is running and bucket CORS allows this site.",
+      "Could not load this file. Please try again."
     );
+    reportApiFailure({
+      path: "storage_blob",
+      method: "GET",
+      status: 0,
+      message,
+      source: "storage",
+    });
+    throw new ApiError(message, 0);
   });
   if (!res.ok) {
+    reportApiFailure({
+      path: "storage_blob",
+      method: "GET",
+      status: res.status,
+      message: "Could not load PDF",
+      source: "storage",
+    });
     throw new ApiError("Could not load PDF", res.status);
   }
   return res.blob();
@@ -312,6 +336,7 @@ async function postStudySse(
   fallback: () => Promise<void>
 ) {
   const token = getToken();
+  const requestId = newRequestId();
   let res: Response;
   try {
     res = await fetchWithRetry(`${API_URL}${path}`, {
@@ -322,12 +347,20 @@ async function postStudySse(
       headers: {
         "Content-Type": "application/json",
         Accept: "text/event-stream",
-        "x-request-id": newRequestId(),
+        "x-request-id": requestId,
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify(body),
     });
   } catch {
+    reportApiFailure({
+      path,
+      method: "POST",
+      status: 0,
+      message: "Study AI stream network error",
+      requestId,
+      source: "study_sse",
+    });
     await fallback();
     return;
   }
@@ -335,6 +368,14 @@ async function postStudySse(
   if (!res.ok || !res.body) {
     const raw = await res.text().catch(() => "");
     const detail = parseSseErrorBody(raw);
+    reportApiFailure({
+      path,
+      method: "POST",
+      status: res.ok ? 0 : res.status,
+      message: detail || `Study AI failed (HTTP ${res.status})`,
+      requestId,
+      source: "study_sse",
+    });
     if ([404, 405, 501, 502, 503].includes(res.status)) {
       try {
         await fallback();

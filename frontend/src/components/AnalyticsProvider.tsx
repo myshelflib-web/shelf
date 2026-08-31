@@ -3,10 +3,12 @@
 import { Suspense, useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { ClientErrorBoundary } from "@/components/ClientErrorBoundary";
 import {
   AnalyticsEvents,
   identifyFromUser,
   initAnalytics,
+  installClientErrorMonitoring,
   pageview,
   resetAnalytics,
   track,
@@ -52,15 +54,16 @@ function AnalyticsIdentity() {
 export function AnalyticsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     initAnalytics();
+    return installClientErrorMonitoring();
   }, []);
 
   return (
-    <>
+    <ClientErrorBoundary>
       <Suspense fallback={null}>
         <AnalyticsPageviews />
       </Suspense>
       <AnalyticsIdentity />
       {children}
-    </>
+    </ClientErrorBoundary>
   );
 }

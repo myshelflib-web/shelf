@@ -28,6 +28,10 @@ export const AnalyticsEvents = {
   pdfProcessingFailed: "pdf_processing_failed",
   studyAiStreamError: "study_ai_stream_error",
   quizGenerationFailed: "quiz_generation_failed",
+  clientError: "client_error",
+  apiRequestFailed: "api_request_failed",
+  componentError: "component_error",
+  chunkLoadFailed: "chunk_load_failed",
 
   // Power features
   readerSplitEnabled: "reader_split_enabled",

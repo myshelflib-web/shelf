@@ -19,6 +19,7 @@ export interface AnalyticsProvider {
   identify(userId: string, traits?: AnalyticsUserTraits): void;
   reset(): void;
   pageview(url: string, properties?: AnalyticsProperties): void;
+  captureException?(error: Error, properties?: AnalyticsProperties): void;
 }
 
 export interface AnalyticsConfig {
