@@ -1,3 +1,10 @@
+import {
+  type Counter,
+  type Histogram,
+  metrics as otelApi,
+} from "@opentelemetry/api";
+import { otelAttributes, otelExportEnabled } from "./otelBridge.js";
+
 export type MetricLabels = Record<string, string | number | boolean>;
 
 interface CounterEntry {
@@ -26,6 +33,32 @@ const counters = new Map<string, CounterEntry>();
 const histograms = new Map<string, HistogramEntry>();
 const startedAt = Date.now();
 
+const otelMeter = otelExportEnabled()
+  ? otelApi.getMeter("shelf-app")
+  : undefined;
+const otelCounters = new Map<string, Counter>();
+const otelHistograms = new Map<string, Histogram>();
+
+function otelCounter(name: string): Counter | undefined {
+  if (!otelMeter) return undefined;
+  let counter = otelCounters.get(name);
+  if (!counter) {
+    counter = otelMeter.createCounter(name);
+    otelCounters.set(name, counter);
+  }
+  return counter;
+}
+
+function otelHistogram(name: string): Histogram | undefined {
+  if (!otelMeter) return undefined;
+  let histogram = otelHistograms.get(name);
+  if (!histogram) {
+    histogram = otelMeter.createHistogram(name, { unit: "ms" });
+    otelHistograms.set(name, histogram);
+  }
+  return histogram;
+}
+
 export const metrics = {
   inc(name: string, labels?: MetricLabels, by = 1): void {
     const key = labelKey(name, labels);
@@ -35,6 +68,8 @@ export const metrics = {
     } else {
       counters.set(key, { value: by, labels: labels ?? {} });
     }
+
+    otelCounter(name)?.add(by, otelAttributes(labels));
   },
 
   observe(name: string, durationMs: number, labels?: MetricLabels): void {
@@ -54,6 +89,8 @@ export const metrics = {
         labels: labels ?? {},
       });
     }
+
+    otelHistogram(name)?.record(durationMs, otelAttributes(labels));
   },
 
   async time<T>(

@@ -25,9 +25,9 @@ Express + TypeScript (`"type": "module"`), Prisma 6, PostgreSQL. Entry: `src/ind
 
 Health: `GET /health`, `GET /metrics`. JSON body limit 10mb. CORS from `CORS_ORIGIN` (comma-separated).
 
-## Grafana Cloud (OpenTelemetry)
+## Grafana (OpenTelemetry)
 
-When `OTEL_EXPORTER_OTLP_ENDPOINT` (+ `OTEL_EXPORTER_OTLP_HEADERS`) is set, `src/instrumentation.ts` exports traces/metrics to Grafana Cloud OTLP. Loaded via `--import` before the app (`npm run dev` / `npm start`). See `.env.example`.
+When `OTEL_EXPORTER_OTLP_ENDPOINT` (+ `OTEL_EXPORTER_OTLP_HEADERS` for Grafana Cloud) is set, `src/instrumentation.ts` exports traces, auto HTTP metrics, and app logs to Grafana via OTLP. Custom counters/histograms (`utils/metrics.ts`) dual-write to OTLP when enabled. Loaded via `--import` before the app (`npm run dev` / `npm start`). Local stack: `docker compose --profile observability up -d` → Grafana on `:3001`, OTLP on `:4318`. See `.env.example`.
 
 ## Study AI
 

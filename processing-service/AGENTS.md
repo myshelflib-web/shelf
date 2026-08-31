@@ -9,7 +9,7 @@ Async worker that turns uploaded PDFs into HTML for Shelf. Express health server
 
 Env aligns with backend S3 + database (see `.env.example`). Internal calls from backend use a shared secret (`/api/internal` on the API).
 
-OpenTelemetry: when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, `src/instrumentation.ts` is loaded via `--import` (`npm run dev` / `npm start`).
+OpenTelemetry: when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, `src/instrumentation.ts` exports traces, metrics, and logs via OTLP (`npm run dev` / `npm start`). Local Grafana: `docker compose --profile observability up -d`.
 
 ## Object layout
 

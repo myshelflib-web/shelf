@@ -1,3 +1,6 @@
+import { logs, SeverityNumber } from "@opentelemetry/api-logs";
+import { otelAttributes, otelExportEnabled } from "./otelBridge.js";
+
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 const LEVEL_ORDER: Record<LogLevel, number> = {
@@ -5,6 +8,13 @@ const LEVEL_ORDER: Record<LogLevel, number> = {
   info: 20,
   warn: 30,
   error: 40,
+};
+
+const OTEL_SEVERITY: Record<LogLevel, SeverityNumber> = {
+  debug: SeverityNumber.DEBUG,
+  info: SeverityNumber.INFO,
+  warn: SeverityNumber.WARN,
+  error: SeverityNumber.ERROR,
 };
 
 function resolveLevel(): LogLevel {
@@ -21,6 +31,19 @@ function shouldLog(level: LogLevel): boolean {
 
 export interface LogFields {
   [key: string]: unknown;
+}
+
+function emitOtel(level: LogLevel, message: string, fields?: LogFields): void {
+  if (!otelExportEnabled()) return;
+
+  logs
+    .getLogger(process.env.SERVICE_NAME ?? "processing-service")
+    .emit({
+      severityNumber: OTEL_SEVERITY[level],
+      severityText: level.toUpperCase(),
+      body: message,
+      attributes: otelAttributes(fields),
+    });
 }
 
 function write(level: LogLevel, message: string, fields?: LogFields): void {
@@ -42,6 +65,8 @@ function write(level: LogLevel, message: string, fields?: LogFields): void {
   } else {
     console.log(line);
   }
+
+  emitOtel(level, message, fields);
 }
 
 export const logger = {

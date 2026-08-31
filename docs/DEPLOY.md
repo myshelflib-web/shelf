@@ -259,18 +259,21 @@ Local Ollama (`nomic-embed-text`) is for laptop Docker only — do **not** point
 
 ### Where to paste Grafana / OTEL vars (production)
 
+When set, Shelf exports **traces**, **HTTP + app metrics** (`http_requests_total`, upload counters, etc.), and **structured application logs** to Grafana over OTLP.
+
 Do **not** put them only in local `.env` if you want production telemetry. Add them in the host UI:
 
-1. Open [dashboard.render.com](https://dashboard.render.com) → your **backend** web service → **Environment** → **Add Environment Variable** (or bulk edit).
-2. Add:
-   - `OTEL_EXPORTER_OTLP_ENDPOINT` = `https://otlp-gateway-prod-ap-south-1.grafana.net/otlp`
-   - `OTEL_EXPORTER_OTLP_HEADERS` = the `Authorization=Basic%20…` value from Grafana (same as local)
+1. [Grafana Cloud](https://grafana.com/products/cloud/) → **Connections** → **OpenTelemetry** → copy OTLP endpoint + `Authorization=Basic …` header.
+2. Open [dashboard.render.com](https://dashboard.render.com) → your **backend** web service → **Environment** → **Add Environment Variable** (or bulk edit).
+3. Add:
+   - `OTEL_EXPORTER_OTLP_ENDPOINT` = `https://otlp-gateway-prod-ap-south-1.grafana.net/otlp` (your region)
+   - `OTEL_EXPORTER_OTLP_HEADERS` = the `Authorization=Basic%20…` value from Grafana
    - `OTEL_SERVICE_NAME` = `shelf-backend`
    - `OTEL_DEPLOYMENT_ENVIRONMENT` = `production`
-3. Repeat on the **processing service** with `OTEL_SERVICE_NAME=shelf-processing-service` (same endpoint + headers).
-4. Save → Render redeploys. No OTEL vars needed on **Vercel** (frontend is not instrumented yet).
+4. Repeat on the **processing service** with `OTEL_SERVICE_NAME=shelf-processing-service` (same endpoint + headers).
+5. Save → Render redeploys. In Grafana: **Explore** → Loki for logs, **Metrics** for counters/histograms, **Traces** for request spans. No OTEL vars needed on **Vercel** (frontend is not instrumented yet).
 
-Local laptop: keep the same keys in `backend/.env` and `processing-service/.env` (gitignored).
+**Local dev:** `docker compose --profile observability up -d` → Grafana UI at [http://localhost:3001](http://localhost:3001), OTLP HTTP at `http://localhost:4318` (no auth header). Set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` in `backend/.env` and `processing-service/.env`.
 
 The worker polls the backend every 15s for PDFs waiting to be processed.
 

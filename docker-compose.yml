@@ -57,6 +57,18 @@ services:
     profiles:
       - ai
 
+  # Local Grafana stack (Loki + Prometheus + Tempo + Grafana UI). OTLP HTTP on :4318.
+  # Start: docker compose --profile observability up -d
+  # Then set OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 in backend/.env and processing-service/.env
+  otel-lgtm:
+    image: grafana/otel-lgtm:latest
+    ports:
+      - "3001:3000"
+      - "4317:4317"
+      - "4318:4318"
+    profiles:
+      - observability
+
 volumes:
   postgres_data:
   minio_data:
