@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyBulkDeleteToTree } from "./explorerBulkDeleteTree";
+import { applyBulkDeleteToTree, mergeExplorerTreeWithPendingDeletes } from "./explorerBulkDeleteTree";
 import type { UserPageSummary, UserSubject } from "@/types";
 
 const page = (id: string): UserPageSummary => ({
@@ -52,5 +52,24 @@ describe("applyBulkDeleteToTree", () => {
     expect(result.rootPages).toEqual([]);
     expect(result.subjects[0]?.topicGroups).toEqual([]);
     expect(result.subjects[0]?.pages).toEqual([page("p3")]);
+  });
+});
+
+describe("mergeExplorerTreeWithPendingDeletes", () => {
+  it("re-applies in-flight delete payloads after a refetch", () => {
+    const subjects = [subject("s1", { pages: [page("p1"), page("p2")] })];
+    const rootPages = [page("root")];
+    const pending = [
+      {
+        subjectIds: [] as string[],
+        topicGroups: [] as { subjectId: string; groupId: string }[],
+        pageIds: ["p1", "root"],
+      },
+    ];
+
+    const merged = mergeExplorerTreeWithPendingDeletes(subjects, rootPages, pending);
+
+    expect(merged.rootPages).toEqual([]);
+    expect(merged.subjects[0]?.pages).toEqual([page("p2")]);
   });
 });

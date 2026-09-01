@@ -32,3 +32,16 @@ export function applyBulkDeleteToTree(
 
   return { subjects: nextSubjects, rootPages: nextRootPages };
 }
+
+/** Re-apply in-flight delete payloads after a library refetch (avoids ghost reappearances). */
+export function mergeExplorerTreeWithPendingDeletes(
+  subjects: UserSubject[],
+  rootPages: UserPageSummary[],
+  pending: BulkDeletePayload[]
+): { subjects: UserSubject[]; rootPages: UserPageSummary[] } {
+  return pending.reduce(
+    (acc, payload) =>
+      applyBulkDeleteToTree(payload, acc.subjects, acc.rootPages),
+    { subjects, rootPages }
+  );
+}

@@ -31,7 +31,7 @@ import {
   pageSelectionKey,
   type ExplorerSelectionKey,
 } from "@/lib/explorerSelection";
-import { applyBulkDeleteToTree } from "@/lib/explorerBulkDeleteTree";
+import { applyBulkDeleteToTree, mergeExplorerTreeWithPendingDeletes } from "@/lib/explorerBulkDeleteTree";
 import {
   patchSubjectsOrder,
 } from "@/lib/libraryReorder";
@@ -49,7 +49,7 @@ import { useScheduledPageHrefs } from "@/hooks/useScheduledPageHrefs";
 import clsx from "clsx";
 import { withShortcut } from "@/lib/hotkeys";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAppDialog } from "@/hooks/useAppDialog";
 import {
   PersonalPageReaderScope,
@@ -197,6 +197,8 @@ export function MyContentSidebar({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<ExplorerSelectionKey>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const pendingDeletesRef = useRef<ReturnType<typeof buildBulkDeletePayload>[]>([]);
 
   const searching = debouncedQ.length > 0;
   const manualOrder = sortCriterion === "manual";
@@ -246,8 +248,13 @@ export function MyContentSidebar({
         q: searching ? debouncedQ : undefined,
       })
       .then((res) => {
-        setSubjects(res.subjects);
-        setRootPages(res.rootPages ?? []);
+        const merged = mergeExplorerTreeWithPendingDeletes(
+          res.subjects,
+          res.rootPages ?? [],
+          pendingDeletesRef.current
+        );
+        setSubjects(merged.subjects);
+        setRootPages(merged.rootPages);
         setTotalNotebooks(res.total);
         setTotalNotebookPages(Math.max(1, res.totalPages));
       })
@@ -336,7 +343,16 @@ export function MyContentSidebar({
           syncPageInTree(prev, change.pageId, { title: change.title })
         );
       } else if (change?.type === "page-deleted") {
-        load({ silent: true });
+        const payload = buildBulkDeletePayload(
+          new Set([pageSelectionKey(change.pageId)])
+        );
+        setSubjects((s) => applyBulkDeleteToTree(payload, s, []).subjects);
+        setPinnedExtra((p) =>
+          applyBulkDeleteToTree(payload, p, []).subjects
+        );
+        setRootPages((r) =>
+          applyBulkDeleteToTree(payload, [], r).rootPages
+        );
       } else {
         load({ silent: true });
       }
@@ -495,22 +511,33 @@ export function MyContentSidebar({
     const prevPinned = pinnedExtra;
     const prevRootPages = rootPages;
     const payload = buildBulkDeletePayload(new Set([pageSelectionKey(pageId)]));
+    pendingDeletesRef.current.push(payload);
     setSubjects((s) => applyBulkDeleteToTree(payload, s, rootPages).subjects);
     setPinnedExtra((p) => applyBulkDeleteToTree(payload, p, rootPages).subjects);
     setRootPages((r) => applyBulkDeleteToTree(payload, subjects, r).rootPages);
     emitPageDeleted(pageId);
     if (!workspaceMode) router.push("/my-content");
     void removeCachedPdf(pageId);
-    void api.myContent.deletePage(pageId).catch(async () => {
-      setSubjects(prevSubjects);
-      setPinnedExtra(prevPinned);
-      setRootPages(prevRootPages);
-      emitContentChanged();
-      await alert({
-        title: "Delete failed",
-        message: `Could not delete "${title}". Refresh the library and try again.`,
+    void api.myContent
+      .deletePage(pageId)
+      .then(() => {
+        pendingDeletesRef.current = pendingDeletesRef.current.filter(
+          (entry) => entry !== payload
+        );
+      })
+      .catch(async () => {
+        pendingDeletesRef.current = pendingDeletesRef.current.filter(
+          (entry) => entry !== payload
+        );
+        setSubjects(prevSubjects);
+        setPinnedExtra(prevPinned);
+        setRootPages(prevRootPages);
+        emitContentChanged();
+        await alert({
+          title: "Delete failed",
+          message: `Could not delete "${title}". Refresh the library and try again.`,
+        });
       });
-    });
   };
 
   const openPage = (page: UserPageSummary, href: string) => {
@@ -544,17 +571,35 @@ export function MyContentSidebar({
     const prevPinned = pinnedExtra;
     const prevRootPages = rootPages;
 
+    pendingDeletesRef.current.push(payload);
+    setBulkDeleting(true);
     setSubjects((s) => applyBulkDeleteToTree(payload, s, rootPages).subjects);
     setPinnedExtra((p) => applyBulkDeleteToTree(payload, p, rootPages).subjects);
     setRootPages((r) => applyBulkDeleteToTree(payload, subjects, r).rootPages);
     exitSelectionMode();
 
-    void api.myContent.bulkDelete(payload).catch(() => {
-      setSubjects(prevSubjects);
-      setPinnedExtra(prevPinned);
-      setRootPages(prevRootPages);
-      emitContentChanged();
-    });
+    void api.myContent
+      .bulkDelete(payload)
+      .then(() => {
+        pendingDeletesRef.current = pendingDeletesRef.current.filter(
+          (entry) => entry !== payload
+        );
+      })
+      .catch(async () => {
+        pendingDeletesRef.current = pendingDeletesRef.current.filter(
+          (entry) => entry !== payload
+        );
+        setSubjects(prevSubjects);
+        setPinnedExtra(prevPinned);
+        setRootPages(prevRootPages);
+        emitContentChanged();
+        await alert({
+          title: "Delete failed",
+          message:
+            "Could not delete the selected items. They have been restored — refresh the library and try again.",
+        });
+      })
+      .finally(() => setBulkDeleting(false));
   };
 
   const handleReorderSubjects = (orderedIds: string[]) => {
@@ -968,7 +1013,7 @@ export function MyContentSidebar({
       open={bulkDeleteOpen}
       selected={selected}
       labels={selectionLabels}
-      deleting={false}
+      deleting={bulkDeleting}
       onClose={() => setBulkDeleteOpen(false)}
       onConfirm={handleBulkDelete}
     />

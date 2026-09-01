@@ -1351,43 +1351,37 @@ router.post("/bulk-delete", async (req: Request, res: Response) => {
       return;
     }
 
-    res.json({ success: true });
-
-    void (async () => {
-      try {
-        for (const subject of subjects) {
-          for (const page of subject.topics) {
-            await deletePageAssets(userId, page);
-            scheduleDeletePageVectors(page.id);
-          }
-          for (const group of subject.topicGroups) {
-            for (const page of group.pages) {
-              await deletePageAssets(userId, page);
-              scheduleDeletePageVectors(page.id);
-            }
-          }
-          await prisma.userSubject.delete({ where: { id: subject.id } });
-        }
-
-        for (const group of groups) {
-          for (const page of group.pages) {
-            await deletePageAssets(userId, page);
-            scheduleDeletePageVectors(page.id);
-          }
-          await prisma.userTopicGroup.delete({ where: { id: group.id } });
-        }
-
-        const subjectIdSet = new Set(subjectIds);
-        for (const page of pages) {
-          if (pageCoveredByBulkDelete(page, subjectIdSet, topicGroupKeys)) continue;
+    for (const subject of subjects) {
+      for (const page of subject.topics) {
+        await deletePageAssets(userId, page);
+        scheduleDeletePageVectors(page.id);
+      }
+      for (const group of subject.topicGroups) {
+        for (const page of group.pages) {
           await deletePageAssets(userId, page);
           scheduleDeletePageVectors(page.id);
-          await prisma.userTopic.delete({ where: { id: page.id } });
         }
-      } catch (err) {
-        req.log?.error("my_content.bulk_delete_async_failed", errorFields(err));
       }
-    })();
+      await prisma.userSubject.delete({ where: { id: subject.id } });
+    }
+
+    for (const group of groups) {
+      for (const page of group.pages) {
+        await deletePageAssets(userId, page);
+        scheduleDeletePageVectors(page.id);
+      }
+      await prisma.userTopicGroup.delete({ where: { id: group.id } });
+    }
+
+    const subjectIdSet = new Set(subjectIds);
+    for (const page of pages) {
+      if (pageCoveredByBulkDelete(page, subjectIdSet, topicGroupKeys)) continue;
+      await deletePageAssets(userId, page);
+      scheduleDeletePageVectors(page.id);
+      await prisma.userTopic.delete({ where: { id: page.id } });
+    }
+
+    res.json({ success: true });
   } catch (err) {
     req.log?.error("my_content.bulk_delete_failed", errorFields(err));
     res.status(500).json({ error: "Could not delete selected items" });
