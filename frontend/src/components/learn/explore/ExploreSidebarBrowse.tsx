@@ -18,6 +18,7 @@ import {
   isExploreAreaId,
   learnAreaHref,
   subjectExploreHref,
+  visibleExploreAreas,
 } from "@/lib/exploreCatalog";
 import { subjectHref, topicHref } from "@/lib/learnCatalog";
 import { learnHref, learnScope } from "@/lib/learnContent";
@@ -222,7 +223,7 @@ export function ExploreSidebarBrowse({
               <Newspaper className="w-4 h-4 text-[var(--accent)] shrink-0" />
               <span className="min-w-0 flex-1 truncate">Live current affairs</span>
             </Link>
-            {EXPLORE_AREAS.map((area) => {
+            {visibleExploreAreas(subjects).map((area) => {
               const count = countAreaItems(subjects, area.id);
               return (
                 <Link
@@ -232,9 +233,7 @@ export function ExploreSidebarBrowse({
                 >
                   <ExploreAreaIcon tone={area.tone} size="sm" />
                   <span className="min-w-0 flex-1 truncate">{area.title}</span>
-                  {count > 0 ? (
-                    <span className="explore-side-count">{count}</span>
-                  ) : null}
+                  <span className="explore-side-count">{count}</span>
                 </Link>
               );
             })}

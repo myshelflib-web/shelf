@@ -13,12 +13,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLivelyGreeting } from "@/hooks/useLivelyCopy";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import {
-  EXPLORE_AREAS,
   collectionMeta,
   countAreaItems,
   featuredExploreCollections,
   learnAreaHref,
   subjectExploreHref,
+  visibleExploreAreas,
 } from "@/lib/exploreCatalog";
 import { searchLearnCatalog } from "@/lib/learnCatalog";
 import { useEffect, useState } from "react";
@@ -48,6 +48,7 @@ export function ExploreHomePane() {
 
   const featured = featuredExploreCollections(subjects);
   const searching = loading && query.trim().length > 0 && hits.length === 0;
+  const areas = loading ? [] : visibleExploreAreas(subjects);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -66,8 +67,8 @@ export function ExploreHomePane() {
             className="mt-3 text-sm text-[var(--text-muted)] max-w-2xl min-h-[1.25rem]"
           />
           <p className="mt-4 text-sm text-[var(--text-muted)] leading-relaxed max-w-2xl">
-            Search the public knowledge catalog or browse by broad area. When
-            something is useful, open it and save a copy into your own Library.
+            Search generated study pages or browse by area. When something is
+            useful, open it and save a copy into your own Library.
           </p>
         </header>
 
@@ -83,7 +84,7 @@ export function ExploreHomePane() {
           <ExploreHeroSearch
             query={query}
             onQueryChange={setQuery}
-            placeholder="Search syllabus, reports, textbooks, notes, PYQs…"
+            placeholder="Search study skills, polity, economy…"
             scopeLabel="Public material"
             hits={hits}
             searching={searching}
@@ -93,32 +94,34 @@ export function ExploreHomePane() {
           />
         </div>
 
-        <section className="explore-section">
-          <div className="explore-section-head">
-            <h2 className="explore-section-title">Browse by area</h2>
-            <p className="explore-section-copy">Choose a broad context, then narrow down.</p>
-          </div>
-          <div className="explore-area-grid">
-            {EXPLORE_AREAS.map((area) => (
-              <button
-                key={area.id}
-                type="button"
-                onClick={() => router.push(learnAreaHref(area.id))}
-                className="explore-area-card"
-              >
-                <ExploreAreaIcon tone={area.tone} />
-                <p className="explore-area-title">{area.title}</p>
-                <p className="explore-area-copy">{area.description}</p>
-                {!loading && countAreaItems(subjects, area.id) > 0 ? (
-                  <p className="explore-area-count">
-                    {countAreaItems(subjects, area.id)} article
-                    {countAreaItems(subjects, area.id) === 1 ? "" : "s"}
-                  </p>
-                ) : null}
-              </button>
-            ))}
-          </div>
-        </section>
+        {areas.length > 0 ? (
+          <section className="explore-section">
+            <div className="explore-section-head">
+              <h2 className="explore-section-title">Browse by area</h2>
+              <p className="explore-section-copy">Choose a broad context, then narrow down.</p>
+            </div>
+            <div className="explore-area-grid">
+              {areas.map((area) => {
+                const count = countAreaItems(subjects, area.id);
+                return (
+                  <button
+                    key={area.id}
+                    type="button"
+                    onClick={() => router.push(learnAreaHref(area.id))}
+                    className="explore-area-card"
+                  >
+                    <ExploreAreaIcon tone={area.tone} />
+                    <p className="explore-area-title">{area.title}</p>
+                    <p className="explore-area-copy">{area.description}</p>
+                    <p className="explore-area-count">
+                      {count} article{count === 1 ? "" : "s"}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         <CurrentAffairsLiveNewsStrip />
 
@@ -127,7 +130,7 @@ export function ExploreHomePane() {
             <div className="explore-section-head">
               <h2 className="explore-section-title">Public collections</h2>
               <p className="explore-section-copy">
-                Useful indexed collections already available on Shelf.
+                Useful generated collections already available on Shelf.
               </p>
             </div>
             <div className="explore-collection-grid">

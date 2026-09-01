@@ -1,6 +1,6 @@
 import prisma from "../../utils/prisma.js";
 import { logger } from "../../utils/logger.js";
-import { catalogSubjectSlugs } from "../contentGen/syllabus/index.js";
+import { isPublicLearnSubject } from "../contentGen/publicLearnSubject.js";
 import { deleteAdminArticleStorage } from "./adminArticleStorage.js";
 
 /**
@@ -9,7 +9,6 @@ import { deleteAdminArticleStorage } from "./adminArticleStorage.js";
  * User library objects under users/ are not touched.
  */
 export async function pruneStalePreloadedArticles(): Promise<{ archived: number }> {
-  const keep = new Set(catalogSubjectSlugs());
   const subjects = await prisma.subject.findMany({
     select: {
       slug: true,
@@ -33,7 +32,7 @@ export async function pruneStalePreloadedArticles(): Promise<{ archived: number 
   let archived = 0;
 
   for (const subject of subjects) {
-    if (keep.has(subject.slug) || subject.slug.startsWith("exam-briefs-")) {
+    if (isPublicLearnSubject(subject.slug)) {
       continue;
     }
 

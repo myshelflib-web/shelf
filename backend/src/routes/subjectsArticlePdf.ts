@@ -15,12 +15,15 @@ import {
 import { isPremiumUser } from "../utils/paywall.js";
 import { param } from "../utils/param.js";
 import { parseBytesRange } from "../utils/byteRange.js";
+import { isPublicLearnSubject } from "../services/contentGen/publicLearnSubject.js";
 
 async function resolveArticleBySlugs(
   subjectSlug: string,
   topicSlug: string,
   articleSlug: string
 ) {
+  if (!isPublicLearnSubject(subjectSlug)) return null;
+
   const subject = await prisma.subject.findUnique({
     where: { slug: subjectSlug },
   });

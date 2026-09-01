@@ -5,6 +5,7 @@ import {
   isExploreAreaId,
   listAreaResources,
   subjectsForArea,
+  visibleExploreAreas,
 } from "@/lib/exploreCatalog";
 import { Subject } from "@/types";
 
@@ -73,15 +74,17 @@ describe("exploreCatalog", () => {
     ]);
   });
 
-  it("counts articles in an area", () => {
-    expect(countAreaItems(sampleSubjects, "exams")).toBe(2);
+  it("counts articles in an area without double-counting tracks", () => {
+    expect(countAreaItems(sampleSubjects, "exams")).toBe(1);
     expect(countAreaItems(sampleSubjects, "law")).toBe(1);
+    expect(countAreaItems(sampleSubjects, "engineering")).toBe(1);
+    expect(countAreaItems(sampleSubjects, "policy")).toBe(0);
   });
 
   it("lists resources with optional query filter", () => {
     const all = listAreaResources(sampleSubjects, "exams");
-    expect(all).toHaveLength(2);
-    const filtered = listAreaResources(sampleSubjects, "exams", {
+    expect(all).toHaveLength(1);
+    const filtered = listAreaResources(sampleSubjects, "engineering", {
       query: "gate",
     });
     expect(filtered).toHaveLength(1);
@@ -91,6 +94,14 @@ describe("exploreCatalog", () => {
   it("validates explore area ids", () => {
     expect(isExploreAreaId("law")).toBe(true);
     expect(isExploreAreaId("unknown")).toBe(false);
+  });
+
+  it("hides browse areas that have no published pages", () => {
+    expect(visibleExploreAreas(sampleSubjects).map((a) => a.id)).toEqual([
+      "exams",
+      "law",
+      "engineering",
+    ]);
   });
 
   it("picks featured collections with content", () => {

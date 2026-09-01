@@ -36,47 +36,42 @@ export const EXPLORE_AREAS: ExploreAreaDef[] = [
   {
     id: "exams",
     title: "Exams & certifications",
-    description:
-      "Syllabi, previous papers and reference material for structured preparation.",
+    description: "Generated notes for UPSC, State PCS, and CA.",
     tone: "exam",
-    goals: ["UPSC", "STATE_PCS", "GATE", "CA", "NEET_PG"],
+    goals: ["UPSC", "STATE_PCS", "CA"],
   },
   {
     id: "law",
     title: "Law",
-    description:
-      "Bare Acts, Law Commission reports and legal reference material.",
+    description: "Generated notes for judicial service exams.",
     tone: "law",
     goals: ["JUDICIARY"],
   },
   {
     id: "medicine",
     title: "Medicine",
-    description:
-      "Curriculum resources, public textbooks and clinical references.",
+    description: "Generated notes for NEET PG and INI-CET.",
     tone: "med",
     goals: ["NEET_PG"],
   },
   {
     id: "engineering",
     title: "Engineering",
-    description:
-      "Open technical material, references and certification resources.",
+    description: "Generated notes for GATE papers.",
     tone: "eng",
     goals: ["GATE"],
   },
   {
     id: "policy",
     title: "Public Policy",
-    description:
-      "Government reports, policy documents and official publications.",
+    description: "Generated notes for policy and governance papers.",
     tone: "policy",
-    goals: ["UPSC", "STATE_PCS"],
+    goals: [],
   },
   {
     id: "books",
-    title: "Open Textbooks",
-    description: "Public learning material across subjects and disciplines.",
+    title: "Study skills",
+    description: "Evidence-based learning and exam craft.",
     tone: "books",
     goals: ["GENERAL"],
   },
@@ -99,8 +94,7 @@ export function areaForGoal(goal: StudyGoal): ExploreAreaId {
   if (goal === "JUDICIARY") return "law";
   if (goal === "NEET_PG") return "medicine";
   if (goal === "GATE") return "engineering";
-  if (goal === "UPSC" || goal === "STATE_PCS") return "policy";
-  if (goal === "CA") return "exams";
+  if (goal === "GENERAL") return "books";
   return "exams";
 }
 
@@ -114,6 +108,11 @@ export function subjectsForArea(
 
 export function countAreaItems(subjects: Subject[], areaId: ExploreAreaId): number {
   return countArticles(subjectsForArea(subjects, areaId));
+}
+
+/** Home and sidebar only list areas that currently have published pages. */
+export function visibleExploreAreas(subjects: Subject[]): ExploreAreaDef[] {
+  return EXPLORE_AREAS.filter((area) => countAreaItems(subjects, area.id) > 0);
 }
 
 export type ExploreResource = {
@@ -257,11 +256,11 @@ export function collectionMeta(subject: Subject): string {
   if (goal === "JUDICIARY") return "Statutes · official reports";
   if (goal === "NEET_PG") return "Curriculum · medical references";
   if (goal === "CA") return "Accounting · statutes";
-  if (goal === "GENERAL") return "Open textbooks · public courses";
+  if (goal === "GENERAL") return "Study skills · exam craft";
   if (topics > 0 && articles > 0) {
     return `${topics} topic${topics === 1 ? "" : "s"} · ${articles} article${articles === 1 ? "" : "s"}`;
   }
-  return subject.description?.trim() || "Preloaded collection";
+  return subject.description?.trim() || "Generated collection";
 }
 
 export function exploreGroupsForHome(subjects: Subject[]) {

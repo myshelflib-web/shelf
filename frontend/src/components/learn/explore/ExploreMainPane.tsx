@@ -15,8 +15,8 @@ import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { useAuth } from "@/hooks/useAuth";
 import { isPremiumUser } from "@/lib/premium";
 import {
-  EXPLORE_AREAS,
   ExploreAreaId,
+  areaForGoal,
   collectionMeta,
   countAreaItems,
   featuredExploreCollections,
@@ -24,6 +24,7 @@ import {
   learnAreaHref,
   listAreaResources,
   subjectExploreHref,
+  visibleExploreAreas,
 } from "@/lib/exploreCatalog";
 import {
   catalogGoalLabel,
@@ -44,7 +45,7 @@ function scopedSearchPlaceholder(opts: {
   if (opts.topic) return `Search in ${opts.topic.title}…`;
   if (opts.subject) return `Search in ${opts.subject.name}…`;
   if (opts.areaId) return `Search within ${getExploreArea(opts.areaId).title}…`;
-  return "Search syllabus, reports, textbooks, notes, PYQs…";
+  return "Search study skills, polity, economy…";
 }
 
 function scopedSearchLabel(opts: {
@@ -114,7 +115,7 @@ export function ExploreMainPane({
       return listAreaResources(subjects, areaId, { query });
     }
     if (subject) {
-      const items = listAreaResources(subjects, areaForSubject(subject), {
+      const items = listAreaResources(subjects, areaForGoal(subjectGoal(subject)), {
         subjectSlug: subject.slug,
         topicSlug: topic?.slug,
         query,
@@ -193,15 +194,6 @@ export function ExploreMainPane({
   );
 }
 
-function areaForSubject(subject: Subject): ExploreAreaId {
-  const goal = subjectGoal(subject);
-  if (goal === "JUDICIARY") return "law";
-  if (goal === "NEET_PG") return "medicine";
-  if (goal === "GATE") return "engineering";
-  if (goal === "UPSC" || goal === "STATE_PCS") return "policy";
-  return "exams";
-}
-
 function ExploreHomeContent({
   subjects,
   loading,
@@ -212,48 +204,52 @@ function ExploreHomeContent({
   featured: Subject[];
 }) {
   const router = useRouter();
+  const areas = loading ? [] : visibleExploreAreas(subjects);
 
   return (
     <>
       <p className="text-sm text-[var(--text-muted)] leading-relaxed max-w-2xl -mt-2 mb-2">
-        Search the public knowledge catalog or browse by broad area. When
-        something is useful, open it and save a copy into your own Library.
+        Search generated study pages or browse by area. When something is
+        useful, open it and save a copy into your own Library.
       </p>
 
-      <section className="explore-section !mt-0">
-        <div className="explore-section-head">
-          <h2 className="explore-section-title">Browse by area</h2>
-          <p className="explore-section-copy">
-            Choose a broad context, then narrow down.
-          </p>
-        </div>
-        <div className="explore-area-grid">
-          {EXPLORE_AREAS.map((area) => (
-            <button
-              key={area.id}
-              type="button"
-              onClick={() => router.push(learnAreaHref(area.id))}
-              className="explore-area-card"
-            >
-              <ExploreAreaIcon tone={area.tone} />
-              <p className="explore-area-title">{area.title}</p>
-              <p className="explore-area-copy">{area.description}</p>
-              {!loading && countAreaItems(subjects, area.id) > 0 ? (
-                <p className="explore-area-count">
-                  {countAreaItems(subjects, area.id)} articles
-                </p>
-              ) : null}
-            </button>
-          ))}
-        </div>
-      </section>
+      {areas.length > 0 ? (
+        <section className="explore-section !mt-0">
+          <div className="explore-section-head">
+            <h2 className="explore-section-title">Browse by area</h2>
+            <p className="explore-section-copy">
+              Choose a broad context, then narrow down.
+            </p>
+          </div>
+          <div className="explore-area-grid">
+            {areas.map((area) => {
+              const count = countAreaItems(subjects, area.id);
+              return (
+                <button
+                  key={area.id}
+                  type="button"
+                  onClick={() => router.push(learnAreaHref(area.id))}
+                  className="explore-area-card"
+                >
+                  <ExploreAreaIcon tone={area.tone} />
+                  <p className="explore-area-title">{area.title}</p>
+                  <p className="explore-area-copy">{area.description}</p>
+                  <p className="explore-area-count">
+                    {count} article{count === 1 ? "" : "s"}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       {featured.length > 0 ? (
         <section className="explore-section">
           <div className="explore-section-head">
             <h2 className="explore-section-title">Public collections</h2>
             <p className="explore-section-copy">
-              Useful indexed collections already available on Shelf.
+              Useful generated collections already available on Shelf.
             </p>
           </div>
           <div className="explore-collection-grid">

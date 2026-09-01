@@ -13,8 +13,18 @@ import {
   applyLinkEmbedPolicy,
   effectiveLinkEmbeddable,
 } from "../services/linkEmbedPolicy.js";
+import {
+  isPublicLearnSubject,
+  publicLearnSubjectWhere,
+} from "../services/contentGen/publicLearnSubject.js";
 
 const router = Router();
+
+function rejectNonPublicSubject(slug: string, res: Response): boolean {
+  if (isPublicLearnSubject(slug)) return false;
+  res.status(404).json({ error: "Subject not found" });
+  return true;
+}
 
 function apiBase(req: Request): string {
   const env = process.env.API_PUBLIC_URL?.replace(/\/$/, "");
@@ -60,8 +70,12 @@ const topicWithArticlesSelect = {
 
 router.get("/", async (req: Request, res: Response) => {
   const rawGoal = typeof req.query.studyGoal === "string" ? req.query.studyGoal : null;
-  const where =
-    rawGoal && isStudyGoal(rawGoal) ? { studyGoal: rawGoal } : undefined;
+  const where = {
+    AND: [
+      publicLearnSubjectWhere(),
+      rawGoal && isStudyGoal(rawGoal) ? { studyGoal: rawGoal } : {},
+    ],
+  };
 
   const subjects = await prisma.subject.findMany({
     where,
@@ -74,16 +88,21 @@ router.get("/", async (req: Request, res: Response) => {
     },
   });
   res.json({
-    subjects: subjects.map((subject) => ({
-      ...subject,
-      topics: subject.topics.filter((topic) => topic.articles.length > 0),
-    })),
+    subjects: subjects
+      .map((subject) => ({
+        ...subject,
+        topics: subject.topics.filter((topic) => topic.articles.length > 0),
+      }))
+      .filter((subject) => subject.topics.length > 0),
   });
 });
 
 router.get("/:slug", async (req: Request, res: Response) => {
+  const slug = param(req, "slug");
+  if (rejectNonPublicSubject(slug, res)) return;
+
   const subject = await prisma.subject.findUnique({
-    where: { slug: param(req, "slug") },
+    where: { slug },
     include: {
       topics: {
         orderBy: { order: "asc" },
@@ -109,6 +128,7 @@ router.get(
   async (req: Request, res: Response) => {
     const subjectSlug = param(req, "subjectSlug");
     const topicSlug = param(req, "topicSlug");
+    if (rejectNonPublicSubject(subjectSlug, res)) return;
 
     const subject = await prisma.subject.findUnique({
       where: { slug: subjectSlug },
@@ -151,6 +171,7 @@ router.get(
     const subjectSlug = param(req, "subjectSlug");
     const topicSlug = param(req, "topicSlug");
     const articleSlug = param(req, "articleSlug");
+    if (rejectNonPublicSubject(subjectSlug, res)) return;
 
     const subject = await prisma.subject.findUnique({
       where: { slug: subjectSlug },
@@ -309,6 +330,7 @@ router.get(
     const subjectSlug = param(req, "subjectSlug");
     const topicSlug = param(req, "topicSlug");
     const articleSlug = param(req, "articleSlug");
+    if (rejectNonPublicSubject(subjectSlug, res)) return;
 
     const subject = await prisma.subject.findUnique({ where: { slug: subjectSlug } });
     if (!subject) {
