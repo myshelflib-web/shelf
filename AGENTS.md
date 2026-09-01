@@ -9,6 +9,7 @@ Read the package `AGENTS.md` for the area you are changing:
 | Frontend | [`frontend/AGENTS.md`](frontend/AGENTS.md) | Next.js 15 App Router UI |
 | Backend | [`backend/AGENTS.md`](backend/AGENTS.md) | Express API + Prisma + Postgres |
 | Processing service | [`processing-service/AGENTS.md`](processing-service/AGENTS.md) | Async PDF → HTML worker |
+| Ingestion service | [`ingestion-service/AGENTS.md`](ingestion-service/AGENTS.md) | SQS current-affairs + official doc pipeline |
 
 Deploy notes: [`docs/DEPLOY.md`](docs/DEPLOY.md), [`docs/DOCKER.md`](docs/DOCKER.md).
 
@@ -18,6 +19,7 @@ Deploy notes: [`docs/DEPLOY.md`](docs/DEPLOY.md), [`docs/DOCKER.md`](docs/DOCKER
 frontend/          Next.js (port 3000)
 backend/           Express (port 4000)
 processing-service/ Worker + health server (port 4001)
+ingestion-service/  SQS ingest worker (port 4002)
 docs/              Human deploy docs
 ```
 

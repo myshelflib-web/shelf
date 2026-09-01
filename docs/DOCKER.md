@@ -2,9 +2,9 @@
 
 ```
 GitHub push to main
-  ├─ Detect which apps changed (backend / processing-service / frontend)
+  ├─ Detect which apps changed (backend / processing-service / ingestion-service / frontend)
   ├─ CI: lint / test / build — changed apps only
-  ├─ Docker Hub: push only changed images (main and/or processor-main)
+  ├─ Docker Hub: push only changed images (main, processor-main, ingest-main)
   ├─ Render deploy hooks → only for images just pushed
   └─ Vercel → frontend only when frontend/ (or .nvmrc) changed
 ```
@@ -17,12 +17,13 @@ Docker Hub **Personal** allows **one private repository**. Both images share `sh
 |---------|--------|
 | Backend | `vishnubhardwaj8826/shelf:main` |
 | Processing service | `vishnubhardwaj8826/shelf:processor-main` |
+| Ingestion service | `vishnubhardwaj8826/shelf:ingest-main` |
 
 | Tag | Purpose |
 |-----|---------|
-| **`main`** / `processor-main` | Constant tags for Render |
-| `latest` / `processor-latest` | Same pointers |
-| `<sha>` / `processor-<sha>` | Rollback pins |
+| **`main`** / `processor-main` / `ingest-main` | Constant tags for Render |
+| `latest` / `processor-latest` / `ingest-latest` | Same pointers |
+| `<sha>` / `processor-<sha>` / `ingest-<sha>` | Rollback pins |
 
 Frontend is **not** pushed to Docker Hub — Vercel builds it from the repo.
 
@@ -47,13 +48,14 @@ Also set backend `CORS_ORIGIN` to your Vercel URL (e.g. `https://your-app.vercel
 
 ## Backend + worker on Render
 
-1. Create 2 services → **Deploy an existing image from a registry**
+1. Create 3 services → **Deploy an existing image from a registry**
 2. Image URLs:
 
 | Service | Image |
 |---------|--------|
 | Backend | `docker.io/vishnubhardwaj8826/shelf:main` |
 | Processing service | `docker.io/vishnubhardwaj8826/shelf:processor-main` |
+| Ingestion service | `docker.io/vishnubhardwaj8826/shelf:ingest-main` |
 
 3. Private registry: add Docker Hub username + access token in Render credentials  
 4. Env vars on each service (see below)  
@@ -63,6 +65,7 @@ Also set backend `CORS_ORIGIN` to your Vercel URL (e.g. `https://your-app.vercel
 |--------|--------|
 | `RENDER_DEPLOY_HOOK_BACKEND` | backend deploy hook URL |
 | `RENDER_DEPLOY_HOOK_PROCESSOR` | processing-service deploy hook URL |
+| `RENDER_DEPLOY_HOOK_INGESTION` | ingestion-service deploy hook URL |
 
 ---
 
@@ -74,6 +77,7 @@ Also set backend `CORS_ORIGIN` to your Vercel URL (e.g. `https://your-app.vercel
 | `DOCKERHUB_TOKEN` | Docker Hub PAT with **Read, Write, Delete** (not account password) |
 | `RENDER_DEPLOY_HOOK_BACKEND` | optional |
 | `RENDER_DEPLOY_HOOK_PROCESSOR` | optional |
+| `RENDER_DEPLOY_HOOK_INGESTION` | optional |
 
 Keep **one** private Hub repo: `shelf` (Personal-plan limit). Do not create a second repo for the processing service.
 
@@ -81,7 +85,7 @@ CI enforces this automatically:
 
 1. Before push → create/keep `shelf` private
 2. After push → verify `is_private=true` or **fail the job**
-3. Prune tags → keep **at most 10** (`main`, `latest`, `processor-main`, `processor-latest` always kept; oldest SHA tags deleted)
+3. Prune tags → keep **at most 10** (`main`, `latest`, `processor-main`, `processor-latest`, `ingest-main`, `ingest-latest` always kept; oldest SHA tags deleted)
 
 No frontend image is published (Vercel only).
 
@@ -122,6 +126,27 @@ POLL_INTERVAL_MS=15000
 PORT=4001
 ```
 
+### Ingestion service
+
+```
+BACKEND_URL=https://shelf.onrender.com
+INTERNAL_SECRET=   # same as backend
+INGEST_WORKER_MODE=sqs
+AWS_REGION=ap-south-1
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+INGEST_SQS_POLL_QUEUE_URL=
+INGEST_SQS_FETCH_QUEUE_URL=
+INGEST_SQS_PROCESS_QUEUE_URL=
+INGEST_SQS_PROMOTE_QUEUE_URL=
+INGEST_SQS_ARCHIVE_QUEUE_URL=
+INGEST_SQS_WAIT_SECONDS=20
+INGEST_SQS_VISIBILITY_TIMEOUT=300
+PORT=4002
+```
+
+Backend also needs `INGEST_SCHEDULER=true` and the same SQS queue URLs if the scheduler enqueues polls from the API container. See [`INGEST.md`](INGEST.md).
+
 ---
 
 ## Pipeline behavior
@@ -132,10 +157,11 @@ On **push to `main`**, only apps whose files (or dependents) changed are rebuilt
 |-----------|-----------|-----------------|--------|
 | `backend/**` | backend | backend image + hook | skip |
 | `processing-service/**` | processing service | processor image + hook | skip |
+| `ingestion-service/**` | ingestion service | ingest image + hook | skip |
 | `frontend/**` | frontend | skip | deploy |
-| `.nvmrc` | all three | skip (images pin `node:22-alpine`) | deploy |
+| `.nvmrc` | all four | skip (images pin `node:22-alpine`) | deploy |
 | workflow / docs / other | skip | skip | skip |
 
-The three packages do not import each other. A backend-only change does **not** bounce the worker or frontend; change both trees in the same commit if an API contract requires it.
+The four packages do not import each other. A backend-only change does **not** bounce the workers or frontend; change both trees in the same commit if an API contract requires it.
 
 PRs only run CI checks for the apps that changed.

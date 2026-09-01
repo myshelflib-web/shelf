@@ -27,6 +27,10 @@ echo "Installing processing service..."
 cd processing-service && npm install && cp -n .env.example .env 2>/dev/null || true
 cd ..
 
+echo "Installing ingestion service..."
+cd ingestion-service && npm install && cp -n .env.example .env 2>/dev/null || true
+cd ..
+
 echo "Installing frontend..."
 cd frontend && npm install && cp -n .env.example .env.local 2>/dev/null || true
 cd ..
@@ -37,7 +41,8 @@ echo ""
 echo "Start services in separate terminals:"
 echo "  1. cd backend && npm run dev          (port 4000)"
 echo "  2. cd processing-service && npm run dev    (port 4001)"
-echo "  3. cd frontend && npm run dev         (port 3000)"
+echo "  3. cd ingestion-service && npm run dev     (port 4002, or INGEST_WORKER_MODE=poll)"
+echo "  4. cd frontend && npm run dev         (port 3000)"
 echo ""
 echo "Default admin: admin@shelf.local / admin123"
 echo "MinIO console: http://localhost:9001 (minioadmin/minioadmin)"

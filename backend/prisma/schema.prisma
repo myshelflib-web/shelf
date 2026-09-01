@@ -170,22 +170,162 @@ model Article {
   isPremium      Boolean       @default(false)
   previewPercent Int           @default(30)
   pdfKey         String?
+  /** Official source URL when ingested or manually linked. */
+  sourceUrl      String?
+  /** Edition label, e.g. 2025 or 2025-03. */
+  edition        String?
+  archivedAt     DateTime?
+  supersededById String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  topic      Topic            @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  highlights Highlight[]
-  progress   UserProgress[]
-  starred    StarredArticle[]
-  studyTasks StudyTask[]
+  topic        Topic            @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  highlights   Highlight[]
+  progress     UserProgress[]
+  starred      StarredArticle[]
+  studyTasks   StudyTask[]
+  ingestItem   IngestItem?
+  supersededBy Article?         @relation("ArticleSupersession", fields: [supersededById], references: [id], onDelete: SetNull)
+  supersedes   Article[]        @relation("ArticleSupersession")
 
   @@unique([topicId, slug])
+  @@index([status, edition])
+}
+
+model IngestSource {
+  id                   String               @id @default(uuid())
+  name                 String
+  slug                 String               @unique
+  kind                 IngestSourceKind
+  feedUrl              String
+  studyGoals           StudyGoal[]
+  license              IngestLicense
+  cadence              IngestRefreshCadence
+  enabled              Boolean              @default(true)
+  maxItemsPerRun       Int                  @default(20)
+  promoteToSubjectSlug String?
+  promoteToTopicSlug   String?
+  lastPolledAt         DateTime?
+  lastSuccessAt        DateTime?
+  lastError            String?
+  config               Json?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  items IngestItem[]
+  jobs  IngestJob[]
+
+  @@index([enabled, cadence])
+}
+
+model IngestItem {
+  id                 String           @id @default(uuid())
+  sourceId           String
+  externalId         String?
+  title              String
+  canonicalUrl       String
+  publishedAt        DateTime?
+  fetchedAt          DateTime         @default(now())
+  contentHash        String
+  status             IngestItemStatus @default(FETCHED)
+  license            IngestLicense
+  shelfSummary       String?          @db.Text
+  factualExcerpt     String?          @db.VarChar(500)
+  fullDocumentStored Boolean          @default(false)
+  studyGoals         StudyGoal[]
+  tags               String[]
+  edition            String?
+  sourcePdfUrl       String?
+  pdfKey             String?
+  articleId          String?          @unique
+  supersededById     String?          @unique
+  validUntil         DateTime?
+  reviewedAt         DateTime?
+  publishedAtShelf   DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  source       IngestSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  article      Article?     @relation(fields: [articleId], references: [id], onDelete: SetNull)
+  supersededBy IngestItem?  @relation("IngestSupersession", fields: [supersededById], references: [id], onDelete: SetNull)
+  supersedes   IngestItem?  @relation("IngestSupersession")
+  jobs         IngestJob[]
+
+  @@unique([sourceId, contentHash])
+  @@index([status, publishedAt])
+  @@index([publishedAtShelf])
+}
+
+model IngestJob {
+  id           String           @id @default(uuid())
+  sourceId     String?
+  itemId       String?
+  phase        IngestJobPhase
+  status       IngestJobStatus  @default(QUEUED)
+  sqsMessageId String?
+  payload      Json?
+  error        String?
+  attempts     Int              @default(0)
+  startedAt    DateTime?
+  completedAt  DateTime?
+  createdAt    DateTime         @default(now())
+
+  source IngestSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  item   IngestItem?   @relation(fields: [itemId], references: [id], onDelete: SetNull)
+
+  @@index([phase, status, createdAt])
 }
 
 enum ContentStatus {
   DRAFT
   PROCESSING
   PUBLISHED
+  FAILED
+  ARCHIVED
+}
+
+enum IngestSourceKind {
+  RSS
+  OFFICIAL_PDF_WATCH
+  OFFICIAL_PAGE_WATCH
+}
+
+enum IngestLicense {
+  GOVERNMENT_PRESS
+  LINK_ONLY
+  OFFICIAL_DOCUMENT
+}
+
+enum IngestRefreshCadence {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum IngestItemStatus {
+  FETCHED
+  PENDING_REVIEW
+  APPROVED
+  PUBLISHED
+  REJECTED
+  ARCHIVED
+  SUPERSEDED
+}
+
+enum IngestJobPhase {
+  POLL
+  FETCH
+  PROCESS
+  PROMOTE
+  ARCHIVE
+}
+
+enum IngestJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
   FAILED
 }
 

@@ -14,6 +14,8 @@ GitHub (push to main)
     ├──► Render          → Express backend (port 4000)
     │
     └──► Render          → Processing service (polls for jobs)
+    │
+    └──► Render          → Ingestion service (SQS current-affairs pipeline)
 
 Neon                   → PostgreSQL
 Cloudflare R2          → S3 bucket (admin/ + users/{id}/ folders)
@@ -283,6 +285,44 @@ The worker polls the backend every 15s for PDFs waiting to be processed.
 
 ---
 
+## Step 5b — Ingestion service (Render, Docker image)
+
+Use the same **Deploy an existing image from a registry** flow as backend/processor (see [`DOCKER.md`](DOCKER.md)).
+
+1. **New → Web Service** → **Deploy an existing image**
+2. Image: `docker.io/YOUR_DOCKERHUB_USER/shelf:ingest-main`
+3. **Do not** enable Render auto-deploy from Git — CI pushes the image and triggers the deploy hook.
+4. Environment variables (from `ingestion-service/.env.example`):
+
+| Variable | Value |
+|----------|-------|
+| `BACKEND_URL` | `https://your-api.onrender.com` |
+| `INTERNAL_SECRET` | Same as backend |
+| `INGEST_WORKER_MODE` | `sqs` |
+| `AWS_REGION` | e.g. `ap-south-1` |
+| `AWS_ACCESS_KEY_ID` | IAM user with SQS consume + send |
+| `AWS_SECRET_ACCESS_KEY` | |
+| `INGEST_SQS_POLL_QUEUE_URL` | |
+| `INGEST_SQS_FETCH_QUEUE_URL` | |
+| `INGEST_SQS_PROCESS_QUEUE_URL` | |
+| `INGEST_SQS_PROMOTE_QUEUE_URL` | |
+| `INGEST_SQS_ARCHIVE_QUEUE_URL` | |
+| `PORT` | `4002` |
+
+5. On the **backend** Render service, also set:
+
+| Variable | Value |
+|----------|-------|
+| `INGEST_SCHEDULER=true` | Enables due-source polling |
+| `INGEST_SCHEDULER_INTERVAL_MS` | `300000` (optional) |
+| Same `AWS_*` and `INGEST_SQS_*` URLs | So admin “Poll now” enqueues to SQS |
+
+6. **Deploy Hook** → copy URL → GitHub secret `RENDER_DEPLOY_HOOK_INGESTION`
+
+Full pipeline details: [`docs/INGEST.md`](INGEST.md).
+
+---
+
 ## Step 6 — Frontend (Vercel)
 
 1. Sign up at [vercel.com](https://vercel.com) (no card)
@@ -356,6 +396,8 @@ upsc-docs/
 - Browser → **R2** (upload PUT and PDF Range GET): set the same origin on the R2 bucket **Settings → CORS Policy** (see Step 3). A failed PUT/GET shows as “Cannot reach storage”.
 
 **PDFs stuck on PROCESSING** — ensure the processing-service Render service is running and `INTERNAL_SECRET` matches backend.
+
+**Current affairs not updating** — ensure ingestion-service is running, SQS queue URLs match backend, and `INGEST_SCHEDULER=true` on backend. Check Admin → Ingestion → seed sources, then poll.
 
 **Empty topic content** — check R2 bucket has files under `admin/` and env vars are correct.
 

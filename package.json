@@ -7,13 +7,13 @@
     "node": ">=22"
   },
   "scripts": {
-    "lint": "npm run lint --prefix backend && npm run lint --prefix processing-service && npm run lint --prefix frontend",
-    "typecheck": "npm run typecheck --prefix backend && npm run typecheck --prefix processing-service && npm run typecheck --prefix frontend",
-    "test": "npm run test --prefix backend && npm run test --prefix processing-service && npm run test --prefix frontend",
-    "build": "npm run build --prefix backend && npm run build --prefix processing-service && npm run build --prefix frontend",
+    "lint": "npm run lint --prefix backend && npm run lint --prefix processing-service && npm run lint --prefix ingestion-service && npm run lint --prefix frontend",
+    "typecheck": "npm run typecheck --prefix backend && npm run typecheck --prefix processing-service && npm run typecheck --prefix ingestion-service && npm run typecheck --prefix frontend",
+    "test": "npm run test --prefix backend && npm run test --prefix processing-service && npm run test --prefix ingestion-service && npm run test --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix processing-service && npm run build --prefix ingestion-service && npm run build --prefix frontend",
     "check": "npm run lint && npm run typecheck && npm run test",
     "ci": "npm run check && npm run build",
-    "install:all": "npm ci --prefix backend && npm ci --prefix processing-service && npm ci --prefix frontend",
+    "install:all": "npm ci --prefix backend && npm ci --prefix processing-service && npm ci --prefix ingestion-service && npm ci --prefix frontend",
     "hooks:install": "sh scripts/install-git-hooks.sh"
   }
 }

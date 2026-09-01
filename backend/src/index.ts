@@ -8,6 +8,7 @@ import highlightRoutes from "./routes/highlights.js";
 import progressRoutes from "./routes/progress.js";
 import adminRoutes from "./routes/admin.js";
 import internalRoutes from "./routes/internal.js";
+import ingestInternalRoutes from "./routes/ingestInternal.js";
 import subscriptionRoutes from "./routes/subscription.js";
 import subscriptionRecurringRoutes, {
   handleSubscriptionWebhook,
@@ -16,6 +17,8 @@ import affiliateRoutes from "./routes/affiliate.js";
 import adminCouponsRoutes from "./routes/adminCoupons.js";
 import blogRoutes from "./routes/blog.js";
 import adminBlogRoutes from "./routes/adminBlog.js";
+import adminIngestRoutes from "./routes/adminIngest.js";
+import currentAffairsRoutes from "./routes/currentAffairs.js";
 import libraryFolderRoutes from "./routes/libraryFolders.js";
 import myContentRoutes from "./routes/myContent.js";
 import myContentPdfReplaceRoutes from "./routes/myContentPdfReplace.js";
@@ -36,6 +39,7 @@ import { logger } from "./utils/logger.js";
 import { metrics } from "./utils/metrics.js";
 import { errorFields } from "./utils/logger.js";
 import { startVectorIndexWorker } from "./services/vectorIndexWorker.js";
+import { startIngestScheduler } from "./services/ingest/ingestScheduler.js";
 import { isVectorConfigured, vectorConfigSummary } from "./services/vectorStore.js";
 import { logEmbeddingConfig } from "./services/embeddings.js";
 import { llmConfigSummary } from "./services/llmConfig.js";
@@ -155,9 +159,11 @@ app.use("/api/subjects", subjectRoutes);
 app.use("/api/highlights", highlightRoutes);
 app.use("/api/progress", progressRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin", adminIngestRoutes);
 app.use("/api/admin/blog", adminBlogRoutes);
 app.use("/api/admin/coupons", adminCouponsRoutes);
 app.use("/api/blog", blogRoutes);
+app.use("/api/current-affairs", currentAffairsRoutes);
 app.use("/api/my-content", libraryFolderRoutes);
 app.use("/api/my-content", myContentMoveRoutes);
 app.use("/api/my-content", myContentShareRoutes);
@@ -176,6 +182,7 @@ app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/subscription", subscriptionRecurringRoutes);
 app.use("/api/affiliate", affiliateRoutes);
 app.use("/api/internal", internalRoutes);
+app.use("/api/internal", ingestInternalRoutes);
 
 app.use(
   (
@@ -212,4 +219,5 @@ app.listen(PORT, () => {
   if (isVectorConfigured()) {
     startVectorIndexWorker();
   }
+  startIngestScheduler();
 });

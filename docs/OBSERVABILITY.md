@@ -8,6 +8,7 @@ Services:
 |---|---|---|
 | Backend | `shelf-backend` | 4000 |
 | Processing worker | `shelf-processing-service` | 4001 |
+| Ingestion worker | `shelf-ingestion-service` | 4002 |
 
 Also available locally: `GET /metrics` (JSON snapshot) on each service.
 

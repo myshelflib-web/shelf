@@ -369,3 +369,72 @@ export interface AdminBlogPostDetail extends AdminBlogPostRow {
   coverImageUrl?: string | null;
   heroIllustrationUrl?: string | null;
 }
+
+export type IngestLicense = "GOVERNMENT_PRESS" | "LINK_ONLY" | "OFFICIAL_DOCUMENT";
+
+export interface IngestSourceRow {
+  id: string;
+  name: string;
+  slug: string;
+  kind: string;
+  feedUrl: string;
+  studyGoals: StudyGoal[];
+  license: IngestLicense;
+  cadence: string;
+  enabled: boolean;
+  maxItemsPerRun: number;
+  promoteToSubjectSlug: string | null;
+  promoteToTopicSlug: string | null;
+  lastPolledAt: string | null;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+  _count: { items: number };
+}
+
+export interface IngestItemRow {
+  id: string;
+  title: string;
+  canonicalUrl: string;
+  shelfSummary: string | null;
+  factualExcerpt: string | null;
+  license: IngestLicense;
+  status: string;
+  tags: string[];
+  studyGoals: StudyGoal[];
+  edition: string | null;
+  publishedAt: string | null;
+  publishedAtShelf: string | null;
+  fetchedAt: string;
+  articleId: string | null;
+  source: { name: string; slug: string; license: IngestLicense };
+  article: { id: string; slug: string; status: string } | null;
+}
+
+export interface IngestJobRow {
+  id: string;
+  phase: string;
+  status: string;
+  error: string | null;
+  attempts: number;
+  createdAt: string;
+  completedAt: string | null;
+  source: { slug: string; name: string } | null;
+  item: { title: string } | null;
+}
+
+export interface CurrentAffairsItem {
+  id: string;
+  title: string;
+  canonicalUrl: string;
+  shelfSummary: string | null;
+  factualExcerpt: string | null;
+  license: IngestLicense;
+  tags: string[];
+  studyGoals: StudyGoal[];
+  edition: string | null;
+  publishedAt: string | null;
+  publishedAtShelf: string | null;
+  articleId: string | null;
+  source: { name: string; slug: string };
+  disclaimer: string;
+}

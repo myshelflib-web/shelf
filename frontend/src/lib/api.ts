@@ -712,6 +712,68 @@ export const api = {
     },
     deleteBlogPost: (id: string) =>
       request<{ ok: boolean }>(`/api/admin/blog/${id}`, { method: "DELETE" }),
+    ingestSources: () =>
+      request<{ sources: import("@/types").IngestSourceRow[] }>(
+        "/api/admin/ingest/sources"
+      ),
+    ingestSeedSources: () =>
+      request<{ created: number; updated: number }>(
+        "/api/admin/ingest/seed-sources",
+        { method: "POST" }
+      ),
+    ingestPollSource: (id: string) =>
+      request<{ jobId: string; sqsMessageId: string | null }>(
+        `/api/admin/ingest/sources/${id}/poll`,
+        { method: "POST" }
+      ),
+    ingestItems: (opts?: { status?: string; limit?: number }) => {
+      const params = new URLSearchParams();
+      if (opts?.status) params.set("status", opts.status);
+      if (opts?.limit) params.set("limit", String(opts.limit));
+      const q = params.toString();
+      return request<{ items: import("@/types").IngestItemRow[] }>(
+        `/api/admin/ingest/items${q ? `?${q}` : ""}`
+      );
+    },
+    ingestApproveItem: (id: string) =>
+      request<{ ok: boolean }>(`/api/admin/ingest/items/${id}/approve`, {
+        method: "POST",
+      }),
+    ingestRejectItem: (id: string) =>
+      request<{ ok: boolean }>(`/api/admin/ingest/items/${id}/reject`, {
+        method: "POST",
+      }),
+    ingestPromoteItem: (id: string) =>
+      request<{ articleId: string | null }>(
+        `/api/admin/ingest/items/${id}/promote`,
+        { method: "POST" }
+      ),
+    ingestJobs: (limit = 30) =>
+      request<{ jobs: import("@/types").IngestJobRow[] }>(
+        `/api/admin/ingest/jobs?limit=${limit}`
+      ),
+  },
+
+  currentAffairs: {
+    list: (opts?: {
+      goal?: import("@/types").StudyGoal;
+      from?: string;
+      to?: string;
+      limit?: number;
+    }) => {
+      const params = new URLSearchParams();
+      if (opts?.goal) params.set("goal", opts.goal);
+      if (opts?.from) params.set("from", opts.from);
+      if (opts?.to) params.set("to", opts.to);
+      if (opts?.limit) params.set("limit", String(opts.limit));
+      const q = params.toString();
+      return request<{
+        goal: import("@/types").StudyGoal;
+        from: string;
+        to: string;
+        items: import("@/types").CurrentAffairsItem[];
+      }>(`/api/current-affairs${q ? `?${q}` : ""}`);
+    },
   },
 
   subscription: {

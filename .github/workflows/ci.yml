@@ -24,6 +24,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       processing: ${{ steps.filter.outputs.processing }}
+      ingestion: ${{ steps.filter.outputs.ingestion }}
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
       - name: Checkout
@@ -45,6 +46,9 @@ jobs:
             processing:
               - 'processing-service/**'
               - '.nvmrc'
+            ingestion:
+              - 'ingestion-service/**'
+              - '.nvmrc'
             frontend:
               - 'frontend/**'
               - '.nvmrc'
@@ -53,6 +57,7 @@ jobs:
         env:
           BACKEND: ${{ steps.filter.outputs.backend }}
           PROCESSING: ${{ steps.filter.outputs.processing }}
+          INGESTION: ${{ steps.filter.outputs.ingestion }}
           FRONTEND: ${{ steps.filter.outputs.frontend }}
         run: |
           {
@@ -62,9 +67,10 @@ jobs:
             echo "|-----|---------|"
             echo "| Backend | $BACKEND |"
             echo "| Processing service | $PROCESSING |"
+            echo "| Ingestion service | $INGESTION |"
             echo "| Frontend | $FRONTEND |"
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "backend=$BACKEND processing=$PROCESSING frontend=$FRONTEND"
+          echo "backend=$BACKEND processing=$PROCESSING ingestion=$INGESTION frontend=$FRONTEND"
 
   ci-backend:
     name: Backend
@@ -121,6 +127,33 @@ jobs:
         run: npm run test --prefix processing-service
       - name: Build
         working-directory: processing-service
+        run: npm run build
+
+  ci-ingestion:
+    name: Ingestion service
+    needs: changes
+    if: needs.changes.outputs.ingestion == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: ingestion-service/package-lock.json
+      - name: Install
+        working-directory: ingestion-service
+        run: npm ci
+      - name: Lint
+        run: npm run lint --prefix ingestion-service
+      - name: Typecheck
+        run: npm run typecheck --prefix ingestion-service
+      - name: Test
+        run: npm run test --prefix ingestion-service
+      - name: Build
+        working-directory: ingestion-service
         run: npm run build
 
   ci-frontend:
@@ -215,7 +248,7 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           MAX_DOCKER_TAGS: "10"
-          PROTECTED_DOCKER_TAGS: "main,latest,processor-main,processor-latest"
+          PROTECTED_DOCKER_TAGS: "main,latest,processor-main,processor-latest,ingest-main,ingest-latest"
         run: |
           chmod +x scripts/prune-dockerhub-tags.sh
           ./scripts/prune-dockerhub-tags.sh shelf
@@ -300,7 +333,7 @@ jobs:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
           MAX_DOCKER_TAGS: "10"
-          PROTECTED_DOCKER_TAGS: "main,latest,processor-main,processor-latest"
+          PROTECTED_DOCKER_TAGS: "main,latest,processor-main,processor-latest,ingest-main,ingest-latest"
         run: |
           chmod +x scripts/prune-dockerhub-tags.sh
           ./scripts/prune-dockerhub-tags.sh shelf
@@ -321,4 +354,89 @@ jobs:
             echo "### Processor image pushed"
             echo ""
             echo "\`${{ steps.meta.outputs.image }}:processor-main\` → Render hook"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  docker-ingestion:
+    name: Deploy ingestion (Render)
+    needs: [changes, ci-ingestion]
+    if: >-
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
+      needs.changes.outputs.ingestion == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Require Docker Hub secrets
+        run: |
+          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "Missing DOCKERHUB_USERNAME or DOCKERHUB_TOKEN secrets"
+            exit 1
+          fi
+      - name: Set image tags
+        id: meta
+        run: |
+          SHA_SHORT="${GITHUB_SHA::7}"
+          echo "sha=$SHA_SHORT" >> "$GITHUB_OUTPUT"
+          echo "image=${{ secrets.DOCKERHUB_USERNAME }}/shelf" >> "$GITHUB_OUTPUT"
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Ensure Docker Hub repos are PRIVATE
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          ENSURE_MODE: ensure
+        run: |
+          chmod +x scripts/ensure-private-dockerhub-repos.sh
+          ./scripts/ensure-private-dockerhub-repos.sh shelf
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Build & push ingestion service
+        uses: docker/build-push-action@v7
+        with:
+          context: ./ingestion-service
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:ingest-main
+            ${{ steps.meta.outputs.image }}:ingest-latest
+            ${{ steps.meta.outputs.image }}:ingest-${{ steps.meta.outputs.sha }}
+          cache-from: type=gha,scope=ingestion-service
+          cache-to: type=gha,mode=max,scope=ingestion-service
+      - name: Verify images remain PRIVATE
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          ENSURE_MODE: verify
+        run: ./scripts/ensure-private-dockerhub-repos.sh shelf
+      - name: Prune old tags (keep max 10)
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          MAX_DOCKER_TAGS: "10"
+          PROTECTED_DOCKER_TAGS: "main,latest,processor-main,processor-latest,ingest-main,ingest-latest"
+        run: |
+          chmod +x scripts/prune-dockerhub-tags.sh
+          ./scripts/prune-dockerhub-tags.sh shelf
+      - name: Trigger Render redeploy
+        env:
+          RENDER_DEPLOY_HOOK_INGESTION: ${{ secrets.RENDER_DEPLOY_HOOK_INGESTION }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_INGESTION" ]; then
+            echo "Skip ingestion (no deploy hook secret)"
+            exit 0
+          fi
+          echo "Triggering ingestion..."
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_INGESTION" >/dev/null
+          echo "Triggered ingestion"
+      - name: Summary
+        run: |
+          {
+            echo "### Ingestion image pushed"
+            echo ""
+            echo "\`${{ steps.meta.outputs.image }}:ingest-main\` → Render hook"
           } >> "$GITHUB_STEP_SUMMARY"
