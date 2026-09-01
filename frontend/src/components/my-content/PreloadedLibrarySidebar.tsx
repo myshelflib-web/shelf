@@ -277,6 +277,7 @@ export function PreloadedLibrarySidebar({
                   <PreloadedSubjectBranch
                     key={subject.id}
                     subject={subject}
+                    topicsOnly={isScopedCollection}
                     open={
                       expandedSubjects[subject.slug] ??
                       (isScopedCollection && subject.slug === activeSubject)

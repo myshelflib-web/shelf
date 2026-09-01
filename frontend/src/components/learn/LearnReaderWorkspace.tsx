@@ -316,10 +316,12 @@ export function LearnReaderWorkspace({
   }, [state.studyAICollapsed, openStudyAIPanel, closeStudyAIPanel]);
 
   const panesToRender = focusedPane ? [focusedPane] : state.panes.slice(0, 1);
+  const sidebarHref =
+    focusedTab?.href ?? scopeHref(routeScope);
 
   const libraryExplorer = (
     <LibrarySidePanel
-      currentHref={scopeHref(routeScope)}
+      currentHref={sidebarHref}
       workspaceMode
       showGoalPicker={showGoalPicker}
       onStudyGoalChange={setGuestGoal}
