@@ -3,6 +3,7 @@ import {
   getContentGenJob,
   listPausedJobs,
   remainingWorkCount,
+  completeJobIfIdle,
 } from "./contentGenJobs.js";
 import { isJobInFlight } from "./jobRegistry.js";
 import { runNewsPackJob } from "./news/runNewsPack.js";
@@ -10,11 +11,14 @@ import { runStarterPackJob } from "./runStarterPack.js";
 
 /** Continues a paused job from its remaining plan cursor (or leftover rows). */
 export async function resumeContentGenJob(jobId: string): Promise<void> {
-  if (isJobInFlight(jobId)) throw new Error("Job is already running");
-
   const job = await getContentGenJob(jobId);
   if (!job) throw new Error("Job not found");
-  if (job.status === "COMPLETED") throw new Error("Job has already finished");
+  if (job.status === "COMPLETED" || job.status === "FAILED") {
+    throw new Error("Job has already finished");
+  }
+  if (isJobInFlight(jobId)) throw new Error("Job is already running");
+
+  if (await completeJobIfIdle(jobId)) return;
 
   const remaining = await remainingWorkCount(jobId);
   if (remaining === 0) throw new Error("Job has no remaining pages to generate");

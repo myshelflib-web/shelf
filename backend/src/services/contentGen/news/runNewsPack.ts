@@ -2,6 +2,7 @@ import type { StudyGoal } from "@prisma/client";
 import { errorFields, logger } from "../../../utils/logger.js";
 import { blueprintForGoal } from "../blueprints/index.js";
 import {
+  completeJobIfIdle,
   createContentGenJob,
   finishJob,
   getJobRunState,
@@ -210,6 +211,7 @@ export async function runNewsPackJob(
     ) {
       return;
     }
+    if (await completeJobIfIdle(jobId)) return;
     await markJobRunning(jobId);
 
     const leftover = await pendingItems(jobId);
@@ -265,6 +267,8 @@ export async function runNewsPackJob(
 
     if (result.error === STOPPED_BY_ADMIN) {
       await skipOpenContentGenItems(jobId, STOPPED_BY_ADMIN);
+      await finishJob(jobId, { status: "FAILED", error: STOPPED_BY_ADMIN });
+      return;
     }
 
     await finishJob(jobId, { status: result.status, error: result.error ?? null });

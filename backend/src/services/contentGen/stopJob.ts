@@ -1,9 +1,10 @@
 import {
+  completeJobIfIdle,
   finishJob,
   getContentGenJob,
   skipOpenContentGenItems,
 } from "./contentGenJobs.js";
-import { abortJob, isJobInFlight } from "./jobRegistry.js";
+import { abortJob } from "./jobRegistry.js";
 
 export const STOPPED_BY_ADMIN = "Stopped by admin";
 
@@ -18,12 +19,12 @@ export async function stopContentGenJob(jobId: string): Promise<void> {
     throw new Error("This job is not running");
   }
 
-  const claimed = isJobInFlight(jobId);
   abortJob(jobId);
 
-  // Loop is not in this process (deploy mid-run) — close the row ourselves.
-  if (!claimed) {
-    await skipOpenContentGenItems(jobId, STOPPED_BY_ADMIN);
-    await finishJob(jobId, { status: "FAILED", error: STOPPED_BY_ADMIN });
-  }
+  // Every page already has a terminal row — just close the run. Do not mark
+  // it Stopped; that hides a finished pack behind a fake failure.
+  if (await completeJobIfIdle(jobId)) return;
+
+  await skipOpenContentGenItems(jobId, STOPPED_BY_ADMIN);
+  await finishJob(jobId, { status: "FAILED", error: STOPPED_BY_ADMIN });
 }

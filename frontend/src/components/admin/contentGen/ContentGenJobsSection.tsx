@@ -181,12 +181,18 @@ function ActiveBanner({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-medium">
-            {job.status === "QUEUED" ? "Queued" : "Generating"} — {remaining} page
+            {job.status === "QUEUED"
+              ? "Queued"
+              : remaining === 0
+                ? "Finishing"
+                : "Generating"}{" "}
+            — {remaining} page
             {remaining === 1 ? "" : "s"} left
           </p>
           <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-            Stop aborts the model call in progress. Pages already published stay.
-            In-flight pages are skipped so Retry failed can pick them up.
+            {remaining === 0
+              ? "Every page is scored. The run should close on its own — Stop will mark it finished if it is stuck."
+              : "Stop aborts the model call in progress. Pages already published stay. In-flight pages are skipped so Retry failed can pick them up."}
           </p>
         </div>
         <button

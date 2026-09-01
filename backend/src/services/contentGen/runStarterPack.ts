@@ -4,6 +4,7 @@ import { errorFields, logger } from "../../utils/logger.js";
 import { blueprintForGoal } from "./blueprints/index.js";
 import { specForPage, specsForGoal } from "./syllabus/index.js";
 import {
+  completeJobIfIdle,
   createContentGenJob,
   finishJob,
   getJobRunState,
@@ -21,7 +22,7 @@ import {
 } from "./generateStarterArticle.js";
 import { packStarterDraft, parseStarterDraft, type StarterDraft } from "./starterDraft.js";
 import { runJobLoop, type LoopItem } from "./jobLoop.js";
-import { claimJob, jobAbortSignal, releaseJob } from "./jobRegistry.js";
+import { claimJob, isJobAborted, jobAbortSignal, releaseJob } from "./jobRegistry.js";
 import { STOPPED_BY_ADMIN } from "./stopJob.js";
 import { publishGeneratedArticle } from "./publishGenerated.js";
 import { renderArticleHtml, renderArticleText } from "./renderArticle.js";
@@ -220,6 +221,7 @@ export async function runStarterPackJob(
     ) {
       return;
     }
+    if (await completeJobIfIdle(jobId)) return;
     await markJobRunning(jobId);
 
     const leftover = await pendingItems(jobId);
@@ -256,6 +258,13 @@ export async function runStarterPackJob(
     }
 
     if (plan) {
+      const doneRows = await prisma.contentGenItem.findMany({
+        where: { jobId, status: { in: ["COMPLETED", "FAILED", "SKIPPED"] } },
+        select: { subjectSlug: true, slug: true },
+      });
+      for (const row of doneRows) {
+        leftoverKeys.add(`${row.subjectSlug}/${row.slug}`);
+      }
       for (const entry of plan.entries.slice(state?.cursor ?? 0)) {
         const key = `${entry.subjectSlug}/${entry.slug}`;
         if (leftoverKeys.has(key)) continue;
@@ -297,8 +306,10 @@ export async function runStarterPackJob(
       return;
     }
 
-    if (result.error === STOPPED_BY_ADMIN) {
+    if (result.error === STOPPED_BY_ADMIN || isJobAborted(jobId)) {
       await skipOpenContentGenItems(jobId, STOPPED_BY_ADMIN);
+      await finishJob(jobId, { status: "FAILED", error: STOPPED_BY_ADMIN });
+      return;
     }
 
     await finishJob(jobId, { status: result.status, error: result.error ?? null });

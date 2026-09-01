@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "../../utils/prisma.js";
 import { estimateCostPaise } from "../sarvam/sarvamPricing.js";
 import { asNewsPlan, asStarterPlan, planJson, type ContentGenPlan } from "./jobPlan.js";
+import { isAnyContentGenInFlight } from "./jobRegistry.js";
 import { hasStarterDraft } from "./starterDraft.js";
 
 export type CreateJobInput = {
@@ -123,17 +124,65 @@ export async function remainingWorkCount(jobId: string): Promise<number> {
     select: { cursor: true, plan: true },
   });
   if (!job) return 0;
+
   const starter = asStarterPlan(job.plan);
-  if (starter) return Math.max(0, starter.entries.length - job.cursor);
+  if (starter) {
+    const todo = starter.entries.slice(job.cursor);
+    if (todo.length === 0) return 0;
+    const done = await prisma.contentGenItem.findMany({
+      where: { jobId, status: { in: ["COMPLETED", "FAILED", "SKIPPED"] } },
+      select: { subjectSlug: true, slug: true },
+    });
+    const doneKeys = new Set(done.map((r) => `${r.subjectSlug}/${r.slug}`));
+    return todo.filter((e) => !doneKeys.has(`${e.subjectSlug}/${e.slug}`)).length;
+  }
+
   const news = asNewsPlan(job.plan);
-  if (news) return Math.max(0, news.clusters.length - job.cursor);
+  if (news) {
+    const todo = news.clusters.slice(job.cursor);
+    if (todo.length === 0) return 0;
+    const done = await prisma.contentGenItem.findMany({
+      where: { jobId, status: { in: ["COMPLETED", "FAILED", "SKIPPED"] } },
+      select: { slug: true },
+    });
+    const doneSlugs = new Set(done.map((r) => r.slug));
+    return todo.filter((c) => !doneSlugs.has(c.key)).length;
+  }
   return 0;
+}
+
+/**
+ * Last page already scored but the job row never left RUNNING — common after
+ * a deploy or crash between recordItemOutcome and finishJob. Closes it.
+ */
+export async function completeJobIfIdle(jobId: string): Promise<boolean> {
+  if ((await remainingWorkCount(jobId)) > 0) return false;
+  const job = await prisma.contentGenJob.findUnique({
+    where: { id: jobId },
+    select: { status: true },
+  });
+  if (
+    !job ||
+    (job.status !== "QUEUED" &&
+      job.status !== "RUNNING" &&
+      job.status !== "PAUSED")
+  ) {
+    return false;
+  }
+  await finishJob(jobId, { status: "COMPLETED" });
+  return true;
 }
 
 export async function finishJob(
   jobId: string,
   opts: { status: ContentGenStatus; error?: string | null }
 ): Promise<void> {
+  const current = await prisma.contentGenJob.findUnique({
+    where: { id: jobId },
+    select: { status: true },
+  });
+  if (current?.status === "COMPLETED" || current?.status === "FAILED") return;
+
   await prisma.contentGenJob.update({
     where: { id: jobId },
     data: {
@@ -191,6 +240,19 @@ export async function recordItemOutcome(
   itemId: string,
   outcome: ItemOutcome
 ): Promise<void> {
+  const current = await prisma.contentGenItem.findUnique({
+    where: { id: itemId },
+    select: { status: true },
+  });
+  if (
+    current &&
+    (current.status === "COMPLETED" ||
+      current.status === "FAILED" ||
+      current.status === "SKIPPED")
+  ) {
+    return;
+  }
+
   const inputTokens = outcome.inputTokens ?? 0;
   const outputTokens = outcome.outputTokens ?? 0;
 
@@ -326,6 +388,7 @@ export async function listContentGenItems(
 }
 
 export async function hasRunningJob(): Promise<boolean> {
+  if (isAnyContentGenInFlight()) return true;
   const running = await prisma.contentGenJob.count({
     where: { status: { in: ["QUEUED", "RUNNING"] } },
   });
@@ -343,7 +406,10 @@ export async function skipOpenContentGenItems(
   if (count > 0) {
     await prisma.contentGenJob.update({
       where: { id: jobId },
-      data: { skippedCount: { increment: count } },
+      data: {
+        skippedCount: { increment: count },
+        cursor: { increment: count },
+      },
     });
   }
 }
