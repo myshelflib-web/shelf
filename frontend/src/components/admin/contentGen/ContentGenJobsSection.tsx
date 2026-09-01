@@ -8,6 +8,7 @@ import {
   PauseCircle,
   Play,
   RefreshCw,
+  RotateCcw,
 } from "lucide-react";
 import type { ContentGenItemRow, ContentGenJobRow } from "@/types";
 import {
@@ -136,6 +137,47 @@ function PausedBanner({
   );
 }
 
+function FailedBanner({
+  job,
+  retrying,
+  disabled,
+  onRetry,
+}: {
+  job: ContentGenJobRow;
+  retrying: boolean;
+  disabled: boolean;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="mx-3 mb-2.5 rounded-lg border border-amber-500/25 bg-amber-500/5 px-3 py-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium text-amber-300">
+            {job.failedCount} page{job.failedCount === 1 ? "" : "s"} failed
+          </p>
+          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+            Resume will not redo these — the run already moved on. Retry starts a
+            new job with only the failed pages.
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={retrying || disabled}
+          onClick={onRetry}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-1 text-[11px] hover:border-[var(--accent)]/40 transition disabled:opacity-50"
+        >
+          {retrying ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <RotateCcw className="w-3 h-3" />
+          )}
+          Retry failed
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ContentGenJobsSection({
   jobs,
   items,
@@ -144,10 +186,13 @@ export function ContentGenJobsSection({
   loading,
   expandedId,
   resumingId,
+  retryingId,
+  retryDisabled,
   onToggle,
   onLoadMore,
   onRefresh,
   onResume,
+  onRetryFailed,
 }: {
   jobs: ContentGenJobRow[];
   items: ContentGenItemRow[];
@@ -156,10 +201,13 @@ export function ContentGenJobsSection({
   loading: boolean;
   expandedId: string | null;
   resumingId: string | null;
+  retryingId: string | null;
+  retryDisabled: boolean;
   onToggle: (jobId: string) => void;
   onLoadMore: () => void;
   onRefresh: () => void;
   onResume: (jobId: string) => void;
+  onRetryFailed: (jobId: string) => void;
 }) {
   return (
     <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]/40 p-4">
@@ -250,6 +298,17 @@ export function ContentGenJobsSection({
                     onResume={() => onResume(job.id)}
                   />
                 )}
+                {job.failedCount > 0 &&
+                  job.status !== "QUEUED" &&
+                  job.status !== "RUNNING" &&
+                  job.status !== "PAUSED" && (
+                    <FailedBanner
+                      job={job}
+                      retrying={retryingId === job.id}
+                      disabled={retryDisabled}
+                      onRetry={() => onRetryFailed(job.id)}
+                    />
+                  )}
                 {expanded && (
                   <ItemRows
                     items={items}

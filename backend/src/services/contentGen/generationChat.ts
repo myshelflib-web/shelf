@@ -1,7 +1,7 @@
 import { completeChat } from "../llm.js";
 import { chatModel } from "../llmConfig.js";
 import type { ChatMessage } from "../llmTypes.js";
-import { sarvamChat } from "../sarvam/sarvamChat.js";
+import { sarvamChat, type SarvamReasoningEffort } from "../sarvam/sarvamChat.js";
 import { sarvamConfigured, sarvamModel } from "../sarvam/sarvamConfig.js";
 
 export type GenerationProvider = "sarvam" | "shelf";
@@ -51,12 +51,18 @@ function approxTokens(text: string): number {
  */
 export async function generationChat(
   messages: ChatMessage[],
-  opts: { maxTokens?: number; temperature?: number; metricsFlow?: string } = {}
+  opts: {
+    maxTokens?: number;
+    temperature?: number;
+    metricsFlow?: string;
+    reasoningEffort?: SarvamReasoningEffort;
+  } = {}
 ): Promise<GenerationChatResult> {
   if (sarvamConfigured()) {
     const res = await sarvamChat(messages, {
       maxTokens: opts.maxTokens,
       temperature: opts.temperature,
+      reasoningEffort: opts.reasoningEffort,
     });
     return {
       text: res.text,

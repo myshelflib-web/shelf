@@ -16,6 +16,7 @@ import {
   pricingRates,
 } from "../services/contentGen/costStorage.js";
 import { generationModelLabel } from "../services/contentGen/generationChat.js";
+import { retryFailedContentGenJob } from "../services/contentGen/retryFailed.js";
 import { resumeContentGenJob } from "../services/contentGen/resumeJobs.js";
 import { startStarterPackJob } from "../services/contentGen/runStarterPack.js";
 import { catalogHasSubject, catalogPacks } from "../services/contentGen/syllabus/index.js";
@@ -99,6 +100,19 @@ router.post("/content-gen/jobs/:id/resume", async (req: Request, res: Response) 
     res.status(400).json({
       error: err instanceof Error ? err.message : "Could not resume this job",
     });
+  }
+});
+
+router.post("/content-gen/jobs/:id/retry-failed", async (req: Request, res: Response) => {
+  try {
+    const result = await retryFailedContentGenJob(
+      param(req, "id"),
+      req.user?.userId ?? null
+    );
+    res.json(result);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Could not retry failed pages";
+    res.status(message.includes("already running") ? 409 : 400).json({ error: message });
   }
 });
 

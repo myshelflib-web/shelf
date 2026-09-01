@@ -22,6 +22,7 @@ export function NewsGenSection({
   planning,
   running,
   disabled,
+  lockReason,
   onPlan,
   onRun,
 }: {
@@ -29,6 +30,7 @@ export function NewsGenSection({
   planning: boolean;
   running: boolean;
   disabled: boolean;
+  lockReason: string | null;
   onPlan: (opts: NewsRunOptions) => void;
   onRun: (opts: NewsRunOptions) => void;
 }) {
@@ -54,6 +56,12 @@ export function NewsGenSection({
           and every source is credited and linked.
         </p>
       </div>
+
+      {lockReason && (
+        <p className="mb-3 rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2 text-xs text-sky-300">
+          {lockReason}
+        </p>
+      )}
 
       <div className="flex flex-wrap items-end gap-3 text-xs mb-4">
         <div className="flex flex-col gap-1">
@@ -116,7 +124,7 @@ export function NewsGenSection({
           type="button"
           disabled={planning}
           onClick={() => onPlan(opts)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-1.5 hover:border-[var(--accent)]/40 transition disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-1.5 hover:border-[var(--accent)]/40 transition disabled:cursor-not-allowed disabled:opacity-40"
         >
           {planning ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -129,7 +137,7 @@ export function NewsGenSection({
           type="button"
           disabled={disabled || running}
           onClick={() => onRun(opts)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-1.5 hover:border-[var(--accent)]/40 transition disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] px-3 py-1.5 hover:border-[var(--accent)]/40 transition disabled:cursor-not-allowed disabled:opacity-40"
         >
           {running ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />

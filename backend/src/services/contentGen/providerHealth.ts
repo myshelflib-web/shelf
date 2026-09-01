@@ -49,7 +49,7 @@ export async function probeProvider(): Promise<boolean> {
         { role: "system", content: "Reply with the single word OK." },
         { role: "user", content: "ping" },
       ],
-      { maxTokens: 8, temperature: 0, metricsFlow: "content_gen_probe" }
+      { maxTokens: 32, temperature: 0, metricsFlow: "content_gen_probe", reasoningEffort: null }
     );
     return true;
   } catch (err) {

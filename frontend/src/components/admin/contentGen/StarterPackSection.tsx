@@ -17,12 +17,14 @@ export function StarterPackSection({
   loading,
   busyGoal,
   disabled,
+  lockReason,
   onRun,
 }: {
   packs: ContentGenPack[];
   loading: boolean;
   busyGoal: StudyGoal | null;
   disabled: boolean;
+  lockReason: string | null;
   onRun: (opts: StarterPackRunOptions) => void;
 }) {
   const [dryRun, setDryRun] = useState(true);
@@ -75,6 +77,12 @@ export function StarterPackSection({
         </div>
       </div>
 
+      {lockReason && (
+        <p className="mb-3 rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2 text-xs text-sky-300">
+          {lockReason}
+        </p>
+      )}
+
       {loading && packs.length === 0 ? (
         <div className="space-y-2">
           {[0, 1, 2].map((i) => (
@@ -117,7 +125,7 @@ export function StarterPackSection({
                             skipExisting,
                           })
                         }
-                        className="rounded border border-[var(--border)] px-1.5 py-0.5 text-[10px] text-[var(--text-muted)] hover:border-[var(--accent)]/50 hover:text-[var(--text-secondary)] transition disabled:opacity-50"
+                        className="rounded border border-[var(--border)] px-1.5 py-0.5 text-[10px] text-[var(--text-secondary)] hover:border-[var(--accent)]/50 hover:text-[var(--text-primary)] transition disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {subject.name}
                         <span className="ml-1 opacity-60">
@@ -138,7 +146,7 @@ export function StarterPackSection({
                       skipExisting,
                     })
                   }
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5 text-xs hover:border-[var(--accent)]/40 transition disabled:opacity-50"
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-1.5 text-xs hover:border-[var(--accent)]/40 transition disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {busyGoal === pack.studyGoal ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />

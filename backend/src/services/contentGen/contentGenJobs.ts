@@ -322,3 +322,18 @@ export async function hasRunningJob(): Promise<boolean> {
   });
   return running > 0;
 }
+
+/** Failed page rows for a finished job — used to start a retry run. */
+export async function listFailedContentGenItems(jobId: string) {
+  return prisma.contentGenItem.findMany({
+    where: { jobId, status: "FAILED" },
+    orderBy: { createdAt: "asc" },
+    select: {
+      title: true,
+      slug: true,
+      subjectSlug: true,
+      topicSlug: true,
+      payload: true,
+    },
+  });
+}

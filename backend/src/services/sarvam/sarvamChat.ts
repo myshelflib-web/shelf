@@ -3,6 +3,10 @@ import { logger } from "../../utils/logger.js";
 import { parseProviderError } from "../llmConfig.js";
 import type { ChatMessage } from "../llmTypes.js";
 import {
+  extractCompletionText,
+  type SarvamCompletionBody,
+} from "./sarvamParse.js";
+import {
   sarvamApiKey,
   sarvamBaseUrl,
   sarvamMaxOutputTokens,
@@ -16,11 +20,16 @@ export class SarvamNotConfiguredError extends Error {
   }
 }
 
+/** Sarvam 105B thinking. `null` turns it off (short JSON / probes). */
+export type SarvamReasoningEffort = "low" | "medium" | "high" | null;
+
 export type SarvamChatOpts = {
   maxTokens?: number;
   temperature?: number;
   model?: string;
   signal?: AbortSignal;
+  /** Default off. Thinking is turned on only when a short call comes back empty. */
+  reasoningEffort?: SarvamReasoningEffort;
 };
 
 export type SarvamChatResult = {
@@ -30,25 +39,21 @@ export type SarvamChatResult = {
   outputTokens: number;
 };
 
-type SarvamCompletionBody = {
-  choices?: { message?: { content?: string | null } }[];
-  usage?: {
-    prompt_tokens?: number;
-    completion_tokens?: number;
-    total_tokens?: number;
-  };
-};
+/** Pro plan ceiling; Starter silently caps lower. */
+const MAX_COMPLETION_TOKENS = 16_000;
 
-/** Rough fallback when the provider omits usage (~4 chars per token). */
 function approxTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
-/** Sarvam exposes an OpenAI-compatible /chat/completions endpoint. */
-export async function sarvamChat(
+function bumpMaxTokens(current: number): number {
+  return Math.min(MAX_COMPLETION_TOKENS, current + 4096);
+}
+
+async function requestOnce(
   messages: ChatMessage[],
-  opts: SarvamChatOpts = {}
-): Promise<SarvamChatResult> {
+  opts: SarvamChatOpts & { reasoningEffort: SarvamReasoningEffort; maxTokens: number }
+): Promise<{ body: SarvamCompletionBody; model: string }> {
   const apiKey = sarvamApiKey();
   if (!apiKey) throw new SarvamNotConfiguredError();
 
@@ -67,8 +72,9 @@ export async function sarvamChat(
         model,
         messages,
         temperature: opts.temperature ?? 0.3,
-        max_tokens: opts.maxTokens ?? sarvamMaxOutputTokens(),
+        max_tokens: opts.maxTokens,
         stream: false,
+        reasoning_effort: opts.reasoningEffort,
       }),
       signal: opts.signal,
       timeoutMs: 180_000,
@@ -91,32 +97,75 @@ export async function sarvamChat(
     );
   }
 
-  let body: SarvamCompletionBody;
   try {
-    body = JSON.parse(raw) as SarvamCompletionBody;
+    return { body: JSON.parse(raw) as SarvamCompletionBody, model };
   } catch {
     throw new Error("Sarvam returned a non-JSON response");
   }
+}
 
-  const text = body.choices?.[0]?.message?.content?.trim() ?? "";
-  if (!text) throw new Error("Sarvam returned an empty completion");
-
+/** Sarvam exposes an OpenAI-compatible /chat/completions endpoint. */
+export async function sarvamChat(
+  messages: ChatMessage[],
+  opts: SarvamChatOpts = {}
+): Promise<SarvamChatResult> {
   const promptText = messages
     .map((m) => (typeof m.content === "string" ? m.content : ""))
     .join("\n");
 
-  const result: SarvamChatResult = {
-    text,
-    model,
-    inputTokens: body.usage?.prompt_tokens ?? approxTokens(promptText),
-    outputTokens: body.usage?.completion_tokens ?? approxTokens(text),
-  };
+  const requested = opts.reasoningEffort === undefined ? null : opts.reasoningEffort;
+  let maxTokens = opts.maxTokens ?? sarvamMaxOutputTokens();
+  let reasoningEffort = requested;
 
-  logger.debug("sarvam.chat.ok", {
-    model,
-    inputTokens: result.inputTokens,
-    outputTokens: result.outputTokens,
-  });
+  let lastFinish: string | null = null;
+  let lastReasoning = 0;
 
-  return result;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const { body, model } = await requestOnce(messages, {
+      ...opts,
+      maxTokens,
+      reasoningEffort,
+    });
+    const extracted = extractCompletionText(body);
+    lastFinish = extracted.finishReason;
+    lastReasoning = extracted.reasoningChars;
+
+    if (extracted.text) {
+      const result: SarvamChatResult = {
+        text: extracted.text,
+        model,
+        inputTokens: body.usage?.prompt_tokens ?? approxTokens(promptText),
+        outputTokens: body.usage?.completion_tokens ?? approxTokens(extracted.text),
+      };
+      logger.debug("sarvam.chat.ok", {
+        model,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+        finishReason: extracted.finishReason,
+        reasoningEffort,
+        attempt,
+      });
+      return result;
+    }
+
+    logger.warn("sarvam.chat.empty", {
+      attempt,
+      finishReason: extracted.finishReason,
+      reasoningChars: extracted.reasoningChars,
+      completionTokens: body.usage?.completion_tokens ?? 0,
+      reasoningEffort,
+      maxTokens,
+    });
+
+    maxTokens = bumpMaxTokens(maxTokens);
+    if (reasoningEffort === null) {
+      reasoningEffort = "low";
+    } else if (reasoningEffort === "low") {
+      reasoningEffort = "medium";
+    }
+  }
+
+  throw new Error(
+    `Sarvam returned an empty completion (finish_reason=${lastFinish ?? "unknown"}, reasoning_chars=${lastReasoning})`
+  );
 }

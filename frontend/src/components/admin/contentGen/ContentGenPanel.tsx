@@ -38,6 +38,7 @@ export function ContentGenPanel() {
   const [planning, setPlanning] = useState(false);
   const [newsRunning, setNewsRunning] = useState(false);
   const [resumingId, setResumingId] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -96,6 +97,12 @@ export function ContentGenPanel() {
   const hasActiveJob = jobs.some(
     (job) => job.status === "QUEUED" || job.status === "RUNNING"
   );
+  const activeJob = jobs.find(
+    (job) => job.status === "QUEUED" || job.status === "RUNNING"
+  );
+  const lockReason = activeJob
+    ? `A ${activeJob.kind === "NEWS_BRIEF" ? "news" : "syllabus"} run for ${activeJob.studyGoal} is ${activeJob.status.toLowerCase()}. Only one job at a time — wait for it to finish, or check Runs below.`
+    : null;
   const shouldPoll =
     hasActiveJob || jobs.some((job) => job.status === "PAUSED");
 
@@ -159,6 +166,28 @@ export function ContentGenPanel() {
       setError(err instanceof Error ? err.message : "Could not resume this run");
     } finally {
       setResumingId(null);
+    }
+  }
+
+  async function retryFailed(jobId: string) {
+    setRetryingId(jobId);
+    setError(null);
+    setNotice(null);
+    try {
+      const { jobId: nextId, plannedCount } = await api.admin.contentGenRetryFailed(
+        jobId
+      );
+      setNotice(
+        `Retrying ${plannedCount} failed page${plannedCount === 1 ? "" : "s"} as a new run.`
+      );
+      setExpandedId(nextId);
+      setPagedBeyondFirst(false);
+      await loadJobs();
+      await loadItems(nextId, "reset");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not retry failed pages");
+    } finally {
+      setRetryingId(null);
     }
   }
 
@@ -227,6 +256,7 @@ export function ContentGenPanel() {
         loading={overviewLoading}
         busyGoal={busyGoal}
         disabled={hasActiveJob}
+        lockReason={lockReason}
         onRun={runStarterPack}
       />
 
@@ -235,6 +265,7 @@ export function ContentGenPanel() {
         planning={planning}
         running={newsRunning}
         disabled={hasActiveJob}
+        lockReason={lockReason}
         onPlan={planNews}
         onRun={runNews}
       />
@@ -247,6 +278,8 @@ export function ContentGenPanel() {
         loading={jobsLoading}
         expandedId={expandedId}
         resumingId={resumingId}
+        retryingId={retryingId}
+        retryDisabled={hasActiveJob}
         onToggle={toggleJob}
         onLoadMore={() => {
           if (expandedId) void loadItems(expandedId, "more", itemsCursor);
@@ -259,6 +292,7 @@ export function ContentGenPanel() {
           }
         }}
         onResume={(jobId) => void resumeJob(jobId)}
+        onRetryFailed={(jobId) => void retryFailed(jobId)}
       />
     </div>
   );

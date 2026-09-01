@@ -75,17 +75,30 @@ export async function generateNewsBrief(
 
   const drafted = await generationChat(
     newsBriefMessages(cluster, examContext, examLabel),
-    { maxTokens: 2600, temperature: 0.3, metricsFlow: "content_gen_news" }
+    { maxTokens: 3200, temperature: 0.3, metricsFlow: "content_gen_news", reasoningEffort: null }
   );
   usage = addUsage(usage, drafted);
 
   let brief = parseNewsBrief(drafted.text);
+  if (!brief) {
+    const retried = await generationChat(
+      newsBriefMessages(cluster, examContext, examLabel),
+      {
+        maxTokens: 4096,
+        temperature: 0.3,
+        metricsFlow: "content_gen_news",
+        reasoningEffort: "medium",
+      }
+    );
+    usage = addUsage(usage, retried);
+    brief = parseNewsBrief(retried.text);
+  }
   if (!brief) throw new Error("Sources were too thin to write an accurate brief");
 
   const runReview = async (current: NewsBrief) => {
     const res = await generationChat(
       newsReviewMessages(cluster, current, examLabel),
-      { maxTokens: 900, temperature: 0.1, metricsFlow: "content_gen_news_review" }
+      { maxTokens: 1500, temperature: 0.1, metricsFlow: "content_gen_news_review", reasoningEffort: null }
     );
     usage = addUsage(usage, res);
     return (
@@ -104,7 +117,7 @@ export async function generateNewsBrief(
   if (review.verdict === "revise") {
     const res = await generationChat(
       newsReviseMessages(cluster, brief, review, examLabel),
-      { maxTokens: 2600, temperature: 0.2, metricsFlow: "content_gen_news_revise" }
+      { maxTokens: 4096, temperature: 0.2, metricsFlow: "content_gen_news_revise", reasoningEffort: "medium" }
     );
     usage = addUsage(usage, res);
     revisions = 1;

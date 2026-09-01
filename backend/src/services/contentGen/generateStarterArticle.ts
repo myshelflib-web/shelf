@@ -29,8 +29,10 @@ export type StarterArticleResult = {
   revisions: number;
 };
 
-/** Long-form pages need headroom; the schema alone eats several hundred tokens. */
+/** First pass without thinking; think only if the JSON draft does not parse. */
 const DRAFT_MAX_TOKENS = 8192;
+const DRAFT_THINK_MAX_TOKENS = 12_288;
+const RECHECK_MAX_TOKENS = 2048;
 
 async function draftOnce(
   blueprint: StarterPackBlueprint,
@@ -39,10 +41,12 @@ async function draftOnce(
   let usage = emptyUsage();
 
   for (let attempt = 1; attempt <= 2; attempt++) {
+    const think = attempt > 1;
     const res = await generationChat(draftMessages(blueprint, spec), {
-      maxTokens: DRAFT_MAX_TOKENS,
+      maxTokens: think ? DRAFT_THINK_MAX_TOKENS : DRAFT_MAX_TOKENS,
       temperature: 0.35,
       metricsFlow: "content_gen_draft",
+      reasoningEffort: think ? "medium" : null,
     });
     usage = addUsage(usage, res);
 
@@ -61,9 +65,10 @@ async function reviewDraft(
   article: GeneratedArticle
 ): Promise<{ review: RelevanceReview; usage: GenerationUsage }> {
   const res = await generationChat(recheckMessages(blueprint, spec, article), {
-    maxTokens: 1800,
+    maxTokens: RECHECK_MAX_TOKENS,
     temperature: 0.1,
     metricsFlow: "content_gen_recheck",
+    reasoningEffort: null,
   });
 
   const parsed = parseRelevanceReview(res.text);
@@ -103,9 +108,10 @@ export async function generateStarterArticle(
     const res = await generationChat(
       reviseMessages(blueprint, spec, article, review),
       {
-        maxTokens: DRAFT_MAX_TOKENS,
+        maxTokens: DRAFT_THINK_MAX_TOKENS,
         temperature: 0.25,
         metricsFlow: "content_gen_revise",
+        reasoningEffort: "medium",
       }
     );
     usage = addUsage(usage, res);
