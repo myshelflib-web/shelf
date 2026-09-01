@@ -9,13 +9,34 @@ export function buildPreloadedSummaryHtml(
   const safeSummary = escapeHtml(summary || "Official resource on Shelf Learn.");
   const link = url?.trim();
   const linkStatus = opts?.linkStatus;
-  const linkBlock =
-    linkStatus === "BROKEN"
-      ? `<p class="text-[var(--text-secondary)]">The official link appears unavailable right now. Try again later or search for an updated URL on the publisher site.</p>`
-      : link
-        ? `<p><a href="${escapeAttr(link)}" target="_blank" rel="noopener noreferrer" class="text-[var(--accent)] hover:underline font-medium">Open official source in browser →</a></p>`
-        : "";
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${safeTitle}</title></head><body><article><h1>${safeTitle}</h1><p>${safeSummary}</p>${linkBlock}<p><em>Shelf summary — most government portals block in-app embeds; use the official link for the full site.</em></p></article></body></html>`;
+  const broken = linkStatus === "BROKEN";
+
+  const actionBlock = broken
+    ? `<p class="preloaded-official-fallback__warn">The official link appears unavailable right now. Try again later or search for an updated URL on the publisher site.</p>`
+    : link
+      ? `<div class="preloaded-official-fallback__actions">
+          <a href="${escapeAttr(link)}" target="_blank" rel="noopener noreferrer" class="preloaded-official-fallback__cta">Open on official site</a>
+        </div>`
+      : "";
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${safeTitle}</title></head><body>
+<article class="preloaded-official-fallback">
+  <header class="preloaded-official-fallback__header">
+    <p class="preloaded-official-fallback__kicker">Official source preview</p>
+    <h1>${safeTitle}</h1>
+  </header>
+  <p class="preloaded-official-fallback__summary">${safeSummary}</p>
+  ${actionBlock}
+  <section class="preloaded-official-fallback__note" aria-label="How to read and save">
+    <h2>How to use this resource</h2>
+    <ul>
+      <li><strong>Read full content</strong> on the official site using the button above — budget PDFs, notifications, and updates live there.</li>
+      <li><strong>Sign in</strong> and tap <strong>Save to library</strong> to keep this official link in your personal Shelf (<code>/my-content</code>).</li>
+      <li><strong>Why not embedded?</strong> Most government portals block in-app previews for security; Shelf shows a summary and links you to the publisher.</li>
+    </ul>
+  </section>
+</article>
+</body></html>`;
 }
 
 function escapeHtml(value: string): string {

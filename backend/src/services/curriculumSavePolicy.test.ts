@@ -13,6 +13,28 @@ describe("resolveCurriculumSavePolicy", () => {
     expect(policy.allowed).toBe(true);
   });
 
+  it("saves official PDFs as download_remote", () => {
+    const policy = resolveCurriculumSavePolicy({
+      pdfKey: null,
+      contentUrl: null,
+      sourceUrl: "https://ncert.nic.in/textbook.pdf",
+      sourceLicense: "OFFICIAL_DOCUMENT",
+    });
+    expect(policy.mode).toBe("download_remote");
+    expect(policy.allowed).toBe(true);
+  });
+
+  it("saves official HTML portals as library links", () => {
+    const policy = resolveCurriculumSavePolicy({
+      pdfKey: null,
+      contentUrl: null,
+      sourceUrl: "https://www.indiabudget.gov.in/",
+      sourceLicense: "OFFICIAL_DOCUMENT",
+    });
+    expect(policy.mode).toBe("link");
+    expect(policy.allowed).toBe(true);
+  });
+
   it("embeds official docs without admin storage", () => {
     const policy = resolveCurriculumSavePolicy({
       pdfKey: null,

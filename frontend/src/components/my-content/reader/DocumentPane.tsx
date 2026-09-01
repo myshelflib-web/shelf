@@ -116,6 +116,7 @@ export interface LoadedPage {
   isLocked?: boolean;
   saveAllowed?: boolean;
   saveReason?: string | null;
+  saveMode?: "copy_admin" | "download_remote" | "link" | "none";
   embeddable?: boolean | null;
   linkStatus?: string | null;
   subjectMeta?: { name: string; slug: string; icon?: string | null } | null;
@@ -153,6 +154,7 @@ async function fetchCurriculumPage(
     isLocked: article.isLocked,
     saveAllowed: article.saveAllowed !== false,
     saveReason: article.saveReason ?? null,
+    saveMode: article.saveMode ?? "link",
     embeddable: article.embeddable ?? null,
     linkStatus: article.linkStatus ?? null,
     subjectMeta: article.topic.subject,
@@ -167,6 +169,7 @@ async function fetchPage(scope: PersonalPageReaderScope): Promise<{
   isLocked?: boolean;
   saveAllowed?: boolean;
   saveReason?: string | null;
+  saveMode?: "copy_admin" | "download_remote" | "link" | "none";
   embeddable?: boolean | null;
   linkStatus?: string | null;
   subjectMeta?: { name: string; slug: string; icon?: string | null } | null;
@@ -183,6 +186,7 @@ async function fetchPage(scope: PersonalPageReaderScope): Promise<{
       isLocked: curriculum.isLocked,
       saveAllowed: curriculum.saveAllowed,
       saveReason: curriculum.saveReason,
+      saveMode: curriculum.saveMode,
       embeddable: curriculum.embeddable,
       linkStatus: curriculum.linkStatus,
       subjectMeta: curriculum.subjectMeta,
@@ -476,6 +480,7 @@ export function DocumentPane({
           isLocked,
           saveAllowed,
           saveReason,
+          saveMode,
           embeddable,
           linkStatus,
           subjectMeta,
@@ -537,6 +542,7 @@ export function DocumentPane({
           isLocked,
           saveAllowed,
           saveReason,
+          saveMode,
           embeddable,
           linkStatus,
           subjectMeta: subjectMeta ?? null,
@@ -1425,6 +1431,7 @@ export function DocumentPane({
               pageTitle={pageData.title}
               saveAllowed={pageData.saveAllowed !== false}
               saveReason={pageData.saveReason}
+              saveMode={pageData.saveMode}
               onOpen={onNavigate}
             />
           )}

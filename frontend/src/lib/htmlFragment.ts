@@ -97,6 +97,7 @@ export function formatImportedHtml(html: string): string {
   // Endless blank notes — keep structure as stored
   if (/shelf-blank-canvas/.test(s)) return s;
   if (/class=["']doc-masthead["']/.test(s)) return s;
+  if (/preloaded-official-fallback/.test(s)) return s;
 
   if (!/<h1[\s>]/i.test(s)) {
     s = s.replace(

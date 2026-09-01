@@ -30,6 +30,7 @@ export function PreloadedSaveBanner({
   pageTitle,
   saveAllowed = true,
   saveReason,
+  saveMode = "link",
   onOpen,
 }: {
   subjectSlug: string;
@@ -38,6 +39,7 @@ export function PreloadedSaveBanner({
   pageTitle: string;
   saveAllowed?: boolean;
   saveReason?: string | null;
+  saveMode?: "copy_admin" | "download_remote" | "link" | "none";
   onOpen: (href: string) => void;
 }) {
   const { user } = useAuth();
@@ -51,6 +53,11 @@ export function PreloadedSaveBanner({
   const loginHref = `/login?next=${encodeURIComponent(
     `/learn/${subjectSlug}/${topicSlug}/${articleSlug}`
   )}`;
+
+  const guestSaveHint =
+    saveMode === "download_remote"
+      ? "Sign in to download a personal copy to your library."
+      : "Sign in to save this official link to your library.";
 
   const waitForPublished = useCallback(
     async (pageId: string, saveMode?: string) => {
@@ -128,8 +135,8 @@ export function PreloadedSaveBanner({
             <strong className="text-[var(--text-primary)]">Preloaded</strong>
             {" · "}
             {saveAllowed
-              ? "Sign in to save this to your library. It stays read-only until then."
-              : saveReason ?? "Official preview — save adds a link to your library."}
+              ? `${guestSaveHint} This page stays read-only until then.`
+              : saveReason ?? "Official preview only."}
           </span>
           {saveAllowed ? (
             <Link
@@ -153,12 +160,18 @@ export function PreloadedSaveBanner({
   }
 
   let message = saveAllowed
-    ? saveReason ?? "Read-only here. Save a copy to edit in your library."
+    ? saveReason ??
+      (saveMode === "download_remote"
+        ? "Tap Save to download a personal copy to your library."
+        : "Tap Save to bookmark this official link in your library.")
     : saveReason ?? "Read-only official preview.";
   if (phase === "saving") {
     message = stepLabel || "Saving to your library… You can keep reading.";
   } else if (phase === "ready") {
-    message = "Saved to your library. Open your copy to highlight and edit.";
+    message =
+      saveMode === "link"
+        ? "Saved to your library as an official link. Open it to highlight and add notes."
+        : "Saved to your library. Open your copy to highlight and edit.";
   } else if (error) {
     message = error;
   }

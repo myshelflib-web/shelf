@@ -241,7 +241,8 @@ router.get(
       content = buildPreloadedSummaryHtml(
         article.title,
         savePolicy.embedUrl ?? article.sourceUrl ?? "",
-        article.summary
+        article.summary,
+        { linkStatus: article.linkStatus }
       );
     }
 

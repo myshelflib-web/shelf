@@ -95,12 +95,23 @@ export function resolveCurriculumSavePolicy(
   }
 
   if (license === "OFFICIAL_DOCUMENT") {
+    if (isPdfUrl(url)) {
+      return {
+        allowed: true,
+        mode: "download_remote",
+        embedUrl,
+        license,
+        reason:
+          "Official PDF — saves a personal copy to your library when you tap Save.",
+      };
+    }
     return {
       allowed: true,
-      mode: "download_remote",
+      mode: "link",
       embedUrl,
       license,
-      reason: "Official document — downloads to your library only when you save.",
+      reason:
+        "Official portal — saves as a bookmark in your library; open PDFs from the site in your browser.",
     };
   }
 

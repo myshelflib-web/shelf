@@ -266,6 +266,105 @@
   border: 0;
 }
 
+/* Official portal fallback — iframe blocked, link + save instructions */
+.preloaded-official-fallback {
+  max-width: 42rem;
+  margin: 2rem auto 3rem;
+  padding: 0 1rem 2rem;
+}
+
+.preloaded-official-fallback__header {
+  margin-bottom: 1.25rem;
+}
+
+.preloaded-official-fallback__kicker {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 0.5rem;
+}
+
+.preloaded-official-fallback__header h1 {
+  font-size: 1.625rem;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.preloaded-official-fallback__summary {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+  margin: 0 0 1.5rem;
+}
+
+.preloaded-official-fallback__actions {
+  margin-bottom: 1.75rem;
+}
+
+.preloaded-official-fallback__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.625rem 1.25rem;
+  border-radius: 10px;
+  background: var(--accent);
+  color: #fff !important;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none !important;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.preloaded-official-fallback__cta:hover {
+  background: var(--accent-hover);
+}
+
+.preloaded-official-fallback__warn {
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin: 0 0 1.5rem;
+}
+
+.preloaded-official-fallback__note {
+  padding: 1rem 1.125rem;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.preloaded-official-fallback__note h2 {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-primary);
+  margin: 0 0 0.75rem;
+}
+
+.preloaded-official-fallback__note ul {
+  margin: 0;
+  padding-left: 1.125rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.preloaded-official-fallback__note li + li {
+  margin-top: 0.5rem;
+}
+
+.preloaded-official-fallback__note code {
+  font-size: 0.8125em;
+}
+
 .learn-track-hub {
   display: flex;
   flex-wrap: wrap;

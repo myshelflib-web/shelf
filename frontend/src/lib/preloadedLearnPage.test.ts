@@ -42,6 +42,6 @@ describe("resolvePreloadedLearnPage", () => {
     });
     expect(resolved.contentType).toBe("HTML");
     expect(resolved.content).toContain("Central bank portal");
-    expect(resolved.content).toContain("Open official source");
+    expect(resolved.content).toContain("Open on official site");
   });
 });
