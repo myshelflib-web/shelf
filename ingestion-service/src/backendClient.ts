@@ -1,5 +1,6 @@
 import { fetchWithRetry } from "./fetchRetry.js";
 import { log } from "./logger.js";
+import { metrics } from "./utils/metrics.js";
 
 function internalHeaders(): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -31,6 +32,8 @@ export async function postIngest(
   const ms = Date.now() - started;
   if (!res.ok) {
     const text = await res.text();
+    metrics.inc("ingest_api_requests_total", { path, ok: false, status: res.status });
+    metrics.observe("ingest_api_duration_ms", ms, { path, ok: false });
     log.error("ingest.api.fail", {
       path,
       status: res.status,
@@ -40,6 +43,8 @@ export async function postIngest(
     throw new Error(`Ingest API ${path} failed (${res.status}): ${text.slice(0, 500)}`);
   }
 
+  metrics.inc("ingest_api_requests_total", { path, ok: true, status: res.status });
+  metrics.observe("ingest_api_duration_ms", ms, { path, ok: true });
   log.info("ingest.api.ok", { path, status: res.status, ms });
 }
 
@@ -50,12 +55,31 @@ export async function fetchDueSources(): Promise<{ id: string; slug: string }[]>
     timeoutMs: 30_000,
   });
   if (!res.ok) {
+    metrics.inc("ingest_api_requests_total", {
+      path: "/api/internal/ingest/due-sources",
+      ok: false,
+      status: res.status,
+    });
+    metrics.observe("ingest_api_duration_ms", Date.now() - started, {
+      path: "/api/internal/ingest/due-sources",
+      ok: false,
+    });
     log.error("ingest.due_sources.fail", { status: res.status, ms: Date.now() - started });
     throw new Error(`due-sources failed (${res.status})`);
   }
   const data = (await res.json()) as { sources: { id: string; slug: string }[] };
   const sources = data.sources ?? [];
-  log.info("ingest.due_sources.ok", { count: sources.length, ms: Date.now() - started });
+  const ms = Date.now() - started;
+  metrics.inc("ingest_api_requests_total", {
+    path: "/api/internal/ingest/due-sources",
+    ok: true,
+    status: res.status,
+  });
+  metrics.observe("ingest_api_duration_ms", ms, {
+    path: "/api/internal/ingest/due-sources",
+    ok: true,
+  });
+  log.info("ingest.due_sources.ok", { count: sources.length, ms });
   return sources;
 }
 

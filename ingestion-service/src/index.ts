@@ -4,6 +4,7 @@ import { startSqsWorkers, workerStats, sqsConfigured } from "./sqsWorkers.js";
 import { startLocalPollWorker } from "./localPollWorker.js";
 import { awsConfigured, queueStatus } from "./ingestConfig.js";
 import { log, logConfigSummary } from "./logger.js";
+import { metrics } from "./utils/metrics.js";
 
 process.env.SERVICE_NAME = process.env.SERVICE_NAME ?? "ingestion-service";
 
@@ -23,6 +24,14 @@ app.get("/health", async (_req, res) => {
     internalSecret: Boolean(process.env.INTERNAL_SECRET),
     worker: workerStats(),
     queues,
+  });
+});
+
+app.get("/metrics", (_req, res) => {
+  res.json({
+    service: process.env.SERVICE_NAME,
+    worker: workerStats(),
+    ...metrics.snapshot(),
   });
 });
 

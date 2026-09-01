@@ -109,6 +109,8 @@ Examples: `study` + `ask`, `study` + `ask_stream`, `study` + `library_ask`.
 | `db_retries_total` | Prisma transient retries |
 | `s3_ops_total`, `s3_op_duration_ms` | Storage |
 | `worker_jobs_total`, `worker_job_duration_ms` | PDF processing |
+| `ingest_sqs_messages_total` | Ingestion worker — SQS message handling by `phase`, `ok` |
+| `ingest_api_requests_total`, `ingest_api_duration_ms` | Ingestion worker → backend internal API |
 | `razorpay_orders_total` | Checkout |
 | `unhandled_errors_total` | Backend crashes |
 
@@ -127,6 +129,7 @@ Examples: `study` + `ask`, `study` + `ask_stream`, `study` + `library_ask`.
 ## Logs & traces
 
 - Query logs: `{service_name="shelf-backend"} | json | msg="llm.ok"`
+- Ingestion worker: `{service_name="shelf-ingestion-service"} | json | event="ingest.sqs.ok"`
 - Correlate with traces using `traceId` / `x-request-id` response headers
 - Flow events: `study.ask.ok`, `quiz.generate.ok`, `billing.checkout.ok`, etc.
 

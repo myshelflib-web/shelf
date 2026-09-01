@@ -12,6 +12,7 @@ import {
   type Phase,
 } from "./ingestConfig.js";
 import { log } from "./logger.js";
+import { metrics } from "./utils/metrics.js";
 
 let processed = 0;
 let failed = 0;
@@ -79,12 +80,14 @@ async function pollQueue(phase: Phase): Promise<void> {
     phaseStats[phase].processed += 1;
     lastOkAt = new Date().toISOString();
     lastError = null;
+    metrics.inc("ingest_sqs_messages_total", { phase, ok: true });
     log.info("ingest.sqs.ok", { phase, processed, failed });
   } catch (err) {
     failed += 1;
     phaseStats[phase].failed += 1;
     const msg = err instanceof Error ? err.message : String(err);
     lastError = msg;
+    metrics.inc("ingest_sqs_messages_total", { phase, ok: false });
     log.error("ingest.sqs.fail", { phase, error: msg, failed, processed });
 
     if (/failed \((401|403|404|502|503|504)\)/.test(msg)) {

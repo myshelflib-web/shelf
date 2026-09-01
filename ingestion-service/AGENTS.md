@@ -18,7 +18,9 @@ Set `INGEST_WORKER_MODE=poll` for local dev without SQS (polls `GET /api/interna
 
 Never stores full third-party newspaper text. Gov RSS: excerpt + Shelf summary + link. Official PDFs: download only when `OFFICIAL_DOCUMENT` license.
 
-Health: `GET /health` (port **4002** default).
+Health: `GET /health` (port **4002** default). Metrics snapshot: `GET /metrics`.
+
+OpenTelemetry: when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, `src/instrumentation.ts` exports traces, metrics, and logs via OTLP (`npm run dev` / `npm start`). Use `OTEL_SERVICE_NAME=shelf-ingestion-service` in Grafana. Local: `docker compose --profile observability up -d`.
 
 ## Deploy
 
