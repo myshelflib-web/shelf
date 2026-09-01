@@ -272,7 +272,7 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
       <div className="flex-1 min-h-0 flex">
         {!compactPortrait ? sidebar : null}
 
-        <main className="flex-1 min-h-0 flex flex-col bg-[var(--bg-primary)]">
+        <main className="relative flex-1 min-h-0 flex flex-col bg-[var(--bg-primary)]">
           {compactPortrait ? (
             <div className="shrink-0 flex items-center gap-2 border-b border-[var(--border)] px-4 py-2">
               <button
@@ -325,7 +325,7 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
             </div>
           )}
 
-          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-7 py-6 sm:py-8">
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-7 py-6 sm:py-8 pb-32">
             <div className="max-w-[820px] mx-auto space-y-7">
               {chat.threadLoading && chat.messages.length === 0 && (
                 <div className="flex justify-center items-center min-h-[min(40vh,22rem)]">
@@ -422,15 +422,12 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
             queue={chat.queue}
             contextChips={contextChips}
             sourcesActive={sourcesActive}
-            onOpenSources={() => setSourcesOpen(true)}
             onOpenAttach={(el) => openPopover("attach", el)}
             attachBtnRef={attachBtnRef}
             fileRef={fileRef}
             onSend={(text, image, opts) => void chat.send(text, image, opts)}
             onStop={chat.stop}
             onRemoveQueued={chat.removeQueued}
-            memoryLimit={memoryLimit}
-            planLabel={isPremiumUser(user) ? "Premium" : "Free"}
             depth={depth}
             onDepthChange={setDepth}
             isPremium={isPremiumUser(user)}

@@ -2,7 +2,7 @@
 
 import { useState, type RefObject } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUp, Library, Paperclip, Square, X } from "lucide-react";
+import { ArrowUp, Plus, Square, X } from "lucide-react";
 import type { StudyAiQueuedPrompt } from "@/lib/studyAiQueue";
 import { readFileAsDataUrl } from "@/lib/studyAiWorkspaceUtils";
 import {
@@ -29,15 +29,12 @@ export function StudyAiComposer({
   queue,
   contextChips,
   sourcesActive,
-  onOpenSources,
   onOpenAttach,
   attachBtnRef,
   fileRef,
   onSend,
   onStop,
   onRemoveQueued,
-  memoryLimit,
-  planLabel,
   depth,
   onDepthChange,
   isPremium,
@@ -56,15 +53,12 @@ export function StudyAiComposer({
   queue: StudyAiQueuedPrompt[];
   contextChips: { key: string; label: string; onRemove: () => void }[];
   sourcesActive: boolean;
-  onOpenSources: () => void;
   onOpenAttach: (el: HTMLElement) => void;
   attachBtnRef: RefObject<HTMLButtonElement | null>;
   fileRef: RefObject<HTMLInputElement | null>;
   onSend: (text: string, image?: string, opts?: { prompt?: string }) => void;
   onStop: () => void;
   onRemoveQueued: (id: string) => void;
-  memoryLimit: number;
-  planLabel: string;
   depth: StudyDepth;
   onDepthChange: (depth: StudyDepth) => void;
   isPremium: boolean;
@@ -117,8 +111,8 @@ export function StudyAiComposer({
   };
 
   return (
-    <div className="study-ai-composer-shell shrink-0 border-t border-[var(--border-subtle)] px-4 sm:px-7 pb-4 pt-3">
-      <div className="max-w-[820px] mx-auto">
+    <div className="study-ai-composer-shell pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-3 sm:px-6">
+      <div className="pointer-events-auto w-full max-w-[820px]">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -131,7 +125,7 @@ export function StudyAiComposer({
           }}
         >
           {contextChips.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-2">
+            <div className="flex flex-wrap gap-1.5 mb-2 justify-center">
               {contextChips.map((chip) => (
                 <span
                   key={chip.key}
@@ -152,11 +146,11 @@ export function StudyAiComposer({
           )}
 
           {queue.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-2">
+            <div className="flex flex-wrap gap-1.5 mb-2 justify-center">
               {queue.map((item, i) => (
                 <span
                   key={item.id}
-                  className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-secondary)]"
+                  className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-secondary)] shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
                 >
                   <span className="text-[var(--text-muted)]">
                     Queued {i + 1}
@@ -178,12 +172,12 @@ export function StudyAiComposer({
           )}
 
           {attachImage && (
-            <div className="mb-2 relative inline-block">
+            <div className="mb-2 relative block w-fit mx-auto">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={attachImage}
                 alt="Attachment preview"
-                className="h-16 rounded-lg border border-[var(--border)]"
+                className="h-16 rounded-lg border border-[var(--border)] shadow-[0_4px_16px_rgba(0,0,0,0.08)]"
               />
               <button
                 type="button"
@@ -197,7 +191,7 @@ export function StudyAiComposer({
           )}
 
           {showSuggestions && (
-            <div className="mb-2">
+            <div className="mb-2 flex justify-center">
               <StudyAiSuggestChips
                 scope="library"
                 mode={suggestMode}
@@ -210,7 +204,7 @@ export function StudyAiComposer({
             </div>
           )}
 
-          <div className="flex items-center gap-1.5 h-14 rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] pl-2 pr-2.5 shadow-[0_6px_22px_rgba(var(--shadow-color)/0.05)] transition-shadow focus-within:border-[var(--accent)] focus-within:shadow-[0_0_0_3px_var(--ring)]">
+          <div className="flex items-center gap-1 h-12 rounded-full border border-[var(--border)] bg-[var(--bg-elevated)] pl-2 pr-2 shadow-[0_8px_28px_rgba(0,0,0,0.14)] transition-shadow focus-within:border-[var(--accent)] focus-within:shadow-[0_8px_28px_rgba(0,0,0,0.14),0_0_0_3px_var(--ring)]">
             <input
               ref={fileRef}
               type="file"
@@ -228,54 +222,22 @@ export function StudyAiComposer({
             <button
               ref={attachBtnRef}
               type="button"
-              aria-label="Attach"
-              title="Attach"
+              aria-label="Attach or set sources"
+              title="Attach or set sources"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
                 onOpenAttach(e.currentTarget);
               }}
-              className="no-focus-ring w-9 h-9 shrink-0 rounded-[9px] border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] flex items-center justify-center hover:border-[var(--accent)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)] transition-colors"
-            >
-              <Paperclip className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              aria-label="Sources"
-              title="Sources"
-              onClick={onOpenSources}
-              className={`no-focus-ring relative w-9 h-9 shrink-0 rounded-[9px] border flex items-center justify-center transition-colors ${
-                sourcesActive
-                  ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-subtle)]"
-                  : "border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)]"
+              className={`no-focus-ring relative w-8 h-8 shrink-0 rounded-full flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors ${
+                sourcesActive ? "text-[var(--accent)]" : ""
               }`}
             >
-              <Library className="w-4 h-4" />
+              <Plus className="w-4 h-4" />
               {sourcesActive && (
-                <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+                <span className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
               )}
             </button>
-            <StudyAiToolsMenu
-              scope="library"
-              disabled={loading}
-              onPick={pickCommand}
-              onBrowseAll={() => {
-                setCommandSeed("/");
-                setCommandsOpen(true);
-              }}
-            />
-            <StudyAiThinkingMenu
-              value={depth}
-              onChange={onDepthChange}
-              isPremium={isPremium}
-              disabled={loading}
-            />
-            <StudyAiWebSearchToggle
-              scope="library"
-              enabled={webSearch}
-              onChange={onWebSearchChange}
-              disabled={loading}
-            />
             <input
               value={input}
               onChange={(e) => {
@@ -287,38 +249,55 @@ export function StudyAiComposer({
                 }
               }}
               placeholder={
-                loading
-                  ? "Queue another message…"
-                  : "Ask anything or pick a tool…"
+                loading ? "Queue another message…" : "Ask anything"
               }
-              className="no-focus-ring flex-1 min-w-0 bg-transparent text-[12px] outline-none placeholder:text-[var(--text-muted)] py-2"
+              className="no-focus-ring flex-1 min-w-0 bg-transparent text-[13px] outline-none placeholder:text-[var(--text-muted)] py-2 px-1"
             />
-            {loading && (
+            <div className="flex items-center gap-0.5 shrink-0">
+              <StudyAiToolsMenu
+                scope="library"
+                disabled={loading}
+                iconOnly
+                onPick={pickCommand}
+                onBrowseAll={() => {
+                  setCommandSeed("/");
+                  setCommandsOpen(true);
+                }}
+              />
+              <StudyAiThinkingMenu
+                value={depth}
+                onChange={onDepthChange}
+                isPremium={isPremium}
+                disabled={loading}
+                iconOnly
+              />
+              <StudyAiWebSearchToggle
+                scope="library"
+                enabled={webSearch}
+                onChange={onWebSearchChange}
+                disabled={loading}
+                iconOnly
+              />
+              {loading && (
+                <button
+                  type="button"
+                  onClick={onStop}
+                  className="no-focus-ring w-8 h-8 shrink-0 rounded-full text-[var(--text-primary)] flex items-center justify-center hover:bg-[var(--bg-secondary)]"
+                  aria-label="Stop generating"
+                >
+                  <Square className="w-3 h-3 fill-current" />
+                </button>
+              )}
               <button
-                type="button"
-                onClick={onStop}
-                className="no-focus-ring w-[34px] h-[34px] shrink-0 rounded-full bg-[var(--bg-secondary)] text-[var(--text-primary)] border border-[var(--border)] flex items-center justify-center hover:border-[var(--accent)]"
-                aria-label="Stop generating"
+                type="submit"
+                disabled={!canSend}
+                className="no-focus-ring w-8 h-8 shrink-0 rounded-full bg-[var(--accent)] text-white flex items-center justify-center disabled:opacity-40 hover:bg-[var(--accent-hover)] transition-colors"
+                aria-label={loading ? "Queue message" : "Send"}
               >
-                <Square className="w-3 h-3 fill-current" />
+                <ArrowUp className="w-4 h-4" />
               </button>
-            )}
-            <button
-              type="submit"
-              disabled={!canSend}
-              className="no-focus-ring w-[34px] h-[34px] shrink-0 rounded-full bg-[var(--accent)] text-white flex items-center justify-center disabled:opacity-40 hover:bg-[var(--accent-hover)] transition-colors"
-              aria-label={loading ? "Queue message" : "Send"}
-            >
-              <ArrowUp className="w-4 h-4" />
-            </button>
+            </div>
           </div>
-          <p className="text-center text-[9px] text-[var(--text-muted)] mt-2 leading-snug">
-            Quick stays fast — use Think longer only when you need depth
-            <span className="mx-1.5 opacity-35">·</span>
-            Memory last {memoryLimit}
-            <span className="mx-1.5 opacity-35">·</span>
-            {planLabel}
-          </p>
         </form>
       </div>
       <StudyAiCommandsModal

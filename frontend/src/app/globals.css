@@ -618,15 +618,6 @@
   animation: fade-in-up 0.22s ease-out both;
 }
 
-/* Study AI workspace — sidebar, composer, popovers */
-.study-ai-composer-shell {
-  background: linear-gradient(
-    to top,
-    var(--bg-primary) 78%,
-    color-mix(in srgb, var(--bg-primary) 92%, transparent)
-  );
-}
-
 .study-ai-context-chip {
   background: color-mix(in srgb, var(--accent) 14%, var(--bg-secondary));
   color: var(--accent);

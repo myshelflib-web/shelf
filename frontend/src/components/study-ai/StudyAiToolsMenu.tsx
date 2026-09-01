@@ -23,12 +23,14 @@ export function StudyAiToolsMenu({
   onPick,
   onBrowseAll,
   compact,
+  iconOnly,
 }: {
   scope: StudyAiCommandScope;
   disabled?: boolean;
   onPick: (cmd: StudyAiCommand) => void;
   onBrowseAll: () => void;
   compact?: boolean;
+  iconOnly?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -135,16 +137,24 @@ export function StudyAiToolsMenu({
         title="Tools & slash commands"
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
-        className={`no-focus-ring shrink-0 rounded-[9px] border flex items-center gap-1.5 transition-colors disabled:opacity-40 ${
-          compact ? "h-8 px-1.5" : "h-9 px-2"
-        } ${
-          open
-            ? "border-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--accent)]"
-            : "border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)]"
+        className={`no-focus-ring shrink-0 flex items-center justify-center transition-colors disabled:opacity-40 ${
+          iconOnly
+            ? `w-8 h-8 rounded-full ${
+                open
+                  ? "text-[var(--accent)] bg-[var(--accent-subtle)]"
+                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+              }`
+            : `rounded-[9px] border gap-1.5 ${compact ? "h-8 px-1.5" : "h-9 px-2"} ${
+                open
+                  ? "border-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--accent)]"
+                  : "border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:border-[var(--accent)] hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)]"
+              }`
         }`}
       >
         <Sparkles className="w-4 h-4 shrink-0" />
-        <span className="hidden sm:inline text-[11px] font-semibold">Tools</span>
+        {!iconOnly && (
+          <span className="hidden sm:inline text-[11px] font-semibold">Tools</span>
+        )}
       </button>
       {menu ? createPortal(menu, document.body) : null}
     </>
