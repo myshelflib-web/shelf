@@ -29,14 +29,21 @@ export function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+export function isStopError(err: unknown): boolean {
+  if (err instanceof Error && err.name === "AbortError") return true;
+  const message = errorMessage(err);
+  return message === "Stopped by admin" || /^stopped by admin$/i.test(message);
+}
+
 export function isFatalProviderError(err: unknown): boolean {
+  if (isStopError(err)) return false;
   const message = errorMessage(err);
   return FATAL_PATTERNS.some((p) => p.test(message));
 }
 
 /** True when the failure looks like provider downtime worth waiting out. */
 export function isProviderOutage(err: unknown): boolean {
-  if (isFatalProviderError(err)) return false;
+  if (isFatalProviderError(err) || isStopError(err)) return false;
   const message = errorMessage(err);
   return OUTAGE_PATTERNS.some((p) => p.test(message));
 }

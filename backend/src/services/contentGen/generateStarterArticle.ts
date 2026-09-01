@@ -35,7 +35,8 @@ const RECHECK_MAX_TOKENS = 4096;
 
 async function draftOnce(
   blueprint: StarterPackBlueprint,
-  spec: ResolvedArticleSpec
+  spec: ResolvedArticleSpec,
+  signal?: AbortSignal
 ): Promise<{ article: GeneratedArticle; usage: GenerationUsage }> {
   let usage = emptyUsage();
 
@@ -46,6 +47,7 @@ async function draftOnce(
       temperature: 0.35,
       metricsFlow: "content_gen_draft",
       reasoningEffort: think ? "medium" : null,
+      signal,
     });
     usage = addUsage(usage, res);
 
@@ -61,13 +63,15 @@ async function draftOnce(
 async function reviewDraft(
   blueprint: StarterPackBlueprint,
   spec: ResolvedArticleSpec,
-  article: GeneratedArticle
+  article: GeneratedArticle,
+  signal?: AbortSignal
 ): Promise<{ review: RelevanceReview; usage: GenerationUsage }> {
   const res = await generationChat(recheckMessages(blueprint, spec, article), {
     maxTokens: RECHECK_MAX_TOKENS,
     temperature: 0.1,
     metricsFlow: "content_gen_recheck",
     reasoningEffort: null,
+    signal,
   });
 
   const parsed = parseRelevanceReview(res.text);
@@ -90,15 +94,16 @@ async function reviewDraft(
 export async function generateStarterArticle(
   blueprint: StarterPackBlueprint,
   spec: ResolvedArticleSpec,
-  opts: { maxRevisions?: number } = {}
+  opts: { maxRevisions?: number; signal?: AbortSignal } = {}
 ): Promise<StarterArticleResult> {
   const maxRevisions = opts.maxRevisions ?? 2;
+  const signal = opts.signal;
 
-  const drafted = await draftOnce(blueprint, spec);
+  const drafted = await draftOnce(blueprint, spec, signal);
   let article = drafted.article;
   let usage = drafted.usage;
 
-  let reviewed = await reviewDraft(blueprint, spec, article);
+  let reviewed = await reviewDraft(blueprint, spec, article, signal);
   usage = addUsage(usage, reviewed.usage);
   let review = reviewed.review;
   let revisions = 0;
@@ -111,6 +116,7 @@ export async function generateStarterArticle(
         temperature: 0.25,
         metricsFlow: "content_gen_revise",
         reasoningEffort: "medium",
+        signal,
       }
     );
     usage = addUsage(usage, res);
@@ -123,7 +129,7 @@ export async function generateStarterArticle(
     }
     article = revised;
 
-    reviewed = await reviewDraft(blueprint, spec, article);
+    reviewed = await reviewDraft(blueprint, spec, article, signal);
     usage = addUsage(usage, reviewed.usage);
     review = reviewed.review;
   }

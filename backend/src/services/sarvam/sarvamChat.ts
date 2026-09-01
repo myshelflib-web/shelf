@@ -76,7 +76,12 @@ async function requestOnce(
       ),
       signal: opts.signal,
       timeoutMs: 180_000,
-      retry: { label: "sarvam_chat", attempts: 2 },
+      retry: {
+        label: "sarvam_chat",
+        attempts: 2,
+        shouldRetry: (err) =>
+          !(err instanceof Error && err.name === "AbortError"),
+      },
     });
   } catch (err) {
     if (err instanceof HttpResponseError) {
@@ -119,6 +124,11 @@ export async function sarvamChat(
   let lastReasoning = 0;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
+    if (opts.signal?.aborted) {
+      const err = new Error("This operation was aborted");
+      err.name = "AbortError";
+      throw err;
+    }
     const { body, model } = await requestOnce(messages, {
       ...opts,
       maxTokens,

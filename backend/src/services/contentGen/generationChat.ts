@@ -56,13 +56,21 @@ export async function generationChat(
     temperature?: number;
     metricsFlow?: string;
     reasoningEffort?: SarvamReasoningEffort;
+    signal?: AbortSignal;
   } = {}
 ): Promise<GenerationChatResult> {
+  if (opts.signal?.aborted) {
+    const err = new Error("This operation was aborted");
+    err.name = "AbortError";
+    throw err;
+  }
+
   if (sarvamConfigured()) {
     const res = await sarvamChat(messages, {
       maxTokens: opts.maxTokens,
       temperature: opts.temperature,
       reasoningEffort: opts.reasoningEffort,
+      signal: opts.signal,
     });
     return {
       text: res.text,
@@ -78,6 +86,7 @@ export async function generationChat(
     temperature: opts.temperature,
     apiKeyRoute: "paid",
     metricsFlow: opts.metricsFlow ?? "content_gen",
+    signal: opts.signal,
   });
 
   const promptTokens = approxTokens(

@@ -92,6 +92,7 @@ export async function getJobRunState(jobId: string) {
       dryRun: true,
       kind: true,
       studyGoal: true,
+      status: true,
     },
   });
 }
@@ -321,6 +322,22 @@ export async function hasRunningJob(): Promise<boolean> {
     where: { status: { in: ["QUEUED", "RUNNING"] } },
   });
   return running > 0;
+}
+
+export async function skipOpenContentGenItems(
+  jobId: string,
+  reason: string
+): Promise<void> {
+  const { count } = await prisma.contentGenItem.updateMany({
+    where: { jobId, status: { in: ["QUEUED", "RUNNING"] } },
+    data: { status: "SKIPPED", error: reason.slice(0, 500) },
+  });
+  if (count > 0) {
+    await prisma.contentGenJob.update({
+      where: { id: jobId },
+      data: { skippedCount: { increment: count } },
+    });
+  }
 }
 
 /** Failed or below-score page rows for a finished job — used to start a retry run. */

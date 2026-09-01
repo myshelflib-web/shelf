@@ -69,13 +69,21 @@ export type NewsBriefResult = {
 export async function generateNewsBrief(
   cluster: NewsCluster,
   examContext: string,
-  examLabel: string
+  examLabel: string,
+  opts: { signal?: AbortSignal } = {}
 ): Promise<NewsBriefResult> {
   let usage = emptyUsage();
+  const signal = opts.signal;
 
   const drafted = await generationChat(
     newsBriefMessages(cluster, examContext, examLabel),
-    { maxTokens: 3200, temperature: 0.3, metricsFlow: "content_gen_news", reasoningEffort: null }
+    {
+      maxTokens: 3200,
+      temperature: 0.3,
+      metricsFlow: "content_gen_news",
+      reasoningEffort: null,
+      signal,
+    }
   );
   usage = addUsage(usage, drafted);
 
@@ -88,6 +96,7 @@ export async function generateNewsBrief(
         temperature: 0.3,
         metricsFlow: "content_gen_news",
         reasoningEffort: "medium",
+        signal,
       }
     );
     usage = addUsage(usage, retried);
@@ -98,7 +107,13 @@ export async function generateNewsBrief(
   const runReview = async (current: NewsBrief) => {
     const res = await generationChat(
       newsReviewMessages(cluster, current, examLabel),
-      { maxTokens: 1500, temperature: 0.1, metricsFlow: "content_gen_news_review", reasoningEffort: null }
+      {
+        maxTokens: 1500,
+        temperature: 0.1,
+        metricsFlow: "content_gen_news_review",
+        reasoningEffort: null,
+        signal,
+      }
     );
     usage = addUsage(usage, res);
     return (
@@ -117,7 +132,13 @@ export async function generateNewsBrief(
   if (review.verdict === "revise") {
     const res = await generationChat(
       newsReviseMessages(cluster, brief, review, examLabel),
-      { maxTokens: 4096, temperature: 0.2, metricsFlow: "content_gen_news_revise", reasoningEffort: "medium" }
+      {
+        maxTokens: 4096,
+        temperature: 0.2,
+        metricsFlow: "content_gen_news_revise",
+        reasoningEffort: "medium",
+        signal,
+      }
     );
     usage = addUsage(usage, res);
     revisions = 1;

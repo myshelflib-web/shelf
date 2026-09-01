@@ -9,6 +9,7 @@ import {
   Play,
   RefreshCw,
   RotateCcw,
+  Square,
 } from "lucide-react";
 import type { ContentGenItemRow, ContentGenJobRow } from "@/types";
 import {
@@ -95,15 +96,20 @@ function ItemRows({
 function PausedBanner({
   job,
   resuming,
+  stopping,
   onResume,
+  onStop,
 }: {
   job: ContentGenJobRow;
   resuming: boolean;
+  stopping: boolean;
   onResume: () => void;
+  onStop: () => void;
 }) {
   const remaining =
     job.plannedCount -
     (job.completedCount + job.failedCount + job.skippedCount);
+  const busy = resuming || stopping;
 
   return (
     <div className="mx-3 mb-2.5 rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2">
@@ -119,18 +125,77 @@ function PausedBanner({
             {job.pausedReason ? ` Last error: ${job.pausedReason}` : ""}
           </p>
         </div>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onResume}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-1 text-[11px] hover:border-[var(--accent)]/40 transition disabled:opacity-50"
+          >
+            {resuming ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Play className="w-3 h-3" />
+            )}
+            Resume now
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={onStop}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/5 px-2.5 py-1 text-[11px] text-red-300 hover:border-red-500/50 transition disabled:opacity-50"
+          >
+            {stopping ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <Square className="w-3 h-3" />
+            )}
+            Stop
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActiveBanner({
+  job,
+  stopping,
+  onStop,
+}: {
+  job: ContentGenJobRow;
+  stopping: boolean;
+  onStop: () => void;
+}) {
+  const remaining =
+    job.plannedCount -
+    (job.completedCount + job.failedCount + job.skippedCount);
+
+  return (
+    <div className="mx-3 mb-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)]/60 px-3 py-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium">
+            {job.status === "QUEUED" ? "Queued" : "Generating"} — {remaining} page
+            {remaining === 1 ? "" : "s"} left
+          </p>
+          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+            Stop aborts the model call in progress. Pages already published stay.
+            In-flight pages are skipped so Retry failed can pick them up.
+          </p>
+        </div>
         <button
           type="button"
-          disabled={resuming}
-          onClick={onResume}
-          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-1 text-[11px] hover:border-[var(--accent)]/40 transition disabled:opacity-50"
+          disabled={stopping}
+          onClick={onStop}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/5 px-2.5 py-1 text-[11px] text-red-300 hover:border-red-500/50 transition disabled:opacity-50"
         >
-          {resuming ? (
+          {stopping ? (
             <Loader2 className="w-3 h-3 animate-spin" />
           ) : (
-            <Play className="w-3 h-3" />
+            <Square className="w-3 h-3" />
           )}
-          Resume now
+          Stop
         </button>
       </div>
     </div>
@@ -197,12 +262,14 @@ export function ContentGenJobsSection({
   expandedId,
   resumingId,
   retryingId,
+  stoppingId,
   retryDisabled,
   onToggle,
   onLoadMore,
   onRefresh,
   onResume,
   onRetryFailed,
+  onStop,
 }: {
   jobs: ContentGenJobRow[];
   items: ContentGenItemRow[];
@@ -212,12 +279,14 @@ export function ContentGenJobsSection({
   expandedId: string | null;
   resumingId: string | null;
   retryingId: string | null;
+  stoppingId: string | null;
   retryDisabled: boolean;
   onToggle: (jobId: string) => void;
   onLoadMore: () => void;
   onRefresh: () => void;
   onResume: (jobId: string) => void;
   onRetryFailed: (jobId: string) => void;
+  onStop: (jobId: string) => void;
 }) {
   return (
     <section className="rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]/40 p-4">
@@ -305,7 +374,16 @@ export function ContentGenJobsSection({
                   <PausedBanner
                     job={job}
                     resuming={resumingId === job.id}
+                    stopping={stoppingId === job.id}
                     onResume={() => onResume(job.id)}
+                    onStop={() => onStop(job.id)}
+                  />
+                )}
+                {(job.status === "QUEUED" || job.status === "RUNNING") && (
+                  <ActiveBanner
+                    job={job}
+                    stopping={stoppingId === job.id}
+                    onStop={() => onStop(job.id)}
                   />
                 )}
                 {(job.failedCount > 0 || job.skippedCount > 0) &&

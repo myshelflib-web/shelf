@@ -18,6 +18,7 @@ import {
 import { generationModelLabel } from "../services/contentGen/generationChat.js";
 import { retryFailedContentGenJob } from "../services/contentGen/retryFailed.js";
 import { resumeContentGenJob } from "../services/contentGen/resumeJobs.js";
+import { stopContentGenJob } from "../services/contentGen/stopJob.js";
 import { startStarterPackJob } from "../services/contentGen/runStarterPack.js";
 import { catalogHasSubject, catalogPacks } from "../services/contentGen/syllabus/index.js";
 import {
@@ -113,6 +114,17 @@ router.post("/content-gen/jobs/:id/retry-failed", async (req: Request, res: Resp
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not retry failed pages";
     res.status(message.includes("already running") ? 409 : 400).json({ error: message });
+  }
+});
+
+router.post("/content-gen/jobs/:id/stop", async (req: Request, res: Response) => {
+  try {
+    await stopContentGenJob(param(req, "id"));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({
+      error: err instanceof Error ? err.message : "Could not stop this job",
+    });
   }
 });
 

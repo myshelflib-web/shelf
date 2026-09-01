@@ -8,12 +8,14 @@ import {
   markJobRunning,
   pendingItems,
   recordItemOutcome,
+  skipOpenContentGenItems,
   type ItemOutcome,
 } from "../contentGenJobs.js";
 import { asNewsPlan } from "../jobPlan.js";
 import { generationModelLabel } from "../generationChat.js";
 import { runJobLoop, type LoopItem } from "../jobLoop.js";
-import { claimJob, releaseJob } from "../jobRegistry.js";
+import { claimJob, jobAbortSignal, releaseJob } from "../jobRegistry.js";
+import { STOPPED_BY_ADMIN } from "../stopJob.js";
 import { publishGeneratedArticle } from "../publishGenerated.js";
 import { clusterNewsItems, loadRecentNewsItems } from "./collectNewsClusters.js";
 import { generateNewsBrief, MIN_NEWS_SCORE } from "./generateNewsBrief.js";
@@ -116,7 +118,8 @@ async function generateOne(
   studyGoal: StudyGoal,
   cluster: NewsCluster,
   dryRun: boolean,
-  topic: { slug: string; title: string }
+  topic: { slug: string; title: string },
+  signal?: AbortSignal
 ): Promise<ItemOutcome> {
   const blueprint = blueprintForGoal(studyGoal);
   if (!blueprint) throw new Error(`No exam context for ${studyGoal}`);
@@ -125,8 +128,14 @@ async function generateOne(
   const result = await generateNewsBrief(
     cluster,
     blueprint.examContext,
-    blueprint.label
+    blueprint.label,
+    { signal }
   );
+  if (signal?.aborted) {
+    const err = new Error("This operation was aborted");
+    err.name = "AbortError";
+    throw err;
+  }
   const notes =
     [
       ...result.review.unsupported.map((u) => `Unsupported: ${u}`),
@@ -192,11 +201,19 @@ export async function runNewsPackJob(
   if (!claimJob(jobId)) return;
 
   try {
+    const state = await getJobRunState(jobId);
+    if (
+      !state ||
+      (state.status !== "QUEUED" &&
+        state.status !== "RUNNING" &&
+        state.status !== "PAUSED")
+    ) {
+      return;
+    }
     await markJobRunning(jobId);
 
     const leftover = await pendingItems(jobId);
-    const state = await getJobRunState(jobId);
-    const plan = asNewsPlan(state?.plan);
+    const plan = asNewsPlan(state.plan);
     const subject = GOAL_SUBJECT[studyGoal];
     const topic = plan
       ? { slug: plan.topicSlug, title: plan.topicTitle }
@@ -237,12 +254,17 @@ export async function runNewsPackJob(
         subjectSlug: subject.slug,
         topicSlug: topic.slug,
       }),
-      process: (cluster) => generateOne(studyGoal, cluster, dryRun, topic),
+      process: (cluster) =>
+        generateOne(studyGoal, cluster, dryRun, topic, jobAbortSignal(jobId)),
     });
 
     if (result.status === "PAUSED") {
       logger.warn("contentgen.news_pack.parked", { jobId, goal: studyGoal });
       return;
+    }
+
+    if (result.error === STOPPED_BY_ADMIN) {
+      await skipOpenContentGenItems(jobId, STOPPED_BY_ADMIN);
     }
 
     await finishJob(jobId, { status: result.status, error: result.error ?? null });

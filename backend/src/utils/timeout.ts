@@ -24,22 +24,40 @@ export async function withTimeout<T>(
   }
 }
 
-/** fetch with AbortSignal timeout (Node 18+ / undici). */
+/** fetch with AbortSignal timeout (Node 18+ / undici). Honors a caller signal so Stop can abort. */
 export async function fetchWithTimeout(
   url: string,
   init: RequestInit & { timeoutMs?: number } = {}
 ): Promise<Response> {
-  const { timeoutMs = 30_000, ...rest } = init;
+  const { timeoutMs = 30_000, signal: userSignal, ...rest } = init;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  const onUserAbort = () => controller.abort();
+  if (userSignal) {
+    if (userSignal.aborted) {
+      clearTimeout(timer);
+      throw abortError();
+    }
+    userSignal.addEventListener("abort", onUserAbort, { once: true });
+  }
+
   try {
     return await fetch(url, { ...rest, signal: controller.signal });
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
+      if (userSignal?.aborted) throw err;
       throw new TimeoutError(`fetch ${url}`, timeoutMs);
     }
     throw err;
   } finally {
     clearTimeout(timer);
+    userSignal?.removeEventListener("abort", onUserAbort);
   }
+}
+
+function abortError(): Error {
+  const err = new Error("This operation was aborted");
+  err.name = "AbortError";
+  return err;
 }

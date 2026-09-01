@@ -831,6 +831,10 @@ export const api = {
         `/api/admin/content-gen/jobs/${id}/retry-failed`,
         { method: "POST" }
       ),
+    contentGenStop: (id: string) =>
+      request<{ ok: true }>(`/api/admin/content-gen/jobs/${id}/stop`, {
+        method: "POST",
+      }),
     contentGenStarterPack: (body: {
       studyGoal: import("@/types").StudyGoal;
       subjectSlug?: string;

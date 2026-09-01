@@ -8,12 +8,15 @@ import {
   recordItemOutcome,
   type ItemOutcome,
 } from "./contentGenJobs.js";
+import { isJobAborted, jobAbortSignal } from "./jobRegistry.js";
 import {
   errorMessage,
   isFatalProviderError,
   isProviderOutage,
+  isStopError,
   waitForProviderRecovery,
 } from "./providerHealth.js";
+import { STOPPED_BY_ADMIN } from "./stopJob.js";
 
 export type ItemDescribe = {
   title: string;
@@ -47,7 +50,8 @@ async function ensureItemId<T>(
 type SlotResult =
   | { kind: "done"; index: number }
   | { kind: "fatal"; index: number; message: string }
-  | { kind: "outage"; index: number; message: string };
+  | { kind: "outage"; index: number; message: string }
+  | { kind: "stopped"; index: number };
 
 /**
  * Walks pending items in small parallel batches (default 2) so a paid Sarvam
@@ -82,6 +86,15 @@ export async function runJobLoop<T>(opts: {
       return { kind: "done", index: i };
     } catch (err) {
       const message = errorMessage(err);
+      if (isStopError(err) || isJobAborted(jobId)) {
+        if (itemId) {
+          await recordItemOutcome(jobId, itemId, {
+            status: "SKIPPED",
+            error: STOPPED_BY_ADMIN,
+          });
+        }
+        return { kind: "stopped", index: i };
+      }
       if (isFatalProviderError(err)) {
         if (itemId) {
           await recordItemOutcome(jobId, itemId, {
@@ -107,6 +120,10 @@ export async function runJobLoop<T>(opts: {
   }
 
   while (index < items.length) {
+    if (isJobAborted(jobId)) {
+      return { status: "FAILED", error: STOPPED_BY_ADMIN };
+    }
+
     const batch: number[] = [];
     for (let k = 0; k < concurrency && index + k < items.length; k++) {
       const i = index + k;
@@ -118,6 +135,11 @@ export async function runJobLoop<T>(opts: {
     }
 
     const results = await Promise.all(batch.map((i) => runSlot(i)));
+    const stopped = results.find((r) => r.kind === "stopped");
+    if (stopped) {
+      return { status: "FAILED", error: STOPPED_BY_ADMIN };
+    }
+
     const fatal = results.find((r) => r.kind === "fatal");
     if (fatal && fatal.kind === "fatal") {
       logger.error("contentGen.loop.fatal", { jobId, label, err: fatal.message });
@@ -136,6 +158,7 @@ export async function runJobLoop<T>(opts: {
 
       const outcome = await waitForProviderRecovery({
         label,
+        signal: jobAbortSignal(jobId),
         onAttempt: (attempt, delayMs) => {
           logger.info("contentGen.loop.waiting", {
             jobId,
@@ -150,6 +173,9 @@ export async function runJobLoop<T>(opts: {
         await markJobRunning(jobId);
         index = outage.index;
         continue;
+      }
+      if (outcome === "aborted") {
+        return { status: "FAILED", error: STOPPED_BY_ADMIN };
       }
       if (outcome === "fatal") return { status: "FAILED", error: outage.message };
       return { status: "PAUSED", error: outage.message };

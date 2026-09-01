@@ -39,6 +39,8 @@ export function ContentGenPanel() {
   const [newsRunning, setNewsRunning] = useState(false);
   const [resumingId, setResumingId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
+  const [stoppingId, setStoppingId] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -78,12 +80,8 @@ export function ContentGenPanel() {
       setItemsCursor(page.nextCursor);
       setItemsHasMore(page.hasMore);
       if (mode === "more") setPagedBeyondFirst(true);
-    } catch {
-      if (mode === "reset") {
-        setItems([]);
-        setItemsCursor(null);
-        setItemsHasMore(false);
-      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load pages");
     } finally {
       setItemsLoading(false);
     }
@@ -132,6 +130,22 @@ export function ContentGenPanel() {
     void loadItems(jobId, "reset");
   }
 
+  async function refreshRuns() {
+    if (refreshing) return;
+    setRefreshing(true);
+    setError(null);
+    setPagedBeyondFirst(false);
+    try {
+      await Promise.all([
+        loadOverview(),
+        loadJobs(),
+        expandedId ? loadItems(expandedId, "reset") : Promise.resolve(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   async function runStarterPack(opts: StarterPackRunOptions) {
     setBusyGoal(opts.studyGoal);
     setError(null);
@@ -166,6 +180,23 @@ export function ContentGenPanel() {
       setError(err instanceof Error ? err.message : "Could not resume this run");
     } finally {
       setResumingId(null);
+    }
+  }
+
+  async function stopJob(jobId: string) {
+    setStoppingId(jobId);
+    setError(null);
+    try {
+      await api.admin.contentGenStop(jobId);
+      setNotice(
+        "Stopping — in-flight pages will be skipped. Published pages stay."
+      );
+      await loadJobs();
+      if (expandedId === jobId && !pagedBeyondFirst) await loadItems(jobId, "reset");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not stop this run");
+    } finally {
+      setStoppingId(null);
     }
   }
 
@@ -275,24 +306,20 @@ export function ContentGenPanel() {
         items={items}
         itemsLoading={itemsLoading}
         itemsHasMore={itemsHasMore}
-        loading={jobsLoading}
+        loading={refreshing || jobsLoading}
         expandedId={expandedId}
         resumingId={resumingId}
         retryingId={retryingId}
+        stoppingId={stoppingId}
         retryDisabled={hasActiveJob}
         onToggle={toggleJob}
         onLoadMore={() => {
           if (expandedId) void loadItems(expandedId, "more", itemsCursor);
         }}
-        onRefresh={() => {
-          void loadJobs();
-          if (expandedId) {
-            setPagedBeyondFirst(false);
-            void loadItems(expandedId, "reset");
-          }
-        }}
+        onRefresh={() => void refreshRuns()}
         onResume={(jobId) => void resumeJob(jobId)}
         onRetryFailed={(jobId) => void retryFailed(jobId)}
+        onStop={(jobId) => void stopJob(jobId)}
       />
     </div>
   );

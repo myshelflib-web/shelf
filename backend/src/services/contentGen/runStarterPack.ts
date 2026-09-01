@@ -10,6 +10,7 @@ import {
   markJobRunning,
   pendingItems,
   recordItemOutcome,
+  skipOpenContentGenItems,
 } from "./contentGenJobs.js";
 import { asStarterPlan, type StarterPlanEntry } from "./jobPlan.js";
 import { generationModelLabel } from "./generationChat.js";
@@ -18,7 +19,8 @@ import {
   MIN_PUBLISH_SCORE,
 } from "./generateStarterArticle.js";
 import { runJobLoop, type LoopItem } from "./jobLoop.js";
-import { claimJob, releaseJob } from "./jobRegistry.js";
+import { claimJob, jobAbortSignal, releaseJob } from "./jobRegistry.js";
+import { STOPPED_BY_ADMIN } from "./stopJob.js";
 import { publishGeneratedArticle } from "./publishGenerated.js";
 import { renderArticleHtml, renderArticleText } from "./renderArticle.js";
 import type { ItemOutcome } from "./contentGenJobs.js";
@@ -124,12 +126,18 @@ export async function startStarterPackJob(
 async function generateOne(
   studyGoal: StudyGoal,
   spec: ResolvedArticleSpec,
-  dryRun: boolean
+  dryRun: boolean,
+  signal?: AbortSignal
 ): Promise<ItemOutcome> {
   const blueprint = blueprintForGoal(studyGoal);
   if (!blueprint) throw new Error(`No starter pack blueprint for ${studyGoal}`);
 
-  const result = await generateStarterArticle(blueprint, spec);
+  const result = await generateStarterArticle(blueprint, spec, { signal });
+  if (signal?.aborted) {
+    const err = new Error("This operation was aborted");
+    err.name = "AbortError";
+    throw err;
+  }
   const notes = reviewNotes(
     result.review.missing,
     result.review.corrections,
@@ -195,11 +203,19 @@ export async function runStarterPackJob(
   if (!claimJob(jobId)) return;
 
   try {
+    const state = await getJobRunState(jobId);
+    if (
+      !state ||
+      (state.status !== "QUEUED" &&
+        state.status !== "RUNNING" &&
+        state.status !== "PAUSED")
+    ) {
+      return;
+    }
     await markJobRunning(jobId);
 
     const leftover = await pendingItems(jobId);
-    const state = await getJobRunState(jobId);
-    const plan = asStarterPlan(state?.plan);
+    const plan = asStarterPlan(state.plan);
 
     const items: LoopItem<StarterPlanEntry>[] = [];
     const leftoverKeys = new Set<string>();
@@ -251,13 +267,17 @@ export async function runStarterPackJob(
             error: "Page is no longer in the syllabus catalog",
           };
         }
-        return generateOne(studyGoal, spec, dryRun);
+        return generateOne(studyGoal, spec, dryRun, jobAbortSignal(jobId));
       },
     });
 
     if (result.status === "PAUSED") {
       logger.warn("contentgen.starter_pack.parked", { jobId, goal: studyGoal });
       return;
+    }
+
+    if (result.error === STOPPED_BY_ADMIN) {
+      await skipOpenContentGenItems(jobId, STOPPED_BY_ADMIN);
     }
 
     await finishJob(jobId, { status: result.status, error: result.error ?? null });

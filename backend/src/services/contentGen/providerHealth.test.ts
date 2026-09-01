@@ -3,6 +3,7 @@ import {
   backoffDelayMs,
   isFatalProviderError,
   isProviderOutage,
+  isStopError,
 } from "./providerHealth.js";
 
 describe("isProviderOutage", () => {
@@ -24,6 +25,15 @@ describe("isProviderOutage", () => {
     expect(isProviderOutage(new Error("Model did not return a usable article draft"))).toBe(
       false
     );
+  });
+
+  it("does not treat a Stop abort as provider downtime", () => {
+    const abort = new Error("This operation was aborted");
+    abort.name = "AbortError";
+    expect(isStopError(abort)).toBe(true);
+    expect(isProviderOutage(abort)).toBe(false);
+    expect(isFatalProviderError(abort)).toBe(false);
+    expect(isProviderOutage(new Error("Stopped by admin"))).toBe(false);
   });
 });
 
