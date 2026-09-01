@@ -98,6 +98,8 @@ jobs:
         run: npm run typecheck --prefix backend
       - name: Test
         run: npm run test --prefix backend
+      - name: Copyright compliance audit
+        run: npm run preloaded:copyright-audit --prefix backend
       - name: Build
         working-directory: backend
         run: npm run build

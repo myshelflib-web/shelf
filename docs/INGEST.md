@@ -167,12 +167,14 @@ Set `LOG_LEVEL=debug` on ingestion-service for per-request detail. Health: `GET 
 ## Phases
 
 1. **Poll** — RSS (PIB, PRS) or official page PDF link detection
-2. **Fetch** — Resolve canonical URL + metadata (no admin S3 storage for new ingest)
+2. **Fetch** — Download official PDFs to admin S3 when `OFFICIAL_DOCUMENT` + allowlisted host; link-only otherwise
 3. **Process** — Auto-approve gov press; route others to admin review
-4. **Promote** — Create Learn `Article` with `sourceUrl` iframe embed (legacy admin PDF uploads still use S3)
-5. **Archive** — Supersede older yearly editions (`ARCHIVED` articles, `SUPERSEDED` ingest rows)
+4. **Promote** — Create Learn `Article` with `sourceUrl` and optional `pdfKey` when fetched
+5. **Archive** — Supersede older yearly editions (`ARCHIVED` articles, `SUPERSEDED` ingest rows); delete stale S3 bytes
 
-Preloaded Learn articles with a `sourceUrl` open in an iframe. Catalog seeding stores **links only** — no `admin/` PDF or summary HTML in S3. **Save to library** downloads a copy into the user's library only when allowed by license; vector indexing runs on user library pages only.
+Preloaded Learn articles open via iframe, PDF viewer (proxy or mirrored S3), or Shelf summary HTML. **`PRELOADED_MIRROR_PDF=true`** mirrors embed-blocked official PDFs to admin S3 via the ingestion FETCH queue. **Save to library** copies into the user's library only when allowed by license; vector indexing runs on user library pages only.
+
+Run `npm run preloaded:copyright-audit --prefix backend` before catalog changes (also enforced in CI).
 
 ### Preloaded link health
 

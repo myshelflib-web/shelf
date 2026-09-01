@@ -51,6 +51,11 @@ export const SITE_NAV_LINKS = [
     path: "/about",
   },
   {
+    name: "Copyright",
+    description: "Copyright policy, user upload terms, and takedown notices.",
+    path: "/legal/copyright",
+  },
+  {
     name: "Exam-style quiz",
     description: "Practice MCQs and written answers from your Shelf library.",
     path: "/quiz",

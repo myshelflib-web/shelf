@@ -73,6 +73,7 @@ import clsx from "clsx";
 import { isLiveEditorHtml } from "@/lib/pageKinds";
 import { linkEmbedHint, shouldUseLinkEmbed } from "@/lib/linkEmbedPolicy";
 import { resolvePreloadedLearnPage } from "@/lib/preloadedLearnPage";
+import { formatOfficialSourceAttribution } from "@/lib/officialSourceAttribution";
 import { useDocumentPaneFlags } from "./useDocumentPaneFlags";
 
 const FS_AI_WIDTH_KEY = "shelf:fullscreen-study-ai-width";
@@ -1203,6 +1204,11 @@ export function DocumentPane({
         )
     );
 
+  const officialSourceAttribution =
+    pageData?.isPreloaded && isPdf
+      ? formatOfficialSourceAttribution(pageData.sourceUrl)
+      : null;
+
   const crumbNotebook =
     pageData?.notebookMeta ??
     (notebook
@@ -1482,6 +1488,7 @@ export function DocumentPane({
                   commandsRef={pdfCommandsRef}
                   onPageInfo={setPdfInfo}
                   onReadProgress={handleReadProgress}
+                  officialSourceAttribution={officialSourceAttribution}
                   phoneChrome={
                     isPhone && showChrome
                       ? {

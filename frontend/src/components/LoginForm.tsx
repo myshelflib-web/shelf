@@ -54,6 +54,7 @@ export function LoginForm({
   const [loading, setLoading] = useState(false);
   const [socialSigningIn, setSocialSigningIn] = useState(false);
   const [completingSignIn, setCompletingSignIn] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const { remaining, coolingDown, start, clear } = useOtpResendCooldown();
   const googleClientId = useGoogleClientId();
   const googleFromServer =
@@ -143,6 +144,10 @@ export function LoginForm({
 
     try {
       if (isRegister) {
+        if (!agreedToTerms) {
+          setError("Please accept the copyright and upload terms to create an account");
+          return;
+        }
         if (!otpSent) {
           await handleSendOtp();
           return;
@@ -297,6 +302,25 @@ export function LoginForm({
             <p className="text-sm text-red-500 bg-red-500/10 px-3 py-2 rounded-lg">
               {error}
             </p>
+          )}
+
+          {isRegister && (
+            <label className="flex items-start gap-2 text-xs text-[var(--text-secondary)] leading-relaxed">
+              <input
+                type="checkbox"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                className="mt-0.5 rounded border-[var(--border)]"
+              />
+              <span>
+                I will only upload material I have the right to use, and I agree to
+                Shelf&apos;s{" "}
+                <a href="/legal/copyright" className="text-[var(--accent)] hover:underline">
+                  copyright &amp; takedown policy
+                </a>
+                .
+              </span>
+            </label>
           )}
 
           <button

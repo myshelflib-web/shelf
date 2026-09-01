@@ -80,6 +80,7 @@ import { usePdfMarkUndo } from "./usePdfMarkUndo";
 import { usePdfWheelZoom } from "./usePdfWheelZoom";
 import { useHotkey } from "@/hooks/useHotkeys";
 import { useIsPhone } from "@/hooks/useIsPhone";
+import { OfficialSourceAttributionBar } from "@/components/learn/OfficialSourceAttributionBar";
 
 pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
@@ -132,6 +133,8 @@ interface PdfViewerProps {
   /** Owner library PDFs — page delete via thumbnail grid. */
   canEditPdf?: boolean;
   phoneChrome?: PdfPhoneChrome;
+  /** Learn / official catalog — persistent source attribution for proxied or mirrored PDFs. */
+  officialSourceAttribution?: { label: string; url: string } | null;
 }
 
 type ToolMode = "text" | "pen" | "ink" | "clip" | "erase";
@@ -169,6 +172,7 @@ export function PdfViewer({
   annotationGate = null,
   canEditPdf,
   phoneChrome,
+  officialSourceAttribution = null,
 }: PdfViewerProps) {
   const { alert } = useAppDialog();
   const isPhone = useIsPhone();
@@ -1891,6 +1895,13 @@ export function PdfViewer({
         highlightsHydrating={highlightsHydrating}
         onHighlightSelect={jumpToHighlight}
       />
+
+      {officialSourceAttribution ? (
+        <OfficialSourceAttributionBar
+          label={officialSourceAttribution.label}
+          url={officialSourceAttribution.url}
+        />
+      ) : null}
 
       <div className="relative flex-1 flex flex-col min-h-0">
         {mode === "pen" && penSettingsOpen && (

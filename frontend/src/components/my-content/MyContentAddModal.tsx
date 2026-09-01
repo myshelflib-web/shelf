@@ -300,6 +300,14 @@ export function MyContentAddModal({
                     Drag a file here, or click to browse. PDF, TXT, MD, or DOCX.
                   </p>
                 )}
+                <p className="text-xs text-[var(--text-muted)]">
+                  By uploading you confirm you have the right to store this file
+                  (your own work or material you may legally use). See our{" "}
+                  <a href="/legal/copyright" className="text-[var(--accent)] hover:underline">
+                    copyright policy
+                  </a>
+                  .
+                </p>
               </>
             )}
             {addMode === "youtube" && (

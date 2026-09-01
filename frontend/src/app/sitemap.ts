@@ -95,6 +95,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}/about`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${siteUrl}/quiz`, changeFrequency: "weekly", priority: 0.75 },
     { url: `${siteUrl}/contact`, changeFrequency: "monthly", priority: 0.4 },
+    { url: `${siteUrl}/legal/copyright`, changeFrequency: "yearly", priority: 0.3 },
     ...blogSlugs.map((slug) => ({
       url: `${siteUrl}/blog/${slug}`,
       changeFrequency: "monthly" as const,
