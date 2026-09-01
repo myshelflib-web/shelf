@@ -7,7 +7,6 @@ import {
   useEffect,
   useState,
 } from "react";
-import { LearnReaderSkeleton } from "@/components/learn/LearnReaderSkeleton";
 
 function isLearnArticlePath(pathname: string): boolean {
   const parts = pathname.replace(/^\/learn\/?/, "").split("/").filter(Boolean);
@@ -48,15 +47,6 @@ export function LearnNavigationProvider({
       value={{ openingReader, startReaderOpen, clearReaderOpen }}
     >
       {children}
-      {openingReader ? (
-        <div
-          className="fixed inset-0 z-[80] bg-[var(--bg-primary)]"
-          aria-busy
-          aria-label="Opening document"
-        >
-          <LearnReaderSkeleton />
-        </div>
-      ) : null}
     </LearnNavigationContext.Provider>
   );
 }

@@ -6,6 +6,8 @@ import { Header } from "@/components/Header";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { LibrarySidePanel } from "@/components/my-content/LibrarySidePanel";
 import { ExploreMainPane } from "@/components/learn/explore/ExploreMainPane";
+import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
+import { LearnReaderPaneSkeleton } from "@/components/learn/LearnReaderSkeleton";
 import { SignInPromptModal } from "@/components/learn/SignInPromptModal";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { ShelfExplorerFab } from "@/components/ShelfExplorerFab";
@@ -49,6 +51,7 @@ function LearnBrowseWorkspaceInner({
   const isPhone = useIsPhone();
   const searchParams = useSearchParams();
   const { setGuestGoal, showGoalPicker } = useLearnStudyGoal(initialGoal);
+  const { openingReader } = useLearnNavigation();
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [signInFeature, setSignInFeature] = useState<string | null>(null);
 
@@ -94,6 +97,11 @@ function LearnBrowseWorkspaceInner({
         >
           {compactPortrait && !explorerOpen ? (
             <ShelfExplorerFab onClick={() => setExplorerOpen(true)} />
+          ) : null}
+          {openingReader ? (
+            <div className="absolute inset-0 z-20 bg-[var(--bg-primary)]">
+              <LearnReaderPaneSkeleton />
+            </div>
           ) : null}
           <ExploreMainPane
             subjectSlug={subjectSlug}

@@ -1,41 +1,44 @@
-import { ShelfBone } from "@/components/dashboard/DashboardSkeletons";
+"use client";
 
-export function LearnReaderSkeleton() {
+import { ShelfBone } from "@/components/dashboard/DashboardSkeletons";
+import { CircleLoader } from "@/components/CircleLoader";
+import { PanelLeft, PanelRight } from "lucide-react";
+
+/** Middle reader pane placeholder — matches LearnReaderWorkspace editor column. */
+export function LearnReaderPaneSkeleton() {
   return (
     <div
-      className="h-full flex flex-col overflow-hidden bg-[var(--bg-primary)]"
+      className="h-full flex flex-col min-w-0 overflow-hidden bg-[var(--bg-primary)]"
       aria-busy
       aria-label="Opening document"
     >
-      <div className="h-14 shrink-0 border-b border-[var(--border-subtle)] px-4 flex items-center gap-3">
-        <ShelfBone className="h-8 w-8 rounded-lg shrink-0" />
-        <ShelfBone className="h-3.5 w-40 rounded" />
-        <div className="flex-1" />
-        <ShelfBone className="h-8 w-24 rounded-lg shrink-0" />
+      <div className="reader-workspace-toolbar flex items-center gap-1 px-2 py-1 border-b border-[var(--border)] shrink-0 bg-[var(--bg-secondary)]">
+        <span className="p-1.5 rounded-md text-[var(--text-muted)] opacity-40">
+          <PanelLeft className="w-4 h-4" />
+        </span>
+        <span className="p-1.5 rounded-md text-[var(--text-muted)] opacity-40 ml-auto">
+          <PanelRight className="w-4 h-4" />
+        </span>
       </div>
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        <div className="hidden md:block w-72 shrink-0 border-r border-[var(--border-subtle)] p-3 space-y-2">
-          {[0, 1, 2, 3, 4, 5].map((i) => (
-            <ShelfBone key={i} className="h-7 w-full rounded-md" />
-          ))}
+
+      <div className="reader-workspace-tabs shrink-0 border-b border-[var(--border)] bg-[var(--bg-secondary)] px-2 min-h-[36px] flex items-center">
+        <div className="inline-flex items-center gap-2 rounded-t-md border border-b-0 border-[var(--border)] bg-[var(--bg-primary)] px-3 py-1.5 min-w-[8rem]">
+          <ShelfBone className="h-3 w-24 rounded" />
         </div>
-        <div className="flex-1 min-w-0 flex flex-col p-4 gap-4">
-          <div className="flex items-center gap-2">
-            <ShelfBone className="h-7 w-32 rounded-md" />
-            <ShelfBone className="h-7 w-20 rounded-md" />
-          </div>
-          <div className="flex-1 min-h-0 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-6 space-y-4">
-            <ShelfBone className="h-4 w-2/3 max-w-md rounded" />
-            <ShelfBone className="h-3 w-full rounded" />
-            <ShelfBone className="h-3 w-full rounded" />
-            <ShelfBone className="h-3 w-5/6 rounded" />
-            <div className="pt-4 space-y-3">
-              {[0, 1, 2, 3, 4].map((i) => (
-                <ShelfBone key={i} className="h-3 w-full rounded" />
-              ))}
-            </div>
-          </div>
-        </div>
+      </div>
+
+      <div className="doc-chrome-bar grid grid-cols-[minmax(0,1fr)_minmax(6.5rem,11rem)_minmax(0,1fr)] items-center gap-3 px-4 py-2.5 border-b border-[var(--border)] bg-[var(--bg-primary)] shrink-0">
+        <nav className="flex items-center gap-1 min-w-0">
+          <ShelfBone className="h-2.5 w-12 rounded" />
+          <ShelfBone className="h-2.5 w-16 rounded" />
+          <ShelfBone className="h-2.5 w-20 rounded" />
+        </nav>
+        <ShelfBone className="h-1.5 w-full max-w-[11rem] rounded-full justify-self-center" />
+        <div />
+      </div>
+
+      <div className="flex-1 flex items-center justify-center min-h-0 bg-[var(--bg-primary)]">
+        <CircleLoader size="lg" label="Loading page" />
       </div>
     </div>
   );
