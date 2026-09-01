@@ -208,10 +208,10 @@ export function featuredExploreCollections(subjects: Subject[]): Subject[] {
   const seen = new Set<string>();
 
   const preferredSlugs = [
-    "ncert",
     "study-skills-learning",
     "study-skills-exam-craft",
     "upsc-polity",
+    "upsc-economy",
   ];
   for (const slug of preferredSlugs) {
     const match = withArticles.find((s) => s.slug === slug && !seen.has(s.id));

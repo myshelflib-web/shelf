@@ -12,5 +12,10 @@ export async function deleteAdminArticleStorage(opts: {
   }
   if (opts.contentUrl && opts.contentUrl !== opts.pdfKey) {
     await deleteFromS3(opts.contentUrl).catch(() => undefined);
+    if (opts.contentUrl.endsWith("/content.html")) {
+      await deleteFromS3(
+        opts.contentUrl.replace(/content\.html$/, "content.txt")
+      ).catch(() => undefined);
+    }
   }
 }
