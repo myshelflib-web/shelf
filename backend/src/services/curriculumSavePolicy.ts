@@ -22,7 +22,7 @@ type ArticleLike = {
   ingestItem?: { license: IngestLicense } | null;
 };
 
-function isPdfUrl(url: string): boolean {
+export function isPdfUrl(url: string): boolean {
   return /\.pdf($|\?|#)/i.test(url);
 }
 

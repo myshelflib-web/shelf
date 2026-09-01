@@ -87,6 +87,7 @@ export async function dispatchIngestMessage(msg: {
   phase: string;
   sourceId?: string;
   itemId?: string;
+  articleId?: string;
   jobId?: string;
 }): Promise<void> {
   log.info("ingest.dispatch.start", {
@@ -103,8 +104,13 @@ export async function dispatchIngestMessage(msg: {
       await postIngest(`/api/internal/ingest/poll/${msg.sourceId}`, body);
       break;
     case "FETCH":
-      if (!msg.itemId) throw new Error("FETCH missing itemId");
-      await postIngest(`/api/internal/ingest/fetch/${msg.itemId}`, body);
+      if (msg.articleId) {
+        await postIngest(`/api/internal/preloaded/mirror/${msg.articleId}`, body);
+      } else if (msg.itemId) {
+        await postIngest(`/api/internal/ingest/fetch/${msg.itemId}`, body);
+      } else {
+        throw new Error("FETCH missing itemId or articleId");
+      }
       break;
     case "PROCESS":
       if (!msg.itemId) throw new Error("PROCESS missing itemId");

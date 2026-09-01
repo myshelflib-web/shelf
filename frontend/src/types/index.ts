@@ -82,6 +82,7 @@ export interface ArticleDetail {
   saveMode?: "copy_admin" | "download_remote" | "link" | "none";
   saveReason?: string | null;
   embeddable?: boolean | null;
+  linkStatus?: string | null;
   sourceLicense?: import("@/types").IngestLicense | null;
   summary?: string | null;
   isPremium: boolean;

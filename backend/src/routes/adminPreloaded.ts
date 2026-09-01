@@ -3,9 +3,11 @@ import { authMiddleware, adminMiddleware } from "../middleware/auth.js";
 import { seedPreloadedCatalog } from "../services/preloaded/seedCatalog.js";
 import {
   checkArticleLink,
+  checkAllPreloadedArticleLinks,
   migratePreloadedArticlesToLinks,
   runArticleLinkHealthBatch,
 } from "../services/preloaded/articleLinkHealth.js";
+import { auditPreloadedCatalog } from "../services/preloaded/catalogAudit.js";
 import prisma from "../utils/prisma.js";
 import { param } from "../utils/param.js";
 
@@ -36,12 +38,28 @@ router.post(
   authMiddleware,
   adminMiddleware,
   async (req: Request, res: Response) => {
+    const all = req.body?.all === true;
+    if (all) {
+      const result = await checkAllPreloadedArticleLinks();
+      res.json(result);
+      return;
+    }
     const limit =
       typeof req.body?.limit === "number"
         ? Math.min(100, Math.max(1, req.body.limit))
         : undefined;
     const checked = await runArticleLinkHealthBatch(limit);
     res.json({ checked });
+  }
+);
+
+router.get(
+  "/preloaded/audit",
+  authMiddleware,
+  adminMiddleware,
+  async (_req: Request, res: Response) => {
+    const report = await auditPreloadedCatalog();
+    res.json(report);
   }
 );
 
@@ -77,6 +95,23 @@ router.post(
 
     const result = await checkArticleLink(article.id);
     res.json(result);
+  }
+);
+
+router.post(
+  "/preloaded/mirror",
+  authMiddleware,
+  adminMiddleware,
+  async (req: Request, res: Response) => {
+    const { runPreloadedMirrorBatch } = await import(
+      "../services/preloaded/mirrorPreloadedArticle.js"
+    );
+    const limit =
+      typeof req.body?.limit === "number"
+        ? Math.min(50, Math.max(1, req.body.limit))
+        : undefined;
+    const queued = await runPreloadedMirrorBatch(limit);
+    res.json({ queued });
   }
 );
 

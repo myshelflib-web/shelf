@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
 import { LearnArticleJsonLd } from "@/components/seo/LearnArticleJsonLd";
+import { LearnArticleSeoIntro } from "@/components/seo/LearnArticleSeoIntro";
 import { LearnBreadcrumbJsonLd } from "@/components/seo/LearnBreadcrumbJsonLd";
-import { buildPageMetadata } from "@/lib/seo/metadata";
-import { fetchLearnArticle, fetchLearnTopic, learnArticleSeoDescription } from "@/lib/seo/learnFetch";
+import { buildArticlePageMetadata } from "@/lib/seo/metadata";
+import {
+  fetchLearnArticle,
+  fetchLearnTopic,
+  learnArticleSeoDescription,
+} from "@/lib/seo/learnFetch";
 import {
   learnArticleDescription,
   learnPageKeywords,
@@ -34,10 +39,11 @@ export async function generateMetadata({
     learnArticleSeoDescription(articleData, topicTitle, subjectName) ||
     learnArticleDescription(articleTitle, topicTitle, subjectName, goal);
 
-  return buildPageMetadata({
+  return buildArticlePageMetadata({
     title: `${articleTitle} — ${topicTitle} | Shelf Learn`,
     description,
     path: `/learn/${subject}/${topic}/${article}`,
+    modifiedTime: articleData?.updatedAt ?? undefined,
     keywords: learnPageKeywords(
       goal,
       articleTitle,
@@ -67,6 +73,10 @@ export default async function LearnArticleLayout({
   const description =
     learnArticleSeoDescription(articleData, topicTitle, subjectName) ||
     learnArticleDescription(articleTitle, topicTitle, subjectName, goal);
+  const isPdf = Boolean(
+    articleData?.hasPdf ||
+      (articleData?.sourceUrl && /\.pdf($|\?|#)/i.test(articleData.sourceUrl))
+  );
 
   return (
     <>
@@ -88,6 +98,17 @@ export default async function LearnArticleLayout({
         subjectName={subjectName}
         topicName={topicTitle}
         studyGoal={goal}
+        dateModified={articleData?.updatedAt ?? null}
+        sourceUrl={articleData?.sourceUrl ?? null}
+        isPdf={isPdf}
+      />
+      <LearnArticleSeoIntro
+        subjectName={subjectName}
+        subjectSlug={subject}
+        topicTitle={topicTitle}
+        topicSlug={topic}
+        articleTitle={articleTitle}
+        description={description}
       />
       {children}
     </>

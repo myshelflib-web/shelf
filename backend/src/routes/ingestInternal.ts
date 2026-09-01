@@ -12,6 +12,7 @@ import {
   markJobRunning,
 } from "../services/ingest/ingestJobs.js";
 import { findSourcesDueForPoll } from "../services/ingest/ingestScheduler.js";
+import { mirrorPreloadedArticle } from "../services/preloaded/mirrorPreloadedArticle.js";
 import { logger, errorFields } from "../utils/logger.js";
 
 const router = Router();
@@ -76,6 +77,24 @@ router.post("/ingest/promote/:itemId", async (req: Request, res: Response) => {
   } catch (err) {
     if (jobId) await markJobFailed(jobId, err instanceof Error ? err.message : String(err));
     res.status(500).json({ error: err instanceof Error ? err.message : "Promote failed" });
+  }
+});
+
+router.post("/preloaded/mirror/:articleId", async (req: Request, res: Response) => {
+  const articleId = param(req, "articleId");
+  const jobId = String(req.body?.jobId ?? "");
+  try {
+    if (jobId) await markJobRunning(jobId);
+    const result = await mirrorPreloadedArticle(articleId);
+    if (jobId) await markJobCompleted(jobId);
+    res.json(result);
+  } catch (err) {
+    if (jobId) await markJobFailed(jobId, err instanceof Error ? err.message : String(err));
+    (req.log ?? logger).error("internal.preloaded.mirror_failed", {
+      articleId,
+      ...errorFields(err),
+    });
+    res.status(500).json({ error: err instanceof Error ? err.message : "Mirror failed" });
   }
 });
 

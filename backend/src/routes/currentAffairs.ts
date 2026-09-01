@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { Prisma, StudyGoal } from "@prisma/client";
+import { checkPublicLink } from "../services/publicLinkCheck.js";
 import prisma from "../utils/prisma.js";
 import { isStudyGoal } from "../studyGoal.js";
 import { param } from "../utils/param.js";
@@ -101,6 +102,30 @@ router.get("/", async (req: Request, res: Response) => {
   });
 });
 
+router.get("/sitemap-slugs", async (_req: Request, res: Response) => {
+  const items = await prisma.ingestItem.findMany({
+    where: { status: { in: [...PUBLIC_STATUSES] } },
+    orderBy: [{ publishedAtShelf: "desc" }, { publishedAt: "desc" }],
+    take: 500,
+    select: {
+      slug: true,
+      publishedAt: true,
+      publishedAtShelf: true,
+      updatedAt: true,
+    },
+  });
+
+  res.json({
+    items: items.map((item) => ({
+      slug: item.slug,
+      lastModified:
+        item.publishedAtShelf ??
+        item.publishedAt ??
+        item.updatedAt,
+    })),
+  });
+});
+
 router.get("/items/:slug", async (req: Request, res: Response) => {
   const slug = param(req, "slug");
   const item = await prisma.ingestItem.findFirst({
@@ -132,13 +157,43 @@ router.get("/items/:slug/embed-status", async (req: Request, res: Response) => {
     res.status(404).json({ error: "Not found" });
     return;
   }
+
+  const url = item.canonicalUrl?.trim();
+  const stale =
+    !item.lastLinkCheckAt ||
+    Date.now() - item.lastLinkCheckAt.getTime() >
+      Number(process.env.PRELOADED_LINK_CHECK_STALE_MS ?? 604_800_000);
+
+  if (url && stale) {
+    const result = await checkPublicLink(url);
+    await prisma.ingestItem.update({
+      where: { id: item.id },
+      data: {
+        linkStatus: result.linkStatus,
+        embeddable: result.embeddable,
+        lastHttpStatus: result.lastHttpStatus,
+        lastLinkCheckAt: new Date(),
+        ...(result.finalUrl !== url ? { canonicalUrl: result.finalUrl } : {}),
+      },
+    });
+    res.json({
+      slug: item.slug,
+      url: result.finalUrl,
+      embeddable: result.embeddable,
+      linkStatus: result.linkStatus,
+      lastHttpStatus: result.lastHttpStatus,
+      lastLinkCheckAt: new Date().toISOString(),
+    });
+    return;
+  }
+
   res.json({
     slug: item.slug,
     url: item.canonicalUrl,
     embeddable: item.embeddable,
     linkStatus: item.linkStatus,
     lastHttpStatus: item.lastHttpStatus,
-    lastLinkCheckAt: item.lastLinkCheckAt,
+    lastLinkCheckAt: item.lastLinkCheckAt?.toISOString() ?? null,
   });
 });
 

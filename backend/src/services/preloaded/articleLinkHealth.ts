@@ -5,6 +5,7 @@ import {
   sameHostname,
   type PublicLinkCheckResult,
 } from "../publicLinkCheck.js";
+import { repairNcertPdfLink } from "./ncertUrlRepair.js";
 import { suggestOfficialUrl } from "./urlRepair.js";
 
 export type ArticleLinkCheckResult = PublicLinkCheckResult & {
@@ -149,6 +150,39 @@ export async function checkArticleLink(articleId: string): Promise<ArticleLinkCh
   });
 
   if (result.linkStatus === "BROKEN") {
+    const ncertFixed = await repairNcertPdfLink(url);
+    if (ncertFixed) {
+      await prisma.article.update({
+        where: { id: articleId },
+        data: {
+          sourceUrl: ncertFixed.repairedUrl,
+          sourceUrlChecked: ncertFixed.finalUrl,
+          linkStatus: ncertFixed.linkStatus,
+          embeddable: ncertFixed.embeddable,
+          lastHttpStatus: ncertFixed.lastHttpStatus,
+          lastLinkCheckAt: new Date(),
+        },
+      });
+      logger.info("preloaded.ncert_url_repair.applied", {
+        articleId,
+        oldUrl: url,
+        newUrl: ncertFixed.repairedUrl,
+      });
+      const { maybeEnqueuePreloadedMirror } = await import("./mirrorPreloadedArticle.js");
+      void maybeEnqueuePreloadedMirror(articleId).catch((err) =>
+        logger.warn("preloaded.mirror.hook_failed", {
+          articleId,
+          err: err instanceof Error ? err.message : String(err),
+        })
+      );
+      return {
+        ...ncertFixed,
+        finalUrl: ncertFixed.repairedUrl,
+        sourceUrlUpdated: true,
+        repaired: true,
+      };
+    }
+
     repaired = await maybeRepairArticleUrl(articleId);
     if (repaired) {
       const refreshed = await prisma.article.findUnique({
@@ -156,6 +190,13 @@ export async function checkArticleLink(articleId: string): Promise<ArticleLinkCh
         select: { sourceUrl: true, linkStatus: true, embeddable: true, lastHttpStatus: true, sourceUrlChecked: true },
       });
       if (refreshed?.sourceUrl) {
+        const { maybeEnqueuePreloadedMirror } = await import("./mirrorPreloadedArticle.js");
+        void maybeEnqueuePreloadedMirror(articleId).catch((err) =>
+          logger.warn("preloaded.mirror.hook_failed", {
+            articleId,
+            err: err instanceof Error ? err.message : String(err),
+          })
+        );
         return {
           linkStatus: refreshed.linkStatus,
           embeddable: refreshed.embeddable,
@@ -176,6 +217,14 @@ export async function checkArticleLink(articleId: string): Promise<ArticleLinkCh
     sourceUrlUpdated: Boolean(nextSourceUrl),
   });
 
+  const { maybeEnqueuePreloadedMirror } = await import("./mirrorPreloadedArticle.js");
+  void maybeEnqueuePreloadedMirror(articleId).catch((err) =>
+    logger.warn("preloaded.mirror.hook_failed", {
+      articleId,
+      err: err instanceof Error ? err.message : String(err),
+    })
+  );
+
   return {
     ...result,
     finalUrl: nextSourceUrl ?? result.finalUrl,
@@ -184,24 +233,35 @@ export async function checkArticleLink(articleId: string): Promise<ArticleLinkCh
   };
 }
 
-export async function runArticleLinkHealthBatch(
-  limit = Number(process.env.PRELOADED_LINK_CHECK_BATCH ?? 20)
-): Promise<number> {
+async function loadArticlesForLinkCheck(opts?: {
+  limit?: number;
+  all?: boolean;
+}): Promise<Array<{ id: string }>> {
   const staleBefore = new Date(
     Date.now() - Number(process.env.PRELOADED_LINK_CHECK_STALE_MS ?? 604_800_000)
   );
 
-  const articles = await prisma.article.findMany({
+  return prisma.article.findMany({
     where: {
       status: "PUBLISHED",
       sourceUrl: { not: null },
       pdfKey: null,
-      OR: [{ lastLinkCheckAt: null }, { lastLinkCheckAt: { lt: staleBefore } }],
+      ...(opts?.all
+        ? {}
+        : {
+            OR: [{ lastLinkCheckAt: null }, { lastLinkCheckAt: { lt: staleBefore } }],
+          }),
     },
     orderBy: [{ lastLinkCheckAt: "asc" }, { updatedAt: "desc" }],
-    take: limit,
+    ...(opts?.all ? {} : { take: opts?.limit ?? Number(process.env.PRELOADED_LINK_CHECK_BATCH ?? 20) }),
     select: { id: true },
   });
+}
+
+export async function runArticleLinkHealthBatch(
+  limit = Number(process.env.PRELOADED_LINK_CHECK_BATCH ?? 20)
+): Promise<number> {
+  const articles = await loadArticlesForLinkCheck({ limit });
 
   let checked = 0;
   for (const article of articles) {
@@ -220,6 +280,34 @@ export async function runArticleLinkHealthBatch(
     logger.info("preloaded.link_check.batch", { checked, requested: articles.length });
   }
   return checked;
+}
+
+export async function checkAllPreloadedArticleLinks(): Promise<{
+  checked: number;
+  failed: number;
+  total: number;
+}> {
+  const articles = await loadArticlesForLinkCheck({ all: true });
+  let checked = 0;
+  let failed = 0;
+  for (const article of articles) {
+    try {
+      await checkArticleLink(article.id);
+      checked += 1;
+    } catch (err) {
+      failed += 1;
+      logger.warn("preloaded.link_check.failed", {
+        articleId: article.id,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  logger.info("preloaded.link_check.all", {
+    checked,
+    failed,
+    total: articles.length,
+  });
+  return { checked, failed, total: articles.length };
 }
 
 export async function migratePreloadedArticlesToLinks(): Promise<{ updated: number }> {

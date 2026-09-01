@@ -1,5 +1,6 @@
 import { logger } from "../../utils/logger.js";
 import { runArticleLinkHealthBatch } from "./articleLinkHealth.js";
+import { runPreloadedMirrorBatch } from "./mirrorPreloadedArticle.js";
 
 let preloadedLinkTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -11,13 +12,18 @@ export function startPreloadedLinkHealthScheduler(): void {
   logger.info("preloaded.link_check.scheduler_started", {
     intervalMs,
     urlRepair: process.env.PRELOADED_URL_REPAIR === "true",
+    mirrorPdf: process.env.PRELOADED_MIRROR_PDF === "true",
   });
-  void runArticleLinkHealthBatch().catch((err) =>
-    logger.warn("preloaded.link_check.initial_failed", { err: String(err) })
-  );
-  preloadedLinkTimer = setInterval(() => {
+  const tick = () => {
     void runArticleLinkHealthBatch().catch((err) =>
       logger.warn("preloaded.link_check.tick_failed", { err: String(err) })
     );
-  }, intervalMs);
+    if (process.env.PRELOADED_MIRROR_PDF === "true") {
+      void runPreloadedMirrorBatch().catch((err) =>
+        logger.warn("preloaded.mirror.tick_failed", { err: String(err) })
+      );
+    }
+  };
+  void tick();
+  preloadedLinkTimer = setInterval(tick, intervalMs);
 }

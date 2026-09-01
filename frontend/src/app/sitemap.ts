@@ -5,6 +5,7 @@ import {
   INDEXABLE_LEARN_TRACKS,
   learnTrackPath,
 } from "@/lib/seo/learnTrackSeo";
+import { fetchCurrentAffairsSitemapSlugs } from "@/lib/seo/currentAffairsFetch";
 import { getSiteUrl } from "@/lib/siteUrl";
 
 const API_URL =
@@ -20,7 +21,8 @@ type SubjectList = {
     updatedAt?: string;
     topics: Array<{
       slug: string;
-      articles?: Array<{ slug: string }>;
+      updatedAt?: string;
+      articles?: Array<{ slug: string; updatedAt?: string }>;
     }>;
   }>;
 };
@@ -40,18 +42,21 @@ async function fetchLearnRoutes(siteUrl: string): Promise<MetadataRoute.Sitemap>
         url: `${siteUrl}/learn/${subject.slug}`,
         changeFrequency: "weekly",
         priority: 0.8,
+        ...(subject.updatedAt ? { lastModified: subject.updatedAt } : {}),
       });
       for (const topic of subject.topics ?? []) {
         learnRoutes.push({
           url: `${siteUrl}/learn/${subject.slug}/${topic.slug}`,
           changeFrequency: "weekly",
           priority: 0.7,
+          ...(topic.updatedAt ? { lastModified: topic.updatedAt } : {}),
         });
         for (const article of topic.articles ?? []) {
           learnRoutes.push({
             url: `${siteUrl}/learn/${subject.slug}/${topic.slug}/${article.slug}`,
             changeFrequency: "weekly",
             priority: 0.85,
+            ...(article.updatedAt ? { lastModified: article.updatedAt } : {}),
           });
         }
       }
@@ -99,6 +104,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   const learnRoutes = await fetchLearnRoutes(siteUrl);
+  const currentAffairsRoutes = await fetchCurrentAffairsSitemapSlugs(siteUrl);
   const trackRoutes: MetadataRoute.Sitemap = INDEXABLE_LEARN_TRACKS.map(
     (goal) => ({
       url: `${siteUrl}${learnTrackPath(goal)}`,
@@ -106,5 +112,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.88,
     })
   );
-  return [...staticRoutes, ...trackRoutes, ...learnRoutes];
+  return [...staticRoutes, ...trackRoutes, ...learnRoutes, ...currentAffairsRoutes];
 }

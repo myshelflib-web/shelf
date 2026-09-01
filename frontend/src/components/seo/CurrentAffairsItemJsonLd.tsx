@@ -29,6 +29,10 @@ export function CurrentAffairsItemJsonLd({
       "@type": "Organization",
       name: "Shelf | myshelflib",
       url: siteUrl,
+      logo: {
+        "@type": "ImageObject",
+        url: `${siteUrl}/icons/shelf-icon-2048.png`,
+      },
     },
   };
 

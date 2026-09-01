@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { LearnNavigationProvider } from "@/components/learn/LearnNavigationProvider";
+import { LearnHubJsonLd } from "@/components/seo/LearnHubJsonLd";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { LEARN_DESCRIPTION } from "@/lib/seo/keywords";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Free study curriculum library",
+  title: "Free study curriculum library | Shelf Learn",
   description: LEARN_DESCRIPTION,
   path: "/learn",
+  absoluteTitle: true,
   keywords: [
     "free study curriculum",
     "online syllabus library",
@@ -28,5 +30,10 @@ export default function LearnLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <LearnNavigationProvider>{children}</LearnNavigationProvider>;
+  return (
+    <LearnNavigationProvider>
+      <LearnHubJsonLd />
+      {children}
+    </LearnNavigationProvider>
+  );
 }

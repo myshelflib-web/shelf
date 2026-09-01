@@ -1,5 +1,6 @@
 import prisma from "../../utils/prisma.js";
 import { logger } from "../../utils/logger.js";
+import { deleteAdminArticleStorage } from "../preloaded/adminArticleStorage.js";
 
 /** Archive superseded editions for official doc sources (yearly/monthly cadence). */
 export async function archiveSupersededForSource(sourceId: string): Promise<{ archived: number }> {
@@ -43,12 +44,26 @@ export async function archiveSupersededForSource(sourceId: string): Promise<{ ar
     });
 
     if (row.articleId) {
+      const article = await prisma.article.findUnique({
+        where: { id: row.articleId },
+        select: { pdfKey: true, contentUrl: true },
+      });
+
+      if (article?.pdfKey) {
+        await deleteAdminArticleStorage({
+          pdfKey: article.pdfKey,
+          contentUrl: article.contentUrl,
+        });
+      }
+
       await prisma.article.update({
         where: { id: row.articleId },
         data: {
           status: "ARCHIVED",
           archivedAt: new Date(),
           supersededById: published[0].articleId ?? undefined,
+          pdfKey: null,
+          contentUrl: null,
         },
       });
     }

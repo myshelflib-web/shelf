@@ -71,6 +71,8 @@ import { shouldSkipLibraryNav } from "@/hooks/useLibraryHref";
 import { CircleLoader } from "@/components/CircleLoader";
 import clsx from "clsx";
 import { isLiveEditorHtml } from "@/lib/pageKinds";
+import { linkEmbedHint, shouldUseLinkEmbed } from "@/lib/linkEmbedPolicy";
+import { resolvePreloadedLearnPage } from "@/lib/preloadedLearnPage";
 import { useDocumentPaneFlags } from "./useDocumentPaneFlags";
 
 const FS_AI_WIDTH_KEY = "shelf:fullscreen-study-ai-width";
@@ -114,6 +116,7 @@ export interface LoadedPage {
   saveAllowed?: boolean;
   saveReason?: string | null;
   embeddable?: boolean | null;
+  linkStatus?: string | null;
   subjectMeta?: { name: string; slug: string; icon?: string | null } | null;
   /** Present when opened via share / link. */
   access?: import("@/types").PageAccessInfo;
@@ -129,24 +132,14 @@ async function fetchCurriculumPage(
     scope.articleSlug
   );
   const { article, progress, starred, navigation } = res;
-  const contentType: UserContentType = article.hasPdf
-    ? "PDF"
-    : article.sourceUrl
-      ? "LINK"
-      : "HTML";
+  const resolved = resolvePreloadedLearnPage(article);
   return {
     page: {
       id: article.id,
       title: article.title,
-      content:
-        article.content ??
-        (contentType === "PDF"
-          ? ""
-          : contentType === "LINK"
-            ? ""
-            : "<p>No content available yet. Upload a PDF from the admin dashboard.</p>"),
-      contentType,
-      sourceUrl: article.sourceUrl ?? null,
+      content: resolved.content,
+      contentType: resolved.contentType,
+      sourceUrl: resolved.sourceUrl,
       completed: progress.completed ?? false,
       starred,
       readPercent: progress.readPercent ?? 0,
@@ -160,6 +153,7 @@ async function fetchCurriculumPage(
     saveAllowed: article.saveAllowed !== false,
     saveReason: article.saveReason ?? null,
     embeddable: article.embeddable ?? null,
+    linkStatus: article.linkStatus ?? null,
     subjectMeta: article.topic.subject,
     topicMeta: { title: article.topic.title, slug: article.topic.slug },
   };
@@ -173,6 +167,7 @@ async function fetchPage(scope: PersonalPageReaderScope): Promise<{
   saveAllowed?: boolean;
   saveReason?: string | null;
   embeddable?: boolean | null;
+  linkStatus?: string | null;
   subjectMeta?: { name: string; slug: string; icon?: string | null } | null;
   topicMeta?: { title: string; slug: string } | null;
   access?: import("@/types").PageAccessInfo;
@@ -188,6 +183,7 @@ async function fetchPage(scope: PersonalPageReaderScope): Promise<{
       saveAllowed: curriculum.saveAllowed,
       saveReason: curriculum.saveReason,
       embeddable: curriculum.embeddable,
+      linkStatus: curriculum.linkStatus,
       subjectMeta: curriculum.subjectMeta,
       topicMeta: curriculum.topicMeta,
     };
@@ -480,6 +476,7 @@ export function DocumentPane({
           saveAllowed,
           saveReason,
           embeddable,
+          linkStatus,
           subjectMeta,
           topicMeta,
           access,
@@ -540,6 +537,7 @@ export function DocumentPane({
           saveAllowed,
           saveReason,
           embeddable,
+          linkStatus,
           subjectMeta: subjectMeta ?? null,
           access,
         };
@@ -1166,6 +1164,34 @@ export function DocumentPane({
   const isPdf = pageData?.contentType === "PDF";
   const isLink = pageData?.contentType === "LINK";
   const isVideo = pageData?.contentType === "VIDEO";
+  const linkEmbedAllowed =
+    isLink &&
+    shouldUseLinkEmbed({
+      sourceUrl: pageData?.sourceUrl,
+      embeddable: pageData?.embeddable,
+      linkStatus: pageData?.linkStatus,
+    });
+  const linkEmbedHintValue =
+    isLink &&
+    linkEmbedHint({
+      sourceUrl: pageData?.sourceUrl,
+      embeddable: pageData?.embeddable,
+      linkStatus: pageData?.linkStatus,
+    });
+  const learnEmbedStatusProbe =
+    scope.kind === "learn" && isPreloadedDoc && isLink
+      ? () =>
+          api.subjects
+            .getArticleEmbedStatus(
+              scope.subjectSlug,
+              scope.topicSlug,
+              scope.articleSlug
+            )
+            .then((r) => ({
+              embeddable: r.embeddable,
+              linkStatus: r.linkStatus,
+            }))
+      : undefined;
   const liveBlank =
     Boolean(
       pageData &&
@@ -1482,7 +1508,9 @@ export function DocumentPane({
                   pageId={isPreloadedDoc ? "" : pageData.id}
                   title={pageData.title}
                   url={pageData.sourceUrl ?? ""}
-                  embeddableHint={isPreloadedDoc ? pageData.embeddable : undefined}
+                  embeddableHint={linkEmbedHintValue}
+                  linkStatus={pageData.linkStatus}
+                  embedStatusProbe={learnEmbedStatusProbe}
                   editing={editing}
                   draftTitle={draftTitle}
                   draftUrl={draftUrl}
@@ -1493,7 +1521,9 @@ export function DocumentPane({
                     onClipImage(data, pageData);
                     setHtmlClip(false);
                   }}
-                  onImport={importLinkPage}
+                  onImport={
+                    !isPreloadedDoc && linkEmbedAllowed ? importLinkPage : undefined
+                  }
                 />
               ) : isVideo ? (
                 <VideoPageView

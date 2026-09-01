@@ -21,6 +21,21 @@ export const SITE_NAV_LINKS = [
     path: "/learn",
   },
   {
+    name: "Current affairs",
+    description: "UPSC and exam-track current affairs with official source links.",
+    path: "/learn/current-affairs",
+  },
+  {
+    name: "UPSC syllabus",
+    description: "Free UPSC study curriculum — NCERT, bare acts, and official PDFs.",
+    path: "/learn/tracks/upsc",
+  },
+  {
+    name: "GATE syllabus",
+    description: "GATE exam syllabus and official study resources on Shelf Learn.",
+    path: "/learn/tracks/gate",
+  },
+  {
     name: "Pricing",
     description: "Shelf plans and Premium pricing.",
     path: "/subscribe",

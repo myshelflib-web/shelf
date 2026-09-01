@@ -122,7 +122,7 @@ CI builds and pushes `:ingest-main` when `ingestion-service/**` changes on `main
 |---|---|---|
 | `GOVERNMENT_PRESS` | Title, link, ≤280 char RSS excerpt, Shelf summary | No — link out |
 | `LINK_ONLY` | Title, link, Shelf summary only | No |
-| `OFFICIAL_DOCUMENT` | Link/embed in Learn; PDF copied to **user** library on save | Yes — official PDFs when user saves |
+| `OFFICIAL_DOCUMENT` | Link/embed in Learn; mirror to admin S3 when embed blocked; PDF copied to **user** library on save | Yes — official PDFs when mirrored or user saves |
 
 Newspaper full-text scraping is **not implemented**.
 

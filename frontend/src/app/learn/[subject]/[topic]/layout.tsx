@@ -41,6 +41,7 @@ export async function generateMetadata({
     title: `${data.title} — ${subjectName} | Shelf Learn`,
     description,
     path: `/learn/${subject}/${topic}`,
+    absoluteTitle: true,
     keywords: learnPageKeywords(
       goal,
       data.title,

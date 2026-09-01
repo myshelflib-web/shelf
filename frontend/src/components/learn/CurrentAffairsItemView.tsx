@@ -10,6 +10,8 @@ import {
 } from "lucide-react";
 import type { CurrentAffairsPublicItem } from "@/lib/seo/currentAffairsFetch";
 import { getSiteUrl } from "@/lib/siteUrl";
+import { isPdfSourceUrl, linkEmbedHint } from "@/lib/linkEmbedPolicy";
+import { api } from "@/lib/api";
 import { CurrentAffairsWorkspace } from "@/components/learn/CurrentAffairsWorkspace";
 import { EmbedViewer } from "@/components/my-content/EmbedViewer";
 
@@ -48,10 +50,17 @@ export function CurrentAffairsItemView({
     return parts.join(". ");
   }, [item, shareUrl]);
 
-  const showEmbed =
-    item.embeddable !== false &&
-    item.linkStatus !== "BROKEN" &&
-    !/\.pdf($|\?)/i.test(item.canonicalUrl);
+  const embedHint = linkEmbedHint({
+    sourceUrl: item.canonicalUrl,
+    embeddable: item.embeddable,
+    linkStatus: item.linkStatus,
+  });
+  const showEmbedSection = embedHint !== false;
+  const embedStatusProbe = () =>
+    api.currentAffairs.embedStatus(item.slug).then((r) => ({
+      embeddable: r.embeddable,
+      linkStatus: r.linkStatus,
+    }));
 
   const copyText = useCallback(async (text: string, kind: "link" | "cite") => {
     try {
@@ -151,18 +160,24 @@ export function CurrentAffairsItemView({
               <div className="explore-section-head">
                 <h2 className="explore-section-title">Source preview</h2>
                 <p className="explore-section-copy">
-                  {showEmbed
+                  {embedHint === true
                     ? "Embedded from the official publisher."
-                    : "This source does not allow embedding — use the official link above."}
+                    : embedHint === null
+                      ? "Checking whether this publisher allows an in-app preview…"
+                      : isPdfSourceUrl(item.canonicalUrl)
+                        ? "PDF sources open in your browser or Shelf reader — use the official link above."
+                        : "This source does not allow embedding — use the official link above."}
                 </p>
               </div>
-              {showEmbed ? (
+              {showEmbedSection ? (
                 <div className="rounded-[10px] border border-[var(--border)] overflow-hidden bg-[var(--bg-secondary)] min-h-[480px]">
                   <EmbedViewer
-                    pageId={`ca-${item.slug}`}
+                    pageId=""
                     title={item.title}
                     url={item.canonicalUrl}
-                    embeddableHint={item.embeddable}
+                    embeddableHint={embedHint}
+                    linkStatus={item.linkStatus}
+                    embedStatusProbe={embedStatusProbe}
                   />
                 </div>
               ) : (

@@ -9,6 +9,9 @@ type LearnArticleJsonLdProps = {
   subjectName: string;
   topicName: string;
   studyGoal?: StudyGoal | null;
+  dateModified?: string | null;
+  sourceUrl?: string | null;
+  isPdf?: boolean;
 };
 
 export function LearnArticleJsonLd({
@@ -18,6 +21,9 @@ export function LearnArticleJsonLd({
   subjectName,
   topicName,
   studyGoal,
+  dateModified,
+  sourceUrl,
+  isPdf,
 }: LearnArticleJsonLdProps) {
   const url = `${getSiteUrl()}${path}`;
   const aboutName =
@@ -31,7 +37,14 @@ export function LearnArticleJsonLd({
     headline: title,
     description,
     url,
-    learningResourceType: "Reference material",
+    mainEntityOfPage: url,
+    ...(dateModified ? { dateModified } : {}),
+    learningResourceType: isPdf ? "Textbook" : "Reference material",
+    ...(isPdf
+      ? { encodingFormat: "application/pdf" }
+      : sourceUrl
+        ? { sameAs: sourceUrl }
+        : {}),
     about: {
       "@type": "Thing",
       name: aboutName,
@@ -49,6 +62,10 @@ export function LearnArticleJsonLd({
       "@type": "Organization",
       name: "Shelf",
       url: getSiteUrl(),
+      logo: {
+        "@type": "ImageObject",
+        url: `${getSiteUrl()}/icons/shelf-icon-2048.png`,
+      },
     },
     inLanguage: "en-IN",
     isAccessibleForFree: true,

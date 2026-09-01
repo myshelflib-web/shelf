@@ -233,7 +233,7 @@ export const PRELOADED_CATALOG_NEET: PreloadedCatalogEntry[] = [
     studyGoal: "NEET_PG",
     title: "FMGE information — NBE",
     slug: "fmge-nbe",
-    sourceUrl: "https://natboard.edu.in/fmge",
+    sourceUrl: "https://natboard.edu.in/",
     license: "LINK_ONLY",
     summary:
       "Foreign Medical Graduate Examination details from the National Board of Examinations.",

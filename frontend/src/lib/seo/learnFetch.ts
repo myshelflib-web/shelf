@@ -23,6 +23,8 @@ type LearnArticle = {
   slug: string;
   summary?: string | null;
   sourceUrl?: string | null;
+  hasPdf?: boolean;
+  updatedAt?: string | null;
 };
 
 export async function fetchLearnSubject(
@@ -70,7 +72,7 @@ export async function fetchLearnArticle(
     );
     if (!res.ok) return null;
     const data = (await res.json()) as {
-      article?: LearnArticle & { summary?: string | null; sourceUrl?: string | null };
+      article?: LearnArticle;
     };
     return data.article ?? null;
   } catch {

@@ -5,6 +5,7 @@ import { Download, ExternalLink, Loader2 } from "lucide-react";
 import { ClipPasteLayer } from "./ClipPasteLayer";
 import { captureCurrentTab, cropElementFromTabCapture } from "@/lib/captureTab";
 import { api } from "@/lib/api";
+import { linkEmbedBlockedMessage } from "@/lib/linkEmbedPolicy";
 
 interface EmbedViewerProps {
   pageId: string;
@@ -12,6 +13,9 @@ interface EmbedViewerProps {
   url: string;
   /** When set (e.g. preloaded Learn), skip library embed-status API. */
   embeddableHint?: boolean | null;
+  linkStatus?: string | null;
+  /** Live embed probe when embeddableHint is null (Learn / current affairs). */
+  embedStatusProbe?: () => Promise<{ embeddable: boolean | null; linkStatus?: string | null }>;
   editing?: boolean;
   draftTitle?: string;
   draftUrl?: string;
@@ -27,6 +31,8 @@ export function EmbedViewer({
   title,
   url,
   embeddableHint,
+  linkStatus,
+  embedStatusProbe,
   editing = false,
   draftTitle = "",
   draftUrl = "",
@@ -74,13 +80,30 @@ export function EmbedViewer({
     setEmbeddable(null);
     setImportNotice("");
 
-    if (!pageId || !url) {
-      setEmbeddable(embeddableHint ?? true);
+    if (!url) {
+      setEmbeddable(false);
       return;
     }
 
-    if (embeddableHint !== undefined) {
-      setEmbeddable(embeddableHint ?? true);
+    if (embeddableHint === true || embeddableHint === false) {
+      setEmbeddable(embeddableHint);
+      return;
+    }
+
+    if (!pageId) {
+      if (embedStatusProbe) {
+        embedStatusProbe()
+          .then((r) => {
+            if (!cancelled) setEmbeddable(r.embeddable === true);
+          })
+          .catch(() => {
+            if (!cancelled) setEmbeddable(false);
+          });
+        return () => {
+          cancelled = true;
+        };
+      }
+      setEmbeddable(false);
       return;
     }
 
@@ -90,13 +113,13 @@ export function EmbedViewer({
         if (!cancelled) setEmbeddable(r.embeddable);
       })
       .catch(() => {
-        if (!cancelled) setEmbeddable(true);
+        if (!cancelled) setEmbeddable(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [pageId, url, embeddableHint]);
+  }, [pageId, url, embeddableHint, embedStatusProbe]);
 
   // Sites that block iframes: try Import once so the user isn’t stuck on “refused to connect”.
   useEffect(() => {
@@ -280,7 +303,7 @@ export function EmbedViewer({
                   </p>
                   <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
                     {importNotice ||
-                      "It blocks embedding in other apps. Import a Shelf copy when the page is public, or open it in your browser."}
+                      linkEmbedBlockedMessage(linkStatus)}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-2">

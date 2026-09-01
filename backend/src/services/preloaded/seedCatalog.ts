@@ -1,8 +1,11 @@
 import prisma from "../../utils/prisma.js";
 import { logger } from "../../utils/logger.js";
 import { isStudyGoal } from "../../studyGoal.js";
+import { checkArticleLink } from "./articleLinkHealth.js";
 import { ALL_PRELOADED_CATALOG } from "./catalogIndex.js";
 import type { PreloadedCatalogEntry } from "./types.js";
+import { deleteAdminArticleStorage } from "./adminArticleStorage.js";
+import { pruneStalePreloadedArticles } from "./pruneStaleCatalog.js";
 
 async function upsertSubjectTopic(entry: PreloadedCatalogEntry) {
   const goal = isStudyGoal(entry.studyGoal) ? entry.studyGoal : "UPSC";
@@ -42,6 +45,7 @@ async function upsertSubjectTopic(entry: PreloadedCatalogEntry) {
 export async function seedPreloadedCatalog(): Promise<{
   created: number;
   updated: number;
+  pruned: number;
 }> {
   let created = 0;
   let updated = 0;
@@ -51,16 +55,27 @@ export async function seedPreloadedCatalog(): Promise<{
 
     const existing = await prisma.article.findUnique({
       where: { topicId_slug: { topicId, slug: entry.slug } },
-      select: { id: true },
+      select: { id: true, sourceUrl: true, pdfKey: true, contentUrl: true },
     });
+
+    const sourceUrlChanged = Boolean(
+      existing?.sourceUrl && existing.sourceUrl !== entry.sourceUrl
+    );
+
+    if (sourceUrlChanged && existing) {
+      await deleteAdminArticleStorage({
+        pdfKey: existing.pdfKey,
+        contentUrl: existing.contentUrl,
+      });
+    }
 
     const articleData = {
       title: entry.title,
       sourceUrl: entry.sourceUrl,
       sourceLicense: entry.license,
       summary: entry.summary.slice(0, 500),
-      contentUrl: null,
-      pdfKey: null,
+      contentUrl: sourceUrlChanged ? null : (existing?.contentUrl ?? null),
+      pdfKey: sourceUrlChanged ? null : (existing?.pdfKey ?? null),
       status: "PUBLISHED" as const,
       order: entry.order ?? 0,
       linkStatus: "UNKNOWN" as const,
@@ -71,24 +86,44 @@ export async function seedPreloadedCatalog(): Promise<{
         where: { id: existing.id },
         data: articleData,
       });
+      try {
+        await checkArticleLink(existing.id);
+      } catch (err) {
+        logger.warn("preloaded.seed.link_check_failed", {
+          slug: entry.slug,
+          err: err instanceof Error ? err.message : String(err),
+        });
+      }
       updated += 1;
     } else {
-      await prisma.article.create({
+      const createdArticle = await prisma.article.create({
         data: {
           topicId,
           slug: entry.slug,
           isPremium: false,
           ...articleData,
         },
+        select: { id: true },
       });
+      try {
+        await checkArticleLink(createdArticle.id);
+      } catch (err) {
+        logger.warn("preloaded.seed.link_check_failed", {
+          slug: entry.slug,
+          err: err instanceof Error ? err.message : String(err),
+        });
+      }
       created += 1;
     }
   }
 
+  const { archived: pruned } = await pruneStalePreloadedArticles();
+
   logger.info("preloaded.catalog.seeded", {
     created,
     updated,
+    pruned,
     total: ALL_PRELOADED_CATALOG.length,
   });
-  return { created, updated };
+  return { created, updated, pruned };
 }

@@ -15,6 +15,8 @@ export type IngestQueueMessage = {
   phase: IngestQueuePhase;
   sourceId?: string;
   itemId?: string;
+  /** Preloaded Learn article mirror (FETCH queue, no ingest item). */
+  articleId?: string;
   jobId?: string;
   feedEntry?: {
     externalId: string;

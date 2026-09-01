@@ -521,6 +521,18 @@ export const api = {
       }>(
         `/api/subjects/${subjectSlug}/topics/${topicSlug}/articles/${articleSlug}`
       ),
+    getArticleEmbedStatus: (
+      subjectSlug: string,
+      topicSlug: string,
+      articleSlug: string
+    ) =>
+      request<{
+        embeddable: boolean | null;
+        linkStatus: string;
+        finalUrl: string | null;
+      }>(
+        `/api/subjects/${subjectSlug}/topics/${topicSlug}/articles/${articleSlug}/embed-status`
+      ),
     getArticlePdfUrl: (
       subjectSlug: string,
       topicSlug: string,

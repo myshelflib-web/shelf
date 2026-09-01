@@ -57,3 +57,30 @@ export async function fetchCurrentAffairsFeed(
     return [];
   }
 }
+
+export async function fetchCurrentAffairsSitemapSlugs(
+  siteUrl: string
+): Promise<
+  Array<{ url: string; lastModified?: string; changeFrequency: "daily"; priority: number }>
+> {
+  try {
+    const res = await fetch(`${API_URL}/api/current-affairs/sitemap-slugs`, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(FETCH_MS),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as {
+      items?: Array<{ slug: string; lastModified?: string }>;
+    };
+    return (data.items ?? []).map((item) => ({
+      url: `${siteUrl}/learn/current-affairs/${item.slug}`,
+      changeFrequency: "daily" as const,
+      priority: 0.82,
+      ...(item.lastModified
+        ? { lastModified: new Date(item.lastModified).toISOString() }
+        : {}),
+    }));
+  } catch {
+    return [];
+  }
+}

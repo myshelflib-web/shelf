@@ -82,7 +82,8 @@ export async function promoteIngestItem(itemId: string): Promise<{ articleId: st
       contentUrl: null,
       order: 0,
       isPremium: false,
-      linkStatus: "UNKNOWN",
+      linkStatus: item.linkStatus,
+      embeddable: item.embeddable,
     },
     select: { id: true },
   });

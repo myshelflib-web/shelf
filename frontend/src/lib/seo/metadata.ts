@@ -11,6 +11,13 @@ type PageMetaInput = {
   path?: string;
   keywords?: string[];
   noIndex?: boolean;
+  /** Avoid appending root layout `%s · Shelf` template. */
+  absoluteTitle?: boolean;
+};
+
+type ArticlePageMetaInput = PageMetaInput & {
+  publishedTime?: string;
+  modifiedTime?: string;
 };
 
 export function buildPageMetadata({
@@ -19,6 +26,7 @@ export function buildPageMetadata({
   path = "",
   keywords = DEFAULT_KEYWORDS,
   noIndex = false,
+  absoluteTitle = false,
 }: PageMetaInput): Metadata {
   const siteUrl = getSiteUrl();
   const canonical = path
@@ -26,7 +34,7 @@ export function buildPageMetadata({
     : siteUrl;
 
   return {
-    title,
+    title: absoluteTitle ? { absolute: title } : title,
     description,
     keywords,
     metadataBase: new URL(siteUrl),
@@ -67,6 +75,26 @@ export function buildPageMetadata({
             "max-snippet": -1,
           },
         },
+  };
+}
+
+/** Blog / Learn article pages — Open Graph type article + optional dates. */
+export function buildArticlePageMetadata({
+  publishedTime,
+  modifiedTime,
+  ...input
+}: ArticlePageMetaInput): Metadata {
+  const meta = buildPageMetadata({ ...input, absoluteTitle: true });
+  return {
+    ...meta,
+    openGraph: {
+      ...meta.openGraph,
+      type: "article",
+      ...(publishedTime ? { publishedTime } : {}),
+      ...(modifiedTime || publishedTime
+        ? { modifiedTime: modifiedTime ?? publishedTime }
+        : {}),
+    },
   };
 }
 

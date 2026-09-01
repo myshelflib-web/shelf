@@ -1,19 +1,17 @@
-"use client";
+import { LearnArticlePageClient } from "@/components/learn/LearnArticlePageClient";
 
-import { useParams } from "next/navigation";
-import { LearnReaderWorkspace } from "@/components/learn/LearnReaderWorkspace";
-import { learnScope } from "@/lib/learnContent";
+type PageProps = {
+  params: Promise<{ subject: string; topic: string; article: string }>;
+};
 
-export default function ArticlePage() {
-  const params = useParams<{
-    subject: string;
-    topic: string;
-    article: string;
-  }>();
+export default async function ArticlePage({ params }: PageProps) {
+  const { subject, topic, article } = await params;
 
   return (
-    <LearnReaderWorkspace
-      scope={learnScope(params.subject, params.topic, params.article)}
+    <LearnArticlePageClient
+      subjectSlug={subject}
+      topicSlug={topic}
+      articleSlug={article}
     />
   );
 }

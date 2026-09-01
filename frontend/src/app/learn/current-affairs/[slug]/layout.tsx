@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { buildPageMetadata } from "@/lib/seo/metadata";
+import { CurrentAffairsItemJsonLd } from "@/components/seo/CurrentAffairsItemJsonLd";
+import { LearnBreadcrumbJsonLd } from "@/components/seo/LearnBreadcrumbJsonLd";
+import { buildArticlePageMetadata } from "@/lib/seo/metadata";
 import { fetchCurrentAffairsItem } from "@/lib/seo/currentAffairsFetch";
 
 type LayoutProps = {
@@ -13,7 +15,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const item = await fetchCurrentAffairsItem(slug);
   if (!item) {
-    return buildPageMetadata({
+    return buildArticlePageMetadata({
       title: "Current affairs | Shelf Learn",
       description: "Exam-track current affairs digest from official sources.",
       path: `/learn/current-affairs/${slug}`,
@@ -26,10 +28,13 @@ export async function generateMetadata({
     item.factualExcerpt?.slice(0, 155) ??
     `${item.title} — ${item.source.name}. Shelf summary with link to official source.`;
 
-  return buildPageMetadata({
+  const canonicalPath = item.learnPath ?? item.sharePath;
+
+  return buildArticlePageMetadata({
     title: `${item.title} | Current affairs | Shelf Learn`,
     description,
-    path: item.sharePath,
+    path: canonicalPath,
+    publishedTime: item.publishedAtShelf ?? item.publishedAt ?? undefined,
     keywords: [
       "current affairs",
       item.source.name,
@@ -39,6 +44,25 @@ export async function generateMetadata({
   });
 }
 
-export default function CurrentAffairsItemLayout({ children }: LayoutProps) {
-  return children;
+export default async function CurrentAffairsItemLayout({
+  children,
+  params,
+}: LayoutProps) {
+  const { slug } = await params;
+  const item = await fetchCurrentAffairsItem(slug);
+  if (!item) return children;
+
+  return (
+    <>
+      <LearnBreadcrumbJsonLd
+        crumbs={[
+          { name: "Learn", path: "/learn" },
+          { name: "Current affairs", path: "/learn/current-affairs" },
+          { name: item.title, path: item.sharePath },
+        ]}
+      />
+      <CurrentAffairsItemJsonLd item={item} />
+      {children}
+    </>
+  );
 }

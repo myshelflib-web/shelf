@@ -5,12 +5,8 @@ import { errorFields, logger } from "../utils/logger.js";
 import prisma from "../utils/prisma.js";
 import { assertStorageRoom, QuotaError, type QuotaUser } from "../utils/quotas.js";
 import type { CurriculumSaveMode } from "./curriculumSavePolicy.js";
-import { parsePublicHttpUrl } from "../utils/publicUrl.js";
-import { fetchWithRetry } from "../utils/fetchRetry.js";
-import { ingestFetchHeaders } from "./ingest/ingestHttp.js";
+import { downloadOfficialPdf } from "./ingest/officialPdfDownload.js";
 import { curriculumSourceUrl } from "../utils/curriculumCopy.js";
-
-const MAX_PDF_BYTES = 50 * 1024 * 1024;
 
 type CurriculumArticle = {
   id: string;
@@ -18,25 +14,6 @@ type CurriculumArticle = {
   contentUrl: string | null;
   sourceUrl: string | null;
 };
-
-async function downloadRemotePdf(url: string): Promise<Buffer> {
-  const safe = parsePublicHttpUrl(url);
-  if (!safe) throw new Error("PDF URL is not allowed.");
-
-  const res = await fetchWithRetry(safe, {
-    timeoutMs: 120_000,
-    redirect: "follow",
-    headers: ingestFetchHeaders({ Accept: "application/pdf, */*" }),
-  });
-  if (!res.ok) throw new Error(`PDF download failed (${res.status}).`);
-
-  const buffer = Buffer.from(await res.arrayBuffer());
-  if (buffer.length > MAX_PDF_BYTES) {
-    throw new Error("PDF exceeds save size limit.");
-  }
-  if (buffer.length < 512) throw new Error("PDF appears empty or invalid.");
-  return buffer;
-}
 
 async function publishAsLinkSave(
   pageId: string,
@@ -89,7 +66,7 @@ export async function finishCurriculumLibraryCopy(params: {
       );
       storedBytes = uploaded.byteLength;
     } else if (saveMode === "download_remote" && article.sourceUrl) {
-      const buffer = await downloadRemotePdf(article.sourceUrl);
+      const buffer = await downloadOfficialPdf(article.sourceUrl);
       storedBytes = buffer.length;
       assertStorageRoom(me, storedBytes);
       pdfKey = `${docPrefix}/source.pdf`;

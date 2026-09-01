@@ -36,6 +36,7 @@ export async function generateMetadata({
     title: `${subject.name} — Free study curriculum | Shelf Learn`,
     description,
     path: `/learn/${slug}`,
+    absoluteTitle: true,
     keywords: learnPageKeywords(
       isStudyGoal(subject.studyGoal) ? subject.studyGoal : null,
       subject.name,

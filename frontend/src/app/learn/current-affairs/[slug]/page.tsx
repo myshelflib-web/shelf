@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { CurrentAffairsItemView } from "@/components/learn/CurrentAffairsItemView";
-import { CurrentAffairsItemJsonLd } from "@/components/seo/CurrentAffairsItemJsonLd";
 import { fetchCurrentAffairsItem } from "@/lib/seo/currentAffairsFetch";
 
 type PageProps = {
@@ -14,7 +13,6 @@ export default async function CurrentAffairsItemPage({ params }: PageProps) {
 
   return (
     <>
-      <CurrentAffairsItemJsonLd item={item} />
       <CurrentAffairsItemView item={item} />
     </>
   );
