@@ -39,7 +39,7 @@ export function PreloadedSaveBanner({
       const { page } = await api.myContent.getPageById(pageId);
       if (page.status === "PUBLISHED") return;
       if (page.status === "FAILED") {
-        throw new Error("Could not finish saving this page");
+        throw new Error("Could not finish saving this file");
       }
       await new Promise((r) => window.setTimeout(r, 1500));
     }
@@ -94,7 +94,7 @@ export function PreloadedSaveBanner({
         <span className="flex-1 min-w-0">
           <strong className="text-[var(--text-primary)]">Preloaded</strong>
           {" · "}
-          Sign in to save this page to your library. It stays read-only until
+          Sign in to save this file to your library. It stays read-only until
           then.
         </span>
         <Link

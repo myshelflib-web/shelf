@@ -32,7 +32,7 @@ export function NotebookTilePreview({ subject }: { subject: UserSubject }) {
   }, [items.length]);
 
   if (items.length === 0) {
-    return <p className="text-sm text-[var(--text-muted)]">No pages</p>;
+    return <p className="text-sm text-[var(--text-muted)]">No files</p>;
   }
 
   const shown = items.slice(0, fit);

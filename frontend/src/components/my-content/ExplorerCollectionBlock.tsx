@@ -213,7 +213,7 @@ export function ExplorerCollectionBlock({
           <ExplorerDragGrip
             active={reorderEnabled && !searching}
             showHint={showDragAffordance && (!reorderEnabled || searching)}
-            label="Drag to reorder collection"
+            label="Drag to reorder folder"
             onDragStart={(e) => startReorderDrag({ kind: "subject", id: nb.id }, e)}
             onDragEnd={clearDropHint}
           />
@@ -240,14 +240,14 @@ export function ExplorerCollectionBlock({
             <button
               type="button"
               className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-              title="Edit collection"
+              title="Edit folder"
               onClick={() => onEditNotebook(nb)}
             >
               <Pencil className="w-3 h-3" />
             </button>
             <button
               type="button"
-              title="New topic"
+              title="New folder"
               className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
               onClick={() => onAddTopic(nb)}
             >
@@ -255,7 +255,7 @@ export function ExplorerCollectionBlock({
             </button>
             <button
               type="button"
-              title="Add page"
+              title="Add file"
               className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
               onClick={() => onAddPage(nb)}
             >
@@ -448,7 +448,7 @@ export function ExplorerCollectionBlock({
                     <ExplorerDragGrip
                       active={reorderEnabled}
                       showHint={showDragAffordance && !reorderEnabled}
-                      label="Drag to reorder topic"
+                      label="Drag to reorder folder"
                       onDragStart={(e) =>
                         startReorderDrag(
                           { kind: "topic", id: group.id, subjectId: nb.id },
@@ -483,10 +483,10 @@ export function ExplorerCollectionBlock({
                       <button
                         type="button"
                         className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-                        title="Rename topic"
+                        title="Rename folder"
                         onClick={async () => {
                           const title = await prompt({
-                            title: "Rename topic",
+                            title: "Rename folder",
                             defaultValue: group.title,
                             confirmLabel: "Rename",
                           });
@@ -498,7 +498,7 @@ export function ExplorerCollectionBlock({
                       </button>
                       <button
                         type="button"
-                        title="Add page"
+                        title="Add file"
                         className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
                         onClick={() => onAddPage(nb, group)}
                       >
@@ -507,7 +507,7 @@ export function ExplorerCollectionBlock({
                       <button
                         type="button"
                         className="p-0.5 rounded text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--bg-secondary)]"
-                        title="Delete topic"
+                        title="Delete folder"
                         onClick={() => onDeleteTopic(nb, group.id, group.title)}
                       >
                         <Trash2 className="w-3 h-3" />

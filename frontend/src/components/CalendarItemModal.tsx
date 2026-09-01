@@ -191,11 +191,11 @@ export function CalendarItemModal({
               <ShelfSelect
                 value={notebookSlug}
                 options={[
-                  { value: "", label: "All collections" },
+                  { value: "", label: "All folders" },
                   ...notebooks.map((n) => ({ value: n.slug, label: n.name })),
                 ]}
                 className="w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
-                aria-label="Collection"
+                aria-label="Folder"
                 onChange={onNotebookSlugChange}
               />
               <ShelfSelect
@@ -203,12 +203,12 @@ export function CalendarItemModal({
                 options={[
                   {
                     value: "",
-                    label: "Link collection, topic, or page (optional)",
+                    label: "Link folder or file (optional)",
                   },
                   ...filteredPages.map((p) => ({ value: p.href, label: p.label })),
                 ]}
                 className="w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
-                aria-label="Linked page"
+                aria-label="Linked file"
                 onChange={onPageHrefChange}
               />
             </>

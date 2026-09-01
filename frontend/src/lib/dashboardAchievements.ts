@@ -38,7 +38,7 @@ export const DASHBOARD_ACHIEVEMENTS: AchievementDef[] = [
   {
     id: "library",
     label: "Collector",
-    hint: "Add a collection or page",
+    hint: "Add a folder or file",
     color: "var(--accent)",
   },
   {

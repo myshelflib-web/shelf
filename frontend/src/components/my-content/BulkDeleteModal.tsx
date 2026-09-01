@@ -17,9 +17,9 @@ interface BulkDeleteModalProps {
 }
 
 function kindLabel(kind: "subject" | "topic" | "page") {
-  if (kind === "subject") return "Collection";
-  if (kind === "topic") return "Topic";
-  return "Page";
+  if (kind === "subject") return "Folder";
+  if (kind === "topic") return "Folder";
+  return "File";
 }
 
 export function BulkDeleteModal({
@@ -57,7 +57,7 @@ export function BulkDeleteModal({
               Delete {items.length} item{items.length === 1 ? "" : "s"}?
             </h2>
             <p className="text-sm text-[var(--text-muted)] mt-1">
-              This cannot be undone. Topics and pages inside a selected collection
+              This cannot be undone. Folders and files inside a selected folder
               are removed too.
             </p>
           </div>

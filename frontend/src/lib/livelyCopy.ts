@@ -91,23 +91,23 @@ const SUBTITLES: Record<TimeBucket, string[]> = {
 
 const SURFACE_LINES: Record<LivelySurface, string[]> = {
   library: [
-    "Search your collections, or open a page from the explorer.",
+    "Search your folders, or open a file from the explorer.",
     "Your shelves are waiting — pick a thread.",
     "Browse, pin, and keep going where you left off.",
-    "Every collection is a room you can return to.",
-    "Find a page. Make a mark. Move on lightly.",
+    "Every folder is a room you can return to.",
+    "Find a file. Make a mark. Move on lightly.",
   ],
   libraryEmpty: [
-    "Add a collection or page to start your library.",
+    "Add a folder or file to start your library.",
     "Empty shelves mean room to grow — drop a PDF in.",
-    "Your first collection is one click away.",
-    "Start with one page. The rest will follow.",
+    "Your first folder is one click away.",
+    "Start with one file. The rest will follow.",
     "A blank library is an invitation, not a gap.",
   ],
   libraryGuest: [
     "Browse the preloaded library — sign in to keep a copy.",
-    "Search collections here. Study AI waits until you log in.",
-    "Open a page from the explorer, or sign in to start your own shelves.",
+    "Search folders here. Study AI waits until you log in.",
+    "Open a file from the explorer, or sign in to start your own shelves.",
     "This is a taste of Shelf. Your library begins after sign-in.",
     "Find a syllabus or past paper, then keep it when you join.",
   ],
@@ -122,15 +122,15 @@ const SURFACE_LINES: Record<LivelySurface, string[]> = {
     "Ask about this file, or anything beyond it.",
     "Highlight a passage — or set a reminder from here.",
     "Summarize, quiz, or schedule — your call.",
-    "This page is the focus; Study AI can still help elsewhere.",
+    "This file is the focus; Study AI can still help elsewhere.",
     "Curious about a line? Send it here.",
   ],
   dashboard: [
     "Pick up where you left off.",
-    "Search your notes, or jump back into a page.",
+    "Search your notes, or jump back into a file.",
     "One next step is enough — then open the work.",
-    "Continue, plan, or ask. Then back to the page.",
-    "Your collections are waiting when you are.",
+    "Continue, plan, or ask. Then back to the file.",
+    "Your folders are waiting when you are.",
   ],
   calendar: [
     "Capture first. Put it on a day when you are ready.",
@@ -160,7 +160,7 @@ const SURFACE_LINES: Record<LivelySurface, string[]> = {
   ],
   profile: [
     "Name, photo, and account — kept simple.",
-    "You, behind the collections.",
+    "You, behind the folders.",
   ],
   generic: [
     "One clear step at a time.",

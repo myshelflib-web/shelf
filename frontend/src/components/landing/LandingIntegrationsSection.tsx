@@ -30,7 +30,7 @@ const INTEGRATIONS = [
   {
     icon: Share2,
     title: "Document sharing",
-    body: "Share pages with classmates by email — view or edit access, Shared with me in the sidebar, and send a PDF back to Telegram from Share.",
+    body: "Share files with classmates by email — view or edit access, Shared with me in the sidebar, and send a PDF back to Telegram from Share.",
     href: "/features/document-sharing",
     blogHref: "/blog/share-study-documents",
     cta: "Sharing guide",

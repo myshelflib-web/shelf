@@ -55,7 +55,7 @@ export function SaveAnswerModal({
     api.myContent
       .listSubjects({ pageSize: 100, sort: "name" })
       .then(({ subjects: list }) => setSubjects(list))
-      .catch(() => setError("Could not load collections"))
+      .catch(() => setError("Could not load folders"))
       .finally(() => setSubjectsLoading(false));
   }, []);
 
@@ -192,7 +192,7 @@ export function SaveAnswerModal({
         {mode === "choose" && (
           <div className="space-y-3">
             <p className="text-[13px] text-[var(--text-secondary)]">
-              Download this answer, or save it as a new page in your library.
+              Download this answer, or save it as a new file in your library.
             </p>
             <button
               type="button"
@@ -220,7 +220,7 @@ export function SaveAnswerModal({
                   Save to library
                 </span>
                 <span className="block text-[12px] text-[var(--text-muted)]">
-                  Pick collection / topic, or library root
+                  Pick folder or nested folder, or library root
                 </span>
               </span>
             </button>
@@ -280,13 +280,13 @@ export function SaveAnswerModal({
           <div className="space-y-3">
             {subjectsLoading ? (
               <div className="flex justify-center py-8">
-                <CircleLoader size="md" label="Loading collections" />
+                <CircleLoader size="md" label="Loading folders" />
               </div>
             ) : (
               <>
             <label className="block">
               <span className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
-                Page title
+                File name
               </span>
               <input
                 value={title}
@@ -296,7 +296,7 @@ export function SaveAnswerModal({
             </label>
             <label className="block">
               <span className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
-                Collection (optional)
+                Folder (optional)
               </span>
               <ShelfSelect
                 value={notebookId}
@@ -305,7 +305,7 @@ export function SaveAnswerModal({
                   ...subjects.map((s) => ({ value: s.id, label: s.name })),
                 ]}
                 className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[13px]"
-                aria-label="Collection"
+                aria-label="Folder"
                 onChange={(v) => {
                   setNotebookId(v);
                   setTopicId("");
@@ -315,21 +315,21 @@ export function SaveAnswerModal({
             {notebookId && (
               <label className="block">
                 <span className="text-[11px] uppercase tracking-wide text-[var(--text-muted)]">
-                  Topic (optional)
+                  Nested folder (optional)
                 </span>
                 {topicsLoading ? (
                   <div className="mt-2 flex justify-center py-3">
-                    <CircleLoader size="sm" label="Loading topics" />
+                    <CircleLoader size="sm" label="Loading folders" />
                   </div>
                 ) : (
                 <ShelfSelect
                   value={topicId}
                   options={[
-                    { value: "", label: "Collection-level page" },
+                    { value: "", label: "Top-level file in folder" },
                     ...topics.map((t) => ({ value: t.id, label: t.title })),
                   ]}
                   className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 text-[13px]"
-                  aria-label="Topic"
+                  aria-label="Nested folder"
                   onChange={setTopicId}
                 />
                 )}
@@ -354,7 +354,7 @@ export function SaveAnswerModal({
                 onClick={() => void saveToLibrary()}
                 className="flex-1 rounded-lg bg-[var(--accent)] px-3 py-2 text-[13px] text-white disabled:opacity-50"
               >
-                {busy ? "Saving…" : "Save page"}
+                {busy ? "Saving…" : "Save file"}
               </button>
             </div>
           </div>
@@ -364,7 +364,7 @@ export function SaveAnswerModal({
           <div className="space-y-3">
             <p className="text-[13px] text-[var(--text-secondary)]">
               {savedHref
-                ? "Answer saved as a new page in your library."
+                ? "Answer saved as a new file in your library."
                 : downloadedAs === "pdf"
                   ? "PDF download started."
                   : downloadedAs === "doc"
@@ -376,7 +376,7 @@ export function SaveAnswerModal({
                 href={savedHref}
                 className="inline-block text-[13px] text-[var(--accent)] hover:underline"
               >
-                Open page
+                Open file
               </a>
             )}
             <button

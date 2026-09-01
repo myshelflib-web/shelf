@@ -19,7 +19,7 @@ export function DashboardAddMaterial({ loading = false }: { loading?: boolean })
         Add material
       </button>
       <span className="hidden sm:inline text-[11px] text-[var(--text-muted)] ml-2">
-        Upload a file, add a URL or create a collection
+        Upload a file, add a URL or create a folder
       </span>
     </div>
   );

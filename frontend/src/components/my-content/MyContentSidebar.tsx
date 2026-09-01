@@ -92,7 +92,7 @@ function notebookSortFor(
 
 function directionTitle(criterion: SortCriterion, ascending: boolean): string {
   if (criterion === "manual") {
-    return "Drag collections to reorder";
+    return "Drag folders to reorder";
   }
   if (criterion === "name") {
     return ascending ? "Ascending — A to Z" : "Descending — Z to A";
@@ -489,8 +489,8 @@ export function MyContentSidebar({
     title: string
   ) => {
     const ok = await confirm({
-      title: "Delete topic",
-      message: `Delete topic "${title}" and its pages? This cannot be undone.`,
+      title: "Delete folder",
+      message: `Delete folder "${title}" and its files? This cannot be undone.`,
       confirmLabel: "Delete",
       danger: true,
     });
@@ -501,8 +501,8 @@ export function MyContentSidebar({
 
   const deletePage = async (pageId: string, title: string) => {
     const ok = await confirm({
-      title: "Delete page",
-      message: `Delete page "${title}"? This cannot be undone.`,
+      title: "Delete file",
+      message: `Delete file "${title}"? This cannot be undone.`,
       confirmLabel: "Delete",
       danger: true,
     });
@@ -783,8 +783,8 @@ export function MyContentSidebar({
             </button>
             <button
               type="button"
-              title={withShortcut("Add a page to your library", "c p")}
-              aria-label="Add page"
+              title={withShortcut("Add a file to your library", "c p")}
+              aria-label="Add file"
               onClick={() => openAdd({ kind: "page" })}
               className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
             >
@@ -792,8 +792,8 @@ export function MyContentSidebar({
             </button>
             <button
               type="button"
-              title={withShortcut("Create a new collection", "c n")}
-              aria-label="New collection"
+              title={withShortcut("Create a new folder", "c n")}
+              aria-label="New folder"
               onClick={() => openAdd({ kind: "notebook" })}
               className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
             >
@@ -810,7 +810,7 @@ export function MyContentSidebar({
             </button>
             <button
               type="button"
-              title="Collapse all collections and topics"
+              title="Collapse all folders"
               aria-label="Collapse all"
               onClick={collapseAll}
               className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
@@ -826,7 +826,7 @@ export function MyContentSidebar({
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search collections…"
+              placeholder="Search folders…"
               className="w-full pl-8 pr-3 py-1.5 rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
             />
           </div>
@@ -841,7 +841,7 @@ export function MyContentSidebar({
               compact
               className={`flex-1 min-w-0 ${shelfSelectSidebarClass}`}
               value={sortCriterion}
-              aria-label="Sort collections"
+              aria-label="Sort folders"
               options={SORT_CRITERIA.map((s) => ({ value: s.id, label: s.label }))}
               onChange={(v) => setSortCriterion(v as SortCriterion)}
             />
@@ -867,7 +867,7 @@ export function MyContentSidebar({
               <span className="inline-flex align-middle text-[var(--text-secondary)]">
                 ⋮⋮
               </span>{" "}
-              handle (hover a row) to reorder, or drop pages and topics into another collection.
+              handle (hover a row) to reorder, or drop files and folders into another folder.
             </p>
           )}
           {!manualOrder && !searching && (
@@ -971,7 +971,7 @@ export function MyContentSidebar({
             disabled={notebookPage <= 1 || loading}
             onClick={() => setNotebookPage((p) => Math.max(1, p - 1))}
             className="p-1 rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] disabled:opacity-30"
-            aria-label="Previous collections"
+            aria-label="Previous folders"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
           </button>
@@ -985,7 +985,7 @@ export function MyContentSidebar({
               setNotebookPage((p) => Math.min(totalNotebookPages, p + 1))
             }
             className="p-1 rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] disabled:opacity-30"
-            aria-label="Next collections"
+            aria-label="Next folders"
           >
             <ChevronRight className="w-3.5 h-3.5" />
             </button>

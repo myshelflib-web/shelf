@@ -178,7 +178,7 @@ export function DocumentChromeActions({
           onClick={onDelete}
           className="p-2 rounded-lg hover:bg-red-500/10 text-[var(--text-muted)] hover:text-red-500"
           title="Delete this page permanently"
-          aria-label="Delete page"
+          aria-label="Delete file"
         >
           <Trash2 className="w-4 h-4" />
         </button>

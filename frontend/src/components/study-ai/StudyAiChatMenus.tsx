@@ -36,7 +36,7 @@ export function StudyAiAttachMenu({
         </span>
         <span className="study-ai-popcopy">
           <strong>From Library</strong>
-          <span>Choose an existing file, topic or collection</span>
+          <span>Choose an existing file, folder, or nested folder</span>
         </span>
       </button>
       <button

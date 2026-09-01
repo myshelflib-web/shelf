@@ -31,7 +31,6 @@ import {
   NOTEBOOK_PAGE_SIZE,
   parseNotebookFilter,
   parseNotebookSort,
-  type SlimNotebook,
 } from "../utils/notebookBrowse.js";
 import { mergeReorder } from "../utils/libraryReorder.js";
 import {
@@ -75,6 +74,12 @@ import {
 } from "../utils/directUpload.js";
 import { parseYoutubeUrl } from "../utils/youtubeUrl.js";
 import { createVideoPage } from "../services/youtubeImport.js";
+import {
+  createNestedFolder,
+  createRootFolder,
+  loadLegacySubjectsForUser,
+  slimRootFolders,
+} from "../services/libraryStore.js";
 
 const router = Router();
 
@@ -149,53 +154,29 @@ function contentTypeFromKind(kind: string): UserContentType {
   return map[kind] ?? "HTML";
 }
 
-const notebookTreeInclude = {
-  topicGroups: {
-    orderBy: { order: "asc" as const },
-    include: {
-      pages: { orderBy: { order: "asc" as const }, select: pageSelect },
-    },
-  },
-  topics: {
-    where: { userTopicGroupId: null },
-    orderBy: { order: "asc" as const },
-    select: pageSelect,
-  },
-};
-
-function shapeSubject<T extends { topics?: unknown }>(subject: T) {
-  const { topics, ...rest } = subject;
-  return { ...rest, pages: topics ?? [] };
-}
-
-async function notebooksByIds(ids: string[]) {
-  if (ids.length === 0) return [];
-  const subjects = await prisma.userSubject.findMany({
-    where: { id: { in: ids } },
-    include: notebookTreeInclude,
-  });
-  const map = new Map(subjects.map((s) => [s.id, s]));
-  const ordered: typeof subjects = [];
-  for (const id of ids) {
-    const s = map.get(id);
-    if (s) ordered.push(s);
-  }
-  return ordered.map(shapeSubject);
-}
-
 type PageParent = {
   userId: string;
   scope: PageSlugScope;
+  folderId: string | null;
   userSubjectId: string | null;
   userTopicGroupId: string | null;
   subjectSlug: string | null;
   groupSlug: string | null;
 };
 
+function fileParentFields(parent: PageParent) {
+  return {
+    folderId: parent.folderId,
+    userSubjectId: parent.userSubjectId,
+    userTopicGroupId: parent.userTopicGroupId,
+  };
+}
+
 function rootPageParent(userId: string): PageParent {
   return {
     userId,
     scope: { kind: "root", userId },
+    folderId: null,
     userSubjectId: null,
     userTopicGroupId: null,
     subjectSlug: null,
@@ -207,16 +188,17 @@ async function notebookPageParent(
   userId: string,
   subjectId: string
 ): Promise<PageParent | null> {
-  const subject = await prisma.userSubject.findFirst({
-    where: { id: subjectId, userId },
+  const folder = await prisma.userFolder.findFirst({
+    where: { id: subjectId, userId, parentId: null },
   });
-  if (!subject) return null;
+  if (!folder) return null;
   return {
     userId,
-    scope: { kind: "notebook", userSubjectId: subject.id },
-    userSubjectId: subject.id,
+    scope: { kind: "notebook", userSubjectId: folder.id },
+    folderId: folder.id,
+    userSubjectId: folder.id,
     userTopicGroupId: null,
-    subjectSlug: subject.slug,
+    subjectSlug: folder.slug,
     groupSlug: null,
   };
 }
@@ -226,20 +208,21 @@ async function topicPageParent(
   subjectId: string,
   groupId: string
 ): Promise<PageParent | null> {
-  const subject = await prisma.userSubject.findFirst({
-    where: { id: subjectId, userId },
+  const root = await prisma.userFolder.findFirst({
+    where: { id: subjectId, userId, parentId: null },
   });
-  const group = await prisma.userTopicGroup.findFirst({
-    where: { id: groupId, userSubjectId: subject?.id },
+  const nested = await prisma.userFolder.findFirst({
+    where: { id: groupId, userId, parentId: root?.id ?? "" },
   });
-  if (!subject || !group) return null;
+  if (!root || !nested) return null;
   return {
     userId,
-    scope: { kind: "topic", userTopicGroupId: group.id },
-    userSubjectId: subject.id,
-    userTopicGroupId: group.id,
-    subjectSlug: subject.slug,
-    groupSlug: group.slug,
+    scope: { kind: "topic", userTopicGroupId: nested.id },
+    folderId: nested.id,
+    userSubjectId: root.id,
+    userTopicGroupId: nested.id,
+    subjectSlug: root.slug,
+    groupSlug: nested.slug,
   };
 }
 
@@ -275,7 +258,7 @@ async function handlePageUpload(
     const existing = await findPageBySlug(parent.scope, slug);
     if (existing) {
       res.status(409).json({
-        error: "A page with this name already exists",
+        error: "A file with this name already exists",
       });
       return;
     }
@@ -304,8 +287,7 @@ async function handlePageUpload(
       const page = await prisma.userTopic.create({
         data: {
           userId: parent.userId,
-          userSubjectId: parent.userSubjectId,
-          userTopicGroupId: parent.userTopicGroupId,
+          ...fileParentFields(parent),
           title: title.trim(),
           slug,
           pdfKey,
@@ -339,8 +321,7 @@ async function handlePageUpload(
     const page = await prisma.userTopic.create({
       data: {
         userId: parent.userId,
-        userSubjectId: parent.userSubjectId,
-        userTopicGroupId: parent.userTopicGroupId,
+        ...fileParentFields(parent),
         title: title.trim(),
         slug,
         contentUrl: contentKey,
@@ -395,7 +376,7 @@ async function handlePageCreate(
     const youtube = parseYoutubeUrl(sourceUrl);
     if (youtube?.kind === "playlist") {
       res.status(400).json({
-        error: "Paste playlists under Add page → YouTube to import every lecture.",
+        error: "Paste playlists under Add file → YouTube to import every lecture.",
       });
       return;
     }
@@ -421,8 +402,7 @@ async function handlePageCreate(
     const page = await prisma.userTopic.create({
       data: {
         userId: parent.userId,
-        userSubjectId: parent.userSubjectId,
-        userTopicGroupId: parent.userTopicGroupId,
+        ...fileParentFields(parent),
         title: title.trim(),
         slug,
         sourceUrl,
@@ -467,8 +447,7 @@ async function handlePageCreate(
   const page = await prisma.userTopic.create({
     data: {
       userId: parent.userId,
-      userSubjectId: parent.userSubjectId,
-      userTopicGroupId: parent.userTopicGroupId,
+      ...fileParentFields(parent),
       title: title.trim(),
       slug,
       contentUrl: contentKey,
@@ -621,14 +600,14 @@ router.post("/uploads/init", async (req: Request, res: Response) => {
     if (subjectId && topicGroupId) {
       const next = await topicPageParent(req.user!.userId, subjectId, topicGroupId);
       if (!next) {
-        res.status(404).json({ error: "Collection or topic not found" });
+        res.status(404).json({ error: "Folder not found" });
         return;
       }
       parent = next;
     } else if (subjectId) {
       const next = await notebookPageParent(req.user!.userId, subjectId);
       if (!next) {
-        res.status(404).json({ error: "Collection not found" });
+        res.status(404).json({ error: "Folder not found" });
         return;
       }
       parent = next;
@@ -678,8 +657,7 @@ router.post("/uploads/init", async (req: Request, res: Response) => {
     kind,
     size,
     contentType: putType,
-    userSubjectId: parent.userSubjectId,
-    userTopicGroupId: parent.userTopicGroupId,
+    ...fileParentFields(parent),
   });
 
   try {
@@ -689,8 +667,7 @@ router.post("/uploads/init", async (req: Request, res: Response) => {
       size,
       slug,
       title,
-      userSubjectId: parent.userSubjectId,
-      userTopicGroupId: parent.userTopicGroupId,
+      ...fileParentFields(parent),
     });
     res.json({
       uploadUrl,
@@ -725,6 +702,7 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
 
   const parent: PageParent = {
     userId: claims.userId,
+    folderId: claims.userTopicGroupId ?? claims.userSubjectId ?? null,
     userSubjectId: claims.userSubjectId,
     userTopicGroupId: claims.userTopicGroupId,
     subjectSlug: null,
@@ -742,7 +720,7 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
       select: { slug: true },
     });
     if (!subject) {
-      res.status(404).json({ error: "Collection not found" });
+      res.status(404).json({ error: "Folder not found" });
       return;
     }
     parent.subjectSlug = subject.slug;
@@ -755,7 +733,7 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
         select: { slug: true },
       });
       if (!group) {
-        res.status(404).json({ error: "Topic not found" });
+        res.status(404).json({ error: "Folder not found" });
         return;
       }
       parent.groupSlug = group.slug;
@@ -801,8 +779,7 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
       const page = await prisma.userTopic.create({
         data: {
           userId: parent.userId,
-          userSubjectId: parent.userSubjectId,
-          userTopicGroupId: parent.userTopicGroupId,
+          ...fileParentFields(parent),
           title: claims.title,
           slug,
           pdfKey: claims.key,
@@ -856,8 +833,7 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
     const page = await prisma.userTopic.create({
       data: {
         userId: parent.userId,
-        userSubjectId: parent.userSubjectId,
-        userTopicGroupId: parent.userTopicGroupId,
+        ...fileParentFields(parent),
         title: claims.title,
         slug,
         contentUrl: contentKey,
@@ -967,37 +943,7 @@ router.get("/subjects", async (req: Request, res: Response) => {
     );
     const requestedPage = Math.max(1, Number(req.query.page) || 1);
 
-    const rows = await prisma.userSubject.findMany({
-      where: { userId },
-      select: {
-        id: true,
-        name: true,
-        description: true,
-        order: true,
-        createdAt: true,
-        updatedAt: true,
-        topics: {
-          select: { title: true, contentType: true, starred: true },
-        },
-      },
-    });
-
-    const slim: SlimNotebook[] = rows.map((row) => {
-      const pages = row.topics;
-      return {
-        id: row.id,
-        name: row.name,
-        description: row.description,
-        order: row.order,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-        pageCount: pages.length,
-        hasPdf: pages.some((p) => p.contentType === "PDF"),
-        hasLink: pages.some((p) => p.contentType === "LINK"),
-        hasStarred: pages.some((p) => p.starred),
-        pageTitles: pages.map((p) => p.title),
-      };
-    });
+    const slim = await slimRootFolders(userId);
 
     const { ids, total, page, totalPages } = browseNotebooks(slim, {
       q,
@@ -1006,12 +952,11 @@ router.get("/subjects", async (req: Request, res: Response) => {
       page: requestedPage,
       pageSize,
     });
-    const subjects = await notebooksByIds(ids);
+    const subjects = await loadLegacySubjectsForUser(userId, ids);
     const rootPages = await prisma.userTopic.findMany({
       where: {
         userId,
-        userSubjectId: null,
-        userTopicGroupId: null,
+        folderId: null,
       },
       orderBy: { order: "asc" },
       select: pageSelect,
@@ -1027,25 +972,29 @@ router.get("/subjects", async (req: Request, res: Response) => {
     });
   } catch (err) {
     req.log?.error("my_content.list_subjects_failed", errorFields(err));
-    res.status(500).json({ error: "Could not load collections" });
+    res.status(500).json({ error: "Could not load folders" });
   }
 });
 
 router.get("/subjects/slug/:slug", async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
-    const subject = await prisma.userSubject.findFirst({
-      where: { userId, slug: param(req, "slug") },
-      include: notebookTreeInclude,
+    const folder = await prisma.userFolder.findFirst({
+      where: { userId, parentId: null, slug: param(req, "slug") },
     });
-    if (!subject) {
-      res.status(404).json({ error: "Collection not found" });
+    if (!folder) {
+      res.status(404).json({ error: "Folder not found" });
       return;
     }
-    res.json({ subject: shapeSubject(subject) });
+    const [subject] = await loadLegacySubjectsForUser(userId, [folder.id]);
+    if (!subject) {
+      res.status(404).json({ error: "Folder not found" });
+      return;
+    }
+    res.json({ subject });
   } catch (err) {
     req.log?.error("my_content.get_subject_failed", errorFields(err));
-    res.status(500).json({ error: "Could not load collection" });
+    res.status(500).json({ error: "Could not load folder" });
   }
 });
 
@@ -1060,36 +1009,37 @@ router.post("/subjects", async (req: Request, res: Response) => {
 
   const slug = slugify(name);
   if (isReservedSlug(slug)) {
-    res.status(400).json({ error: "That collection name is reserved" });
-    return;
-  }
-  const existing = await prisma.userSubject.findUnique({
-    where: { userId_slug: { userId, slug } },
-  });
-  if (existing) {
-    res.status(409).json({ error: "A collection with this name already exists" });
+    res.status(400).json({ error: "That folder name is reserved" });
     return;
   }
 
-  const count = await prisma.userSubject.count({ where: { userId } });
-  const subject = await prisma.userSubject.create({
-    data: {
-      userId,
-      name: name.trim(),
-      slug,
+  try {
+    const folder = await createRootFolder(userId, {
+      name,
       description,
-      icon: icon ?? "📁",
-      order: count + 1,
-    },
-    include: notebookTreeInclude,
-  });
+      icon,
+    });
 
-  contentFlow.collectionCreated(reqLog(req), {
-    collectionId: subject.id,
-    slug: subject.slug,
-  });
+    contentFlow.collectionCreated(reqLog(req), {
+      collectionId: folder.id,
+      slug: folder.slug,
+    });
 
-  res.status(201).json({ subject: shapeSubject(subject) });
+    const subject = {
+      id: folder.id,
+      name: folder.name,
+      slug: folder.slug,
+      description: folder.description,
+      icon: folder.icon,
+      order: folder.order,
+      topicGroups: [],
+      pages: [],
+    };
+
+    res.status(201).json({ subject });
+  } catch {
+    res.status(409).json({ error: "A folder with this name already exists" });
+  }
 });
 
 router.post("/subjects/:subjectId/topic-groups", async (req: Request, res: Response) => {
@@ -1101,46 +1051,38 @@ router.post("/subjects/:subjectId/topic-groups", async (req: Request, res: Respo
     return;
   }
 
-  const subject = await prisma.userSubject.findFirst({
-    where: { id: param(req, "subjectId"), userId },
-  });
-  if (!subject) {
-    res.status(404).json({ error: "Collection not found" });
-    return;
-  }
-
+  const parentId = param(req, "subjectId");
   const slug = slugify(title);
   if (isReservedSlug(slug)) {
-    res.status(400).json({ error: "That topic name is reserved" });
-    return;
-  }
-  const existing = await prisma.userTopicGroup.findUnique({
-    where: { userSubjectId_slug: { userSubjectId: subject.id, slug } },
-  });
-  if (existing) {
-    res.status(409).json({ error: "A topic with this name already exists" });
+    res.status(400).json({ error: "That folder name is reserved" });
     return;
   }
 
-  const order =
-    (await prisma.userTopicGroup.count({ where: { userSubjectId: subject.id } })) + 1;
-  const group = await prisma.userTopicGroup.create({
-    data: {
-      userSubjectId: subject.id,
-      title: title.trim(),
-      slug,
-      order,
-    },
-    include: { pages: { select: pageSelect } },
-  });
+  try {
+    const folder = await createNestedFolder(userId, parentId, { name: title });
+    if (!folder) {
+      res.status(404).json({ error: "Folder not found" });
+      return;
+    }
 
-  contentFlow.topicCreated(reqLog(req), {
-    topicId: group.id,
-    collectionId: subject.id,
-    slug: group.slug,
-  });
+    contentFlow.topicCreated(reqLog(req), {
+      topicId: folder.id,
+      collectionId: parentId,
+      slug: folder.slug,
+    });
 
-  res.status(201).json({ topicGroup: group });
+    res.status(201).json({
+      topicGroup: {
+        id: folder.id,
+        title: folder.name,
+        slug: folder.slug,
+        order: folder.order,
+        pages: [],
+      },
+    });
+  } catch {
+    res.status(409).json({ error: "A folder with this name already exists" });
+  }
 });
 
 router.patch(
@@ -1156,14 +1098,14 @@ router.patch(
       where: { id: param(req, "subjectId"), userId },
     });
     if (!subject) {
-      res.status(404).json({ error: "Collection not found" });
+      res.status(404).json({ error: "Folder not found" });
       return;
     }
     const group = await prisma.userTopicGroup.findFirst({
       where: { id: param(req, "groupId"), userSubjectId: subject.id },
     });
     if (!group) {
-      res.status(404).json({ error: "Topic not found" });
+      res.status(404).json({ error: "Folder not found" });
       return;
     }
     const updated = await prisma.userTopicGroup.update({
@@ -1182,7 +1124,7 @@ router.patch("/subjects/:id", async (req: Request, res: Response) => {
     where: { id: param(req, "id"), userId },
   });
   if (!subject) {
-    res.status(404).json({ error: "Collection not found" });
+    res.status(404).json({ error: "Folder not found" });
     return;
   }
 
@@ -1208,7 +1150,7 @@ router.delete("/subjects/:id", async (req: Request, res: Response) => {
     },
   });
   if (!subject) {
-    res.status(404).json({ error: "Collection not found" });
+    res.status(404).json({ error: "Folder not found" });
     return;
   }
 
@@ -1244,7 +1186,7 @@ router.patch("/subjects/reorder", async (req: Request, res: Response) => {
     const allIds = all.map((s) => s.id);
     const idSet = new Set(allIds);
     if (orderedIds.some((id) => !idSet.has(id))) {
-      res.status(400).json({ error: "Invalid collection ids" });
+      res.status(400).json({ error: "Invalid folder ids" });
       return;
     }
 
@@ -1265,7 +1207,7 @@ router.patch("/subjects/reorder", async (req: Request, res: Response) => {
       });
   } catch (err) {
     req.log?.error("my_content.subjects_reorder_failed", errorFields(err));
-    res.status(500).json({ error: "Could not reorder collections" });
+    res.status(500).json({ error: "Could not reorder folders" });
   }
 });
 
@@ -1278,7 +1220,7 @@ router.patch(
         where: { id: param(req, "subjectId"), userId },
       });
       if (!subject) {
-        res.status(404).json({ error: "Collection not found" });
+        res.status(404).json({ error: "Folder not found" });
         return;
       }
 
@@ -1296,7 +1238,7 @@ router.patch(
       const allIds = all.map((g) => g.id);
       const idSet = new Set(allIds);
       if (orderedIds.some((id) => !idSet.has(id))) {
-        res.status(400).json({ error: "Invalid topic ids" });
+        res.status(400).json({ error: "Invalid folder ids" });
         return;
       }
 
@@ -1317,7 +1259,7 @@ router.patch(
         });
     } catch (err) {
       req.log?.error("my_content.topics_reorder_failed", errorFields(err));
-      res.status(500).json({ error: "Could not reorder topics" });
+      res.status(500).json({ error: "Could not reorder folders" });
     }
   }
 );
@@ -1335,19 +1277,19 @@ router.post("/bulk-delete", async (req: Request, res: Response) => {
 
     const subjects = await loadBulkDeleteSubjects(userId, subjectIds);
     if (subjects.length !== subjectIds.length) {
-      res.status(404).json({ error: "One or more collections not found" });
+      res.status(404).json({ error: "One or more folders not found" });
       return;
     }
 
     const groups = await loadBulkDeleteTopicGroups(userId, topicGroups);
     if (groups.length !== topicGroups.length) {
-      res.status(404).json({ error: "One or more topics not found" });
+      res.status(404).json({ error: "One or more folders not found" });
       return;
     }
 
     const pages = await loadBulkDeletePages(userId, pageIds);
     if (pages.length !== pageIds.length) {
-      res.status(404).json({ error: "One or more pages not found" });
+      res.status(404).json({ error: "One or more files not found" });
       return;
     }
 
@@ -1397,7 +1339,7 @@ router.delete(
         where: { id: param(req, "subjectId"), userId },
       });
       if (!subject) {
-        res.status(404).json({ error: "Collection not found" });
+        res.status(404).json({ error: "Folder not found" });
         return;
       }
       const group = await prisma.userTopicGroup.findFirst({
@@ -1405,7 +1347,7 @@ router.delete(
         include: { pages: true },
       });
       if (!group) {
-        res.status(404).json({ error: "Topic not found" });
+        res.status(404).json({ error: "Folder not found" });
         return;
       }
       for (const page of group.pages) {
@@ -1415,7 +1357,7 @@ router.delete(
       res.json({ success: true });
     } catch (err) {
       req.log?.error("my_content.topic_delete_failed", errorFields(err));
-      res.status(500).json({ error: "Could not delete topic" });
+      res.status(500).json({ error: "Could not delete folder" });
     }
   }
 );
@@ -1437,7 +1379,7 @@ router.post(
       param(req, "subjectId")
     );
     if (!parent) {
-      res.status(404).json({ error: "Collection not found" });
+      res.status(404).json({ error: "Folder not found" });
       return;
     }
     await handlePageUpload(req, res, parent);
@@ -1452,7 +1394,7 @@ router.post(
       param(req, "subjectId")
     );
     if (!parent) {
-      res.status(404).json({ error: "Collection not found" });
+      res.status(404).json({ error: "Folder not found" });
       return;
     }
     await handlePageCreate(req, res, parent);
@@ -1469,7 +1411,7 @@ router.post(
       param(req, "groupId")
     );
     if (!parent) {
-      res.status(404).json({ error: "Collection or topic not found" });
+      res.status(404).json({ error: "Folder not found" });
       return;
     }
     await handlePageUpload(req, res, parent);
@@ -1485,7 +1427,7 @@ router.post(
       param(req, "groupId")
     );
     if (!parent) {
-      res.status(404).json({ error: "Collection or topic not found" });
+      res.status(404).json({ error: "Folder not found" });
       return;
     }
     await handlePageCreate(req, res, parent);
@@ -1502,7 +1444,7 @@ router.get("/file/:pageSlug", async (req: Request, res: Response) => {
     null
   );
   if (!loaded) {
-    res.status(404).json({ error: "Page not found" });
+    res.status(404).json({ error: "File not found" });
     return;
   }
   await sendPageLoadResponse(res, loaded);
@@ -1518,7 +1460,7 @@ router.get(
       },
     });
     if (!subject) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
     const loaded = await loadPageInScope(
@@ -1529,7 +1471,7 @@ router.get(
       null
     );
     if (!loaded) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
     await sendPageLoadResponse(res, loaded);
@@ -1546,7 +1488,7 @@ router.get(
       param(req, "pageSlug")
     );
     if (!loaded) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
     await sendPageLoadResponse(res, loaded);
@@ -1561,7 +1503,7 @@ router.get(
       where: { userId_slug: { userId, slug: param(req, "subjectSlug") } },
     });
     if (!subject) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
 
@@ -1570,7 +1512,7 @@ router.get(
       include: { userTopicGroup: { select: { slug: true } } },
     });
     if (!page) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
 
@@ -1583,7 +1525,7 @@ router.get(
         null
       );
       if (!loaded) {
-        res.status(404).json({ error: "Page not found" });
+        res.status(404).json({ error: "File not found" });
         return;
       }
       await sendPageLoadResponse(res, loaded);
@@ -1597,7 +1539,7 @@ router.get(
       page.slug
     );
     if (!loaded) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
     await sendPageLoadResponse(res, loaded);
@@ -1727,7 +1669,7 @@ router.patch("/pages/:id/progress", async (req: Request, res: Response) => {
       where: { id: param(req, "id"), userId },
     });
     if (!page) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
 
@@ -1791,7 +1733,7 @@ router.patch("/pages/:id/title", async (req: Request, res: Response) => {
       where: { id: param(req, "id"), userId },
     });
     if (!page) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
     const updated = await prisma.userTopic.update({
@@ -1802,7 +1744,7 @@ router.patch("/pages/:id/title", async (req: Request, res: Response) => {
     res.json({ page: updated });
   } catch (err) {
     req.log?.error("my_content.title_failed", errorFields(err));
-    res.status(500).json({ error: "Could not rename page" });
+    res.status(500).json({ error: "Could not rename file" });
   }
 });
 
@@ -1813,7 +1755,7 @@ router.post("/pages/:id/star", async (req: Request, res: Response) => {
       where: { id: param(req, "id"), userId },
     });
     if (!page) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
 
@@ -1849,11 +1791,11 @@ router.patch("/pages/:id/content", async (req: Request, res: Response) => {
       },
     });
     if (!page) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
     if (page.contentType === "PDF" || page.contentType === "LINK") {
-      res.status(400).json({ error: "This page cannot be edited as HTML" });
+      res.status(400).json({ error: "This file cannot be edited as HTML" });
       return;
     }
 
@@ -1930,11 +1872,11 @@ router.patch("/pages/:id/source", async (req: Request, res: Response) => {
       where: { id: param(req, "id"), userId },
     });
     if (!page) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
     if (page.contentType !== "LINK") {
-      res.status(400).json({ error: "Only linked pages can change URL" });
+      res.status(400).json({ error: "Only linked files can change URL" });
       return;
     }
 
@@ -1967,17 +1909,17 @@ router.post("/pages/:id/import", async (req: Request, res: Response) => {
       },
     });
     if (!page) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
     if (page.contentType !== "LINK") {
       res.status(400).json({
-        error: "Only linked pages can be imported. This page is already in Shelf.",
+        error: "Only linked files can be imported. This file is already in Shelf.",
       });
       return;
     }
     if (!page.sourceUrl) {
-      res.status(400).json({ error: "This linked page has no URL." });
+      res.status(400).json({ error: "This linked file has no URL." });
       return;
     }
 
@@ -2085,7 +2027,7 @@ router.get("/pages/:id/embed-status", async (req: Request, res: Response) => {
       select: { contentType: true, sourceUrl: true },
     });
     if (!page) {
-      res.status(404).json({ error: "Page not found" });
+      res.status(404).json({ error: "File not found" });
       return;
     }
     if (page.contentType !== "LINK" || !page.sourceUrl) {
@@ -2106,7 +2048,7 @@ router.delete("/pages/:id", async (req: Request, res: Response) => {
     where: { id: param(req, "id"), userId },
   });
   if (!page) {
-    res.status(404).json({ error: "Page not found" });
+    res.status(404).json({ error: "File not found" });
     return;
   }
 
@@ -2127,7 +2069,7 @@ router.get("/pages/:topicId/highlights", async (req: Request, res: Response) => 
     linkToken: typeof req.query.t === "string" ? req.query.t : null,
   });
   if (!access) {
-    res.status(404).json({ error: "Page not found" });
+    res.status(404).json({ error: "File not found" });
     return;
   }
 
@@ -2156,7 +2098,7 @@ router.post("/highlights", async (req: Request, res: Response) => {
     linkToken: typeof req.body?.t === "string" ? req.body.t : null,
   });
   if (!access || !canAnnotate(access.role)) {
-    res.status(404).json({ error: "Page not found" });
+    res.status(404).json({ error: "File not found" });
     return;
   }
   const page = access.page;

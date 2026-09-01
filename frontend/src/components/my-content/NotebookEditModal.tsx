@@ -73,12 +73,12 @@ export function NotebookEditModal({
       />
       <div
         role="dialog"
-        aria-label="Edit collection"
+        aria-label="Edit folder"
         className="relative w-full max-w-md rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl"
       >
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[var(--border)]">
           <h2 className="text-sm font-semibold text-[var(--text-primary)]">
-            Edit collection
+            Edit folder
           </h2>
           <button
             type="button"
@@ -105,7 +105,7 @@ export function NotebookEditModal({
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-              placeholder="Optional notes about this collection"
+              placeholder="Optional notes about this folder"
             />
           </label>
           {error && (

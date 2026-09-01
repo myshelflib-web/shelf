@@ -112,7 +112,7 @@ export function QuizMarketingLanding() {
               Same quiz from the library, reader, or Study AI
             </h2>
             <p className="text-[var(--text-secondary)] mb-6">
-              Sign in to generate a paper from a collection or page, type /quiz in
+              Sign in to generate a paper from a folder or file, type /quiz in
               Study AI, or press g then q. Guest visitors can read how it works;
               attempts stay private to your account.
             </p>

@@ -902,6 +902,37 @@ export const api = {
         last: import("@/lib/tabViewState").LastRead | null;
         notebooks: Record<string, import("@/lib/tabViewState").LastRead>;
       }>("/api/my-content/last-read"),
+    /** Unified folder/file tree (new model). Legacy listSubjects still works. */
+    getLibraryTree: () =>
+      request<import("@/types/library").LibraryTreeResponse>(
+        "/api/my-content/tree"
+      ),
+    listFolders: (parentId?: string | null) => {
+      const sp = new URLSearchParams();
+      if (parentId) sp.set("parentId", parentId);
+      const qs = sp.toString();
+      return request<{ folders: import("@/types/library").LibraryFolder[] }>(
+        `/api/my-content/folders${qs ? `?${qs}` : ""}`
+      );
+    },
+    createFolder: (data: {
+      name: string;
+      parentId?: string | null;
+      description?: string;
+      icon?: string;
+    }) =>
+      request<{ folder: import("@/types/library").LibraryFolder }>(
+        "/api/my-content/folders",
+        { method: "POST", body: JSON.stringify(data) }
+      ),
+    listFiles: (folderId?: string | null) => {
+      const sp = new URLSearchParams();
+      if (folderId) sp.set("folderId", folderId);
+      const qs = sp.toString();
+      return request<{ files: import("@/types/library").LibraryFile[] }>(
+        `/api/my-content/files${qs ? `?${qs}` : ""}`
+      );
+    },
     listSubjects: (opts?: {
       page?: number;
       pageSize?: number;

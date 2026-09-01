@@ -328,7 +328,7 @@ export function SpotifyDockPanel({
                     <span>
                       Remember as focus playlist for{" "}
                       <span className="text-[var(--text-primary)]">
-                        {notebookName ?? "this collection"}
+                        {notebookName ?? "this folder"}
                       </span>
                     </span>
                   </label>

@@ -231,14 +231,14 @@ export function ClipSaveModal({
             className={`flex-1 py-2 rounded-lg text-sm border ${mode === "new" ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]" : "border-[var(--border)]"}`}
             onClick={() => setMode("new")}
           >
-            New page
+            New file
           </button>
           <button
             type="button"
             className={`flex-1 py-2 rounded-lg text-sm border ${mode === "append" ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]" : "border-[var(--border)]"}`}
             onClick={() => setMode("append")}
           >
-            Existing page
+            Existing file
           </button>
         </div>
         {mode === "new" ? (
@@ -246,7 +246,7 @@ export function ClipSaveModal({
             {showScopePicker ? (
               <>
                 <label className="block text-xs text-[var(--text-muted)] mb-1">
-                  {scopeOptions.length > 1 ? "Topic" : "Location"}
+                  {scopeOptions.length > 1 ? "Folder" : "Location"}
                 </label>
                 <ShelfSelect
                   value={scopeId}
@@ -255,48 +255,48 @@ export function ClipSaveModal({
                     label: opt.label,
                   }))}
                   className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
-                  aria-label={scopeOptions.length > 1 ? "Topic" : "Location"}
+                  aria-label={scopeOptions.length > 1 ? "Folder" : "Location"}
                   onChange={setScopeId}
                 />
               </>
             ) : null}
             <label className="block text-xs text-[var(--text-muted)] mb-1">
-              New page title
+              New file title
             </label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Page title"
+              placeholder="File title"
               className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
             />
           </>
         ) : hasExisting ? (
           <>
             <label className="block text-xs text-[var(--text-muted)] mb-1">
-              Page
+              File
             </label>
             <ShelfSelect
               value={appendId}
               options={
                 canAppend && !clipPages.some((p) => p.id === currentPageId)
-                  ? [{ value: currentPageId, label: "This page" }]
+                  ? [{ value: currentPageId, label: "This file" }]
                   : undefined
               }
               groups={grouped.map((g) => ({
                 label: g.label,
                 options: g.pages.map((p) => ({
                   value: p.id,
-                  label: `${clipTargetLabel(p)}${p.id === currentPageId ? " (this page)" : ""}`,
+                  label: `${clipTargetLabel(p)}${p.id === currentPageId ? " (this file)" : ""}`,
                 })),
               }))}
               className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
-              aria-label="Page"
+              aria-label="File"
               onChange={setAppendId}
             />
           </>
         ) : (
           <p className="text-sm text-[var(--text-muted)] mb-2">
-            No note pages yet. Use New page to create one, then clips can be
+            No note files yet. Use New file to create one, then clips can be
             added to it.
           </p>
         )}

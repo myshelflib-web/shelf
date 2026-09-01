@@ -169,14 +169,14 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
       <div className="px-3 py-6 text-center space-y-3">
         <p className="text-sm text-[var(--text-muted)] leading-relaxed">
           {searching
-            ? `No collections match “${debouncedQ}”.`
-            : "Your library is empty. Add a collection or page to get started."}
+            ? `No folders match “${debouncedQ}”.`
+            : "Your library is empty. Add a folder or file to get started."}
         </p>
         {!searching && (
           <div className="flex items-center justify-center gap-1">
             <button
               type="button"
-              title="New collection"
+              title="New folder"
               onClick={openAddNotebook}
               className="p-2 rounded-md border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
             >
@@ -184,7 +184,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
             </button>
             <button
               type="button"
-              title="Add page"
+              title="Add file"
               onClick={openAddPage}
               className="p-2 rounded-md border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
             >
@@ -202,7 +202,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
         <div className="mb-2 space-y-0.5">
           <div className="flex items-center justify-between gap-1 px-2 py-1">
             <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium">
-              Pages
+              Files
             </p>
             {rootTotalPages > 1 && (
               <span className="text-[10px] text-[var(--text-muted)]">
@@ -275,7 +275,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
                 disabled={rootPage <= 1}
                 onClick={() => setRootPage((p) => Math.max(1, p - 1))}
                 className="p-1 rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] disabled:opacity-30"
-                aria-label="Previous pages"
+                aria-label="Previous files"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
@@ -286,7 +286,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
                   setRootPage((p) => Math.min(rootTotalPages, p + 1))
                 }
                 className="p-1 rounded text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] disabled:opacity-30"
-                aria-label="Next pages"
+                aria-label="Next files"
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
@@ -299,7 +299,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
         <div className="space-y-0.5">
           <div className="flex items-center justify-between gap-1 px-2 py-1">
             <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium">
-              {searching ? "Matches" : "Collections"}
+              {searching ? "Matches" : "Folders"}
             </p>
             <span className="text-[10px] text-[var(--text-muted)] tabular-nums">
               {searching ? treeSubjects.length : totalNotebooks}

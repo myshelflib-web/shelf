@@ -155,7 +155,7 @@ export function LibraryEmptyWorkspace() {
                       Continue reading
                     </span>
                     <span className="block text-xs text-[var(--text-muted)] truncate">
-                      {resume.title || "Last page"}
+                      {resume.title || "Last file"}
                     </span>
                   </span>
                 </button>
@@ -181,7 +181,7 @@ export function LibraryEmptyWorkspace() {
                 openHit(hits[active]!.href);
               }
             }}
-            placeholder="Search across all collections…"
+            placeholder="Search across all folders…"
             className="w-full pl-10 pr-4 py-3 rounded-[10px] bg-[var(--bg-elevated)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
             autoFocus
           />
@@ -193,7 +193,7 @@ export function LibraryEmptyWorkspace() {
               <LibrarySearchHitsSkeleton />
             ) : hits.length === 0 ? (
               <li className="px-4 py-3 text-sm text-[var(--text-muted)]">
-                No pages match “{query.trim()}”
+                No files match “{query.trim()}”
               </li>
             ) : (
               hits.map((hit, i) => (
@@ -225,29 +225,29 @@ export function LibraryEmptyWorkspace() {
           <button
             type="button"
             onClick={() => openAdd({ kind: "notebook" })}
-            title={withShortcut("Create a new collection", "c n")}
+            title={withShortcut("Create a new folder", "c n")}
             className="flex items-center gap-3 px-4 py-3 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-elevated)] text-left transition"
           >
             <FolderPlus className="w-5 h-5 text-[var(--accent)] shrink-0" />
             <span>
               <span className="block text-sm font-medium text-[var(--text-primary)]">
-                New collection
+                New folder
               </span>
               <span className="block text-xs text-[var(--text-muted)]">
-                Group topics and pages
+                Group folders and files
               </span>
             </span>
           </button>
           <button
             type="button"
             onClick={() => openAdd({ kind: "page" })}
-            title={withShortcut("Add a PDF, notes page, or link", "c p")}
+            title={withShortcut("Add a PDF, notes file, or link", "c p")}
             className="flex items-center gap-3 px-4 py-3 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-elevated)] text-left transition"
           >
             <FilePlus className="w-5 h-5 text-[var(--accent)] shrink-0" />
             <span>
               <span className="block text-sm font-medium text-[var(--text-primary)]">
-                Add page
+                Add file
               </span>
               <span className="block text-xs text-[var(--text-muted)]">
                 PDF, notes, or link

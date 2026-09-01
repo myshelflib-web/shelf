@@ -37,7 +37,7 @@ const SOURCES: Array<{ id: QuizSourceKind; title: string; body: string }> = [
   {
     id: "LIBRARY",
     title: "Library",
-    body: "A document, topic, or whole collection.",
+    body: "A file, nested folder, or whole folder.",
   },
   {
     id: "UPLOAD",
@@ -77,11 +77,11 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
     }
     if (sourceKind === "LIBRARY") {
       if (scope.contextKind === "NOTEBOOK" && !scope.contextNotebookId) {
-        setError("Choose a collection.");
+        setError("Choose a folder.");
         return;
       }
       if (scope.contextKind === "TOPIC" && !scope.contextTopicId) {
-        setError("Choose a topic.");
+        setError("Choose a nested folder.");
         return;
       }
       if (scope.contextKind === "PAGE" && !scope.contextPageId) {

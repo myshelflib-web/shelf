@@ -43,6 +43,7 @@ model User {
   starredTopics           StarredArticle[]
   payments                Payment[]
   userSubjects            UserSubject[]
+  userFolders             UserFolder[]
   userTopics              UserTopic[]
   studyTasks              StudyTask[]
   chatThreads             ChatThread[]
@@ -412,6 +413,28 @@ model RecurringSubscription {
   @@index([status])
 }
 
+model UserFolder {
+  id          String   @id @default(uuid())
+  userId      String
+  parentId    String?
+  name        String
+  slug        String
+  description String?
+  icon        String   @default("📁")
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   UserFolder? @relation("FolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children UserFolder[] @relation("FolderTree")
+  files    UserTopic[]
+
+  @@index([userId])
+  @@index([parentId])
+}
+
+/** @deprecated Legacy collection table — migrated to UserFolder. Do not write. */
 model UserSubject {
   id          String   @id @default(uuid())
   userId      String
@@ -431,6 +454,7 @@ model UserSubject {
   @@index([userId])
 }
 
+/** @deprecated Legacy topic folder — migrated to UserFolder. Do not write. */
 model UserTopicGroup {
   id            String   @id @default(uuid())
   userSubjectId String
@@ -450,6 +474,8 @@ model UserTopicGroup {
 model UserTopic {
   id               String           @id @default(uuid())
   userId           String
+  /** Primary parent folder (library file). Replaces userSubjectId + userTopicGroupId. */
+  folderId         String?
   userSubjectId    String?
   userTopicGroupId String?
   title            String
@@ -479,6 +505,7 @@ model UserTopic {
   updatedAt        DateTime         @updatedAt
 
   user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder         UserFolder?             @relation(fields: [folderId], references: [id], onDelete: Cascade)
   userSubject    UserSubject?            @relation(fields: [userSubjectId], references: [id], onDelete: Cascade)
   userTopicGroup UserTopicGroup?         @relation(fields: [userTopicGroupId], references: [id], onDelete: Cascade)
   highlights     UserContentHighlight[]
@@ -487,6 +514,7 @@ model UserTopic {
 
   // Slug uniqueness: partial indexes in migration (root / notebook / topic).
   @@index([userId])
+  @@index([folderId])
   @@index([userSubjectId])
   @@index([userTopicGroupId])
   @@index([userId, viewedAt])
@@ -587,6 +615,7 @@ model ChatThread {
   contextKind        String   @default("LIBRARY")
   contextNotebookId  String?
   contextTopicId     String?
+  contextFolderId    String?
   contextPageId      String?
   relevancyDocId     String?
   createdAt          DateTime @default(now())
@@ -649,6 +678,7 @@ model Quiz {
   contextKind       String         @default("LIBRARY")
   contextNotebookId String?
   contextTopicId    String?
+  contextFolderId   String?
   contextPageId     String?
   relevancyDocId    String?
   sourceLabel       String?

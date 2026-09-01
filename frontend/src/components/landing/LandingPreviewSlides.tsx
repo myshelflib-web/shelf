@@ -139,11 +139,11 @@ export function SlideLibraryHome() {
           <div className="grid grid-cols-2 gap-1.5 w-full max-w-[200px] mt-2">
             <div className="flex items-center gap-1 px-2 py-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--bg-elevated)] text-[8px] text-[var(--text-secondary)]">
               <FolderPlus className="w-3 h-3 text-[var(--accent)]" />
-              New collection
+              New folder
             </div>
             <div className="flex items-center gap-1 px-2 py-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--bg-elevated)] text-[8px] text-[var(--text-secondary)]">
               <FilePlus className="w-3 h-3 text-[var(--accent)]" />
-              Add page
+              Add file
             </div>
           </div>
         </div>

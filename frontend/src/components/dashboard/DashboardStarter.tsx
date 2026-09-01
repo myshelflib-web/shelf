@@ -35,7 +35,7 @@ export function DashboardStarter() {
               onClick={() => openAdd({ kind: "notebook" })}
               className="rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] text-xs font-semibold px-3.5 py-2 hover:border-[var(--accent)]/40"
             >
-              Create blank collection
+              Create blank folder
             </button>
           </div>
         </div>

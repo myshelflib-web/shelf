@@ -196,7 +196,7 @@ export function ExplorerPageRow({
             <ExplorerDragGrip
               active={Boolean(libraryMoveEnabled && startReorderDrag)}
               showHint={showDragAffordance && !libraryMoveEnabled}
-              label="Drag to move page"
+              label="Drag to move file"
               iconClassName="w-3 h-3"
               onDragStart={(e) =>
                 startReorderDrag?.(
@@ -231,8 +231,8 @@ export function ExplorerPageRow({
             <button
               type="button"
               className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--accent)] opacity-0 group-hover:opacity-100"
-              title="Share page"
-              aria-label="Share page"
+              title="Share file"
+              aria-label="Share file"
               onClick={() => onSharePage(page.id, page.title)}
             >
               <Share2 className="w-3 h-3" />
@@ -240,10 +240,10 @@ export function ExplorerPageRow({
             <button
               type="button"
               className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] opacity-0 group-hover:opacity-100"
-              title="Rename page"
+              title="Rename file"
               onClick={async () => {
                 const title = await prompt({
-                  title: "Rename page",
+                  title: "Rename file",
                   defaultValue: page.title,
                   confirmLabel: "Rename",
                 });
@@ -264,7 +264,7 @@ export function ExplorerPageRow({
             <button
               type="button"
               className="p-1 rounded text-[var(--text-muted)] hover:text-red-500 opacity-0 group-hover:opacity-100"
-              title="Delete page"
+              title="Delete file"
               onClick={() => onDeletePage(page.id, page.title)}
             >
               <Trash2 className="w-3 h-3" />

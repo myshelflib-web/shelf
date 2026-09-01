@@ -737,10 +737,10 @@ export function DocumentPane({
 
   const handleDelete = useCallback(async () => {
     if (pageData?.isPreloaded) return;
-    if (!requireOnline("Delete pages")) return;
+    if (!requireOnline("Delete files")) return;
     if (!pageData) return;
     const ok = await confirm({
-      title: "Delete page",
+      title: "Delete file",
       message: `Delete "${pageData.title}"? This cannot be undone.`,
       confirmLabel: "Delete",
       danger: true,

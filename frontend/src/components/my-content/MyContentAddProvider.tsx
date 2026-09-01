@@ -329,7 +329,7 @@ export function MyContentAddProvider({
       return;
     }
     if (!pageTitle.trim() && addMode !== "youtube") return;
-    if (!requireOnline("Add pages")) return;
+    if (!requireOnline("Add files")) return;
     setSubmitting(true);
     setMessage("");
     const isFileUpload = addMode === "file" && Boolean(uploadFile);

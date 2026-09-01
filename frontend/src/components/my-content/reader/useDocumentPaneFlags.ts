@@ -64,7 +64,7 @@ export function useDocumentPaneFlags({
       signInGate.prompt("Star articles");
       return;
     }
-    if (!pageData || !requireOnline("Star pages")) return;
+    if (!pageData || !requireOnline("Star files")) return;
     const starred = !pageData.starred;
     const previous = pageData;
     setPageData({ ...pageData, starred });

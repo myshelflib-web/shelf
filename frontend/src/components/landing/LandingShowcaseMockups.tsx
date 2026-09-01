@@ -159,7 +159,7 @@ export function NotebooksMockup() {
           key="nb-a"
           backTitle="Shelf — Collection"
           back={<CollectionBack />}
-          frontTitle="Add page"
+          frontTitle="Add file"
           front={<AddPageFront />}
         />,
         <LandingDualWindows

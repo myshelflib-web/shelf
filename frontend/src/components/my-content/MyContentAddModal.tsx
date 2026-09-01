@@ -123,13 +123,13 @@ export function MyContentAddModal({
 
   const title =
     kind === "notebook"
-      ? "New collection"
+      ? "New folder"
       : kind === "topic"
-        ? `New topic in ${notebookName ?? "…"}`
+        ? `New folder in ${notebookName ?? "…"}`
         : !notebookName
           ? "Add to library"
           : topicTitle
-            ? `Add page · ${topicTitle}`
+            ? `Add file · ${topicTitle}`
             : `Add to ${notebookName}`;
 
   return (
@@ -164,7 +164,7 @@ export function MyContentAddModal({
           <form ref={formRef} onSubmit={onSubmitNotebook} className="space-y-3">
             <input
               type="text"
-              placeholder="Collection name (e.g. UPSC Polity)"
+              placeholder="Folder name (e.g. UPSC Polity)"
               value={notebookNameInput}
               onChange={(e) => onNotebookNameChange(e.target.value)}
               required
@@ -178,7 +178,7 @@ export function MyContentAddModal({
               className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
             />
             <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? "Creating…" : "Create collection"}
+              {submitting ? "Creating…" : "Create folder"}
             </button>
           </form>
         )}
@@ -187,14 +187,14 @@ export function MyContentAddModal({
           <form ref={formRef} onSubmit={onSubmitTopic} className="space-y-3">
             <input
               type="text"
-              placeholder="Topic name (e.g. Fundamental Rights)"
+              placeholder="Folder name (e.g. Fundamental Rights)"
               value={topicTitleInput}
               onChange={(e) => onTopicTitleChange(e.target.value)}
               required
               className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
             />
             <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? "Creating…" : "Create topic"}
+              {submitting ? "Creating…" : "Create folder"}
             </button>
           </form>
         )}
@@ -204,7 +204,7 @@ export function MyContentAddModal({
             {needsTopicName && (
               <input
                 type="text"
-                placeholder="Topic name"
+                placeholder="Folder name"
                 value={topicTitleInput}
                 onChange={(e) => onTopicTitleChange(e.target.value)}
                 required
@@ -229,7 +229,7 @@ export function MyContentAddModal({
               placeholder={
                 addMode === "youtube"
                   ? "Title (optional — from YouTube)"
-                  : "Page title"
+                  : "File name"
               }
               value={pageTitle}
               onChange={(e) => onPageTitleChange(e.target.value)}
@@ -241,7 +241,7 @@ export function MyContentAddModal({
               <>
                 <input
                   type="text"
-                  placeholder="Collection name for this import"
+                  placeholder="Folder name for this import"
                   value={notebookNameInput}
                   onChange={(e) => onNotebookNameChange(e.target.value)}
                   required
@@ -249,13 +249,13 @@ export function MyContentAddModal({
                   className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
                 />
                 <p className="text-xs text-[var(--text-muted)]">
-                  Each selected folder becomes a topic; PDFs inside are uploaded as pages.
+                  Each selected folder becomes a subfolder; PDFs inside are uploaded as files.
                 </p>
               </>
             ) : null}
             {addMode === "bulk" && notebookName ? (
               <p className="text-xs text-[var(--text-muted)]">
-                Importing into {notebookName}. Folder names become topics; PDFs inside become pages.
+                Importing into {notebookName}. Folder names become subfolders; PDFs inside become files.
               </p>
             ) : null}
             {addMode === "bulk" && (
@@ -314,8 +314,8 @@ export function MyContentAddModal({
                   className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
                 />
                 <p className="text-xs text-[var(--text-muted)]">
-                  One lecture becomes a page. A playlist becomes a topic (or a
-                  collection at library root) with a page per video — watch and
+                  One lecture becomes a file. A playlist becomes a folder (or a
+                  top-level folder at library root) with a file per video — watch and
                   take notes in the same reader.
                 </p>
               </>

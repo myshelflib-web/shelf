@@ -20,9 +20,9 @@ export function DashboardContinue({
   if (loading) return <DashboardContinueSkeleton />;
   if (!lastRead?.href) return null;
   const eyebrow = notebookName
-    ? `Collection · ${notebookName}`
+    ? `Folder · ${notebookName}`
     : lastRead.notebookSlug
-      ? "Collection"
+      ? "Folder"
       : "Library";
   const studied = lastRead.viewedAt
     ? formatLastStudied(lastRead.viewedAt)
@@ -53,7 +53,7 @@ export function DashboardContinue({
             {eyebrow}
           </span>
           <span className="block text-[15px] font-semibold truncate">
-            {lastRead.title || "Last page"}
+            {lastRead.title || "Last file"}
           </span>
           {meta ? (
             <span className="block text-xs text-[var(--text-muted)] mt-0.5">

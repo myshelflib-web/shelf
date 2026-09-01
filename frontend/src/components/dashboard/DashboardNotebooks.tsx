@@ -17,12 +17,12 @@ function notebookHref(notebook: UserSubject): string {
 
 function notebookMeta(notebook: UserSubject): string {
   const pages = countPages(notebook);
-  const pageLabel = `${pages} ${pages === 1 ? "page" : "pages"}`;
+  const fileLabel = `${pages} ${pages === 1 ? "file" : "files"}`;
   const last = getNotebookLastRead(notebook.slug);
   if (last?.viewedAt) {
-    return `${pageLabel} · ${formatOpenedAgo(last.viewedAt)}`;
+    return `${fileLabel} · ${formatOpenedAgo(last.viewedAt)}`;
   }
-  return pageLabel;
+  return fileLabel;
 }
 
 export function DashboardNotebooks({
@@ -39,7 +39,7 @@ export function DashboardNotebooks({
     <section className="shrink-0">
       <div className="flex items-center justify-between gap-4 mb-3">
         <h2 className="text-[15px] font-semibold tracking-tight">
-          Your collections
+          Your folders
         </h2>
         <Link
           href="/my-content"

@@ -288,9 +288,9 @@ export const HOTKEY_HELP: Array<{
   {
     title: "Create",
     items: [
-      { keys: ["c n"], label: "New collection" },
-      { keys: ["c p"], label: "New page" },
-      { keys: ["c t"], label: "New topic" },
+      { keys: ["c n"], label: "New folder" },
+      { keys: ["c p"], label: "New file" },
+      { keys: ["c t"], label: "New folder (nested)" },
     ],
   },
   {
@@ -306,7 +306,7 @@ export const HOTKEY_HELP: Array<{
       { keys: ["mod+s"], label: "Save now" },
       { keys: ["escape"], label: "Finish editing a link" },
       { keys: ["s"], label: "Schedule reading" },
-      { keys: ["*"], label: "Star page" },
+      { keys: ["*"], label: "Star file" },
       { keys: ["x"], label: "Mark complete" },
       { keys: ["f"], label: "Fullscreen" },
       { keys: ["left", "right"], label: "Previous / next PDF page" },

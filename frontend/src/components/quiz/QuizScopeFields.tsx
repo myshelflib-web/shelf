@@ -35,9 +35,9 @@ function pagesFor(
 
 const SCOPE_OPTIONS = [
   { value: "LIBRARY", label: "Entire library" },
-  { value: "NOTEBOOK", label: "Collection" },
-  { value: "TOPIC", label: "Topic" },
-  { value: "PAGE", label: "Document" },
+  { value: "NOTEBOOK", label: "Folder" },
+  { value: "TOPIC", label: "Nested folder" },
+  { value: "PAGE", label: "File" },
 ];
 
 export function QuizScopeFields({
@@ -92,7 +92,7 @@ export function QuizScopeFields({
   const topicOptions = useMemo(() => {
     const opts = [{ value: "", label: "Select…" }];
     if (value.contextKind === "PAGE" && (selectedNb?.pages?.length ?? 0) > 0) {
-      opts.push({ value: "__notebook__", label: "Collection pages" });
+      opts.push({ value: "__notebook__", label: "Folder files (top level)" });
     }
     topics.forEach((t) => opts.push({ value: t.id, label: t.title }));
     return opts;
@@ -145,13 +145,13 @@ export function QuizScopeFields({
       </label>
       {value.contextKind !== "LIBRARY" && (
         <label className="text-[12px] font-medium text-[var(--text-secondary)]">
-          Collection
+          Folder
           <ShelfSelect
             className={quizFieldClass}
             disabled={disabled}
             value={value.contextNotebookId}
             options={notebookOptions}
-            aria-label="Collection"
+            aria-label="Folder"
             onChange={(contextNotebookId) =>
               onChange({
                 ...value,
@@ -165,13 +165,13 @@ export function QuizScopeFields({
       )}
       {(value.contextKind === "TOPIC" || value.contextKind === "PAGE") && (
         <label className="text-[12px] font-medium text-[var(--text-secondary)]">
-          Topic
+          Nested folder
           <ShelfSelect
             className={quizFieldClass}
             disabled={disabled}
             value={value.contextTopicId}
             options={topicOptions}
-            aria-label="Topic"
+            aria-label="Nested folder"
             onChange={(contextTopicId) =>
               onChange({ ...value, contextTopicId, contextPageId: "" })
             }
@@ -180,13 +180,13 @@ export function QuizScopeFields({
       )}
       {value.contextKind === "PAGE" && (
         <label className="text-[12px] font-medium text-[var(--text-secondary)]">
-          Document
+          File
           <ShelfSelect
             className={quizFieldClass}
             disabled={disabled}
             value={value.contextPageId}
             options={pageOptions}
-            aria-label="Document"
+            aria-label="File"
             onChange={(contextPageId) => onChange({ ...value, contextPageId })}
           />
         </label>

@@ -16,7 +16,7 @@ const SUGGESTIONS: Array<{ label: string; query?: string; href?: string }> = [
   { label: "Summarize this week", query: "Summarize what I studied this week" },
   { label: "Start a quiz", href: "/quiz" },
   { label: "Key terms to revise", query: "Key terms I should revise" },
-  { label: "Make a revision plan", query: "Make a revision plan from my collections" },
+  { label: "Make a revision plan", query: "Make a revision plan from my folders" },
 ];
 
 function classify(hit: LibrarySearchHit): Result {
@@ -94,7 +94,7 @@ export function SearchModal({
         href: `/my-content`,
         notebook: s.name,
         topic: "",
-        snippet: "Collection — open in Library explorer",
+        snippet: "Folder — open in Library explorer",
         kind: "NOTEBOOK",
       });
     }
@@ -181,7 +181,7 @@ export function SearchModal({
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search collections, pages…"
+            placeholder="Search folders, files…"
             className="no-focus-ring flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-[var(--text-muted)]"
           />
           <button

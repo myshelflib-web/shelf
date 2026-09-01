@@ -329,9 +329,9 @@ export function StudySourcesModal({
                   value={kind}
                   options={[
                     { value: "LIBRARY", label: "All library" },
-                    { value: "NOTEBOOK", label: "One collection" },
-                    { value: "TOPIC", label: "One topic" },
-                    { value: "PAGE", label: "One page" },
+                    { value: "NOTEBOOK", label: "One folder" },
+                    { value: "TOPIC", label: "One nested folder" },
+                    { value: "PAGE", label: "One file" },
                   ]}
                   aria-label="Library scope"
                   onChange={(v) => onScopeChange(v as ChatContextKind)}
@@ -340,17 +340,17 @@ export function StudySourcesModal({
 
               {kind !== "LIBRARY" && (
                 <label className="block text-[12px] text-[var(--text-secondary)]">
-                  Collection
+                  Folder
                   <ShelfSelect
                     className={fieldClass}
                     disabled={saving || notebooks.length === 0}
                     value={draft.contextNotebookId}
                     options={
                       notebooks.length === 0
-                        ? [{ value: "", label: "No collections yet" }]
+                        ? [{ value: "", label: "No folders yet" }]
                         : notebooks.map((n) => ({ value: n.id, label: n.name }))
                     }
-                    aria-label="Collection"
+                    aria-label="Folder"
                     onChange={(id) => {
                       const nb = notebooks.find((n) => n.id === id);
                       if (kind === "NOTEBOOK") {
@@ -385,7 +385,7 @@ export function StudySourcesModal({
 
               {(kind === "TOPIC" || kind === "PAGE") && (
                 <label className="block text-[12px] text-[var(--text-secondary)]">
-                  Topic
+                  Nested folder
                   <ShelfSelect
                     className={fieldClass}
                     disabled={
@@ -396,19 +396,19 @@ export function StudySourcesModal({
                     value={topicSelectValue}
                     options={[
                       ...(kind === "TOPIC" && topics.length === 0
-                        ? [{ value: "", label: "No topics in this collection" }]
+                        ? [{ value: "", label: "No folders in this folder" }]
                         : []),
                       ...(kind === "PAGE" && notebookPages.length > 0
                         ? [
                             {
                               value: "__notebook__",
-                              label: "Collection pages (no topic)",
+                              label: "Folder files (top level)",
                             },
                           ]
                         : []),
                       ...topics.map((t) => ({ value: t.id, label: t.title })),
                     ]}
-                    aria-label="Topic"
+                    aria-label="Nested folder"
                     onChange={(id) => {
                       if (kind === "TOPIC") {
                         apply({
@@ -438,17 +438,17 @@ export function StudySourcesModal({
 
               {kind === "PAGE" && (
                 <label className="block text-[12px] text-[var(--text-secondary)]">
-                  Page
+                  File
                   <ShelfSelect
                     className={fieldClass}
                     disabled={saving || pageOptions.length === 0}
                     value={draft.contextPageId}
                     options={
                       pageOptions.length === 0
-                        ? [{ value: "", label: "No pages here" }]
+                        ? [{ value: "", label: "No files here" }]
                         : pageOptions.map((p) => ({ value: p.id, label: p.title }))
                     }
-                    aria-label="Page"
+                    aria-label="File"
                     onChange={(contextPageId) => apply({ contextPageId })}
                   />
                 </label>
@@ -456,7 +456,7 @@ export function StudySourcesModal({
 
               {kind !== "LIBRARY" && notebooks.length === 0 && (
                   <p className="text-[12px] text-[var(--text-muted)]">
-                    Add a collection in Library first, then pick it here.
+                    Add a folder in Library first, then pick it here.
                   </p>
                 )}
                 </>
