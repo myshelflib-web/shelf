@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GeneratedArticle, RelevanceReview } from "./types.js";
-import { packStarterDraft, parseStarterDraft } from "./starterDraft.js";
+import { hasStarterDraft, packStarterDraft, parseStarterDraft } from "./starterDraft.js";
 
 const article: GeneratedArticle = {
   title: "Active recall",
@@ -35,6 +35,7 @@ describe("starterDraft", () => {
     expect(parsed?.article.title).toBe("Active recall");
     expect(parsed?.review.score).toBe(65);
     expect(parsed?.review.missing).toContain("Expanding intervals");
+    expect(hasStarterDraft(packed)).toBe(true);
   });
 
   it("rejects junk so a crash row still full-redrafts", () => {

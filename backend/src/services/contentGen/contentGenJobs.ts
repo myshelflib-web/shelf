@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "../../utils/prisma.js";
 import { estimateCostPaise } from "../sarvam/sarvamPricing.js";
 import { asNewsPlan, asStarterPlan, planJson, type ContentGenPlan } from "./jobPlan.js";
+import { hasStarterDraft } from "./starterDraft.js";
 
 export type CreateJobInput = {
   kind: ContentGenKind;
@@ -310,11 +311,16 @@ export async function listContentGenItems(
       inputTokens: true,
       outputTokens: true,
       error: true,
+      payload: true,
     },
   });
 
   const hasMore = rows.length > take;
-  const items = hasMore ? rows.slice(0, take) : rows;
+  const sliced = hasMore ? rows.slice(0, take) : rows;
+  const items = sliced.map(({ payload, ...row }) => ({
+    ...row,
+    hasDraft: hasStarterDraft(payload),
+  }));
   const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null;
   return { items, nextCursor, hasMore };
 }

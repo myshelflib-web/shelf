@@ -21,11 +21,10 @@ export const GENERAL_LEARNING: StarterSubject = {
             "The forgetting curve and what spacing does to it",
             "Designing expanding review intervals, and what to do with a card you fail",
             "What separates a good retrieval question from a bad one",
-            "Interleaving and desirable difficulty, and why they feel worse while working better",
             "A concrete weekly routine combining first pass, retrieval and spaced review",
           ],
           worked: [
-            "Convert one dense textbook page into six retrieval questions, showing what was cut and why",
+            "Include a ~100-word sample paragraph on the page, convert it into six retrieval questions, and state what was left out and why",
           ],
           traps: [
             "Making cards that can be answered by recognising the shape of the answer rather than recalling it",
@@ -96,7 +95,6 @@ export const GENERAL_EXAM_CRAFT: StarterSubject = {
             "The three error classes: knowledge gap, application failure, and careless slip",
             "Why each class needs a different fix, and why treating all three as 'revise more' fails",
             "Building an error log that you actually revisit",
-            "Attempt strategy arithmetic: expected value under negative marking",
             "Question triage and when to abandon a question",
             "Simulating real conditions: timing, environment and no pauses",
             "When to increase mock frequency and when more mocks stop helping",

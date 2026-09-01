@@ -48,6 +48,11 @@ function ItemRows({
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
+              {item.hasDraft && (
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  draft kept
+                </span>
+              )}
               {item.relevanceScore !== null && (
                 <span className="text-[11px] text-[var(--text-muted)]">
                   score {item.relevanceScore}

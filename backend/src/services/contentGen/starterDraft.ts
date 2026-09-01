@@ -28,3 +28,7 @@ export function parseStarterDraft(value: unknown): StarterDraft | null {
   if (!article || !review) return null;
   return { article, review };
 }
+
+export function hasStarterDraft(value: unknown): boolean {
+  return parseStarterDraft(value) !== null;
+}

@@ -124,8 +124,9 @@ function withKeywords(
 }
 
 /**
- * Draft, then audit against the syllabus checklist, then revise once if the
- * audit flags gaps or factual risk. The final review score is what the admin
+ * Draft, then audit against the syllabus checklist, then revise while the
+ * score is below the publish threshold or the auditor still asks for a
+ * rewrite (up to maxRevisions). The final review score is what the admin
  * dashboard shows and what gates publishing.
  */
 export async function generateStarterArticle(
@@ -145,7 +146,10 @@ export async function generateStarterArticle(
   let review = reviewed.review;
   let revisions = 0;
 
-  while (review.verdict === "revise" && revisions < maxRevisions) {
+  while (
+    (review.verdict === "revise" || review.score < MIN_PUBLISH_SCORE) &&
+    revisions < maxRevisions
+  ) {
     const revised = await reviseOnce(blueprint, spec, article, review, signal);
     usage = addUsage(usage, revised.usage);
     revisions += 1;
@@ -194,10 +198,11 @@ export async function improveStarterArticle(
   let currentReview = review;
   let revisions = 0;
 
-  const needsWork =
-    currentReview.verdict === "revise" || currentReview.score < MIN_PUBLISH_SCORE;
-
-  while (needsWork && revisions < maxRevisions) {
+  while (
+    (currentReview.verdict === "revise" ||
+      currentReview.score < MIN_PUBLISH_SCORE) &&
+    revisions < maxRevisions
+  ) {
     const revised = await reviseOnce(
       blueprint,
       spec,

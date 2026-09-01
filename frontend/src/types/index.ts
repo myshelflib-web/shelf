@@ -514,6 +514,7 @@ export interface ContentGenItemRow {
   inputTokens: number;
   outputTokens: number;
   error: string | null;
+  hasDraft?: boolean;
 }
 
 export interface ContentGenJobDetail extends ContentGenJobRow {

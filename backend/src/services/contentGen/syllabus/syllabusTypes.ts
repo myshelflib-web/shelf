@@ -60,7 +60,7 @@ export function leafToSpec(
   return {
     slug: leaf.slug,
     title: leaf.title,
-    syllabusAnchor,
+    syllabusAnchor: `${leaf.title}. ${syllabusAnchor}`,
     mustCover: [...leaf.seeds],
     worked: leaf.worked,
     traps: leaf.traps,

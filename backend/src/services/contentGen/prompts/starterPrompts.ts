@@ -63,6 +63,8 @@ function specBrief(spec: ResolvedArticleSpec): string {
 
   parts.push(
     "",
+    `THIS PAGE is only "${spec.title}". Related skills that have their own pages belong in linkages (one line each), not as extra chapters here.`,
+    "",
     "STAY CONSISTENT WITH THESE OFFICIAL SOURCES:",
     spec.officialSources.length
       ? spec.officialSources.join("\n")
@@ -129,6 +131,7 @@ Length and structure requirements — these are hard:
 - Every table needs 2-4 columns and 3-6 rows, and every cell must carry real content, not a placeholder.
 - Order the sections so the page builds: establish the concept, then the specifics, then the worked reasoning, then the analytical or critical angle.
 - Cover the MUST COVER list in the body. The checklist is not a section plan — group items into sections that read naturally.
+- Do not write a full treatment of a sibling skill that is not on this checklist. A one-line linkage is enough.
 - glance.cards must have exactly 4 cards. Each card is a real distinction or mechanism from this page, not a motivational label.
 
 Plain text only inside every string: no markdown, no HTML, no asterisks, no bracketed citations, no bold markers.`,
@@ -167,13 +170,14 @@ export function recheckMessages(
   return [
     {
       role: "system",
-      content: `You are a strict reviewer for ${blueprint.label} preparation material. You audit a draft on three axes: syllabus coverage, factual risk, and whether it actually teaches or merely gestures. You are hard to satisfy. You reply with a single JSON object and nothing else.`,
+      content: `You are a reviewer for ${blueprint.label} preparation material. You check whether THIS page teaches its own checklist. You do not demand that it also be the textbook for neighbouring pages. You reply with a single JSON object and nothing else.`,
     },
     {
       role: "user",
-      content: `SYLLABUS ANCHOR: ${spec.syllabusAnchor}
+      content: `PAGE TITLE: ${spec.title}
+TOPIC LINE (context only — not extra coverage items): ${spec.syllabusAnchor}
 
-COVERAGE CHECKLIST — each item must be genuinely explained, with its mechanism or reasoning, not merely named:
+COVERAGE CHECKLIST — this is the only list that can go in "missing". Each item must be taught somewhere in the draft (mechanism or reasoning). A dedicated heading is not required.
 ${spec.mustCover.map((m, i) => `${i + 1}. ${m}`).join("\n")}${worked}
 
 DRAFT:
@@ -188,9 +192,14 @@ Audit it and return:
   "verdict": "pass" or "revise"
 }
 
-Judge coverage strictly: a checklist item mentioned in a bullet but never explained counts as missing. Judge vagueness strictly: any paragraph a reader could delete without losing information belongs in "vague".
+Scoring:
+- Start at 100. Subtract about 10 for each truly missing checklist item, about 6 for each real factual correction, about 3 for each vague quote. Floor at 0.
+- If an item is explained in a section, table or worked example, it is covered even if the wording does not match the checklist.
+- Do not put sibling skills (other pages) in "missing". Those belong on their own pages; a linkage line is enough.
+- Do not fail a page for omitting a full treatment of testing, spacing, interleaving, dual coding, storage, or retrieval unless that item is on THIS checklist.
+- Factual nits that do not mislead a candidate are corrections, not a reason to collapse the score below 70 if coverage is complete.
 
-Score 90+ only when every checklist item is explained, you found no factual errors, and nothing reads as filler. Use "revise" whenever score is below 85, or corrections or vague is non-empty.`,
+Score 90+ when every checklist item is explained and there are no serious factual errors. Use "revise" when score is below 85, or when corrections or vague is non-empty.`,
     },
   ];
 }
@@ -229,9 +238,10 @@ Rules for the revision:
 - Keep the identical JSON shape and keep the tables.
 - Do not drop content that was already correct and substantive.
 - Do not shorten the page. If you cut filler, spend the words on the missing items.
+- Do not add full chapters on sibling skills that are not on this page's missing list. A linkage line is enough.
 - Where you were unsure of a specific figure, remove the figure and explain the concept instead of guessing again.
 
-Syllabus anchor for reference: ${spec.syllabusAnchor}`,
+This page is only "${spec.title}". Syllabus line for context: ${spec.syllabusAnchor}`,
     },
   ];
 }
