@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import prisma from "../utils/prisma.js";
+import { resolveCurriculumSavePolicy } from "../services/curriculumSavePolicy.js";
 import { optionalAuthMiddleware } from "../middleware/auth.js";
 import {
   getFromS3,
@@ -160,6 +161,7 @@ router.get(
         },
       },
       include: {
+        ingestItem: { select: { license: true, embeddable: true, linkStatus: true } },
         topic: {
           select: {
             title: true,
@@ -185,6 +187,9 @@ router.get(
 
     const userIsPremium = dbUser ? isPremiumUser(dbUser) : false;
     const isLocked = article.isPremium && !userIsPremium;
+
+    const savePolicy = resolveCurriculumSavePolicy(article);
+    const useLinkEmbed = Boolean(savePolicy.embedUrl);
 
     const [progress, starred, allArticles, fullContent] = await Promise.all([
       userId
@@ -212,7 +217,7 @@ router.get(
         orderBy: { order: "asc" },
         select: { slug: true, title: true, order: true, isPremium: true },
       }),
-      fetchArticleContent(article.contentUrl),
+      useLinkEmbed ? Promise.resolve(null) : fetchArticleContent(article.contentUrl),
     ]);
 
     const currentIndex = allArticles.findIndex((a) => a.slug === article.slug);
@@ -227,6 +232,11 @@ router.get(
       content = truncateHtmlPreview(fullContent, article.previewPercent);
     }
 
+    const embeddable =
+      article.embeddable ??
+      article.ingestItem?.embeddable ??
+      (savePolicy.embedUrl ? true : null);
+
     res.json({
       article: {
         id: article.id,
@@ -235,6 +245,14 @@ router.get(
         content,
         contentUrl: article.contentUrl,
         hasPdf: Boolean(article.pdfKey),
+        sourceUrl: savePolicy.embedUrl,
+        summary: article.summary,
+        sourceLicense: savePolicy.license,
+        saveAllowed: savePolicy.allowed,
+        saveMode: savePolicy.mode,
+        saveReason: savePolicy.reason,
+        embeddable,
+        linkStatus: article.linkStatus,
         isPremium: article.isPremium,
         isLocked,
         previewPercent: article.previewPercent,

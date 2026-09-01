@@ -6,6 +6,7 @@ import { LogIn, UserPlus } from "lucide-react";
 import { GreetingBlock } from "@/components/GreetingBlock";
 import { LivelyLine } from "@/components/LivelyLine";
 import { LibrarySuggestChips } from "@/components/LibrarySuggestChips";
+import { CurrentAffairsLiveNewsStrip } from "@/components/learn/CurrentAffairsLiveNewsStrip";
 import { ExploreAreaIcon } from "@/components/learn/explore/ExploreAreaIcon";
 import { ExploreHeroSearch } from "@/components/learn/explore/ExploreHeroSearch";
 import { useAuth } from "@/hooks/useAuth";
@@ -118,6 +119,8 @@ export function ExploreHomePane() {
             ))}
           </div>
         </section>
+
+        <CurrentAffairsLiveNewsStrip />
 
         {featured.length > 0 ? (
           <section className="explore-section">

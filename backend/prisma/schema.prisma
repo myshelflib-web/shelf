@@ -172,8 +172,19 @@ model Article {
   pdfKey         String?
   /** Official source URL when ingested or manually linked. */
   sourceUrl      String?
+  /** Copyright tier for embed + save-to-library policy. */
+  sourceLicense  IngestLicense?
+  /** Short public description for SEO and Learn browse. */
+  summary        String?          @db.VarChar(500)
   /** Edition label, e.g. 2025 or 2025-03. */
   edition        String?
+  linkStatus     IngestLinkStatus @default(UNKNOWN)
+  embeddable     Boolean?
+  lastHttpStatus Int?
+  lastLinkCheckAt DateTime?
+  /** Final URL after redirects on last HTTP check. */
+  sourceUrlChecked String?
+  lastUrlRepairAt  DateTime?
   archivedAt     DateTime?
   supersededById String?
   createdAt      DateTime      @default(now())
@@ -190,6 +201,7 @@ model Article {
 
   @@unique([topicId, slug])
   @@index([status, edition])
+  @@index([linkStatus, lastLinkCheckAt])
 }
 
 model IngestSource {
@@ -222,6 +234,7 @@ model IngestItem {
   id                 String           @id @default(uuid())
   sourceId           String
   externalId         String?
+  slug               String           @unique
   title              String
   canonicalUrl       String
   publishedAt        DateTime?
@@ -240,6 +253,10 @@ model IngestItem {
   articleId          String?          @unique
   supersededById     String?          @unique
   validUntil         DateTime?
+  linkStatus         IngestLinkStatus @default(UNKNOWN)
+  embeddable         Boolean?
+  lastHttpStatus     Int?
+  lastLinkCheckAt    DateTime?
   reviewedAt         DateTime?
   publishedAtShelf   DateTime?
   createdAt          DateTime         @default(now())
@@ -312,6 +329,13 @@ enum IngestItemStatus {
   REJECTED
   ARCHIVED
   SUPERSEDED
+}
+
+enum IngestLinkStatus {
+  OK
+  BROKEN
+  BLOCKED_EMBED
+  UNKNOWN
 }
 
 enum IngestJobPhase {

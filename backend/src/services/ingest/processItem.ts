@@ -2,6 +2,7 @@ import prisma from "../../utils/prisma.js";
 import { logger } from "../../utils/logger.js";
 import { publishIngestMessage } from "./sqsPublisher.js";
 import { createIngestJob } from "./ingestJobs.js";
+import { checkIngestItemLink } from "./linkHealth.js";
 
 const AUTO_PUBLISH_LICENSES = new Set(["GOVERNMENT_PRESS"]);
 
@@ -42,6 +43,16 @@ export async function processIngestItem(itemId: string): Promise<{ status: strin
   }
 
   logger.info("ingest.process.ok", { itemId, nextStatus });
+
+  if (nextStatus === "APPROVED" && !item.pdfKey && !item.fullDocumentStored) {
+    void checkIngestItemLink(itemId).catch((err) =>
+      logger.warn("ingest.link_check.process_hook_failed", {
+        itemId,
+        err: err instanceof Error ? err.message : String(err),
+      })
+    );
+  }
+
   return { status: nextStatus };
 }
 

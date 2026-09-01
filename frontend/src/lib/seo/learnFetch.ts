@@ -2,7 +2,7 @@ const API_URL =
   process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ||
   "http://localhost:4000";
 
-const FETCH_MS = 4_000;
+const FETCH_MS = 8_000;
 
 type LearnSubject = {
   name: string;
@@ -21,6 +21,8 @@ type LearnTopic = {
 type LearnArticle = {
   title: string;
   slug: string;
+  summary?: string | null;
+  sourceUrl?: string | null;
 };
 
 export async function fetchLearnSubject(
@@ -67,9 +69,25 @@ export async function fetchLearnArticle(
       { next: { revalidate: 3600 }, signal: AbortSignal.timeout(FETCH_MS) }
     );
     if (!res.ok) return null;
-    const data = (await res.json()) as { article?: LearnArticle };
+    const data = (await res.json()) as {
+      article?: LearnArticle & { summary?: string | null; sourceUrl?: string | null };
+    };
     return data.article ?? null;
   } catch {
     return null;
   }
+}
+
+export function learnArticleSeoDescription(
+  article: LearnArticle | null,
+  topicTitle: string,
+  subjectName: string
+): string {
+  if (article?.summary?.trim()) {
+    return article.summary.trim().slice(0, 160);
+  }
+  if (article?.sourceUrl) {
+    return `Official ${article.title} on Shelf Learn — embedded from ${subjectName}, ${topicTitle}. Free to browse; save to your library when permitted.`;
+  }
+  return `${article?.title ?? "Study material"} — ${topicTitle}, ${subjectName}. Free preloaded resource on Shelf Learn.`;
 }

@@ -1,6 +1,8 @@
 import { Router, type Request, type Response } from "express";
 import { authMiddleware } from "../middleware/auth.js";
 import { finishCurriculumLibraryCopy } from "../services/curriculumLibraryCopy.js";
+import { resolveCurriculumSavePolicy } from "../services/curriculumSavePolicy.js";
+import { scheduleIndexPage } from "../services/libraryIndex.js";
 import { pageHref, userDocPrefix } from "../utils/docPaths.js";
 import { errorFields } from "../utils/logger.js";
 import { isPremiumUser } from "../utils/paywall.js";
@@ -57,6 +59,15 @@ async function findOrCreateCollection(
   });
 }
 
+async function findExistingCurriculumSave(userId: string, marker: string) {
+  return prisma.userTopic.findFirst({
+    where: {
+      userId,
+      OR: [{ sourceUrl: marker }, { contentUrl: marker }],
+    },
+  });
+}
+
 /** Copy a published curriculum article into the user's personal library. */
 router.post("/from-curriculum", async (req: Request, res: Response) => {
   const userId = req.user!.userId;
@@ -77,7 +88,10 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
       status: "PUBLISHED",
       topic: { slug: topicSlug, subject: { slug: subjectSlug } },
     },
-    include: { topic: { include: { subject: true } } },
+    include: {
+      topic: { include: { subject: true } },
+      ingestItem: { select: { license: true } },
+    },
   });
   if (!article) {
     res.status(404).json({ error: "Article not found" });
@@ -97,10 +111,14 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
     return;
   }
 
+  const savePolicy = resolveCurriculumSavePolicy(article);
+  if (!savePolicy.allowed) {
+    res.status(400).json({ error: "This article cannot be saved to your library" });
+    return;
+  }
+
   const marker = curriculumSourceUrl(article.id);
-  const already = await prisma.userTopic.findFirst({
-    where: { userId, sourceUrl: marker },
-  });
+  const already = await findExistingCurriculumSave(userId, marker);
   if (already) {
     const notebook = already.userSubjectId
       ? await prisma.userSubject.findFirst({
@@ -128,11 +146,6 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
     return;
   }
 
-  if (!article.pdfKey && !article.contentUrl) {
-    res.status(400).json({ error: "This article has no file to copy" });
-    return;
-  }
-
   const collection = await findOrCreateCollection(
     userId,
     article.topic.subject.name,
@@ -147,6 +160,47 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
   const docPrefix = userDocPrefix(userId, collection.slug, null, slug);
   const order = await nextPageOrder(scope);
 
+  if (savePolicy.mode === "link") {
+    const embedUrl = savePolicy.embedUrl ?? article.sourceUrl;
+    if (!embedUrl) {
+      res.status(400).json({ error: "This article has no link to save" });
+      return;
+    }
+
+    const created = await prisma.userTopic.create({
+      data: {
+        userId,
+        userSubjectId: collection.id,
+        userTopicGroupId: null,
+        title: article.title,
+        slug,
+        contentType: "LINK",
+        sourceUrl: embedUrl,
+        contentUrl: marker,
+        fileSizeBytes: 0,
+        status: "PUBLISHED",
+        order,
+      },
+    });
+
+    scheduleIndexPage(created.id);
+
+    res.json({
+      page: {
+        id: created.id,
+        title: created.title,
+        slug: created.slug,
+        contentType: created.contentType,
+      },
+      href: pageHref(collection.slug, null, created.slug),
+      alreadySaved: false,
+      status: "PUBLISHED",
+      saveMode: savePolicy.mode,
+      saveReason: savePolicy.reason,
+    });
+    return;
+  }
+
   const created = await prisma.userTopic.create({
     data: {
       userId,
@@ -154,9 +208,16 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
       userTopicGroupId: null,
       title: article.title,
       slug,
-      contentType: article.pdfKey ? "PDF" : "HTML",
-      pdfKey: article.pdfKey ? `${docPrefix}/source.pdf` : null,
-      contentUrl: article.contentUrl ? `${docPrefix}/content.html` : null,
+      contentType:
+        article.pdfKey || savePolicy.mode === "download_remote" ? "PDF" : "HTML",
+      pdfKey:
+        article.pdfKey || savePolicy.mode === "download_remote"
+          ? `${docPrefix}/source.pdf`
+          : null,
+      contentUrl:
+        article.contentUrl && savePolicy.mode === "copy_admin"
+          ? `${docPrefix}/content.html`
+          : null,
       sourceUrl: marker,
       fileSizeBytes: 0,
       status: "PROCESSING",
@@ -174,6 +235,8 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
     href: pageHref(collection.slug, null, created.slug),
     alreadySaved: false,
     status: "PROCESSING",
+    saveMode: savePolicy.mode,
+    saveReason: savePolicy.reason,
   });
 
   void finishCurriculumLibraryCopy({
@@ -183,7 +246,9 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
       id: article.id,
       pdfKey: article.pdfKey,
       contentUrl: article.contentUrl,
+      sourceUrl: article.sourceUrl,
     },
+    saveMode: savePolicy.mode,
     docPrefix,
     me,
     log: req.log,

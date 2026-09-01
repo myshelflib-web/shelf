@@ -9,6 +9,7 @@ export const currentAffairsIngest = buildPost(
     excerpt:
       "Exam-track current affairs from PIB and PRS, plus official syllabus PDF watchers — no newspaper scraping, SQS-backed workers, and a public dashboard at /learn/current-affairs.",
     publishedAt: "2026-09-01",
+    updatedAt: "2026-09-01",
     tags: ["learn", "current-affairs", "UPSC", "ingestion", "admin"],
     readingMinutes: 5,
   },
@@ -32,6 +33,20 @@ export const currentAffairsIngest = buildPost(
       paragraphs: [
         "Yearly sources (Economic Survey, UPSC notification, NCERT portal) are watched for new PDFs. When a new edition appears, older catalog articles are archived — not silently deleted.",
         "Five SQS queues drive poll, fetch, process, promote, and archive phases. See docs/INGEST.md for queue names and environment variables.",
+      ],
+    },
+    {
+      heading: "Share, cite, and embed",
+      paragraphs: [
+        "Every published item has a stable URL at /learn/current-affairs/{slug} with SEO metadata and a NewsArticle schema block for search engines.",
+        "Students can copy a citation or share link, read the Shelf summary, and preview the official source in an iframe when the site allows embedding. Broken links are flagged automatically.",
+      ],
+    },
+    {
+      heading: "Live news in preloaded Learn",
+      paragraphs: [
+        "The preloaded Learn explorer now surfaces a Live current affairs strip on the home page and a sidebar link under Browse.",
+        "Headlines link to citeable item pages so students can share Shelf URLs while reading summaries tied to official sources.",
       ],
     },
     {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Newspaper, RefreshCw } from "lucide-react";
+import { ExternalLink, Link2, Newspaper, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api";
 import type { CurrentAffairsItem, StudyGoal } from "@/types";
 import { STUDY_GOAL_LABELS } from "@/lib/studyGoal";
@@ -125,22 +125,37 @@ export function CurrentAffairsDashboard() {
                     className="rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] p-4"
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-[var(--text-primary)]">{item.title}</p>
+                      <div className="min-w-0">
+                        <Link
+                          href={item.sharePath ?? `/learn/current-affairs/${item.slug}`}
+                          className="font-medium text-[var(--text-primary)] hover:text-[var(--accent)] hover:underline"
+                        >
+                          {item.title}
+                        </Link>
                         <p className="text-xs text-[var(--text-muted)] mt-1">
                           {item.source.name}
                           {item.edition ? ` · ${item.edition}` : ""}
+                          {item.linkStatus === "BROKEN" ? " · source unavailable" : ""}
                         </p>
                       </div>
-                      <a
-                        href={item.canonicalUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="shrink-0 text-[var(--accent)] hover:underline inline-flex items-center gap-1 text-xs"
-                      >
-                        Source
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        <a
+                          href={item.canonicalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[var(--accent)] hover:underline inline-flex items-center gap-1 text-xs"
+                        >
+                          Source
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        <Link
+                          href={item.sharePath ?? `/learn/current-affairs/${item.slug}`}
+                          className="text-[var(--text-muted)] hover:text-[var(--accent)] inline-flex items-center gap-1 text-[11px]"
+                        >
+                          <Link2 className="w-3 h-3" />
+                          Cite & share
+                        </Link>
+                      </div>
                     </div>
                     {item.shelfSummary && (
                       <p className="text-sm text-[var(--text-secondary)] mt-2 leading-relaxed">
@@ -150,14 +165,21 @@ export function CurrentAffairsDashboard() {
                     <p className="text-[11px] text-[var(--text-muted)] mt-3 italic">
                       {item.disclaimer}
                     </p>
-                    {item.articleId && (
+                    {item.learnPath ? (
+                      <Link
+                        href={item.learnPath}
+                        className="inline-block mt-2 text-xs text-[var(--accent)] hover:underline"
+                      >
+                        Also in Learn catalog →
+                      </Link>
+                    ) : item.articleId ? (
                       <Link
                         href="/learn"
                         className="inline-block mt-2 text-xs text-[var(--accent)] hover:underline"
                       >
                         Also in Learn catalog →
                       </Link>
-                    )}
+                    ) : null}
                   </li>
                 ))}
               </ul>

@@ -11,6 +11,7 @@ import {
   rejectIngestItem,
 } from "../services/ingest/processItem.js";
 import { promoteIngestItem } from "../services/ingest/promoteItem.js";
+import { checkIngestItemLink } from "../services/ingest/linkHealth.js";
 
 const router = Router();
 
@@ -124,6 +125,17 @@ router.post(
     await processIngestItem(id);
     const result = await promoteIngestItem(id);
     res.json(result);
+  }
+);
+
+router.post(
+  "/ingest/items/:id/check-link",
+  authMiddleware,
+  adminMiddleware,
+  async (req: Request, res: Response) => {
+    const id = param(req, "id");
+    const result = await checkIngestItemLink(id);
+    res.json({ ok: true, ...result });
   }
 );
 

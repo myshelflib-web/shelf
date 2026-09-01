@@ -10,6 +10,8 @@ interface EmbedViewerProps {
   pageId: string;
   title: string;
   url: string;
+  /** When set (e.g. preloaded Learn), skip library embed-status API. */
+  embeddableHint?: boolean | null;
   editing?: boolean;
   draftTitle?: string;
   draftUrl?: string;
@@ -24,6 +26,7 @@ export function EmbedViewer({
   pageId,
   title,
   url,
+  embeddableHint,
   editing = false,
   draftTitle = "",
   draftUrl = "",
@@ -72,7 +75,12 @@ export function EmbedViewer({
     setImportNotice("");
 
     if (!pageId || !url) {
-      setEmbeddable(true);
+      setEmbeddable(embeddableHint ?? true);
+      return;
+    }
+
+    if (embeddableHint !== undefined) {
+      setEmbeddable(embeddableHint ?? true);
       return;
     }
 
@@ -88,7 +96,7 @@ export function EmbedViewer({
     return () => {
       cancelled = true;
     };
-  }, [pageId, url]);
+  }, [pageId, url, embeddableHint]);
 
   // Sites that block iframes: try Import once so the user isn’t stuck on “refused to connect”.
   useEffect(() => {

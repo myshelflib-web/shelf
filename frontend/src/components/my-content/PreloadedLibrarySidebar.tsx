@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   FoldVertical,
-  FolderOpen,
   RefreshCw,
   Search,
 } from "lucide-react";
@@ -148,15 +147,15 @@ export function PreloadedLibrarySidebar({
     setExpandedTopics({});
   };
 
-  const exploreSidebarMode = isBrowseCollection
-    ? "collection"
-    : isExploreArea
-      ? "area"
-      : "home";
+  const exploreSidebarMode =
+    isBrowseCollection || isReaderCollection
+      ? "collection"
+      : isExploreArea
+        ? "area"
+        : "home";
 
   const showFullTree = workspaceMode && !activeSubject;
-  const showExploreBrowse = !workspaceMode && !isBrowseCollection;
-  const showCollectionTree = isScopedCollection;
+  const showExploreBrowse = !showFullTree;
 
   const sidebarBackHref = isScopedCollection
     ? activeTopic && activeSubject
@@ -187,7 +186,12 @@ export function PreloadedLibrarySidebar({
           showPreloaded={showPreloaded}
         />
         <div className="flex items-center gap-1 min-w-0 px-1">
-          <FolderOpen className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
+          {isScopedCollection && activeSubjectData ? (
+            <span className="explore-side-collection-mark shrink-0" aria-hidden>
+              {activeSubjectData.icon ||
+                activeSubjectData.name.charAt(0).toUpperCase()}
+            </span>
+          ) : null}
           <h2 className="font-semibold text-sm truncate flex-1 min-w-0">
             {isScopedCollection && activeSubjectData
               ? activeSubjectData.name
@@ -254,17 +258,16 @@ export function PreloadedLibrarySidebar({
             mode={exploreSidebarMode}
             activeArea={activeArea}
             activeSubject={activeSubject}
+            activeTopic={activeTopic}
+            activeArticle={activeArticle}
+            searchQuery={query}
+            workspaceMode={workspaceMode}
+            onOpenPage={onOpenPage}
           />
         ) : null}
 
-        {(showCollectionTree || showFullTree) && (
-          <div
-            className={
-              showExploreBrowse
-                ? "mt-3 pt-2 border-t border-[var(--border-subtle)]"
-                : ""
-            }
-          >
+        {showFullTree && (
+          <div>
             {loading && subjects.length === 0 ? (
               <ExplorerSidebarSkeleton />
             ) : filtered.length === 0 ? (
@@ -277,11 +280,7 @@ export function PreloadedLibrarySidebar({
                   <PreloadedSubjectBranch
                     key={subject.id}
                     subject={subject}
-                    topicsOnly={isScopedCollection}
-                    open={
-                      expandedSubjects[subject.slug] ??
-                      (isScopedCollection && subject.slug === activeSubject)
-                    }
+                    open={expandedSubjects[subject.slug] ?? false}
                     expandedTopics={expandedTopics}
                     activeSubject={activeSubject}
                     activeTopic={activeTopic}

@@ -9,6 +9,7 @@ import { createIngestJob } from "./ingestJobs.js";
 import { parsePublicHttpUrl } from "../../utils/publicUrl.js";
 import { fetchWithRetry } from "../../utils/fetchRetry.js";
 import { ingestFetchHeaders } from "./ingestHttp.js";
+import { createIngestItemSlug } from "./ingestItemSlug.js";
 
 function configTags(source: IngestSource): string[] {
   const cfg = source.config as { tags?: string[] } | null;
@@ -79,6 +80,7 @@ async function pollOfficialPage(source: IngestSource): Promise<number> {
     const item = await prisma.ingestItem.create({
       data: {
         sourceId: source.id,
+        slug: await createIngestItemSlug(title, edition),
         title,
         canonicalUrl: pdfUrl,
         contentHash: hash,
@@ -122,6 +124,7 @@ async function pollOfficialPage(source: IngestSource): Promise<number> {
       const item = await prisma.ingestItem.create({
         data: {
           sourceId: source.id,
+          slug: await createIngestItemSlug(source.name),
           title: stored.shelfSummary.split(".")[0] ?? source.name,
           canonicalUrl: safe,
           contentHash: hash,
@@ -173,6 +176,7 @@ async function pollRss(source: IngestSource): Promise<number> {
     const item = await prisma.ingestItem.create({
       data: {
         sourceId: source.id,
+        slug: await createIngestItemSlug(entry.title, entry.publishedAt?.getFullYear?.() ? String(entry.publishedAt.getFullYear()) : null),
         externalId: entry.externalId,
         title: entry.title,
         canonicalUrl: entry.canonicalUrl,

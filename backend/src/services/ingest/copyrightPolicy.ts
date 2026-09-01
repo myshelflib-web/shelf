@@ -47,11 +47,11 @@ export function applyLicensePolicy(
     return {
       shelfSummary: buildShelfSummary({
         title: input.title,
-        excerpt: `Official document from ${input.sourceName}. Stored for reading in Shelf.`,
+        excerpt: `Official document from ${input.sourceName}. View on the official site; save to your library for a personal copy.`,
         sourceName: input.sourceName,
       }),
       factualExcerpt: null,
-      fullDocumentStored: true,
+      fullDocumentStored: false,
     };
   }
 

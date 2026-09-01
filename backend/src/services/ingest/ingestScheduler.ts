@@ -9,6 +9,7 @@ import {
   markJobRunning,
 } from "./ingestJobs.js";
 import { pollIngestSource } from "./pollSource.js";
+import { runLinkHealthBatch } from "./linkHealth.js";
 
 export async function findSourcesDueForPoll(limit = 20): Promise<{ id: string; slug: string }[]> {
   const sources = await prisma.ingestSource.findMany({
@@ -67,6 +68,23 @@ export async function enqueueDueSourcePolls(): Promise<number> {
 }
 
 let schedulerTimer: ReturnType<typeof setInterval> | null = null;
+let linkHealthTimer: ReturnType<typeof setInterval> | null = null;
+
+export function startLinkHealthScheduler(): void {
+  if (process.env.INGEST_LINK_CHECK !== "true") return;
+  const intervalMs = Number(process.env.INGEST_LINK_CHECK_INTERVAL_MS ?? 21_600_000);
+  if (linkHealthTimer) return;
+
+  logger.info("ingest.link_check.scheduler_started", { intervalMs });
+  void runLinkHealthBatch().catch((err) =>
+    logger.warn("ingest.link_check.initial_failed", { err: String(err) })
+  );
+  linkHealthTimer = setInterval(() => {
+    void runLinkHealthBatch().catch((err) =>
+      logger.warn("ingest.link_check.tick_failed", { err: String(err) })
+    );
+  }, intervalMs);
+}
 
 export function startIngestScheduler(): void {
   if (process.env.INGEST_SCHEDULER !== "true") return;

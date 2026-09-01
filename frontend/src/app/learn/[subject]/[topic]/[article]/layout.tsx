@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { LearnArticleJsonLd } from "@/components/seo/LearnArticleJsonLd";
 import { LearnBreadcrumbJsonLd } from "@/components/seo/LearnBreadcrumbJsonLd";
 import { buildPageMetadata } from "@/lib/seo/metadata";
-import { fetchLearnArticle, fetchLearnTopic } from "@/lib/seo/learnFetch";
+import { fetchLearnArticle, fetchLearnTopic, learnArticleSeoDescription } from "@/lib/seo/learnFetch";
 import {
   learnArticleDescription,
   learnPageKeywords,
@@ -30,12 +30,9 @@ export async function generateMetadata({
     ? topicData.subject.studyGoal
     : null;
 
-  const description = learnArticleDescription(
-    articleTitle,
-    topicTitle,
-    subjectName,
-    goal
-  );
+  const description =
+    learnArticleSeoDescription(articleData, topicTitle, subjectName) ||
+    learnArticleDescription(articleTitle, topicTitle, subjectName, goal);
 
   return buildPageMetadata({
     title: `${articleTitle} — ${topicTitle} | Shelf Learn`,
@@ -46,7 +43,7 @@ export async function generateMetadata({
       articleTitle,
       topicTitle,
       subjectName,
-      "free study PDF"
+      articleData?.sourceUrl ? "official study resource" : "free study PDF"
     ),
   });
 }
@@ -67,12 +64,9 @@ export default async function LearnArticleLayout({
   const goal = isStudyGoal(topicData?.subject?.studyGoal)
     ? topicData.subject.studyGoal
     : null;
-  const description = learnArticleDescription(
-    articleTitle,
-    topicTitle,
-    subjectName,
-    goal
-  );
+  const description =
+    learnArticleSeoDescription(articleData, topicTitle, subjectName) ||
+    learnArticleDescription(articleTitle, topicTitle, subjectName, goal);
 
   return (
     <>

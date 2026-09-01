@@ -111,6 +111,9 @@ export interface LoadedPage {
   topicMeta: { title: string; slug: string } | null;
   isPreloaded?: boolean;
   isLocked?: boolean;
+  saveAllowed?: boolean;
+  saveReason?: string | null;
+  embeddable?: boolean | null;
   subjectMeta?: { name: string; slug: string; icon?: string | null } | null;
   /** Present when opened via share / link. */
   access?: import("@/types").PageAccessInfo;
@@ -126,7 +129,11 @@ async function fetchCurriculumPage(
     scope.articleSlug
   );
   const { article, progress, starred, navigation } = res;
-  const contentType: UserContentType = article.hasPdf ? "PDF" : "HTML";
+  const contentType: UserContentType = article.hasPdf
+    ? "PDF"
+    : article.sourceUrl
+      ? "LINK"
+      : "HTML";
   return {
     page: {
       id: article.id,
@@ -135,8 +142,11 @@ async function fetchCurriculumPage(
         article.content ??
         (contentType === "PDF"
           ? ""
-          : "<p>No content available yet. Upload a PDF from the admin dashboard.</p>"),
+          : contentType === "LINK"
+            ? ""
+            : "<p>No content available yet. Upload a PDF from the admin dashboard.</p>"),
       contentType,
+      sourceUrl: article.sourceUrl ?? null,
       completed: progress.completed ?? false,
       starred,
       readPercent: progress.readPercent ?? 0,
@@ -147,6 +157,9 @@ async function fetchCurriculumPage(
     },
     isPreloaded: true as const,
     isLocked: article.isLocked,
+    saveAllowed: article.saveAllowed !== false,
+    saveReason: article.saveReason ?? null,
+    embeddable: article.embeddable ?? null,
     subjectMeta: article.topic.subject,
     topicMeta: { title: article.topic.title, slug: article.topic.slug },
   };
@@ -157,6 +170,9 @@ async function fetchPage(scope: PersonalPageReaderScope): Promise<{
   navigation: { prev: NavItem; next: NavItem };
   isPreloaded?: boolean;
   isLocked?: boolean;
+  saveAllowed?: boolean;
+  saveReason?: string | null;
+  embeddable?: boolean | null;
   subjectMeta?: { name: string; slug: string; icon?: string | null } | null;
   topicMeta?: { title: string; slug: string } | null;
   access?: import("@/types").PageAccessInfo;
@@ -169,6 +185,9 @@ async function fetchPage(scope: PersonalPageReaderScope): Promise<{
       navigation: curriculum.navigation,
       isPreloaded: true,
       isLocked: curriculum.isLocked,
+      saveAllowed: curriculum.saveAllowed,
+      saveReason: curriculum.saveReason,
+      embeddable: curriculum.embeddable,
       subjectMeta: curriculum.subjectMeta,
       topicMeta: curriculum.topicMeta,
     };
@@ -453,8 +472,19 @@ export function DocumentPane({
     fetchPage(scope)
       .then((result) => {
         if (gen !== pageLoadGen.current) return;
-        const { page, navigation, isPreloaded, isLocked, subjectMeta, topicMeta, access, accessDenied } =
-          result;
+        const {
+          page,
+          navigation,
+          isPreloaded,
+          isLocked,
+          saveAllowed,
+          saveReason,
+          embeddable,
+          subjectMeta,
+          topicMeta,
+          access,
+          accessDenied,
+        } = result;
         if (accessDenied) {
           loadedHrefRef.current = href;
           setPageData({
@@ -507,6 +537,9 @@ export function DocumentPane({
           topicMeta: isPreloaded ? topicMeta ?? null : page.topic,
           isPreloaded,
           isLocked,
+          saveAllowed,
+          saveReason,
+          embeddable,
           subjectMeta: subjectMeta ?? null,
           access,
         };
@@ -1358,6 +1391,8 @@ export function DocumentPane({
               topicSlug={scope.topicSlug}
               articleSlug={scope.articleSlug}
               pageTitle={pageData.title}
+              saveAllowed={pageData.saveAllowed !== false}
+              saveReason={pageData.saveReason}
               onOpen={onNavigate}
             />
           )}
@@ -1444,9 +1479,10 @@ export function DocumentPane({
                 />
               ) : isLink ? (
                 <EmbedViewer
-                  pageId={pageData.id}
+                  pageId={isPreloadedDoc ? "" : pageData.id}
                   title={pageData.title}
                   url={pageData.sourceUrl ?? ""}
+                  embeddableHint={isPreloadedDoc ? pageData.embeddable : undefined}
                   editing={editing}
                   draftTitle={draftTitle}
                   draftUrl={draftUrl}

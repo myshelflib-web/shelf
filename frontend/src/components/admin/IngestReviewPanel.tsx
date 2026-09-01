@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import type { IngestItemRow, IngestJobRow, IngestSourceRow } from "@/types";
 import { RefreshCw, Check, X, Upload, Database } from "lucide-react";
@@ -59,6 +60,35 @@ export function IngestReviewPanel() {
 
       <section className="rounded-[10px] border border-[var(--border)] p-4">
         <div className="flex flex-wrap items-center gap-2 mb-4">
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => void run(() => api.admin.preloadedSeedCatalog(), "preloaded-seed")}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+          >
+            <Database className="w-4 h-4" />
+            Seed preloaded catalog
+          </button>
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() =>
+              void run(() => api.admin.preloadedMigrateLinks(), "preloaded-migrate")
+            }
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+          >
+            Clear S3 pointers
+          </button>
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() =>
+              void run(() => api.admin.preloadedCheckLinks(20), "preloaded-check")
+            }
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
+          >
+            Check preloaded links
+          </button>
           <button
             type="button"
             disabled={busy !== null}
@@ -134,6 +164,9 @@ export function IngestReviewPanel() {
               <p className="font-medium">{item.title}</p>
               <p className="text-xs text-[var(--text-muted)] mt-0.5">
                 {item.source.name} · {item.status} · {item.license}
+                {item.linkStatus && item.linkStatus !== "UNKNOWN"
+                  ? ` · link ${item.linkStatus.toLowerCase()}`
+                  : ""}
               </p>
               {item.shelfSummary && (
                 <p className="text-[var(--text-secondary)] mt-2 text-xs leading-relaxed">
@@ -175,6 +208,22 @@ export function IngestReviewPanel() {
                 >
                   <Upload className="w-3 h-3" /> Promote to Learn
                 </button>
+                <button
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={() =>
+                    void run(() => api.admin.ingestCheckLink(item.id), `link-${item.id}`)
+                  }
+                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs"
+                >
+                  Check link
+                </button>
+                <Link
+                  href={`/learn/current-affairs/${item.slug}`}
+                  className="text-xs text-[var(--accent)] hover:underline self-center"
+                >
+                  Public page
+                </Link>
                 <a
                   href={item.canonicalUrl}
                   target="_blank"

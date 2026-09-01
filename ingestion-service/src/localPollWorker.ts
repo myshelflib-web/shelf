@@ -1,18 +1,21 @@
 import { fetchDueSources, postIngest } from "./backendClient.js";
+import { log } from "./logger.js";
 
 export function startLocalPollWorker(): void {
   const intervalMs = Number(process.env.INGEST_POLL_INTERVAL_MS ?? 60_000);
-  console.log("ingest.poll.worker_started", { intervalMs });
+  log.info("ingest.poll.worker_started", { intervalMs });
 
   const tick = async () => {
     try {
       const sources = await fetchDueSources();
       for (const source of sources) {
         await postIngest(`/api/internal/ingest/poll/${source.id}`, {});
-        console.log("ingest.poll.local", { slug: source.slug });
+        log.info("ingest.poll.local", { slug: source.slug, sourceId: source.id });
       }
     } catch (err) {
-      console.error("ingest.poll.local_failed", err);
+      log.error("ingest.poll.local_failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   };
 

@@ -77,6 +77,13 @@ export interface ArticleDetail {
   content: string | null;
   contentUrl: string | null;
   hasPdf?: boolean;
+  sourceUrl?: string | null;
+  saveAllowed?: boolean;
+  saveMode?: "copy_admin" | "download_remote" | "link" | "none";
+  saveReason?: string | null;
+  embeddable?: boolean | null;
+  sourceLicense?: import("@/types").IngestLicense | null;
+  summary?: string | null;
   isPremium: boolean;
   isLocked: boolean;
   previewPercent: number;
@@ -393,6 +400,7 @@ export interface IngestSourceRow {
 
 export interface IngestItemRow {
   id: string;
+  slug: string;
   title: string;
   canonicalUrl: string;
   shelfSummary: string | null;
@@ -406,6 +414,10 @@ export interface IngestItemRow {
   publishedAtShelf: string | null;
   fetchedAt: string;
   articleId: string | null;
+  linkStatus: string;
+  embeddable: boolean | null;
+  lastHttpStatus: number | null;
+  lastLinkCheckAt: string | null;
   source: { name: string; slug: string; license: IngestLicense };
   article: { id: string; slug: string; status: string } | null;
 }
@@ -424,6 +436,7 @@ export interface IngestJobRow {
 
 export interface CurrentAffairsItem {
   id: string;
+  slug: string;
   title: string;
   canonicalUrl: string;
   shelfSummary: string | null;
@@ -435,6 +448,10 @@ export interface CurrentAffairsItem {
   publishedAt: string | null;
   publishedAtShelf: string | null;
   articleId: string | null;
+  sharePath: string;
+  learnPath: string | null;
+  linkStatus: string;
+  embeddable: boolean | null;
   source: { name: string; slug: string };
   disclaimer: string;
 }

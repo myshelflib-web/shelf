@@ -1,8 +1,6 @@
 import prisma from "../../utils/prisma.js";
 import { logger } from "../../utils/logger.js";
 import { slugify } from "../../utils/slugify.js";
-import { adminDocPrefix, sourcePdfKey, contentHtmlKey } from "../../utils/docPaths.js";
-import { uploadToS3 } from "../../services/s3.js";
 import { isStudyGoal } from "../../studyGoal.js";
 
 async function ensureSubjectTopic(
@@ -67,15 +65,8 @@ export async function promoteIngestItem(itemId: string): Promise<{ articleId: st
     slug = `${baseSlug}-${n++}`;
   }
 
-  const prefix = adminDocPrefix(subjectSlug, topicSlug, slug);
-  const pdfKey = item.pdfKey ?? (item.fullDocumentStored ? sourcePdfKey(prefix) : null);
-
-  let contentUrl: string | null = null;
-  if (!pdfKey) {
-    const html = buildLinkHtml(item.title, item.canonicalUrl, item.shelfSummary);
-    contentUrl = contentHtmlKey(prefix);
-    await uploadToS3(contentUrl, html, "text/html; charset=utf-8");
-  }
+  const embedUrl = item.sourcePdfUrl ?? item.canonicalUrl;
+  const pdfKey = item.pdfKey;
 
   const article = await prisma.article.create({
     data: {
@@ -83,12 +74,15 @@ export async function promoteIngestItem(itemId: string): Promise<{ articleId: st
       title: item.title,
       slug,
       pdfKey,
-      sourceUrl: item.canonicalUrl,
+      sourceUrl: embedUrl,
+      sourceLicense: item.license,
+      summary: item.shelfSummary?.slice(0, 500) ?? null,
       edition: item.edition,
       status: pdfKey ? "PROCESSING" : "PUBLISHED",
-      contentUrl,
+      contentUrl: null,
       order: 0,
       isPremium: false,
+      linkStatus: "UNKNOWN",
     },
     select: { id: true },
   });
@@ -104,9 +98,4 @@ export async function promoteIngestItem(itemId: string): Promise<{ articleId: st
 
   logger.info("ingest.promote.ok", { itemId, articleId: article.id, slug });
   return { articleId: article.id };
-}
-
-function buildLinkHtml(title: string, url: string, summary: string | null): string {
-  const safeSummary = (summary ?? "").replace(/</g, "&lt;");
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title.replace(/</g, "&lt;")}</title></head><body><article><h1>${title.replace(/</g, "&lt;")}</h1><p>${safeSummary}</p><p><a href="${url}" rel="noopener noreferrer">Read on official source →</a></p><p><em>Shelf summary only — full text at the linked source.</em></p></article></body></html>`;
 }

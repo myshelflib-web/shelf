@@ -721,6 +721,20 @@ export const api = {
         "/api/admin/ingest/seed-sources",
         { method: "POST" }
       ),
+    preloadedSeedCatalog: () =>
+      request<{ created: number; updated: number }>(
+        "/api/admin/preloaded/seed",
+        { method: "POST" }
+      ),
+    preloadedMigrateLinks: () =>
+      request<{ updated: number }>("/api/admin/preloaded/migrate-links", {
+        method: "POST",
+      }),
+    preloadedCheckLinks: (limit?: number) =>
+      request<{ checked: number }>("/api/admin/preloaded/check-links", {
+        method: "POST",
+        body: JSON.stringify(limit ? { limit } : {}),
+      }),
     ingestPollSource: (id: string) =>
       request<{ jobId: string; sqsMessageId: string | null }>(
         `/api/admin/ingest/sources/${id}/poll`,
@@ -748,6 +762,14 @@ export const api = {
         `/api/admin/ingest/items/${id}/promote`,
         { method: "POST" }
       ),
+    ingestCheckLink: (id: string) =>
+      request<{
+        ok: boolean;
+        linkStatus: string;
+        embeddable: boolean | null;
+        lastHttpStatus: number | null;
+        finalUrl: string;
+      }>(`/api/admin/ingest/items/${id}/check-link`, { method: "POST" }),
     ingestJobs: (limit = 30) =>
       request<{ jobs: import("@/types").IngestJobRow[] }>(
         `/api/admin/ingest/jobs?limit=${limit}`
@@ -774,6 +796,19 @@ export const api = {
         items: import("@/types").CurrentAffairsItem[];
       }>(`/api/current-affairs${q ? `?${q}` : ""}`);
     },
+    get: (slug: string) =>
+      request<{ item: import("@/types").CurrentAffairsItem }>(
+        `/api/current-affairs/items/${encodeURIComponent(slug)}`
+      ),
+    embedStatus: (slug: string) =>
+      request<{
+        slug: string;
+        url: string;
+        embeddable: boolean | null;
+        linkStatus: string;
+        lastHttpStatus: number | null;
+        lastLinkCheckAt: string | null;
+      }>(`/api/current-affairs/items/${encodeURIComponent(slug)}/embed-status`),
   },
 
   subscription: {
@@ -1370,6 +1405,8 @@ export const api = {
         href: string;
         alreadySaved: boolean;
         status: string;
+        saveMode?: "copy_admin" | "download_remote" | "link" | "none";
+        saveReason?: string;
       }>("/api/my-content/from-curriculum", {
         method: "POST",
         body: JSON.stringify(data),

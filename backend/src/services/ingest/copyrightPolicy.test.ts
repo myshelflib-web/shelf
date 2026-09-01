@@ -23,13 +23,14 @@ describe("copyrightPolicy", () => {
     expect(stored.shelfSummary).toContain("Budget headline");
   });
 
-  it("allows official PDF storage flag", () => {
+  it("does not mark official PDFs for admin storage (embed until user saves)", () => {
     const stored = applyLicensePolicy("OFFICIAL_DOCUMENT", {
       title: "CSE Notification 2025",
       sourceName: "UPSC",
       isPdfDownload: true,
     });
-    expect(stored.fullDocumentStored).toBe(true);
+    expect(stored.fullDocumentStored).toBe(false);
+    expect(stored.shelfSummary).toContain("save to your library");
   });
 
   it("blocks page body fetch for link-only", () => {
