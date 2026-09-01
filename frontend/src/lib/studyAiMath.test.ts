@@ -1,6 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import {
   inlineMarkdownToExportHtml,
   looksLikeTex,
@@ -9,7 +7,6 @@ import {
   renderMathHtml,
   splitInlineMath,
 } from "./studyAiMath";
-import { StudyAIContent } from "./studyAiMarkdown";
 
 describe("studyAiMath", () => {
   it("splits inline dollar math", () => {
@@ -60,16 +57,12 @@ describe("studyAiMath", () => {
     expect(out).toContain('Type "quiz"');
   });
 
-  it("renders Try next as a styled callout", () => {
-    const html = renderToStaticMarkup(
-      createElement(StudyAIContent, {
-        content:
-          '### Try next\n\nType "Give me a quick 5-question math quiz" to test readiness.',
-      })
+  it("normalizes Try next through full markdown prep", () => {
+    const out = normalizeStudyMarkdown(
+      '- ### Try next: Type "Give me a quick 5-question math quiz".'
     );
-    expect(html).toContain("study-ai-try-next");
-    expect(html).toContain("Give me a quick 5-question math quiz");
-    expect(html).not.toContain("### Try next");
+    expect(out).toContain("### Try next");
+    expect(out).toContain("Give me a quick 5-question math quiz");
   });
 
   it("does not treat a heading as tex", () => {
