@@ -6,6 +6,7 @@ import { ChevronRight, Lock } from "lucide-react";
 import { ExploreWorkspaceShell } from "@/components/learn/explore/ExploreWorkspaceShell";
 import { ExploreAreaIcon } from "@/components/learn/explore/ExploreAreaIcon";
 import { ExploreResourceCard } from "@/components/learn/explore/ExploreAreaPane";
+import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { useAuth } from "@/hooks/useAuth";
 import { isPremiumUser } from "@/lib/premium";
@@ -63,6 +64,7 @@ export function ExploreMainPane({
   returnTo: string;
 }) {
   const router = useRouter();
+  const { startReaderOpen } = useLearnNavigation();
   const { user } = useAuth();
   const isPremium = isPremiumUser(user);
   const { subjects, loading } = useLearnSubjects();
@@ -78,6 +80,11 @@ export function ExploreMainPane({
       : undefined;
 
   const isHome = !subjectSlug && !areaId;
+
+  const openHit = (href: string) => {
+    startReaderOpen(href);
+    router.push(href);
+  };
 
   const searchSubjects = useMemo(() => {
     if (subject) return [subject];
@@ -143,18 +150,17 @@ export function ExploreMainPane({
 
   return (
     <ExploreWorkspaceShell
-      returnTo={returnTo}
-      searchQuery={query}
-      onSearchQueryChange={setQuery}
-      searchPlaceholder={scopedSearchPlaceholder({ areaId, subject, topic })}
-      searchScopeLabel={scopedSearchLabel({ areaId, subject })}
-      searchHits={hits}
-      searchSearching={searching}
-      searchActive={active}
-      onSearchActiveChange={setActive}
-      onOpenSearchHit={(href) => router.push(href)}
-      showSuggestChips={isHome}
-    >
+        returnTo={returnTo}
+        searchQuery={query}
+        onSearchQueryChange={setQuery}
+        searchPlaceholder={scopedSearchPlaceholder({ areaId, subject, topic })}
+        searchScopeLabel={scopedSearchLabel({ areaId, subject })}
+        searchHits={hits}
+        searchSearching={searching}
+        searchActive={active}
+        onSearchActiveChange={setActive}
+        onOpenSearchHit={openHit}
+      >
       {isHome ? (
         <ExploreHomeContent subjects={subjects} loading={loading} featured={featured} />
       ) : areaId && !subjectSlug ? (
@@ -166,6 +172,7 @@ export function ExploreMainPane({
           resources={resources}
           loading={loading}
           isPremium={isPremium}
+          areaId={areaId}
         />
       ) : loading ? (
         <p className="text-sm text-[var(--text-muted)]">Loading…</p>
@@ -295,6 +302,9 @@ function ExploreAreaContent({
           <h1 className="page-title mt-2">{area.title}</h1>
           <p className="page-subtitle mt-2 max-w-2xl">{area.description}</p>
         </div>
+        <Link href="/learn" className="explore-back-all shrink-0">
+          ← Explore
+        </Link>
       </header>
 
       <section className="explore-section !mt-4">
@@ -326,14 +336,22 @@ function ExploreCollectionContent({
   resources,
   loading,
   isPremium,
+  areaId,
 }: {
   subject: Subject;
   topic?: Topic;
   resources: ReturnType<typeof listAreaResources>;
   loading: boolean;
   isPremium: boolean;
+  areaId?: ExploreAreaId | null;
 }) {
   const goal = subjectGoal(subject);
+  const backHref = topic
+    ? subjectHref(subject.slug)
+    : areaId
+      ? learnAreaHref(areaId)
+      : "/learn";
+  const backLabel = topic ? subject.name : areaId ? getExploreArea(areaId).title : "Explore";
 
   return (
     <>
@@ -373,6 +391,9 @@ function ExploreCollectionContent({
               "Browse public material in this collection. Open any file to read it, then save a copy to your Library."}
           </p>
         </div>
+        <Link href={backHref} className="explore-back-all shrink-0">
+          ← {backLabel}
+        </Link>
       </header>
 
       {!topic && subject.topics.length > 0 ? (

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LearnNavigationProvider } from "@/components/learn/LearnNavigationProvider";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { LEARN_DESCRIPTION } from "@/lib/seo/keywords";
 
@@ -27,5 +28,5 @@ export default function LearnLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return children;
+  return <LearnNavigationProvider>{children}</LearnNavigationProvider>;
 }

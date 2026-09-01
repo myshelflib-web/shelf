@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
@@ -10,11 +9,22 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { FolderMark } from "@/components/FolderMark";
+import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
 import { learnHref, learnScope } from "@/lib/learnContent";
 import { isPremiumUser } from "@/lib/premium";
 import { ArticleSummary, Subject } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
+
+function toggleOnKey(
+  e: React.KeyboardEvent,
+  action: () => void
+) {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    action();
+  }
+}
 
 export function PreloadedSubjectBranch({
   subject,
@@ -53,9 +63,9 @@ export function PreloadedSubjectBranch({
   }) => void;
 }) {
   const router = useRouter();
+  const { startReaderOpen } = useLearnNavigation();
   const { user } = useAuth();
   const isPremium = isPremiumUser(user);
-  const isCurrent = activeSubject === subject.slug && !activeTopic;
 
   const openArticle = (topicSlug: string, article: ArticleSummary) => {
     const href = learnHref(subject.slug, topicSlug, article.slug);
@@ -69,56 +79,48 @@ export function PreloadedSubjectBranch({
       });
       return;
     }
+    startReaderOpen(href);
     router.push(href);
   };
 
-  const subjectRowClass = clsx(
-    "library-row group flex items-center gap-0.5 px-1.5 py-1 rounded-md",
-    isCurrent
-      ? "bg-[var(--accent-light)] text-[var(--accent)]"
-      : "hover:bg-[var(--bg-elevated)]"
-  );
+  const folderRowClass = (active: boolean) =>
+    clsx(
+      "library-row group flex items-center gap-0.5 px-1.5 py-1 rounded-md cursor-pointer",
+      active
+        ? "bg-[var(--bg-elevated)]/60 text-[var(--text-primary)]"
+        : "hover:bg-[var(--bg-elevated)]"
+    );
+
+  const isSubjectActive =
+    activeSubject === subject.slug && !activeTopic && !activeArticle;
+
+  const handleSubjectClick = () => {
+    onToggleSubject(subject.slug);
+    if (navigateOnSubjectClick && subjectHrefProp) {
+      router.push(subjectHrefProp);
+    }
+  };
 
   return (
     <div className="mb-0.5">
-      <div className={subjectRowClass}>
-        <button
-          type="button"
-          aria-label={open ? "Collapse collection" : "Expand collection"}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleSubject(subject.slug);
-          }}
-          className="p-0.5 text-[var(--text-muted)] shrink-0 rounded hover:bg-[var(--bg-secondary)]"
-        >
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleSubjectClick}
+        onKeyDown={(e) => toggleOnKey(e, handleSubjectClick)}
+        className={folderRowClass(isSubjectActive)}
+      >
+        <span className="p-0.5 text-[var(--text-muted)] shrink-0" aria-hidden>
           {open ? (
             <ChevronDown className="w-3.5 h-3.5" />
           ) : (
             <ChevronRight className="w-3.5 h-3.5" />
           )}
-        </button>
-        {navigateOnSubjectClick && subjectHrefProp ? (
-          <Link
-            href={subjectHrefProp}
-            className="flex flex-1 min-w-0 items-center gap-1.5 py-0.5"
-          >
-            <FolderMark seed={subject.id} size={14} />
-            <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">
-              {subject.name}
-            </span>
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={() => onToggleSubject(subject.slug)}
-            className="flex flex-1 min-w-0 items-center gap-1.5 py-0.5 text-left"
-          >
-            <FolderMark seed={subject.id} size={14} />
-            <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)]">
-              {subject.name}
-            </span>
-          </button>
-        )}
+        </span>
+        <FolderMark seed={subject.id} size={14} />
+        <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">
+          {subject.name}
+        </span>
       </div>
 
       {open && (
@@ -133,46 +135,36 @@ export function PreloadedSubjectBranch({
               !activeArticle;
             const topicHrefValue = getTopicHref?.(topic.slug);
 
+            const handleTopicClick = () => {
+              onToggleTopic(subject.slug, topic.slug);
+              if (navigateOnTopicClick && topicHrefValue) {
+                router.push(topicHrefValue);
+              }
+            };
+
             return (
               <div key={topic.id}>
-                <div className={clsx(subjectRowClass, isTopicActive && "bg-[var(--accent-light)] text-[var(--accent)]")}>
-                  <button
-                    type="button"
-                    aria-label={tOpen ? "Collapse folder" : "Expand folder"}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleTopic(subject.slug, topic.slug);
-                    }}
-                    className="p-0.5 text-[var(--text-muted)] shrink-0 rounded hover:bg-[var(--bg-secondary)]"
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={handleTopicClick}
+                  onKeyDown={(e) => toggleOnKey(e, handleTopicClick)}
+                  className={folderRowClass(isTopicActive)}
+                >
+                  <span
+                    className="p-0.5 text-[var(--text-muted)] shrink-0"
+                    aria-hidden
                   >
                     {tOpen ? (
                       <ChevronDown className="w-3.5 h-3.5" />
                     ) : (
                       <ChevronRight className="w-3.5 h-3.5" />
                     )}
-                  </button>
-                  {navigateOnTopicClick && topicHrefValue ? (
-                    <Link
-                      href={topicHrefValue}
-                      className="flex flex-1 min-w-0 items-center gap-1.5 py-0.5"
-                    >
-                      <FolderMark seed={topic.id} size={14} />
-                      <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">
-                        {topic.title}
-                      </span>
-                    </Link>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onToggleTopic(subject.slug, topic.slug)}
-                      className="flex flex-1 min-w-0 items-center gap-1.5 py-0.5 text-left"
-                    >
-                      <FolderMark seed={topic.id} size={14} />
-                      <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)]">
-                        {topic.title}
-                      </span>
-                    </button>
-                  )}
+                  </span>
+                  <FolderMark seed={topic.id} size={14} />
+                  <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">
+                    {topic.title}
+                  </span>
                 </div>
 
                 {tOpen && articles.length > 0 && (

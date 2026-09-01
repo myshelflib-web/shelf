@@ -5,7 +5,6 @@ import { LogIn, UserPlus } from "lucide-react";
 import clsx from "clsx";
 import { GreetingBlock } from "@/components/GreetingBlock";
 import { LivelyLine } from "@/components/LivelyLine";
-import { LibrarySuggestChips } from "@/components/LibrarySuggestChips";
 import { ExploreHeroSearch } from "@/components/learn/explore/ExploreHeroSearch";
 import { useAuth } from "@/hooks/useAuth";
 import { useLivelyGreeting } from "@/hooks/useLivelyCopy";
@@ -25,7 +24,6 @@ export function ExploreWorkspaceShell({
   searchActive,
   onSearchActiveChange,
   onOpenSearchHit,
-  showSuggestChips = false,
   children,
 }: {
   returnTo: string;
@@ -38,7 +36,6 @@ export function ExploreWorkspaceShell({
   searchActive: number;
   onSearchActiveChange: (i: number) => void;
   onOpenSearchHit: (href: string) => void;
-  showSuggestChips?: boolean;
   children: React.ReactNode;
 }) {
   const { user } = useAuth();
@@ -65,19 +62,7 @@ export function ExploreWorkspaceShell({
             />
           </div>
 
-          {showSuggestChips && !searchQuery.trim() ? (
-            <LibrarySuggestChips
-              surface="learn"
-              className="mt-5"
-              onPick={(item) => onSearchQueryChange(item.query)}
-            />
-          ) : null}
-
-          <div
-            className={`relative z-20 ${
-              searchQuery.trim() || !showSuggestChips ? "mt-5" : "mt-3"
-            }`}
-          >
+          <div className="relative z-20 mt-5">
             <ExploreHeroSearch
               query={searchQuery}
               onQueryChange={onSearchQueryChange}

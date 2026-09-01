@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   FoldVertical,
@@ -24,6 +25,7 @@ import { PreloadedSubjectBranch } from "@/components/my-content/PreloadedSubject
 import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
 import { LibraryMode } from "@/lib/libraryMode";
 import type { ExploreAreaId } from "@/lib/exploreCatalog";
+import { getExploreArea, learnAreaHref } from "@/lib/exploreCatalog";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { ExploreSidebarBrowse } from "@/components/learn/explore/ExploreSidebarBrowse";
 
@@ -154,6 +156,21 @@ export function PreloadedLibrarySidebar({
   const showExploreBrowse = !workspaceMode && !isCollectionView;
   const showCollectionTree = isCollectionView;
 
+  const sidebarBackHref = isCollectionView
+    ? activeTopic && activeSubject
+      ? subjectHref(activeSubject)
+      : activeArea
+        ? learnAreaHref(activeArea)
+        : "/learn"
+    : null;
+  const sidebarBackLabel = isCollectionView
+    ? activeTopic && activeSubjectData
+      ? activeSubjectData.name
+      : activeArea
+        ? getExploreArea(activeArea).title
+        : "Explore"
+    : null;
+
   return (
     <aside
       className={clsx(
@@ -224,6 +241,12 @@ export function PreloadedLibrarySidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto px-1.5 py-2 min-h-0">
+        {isCollectionView && sidebarBackHref && sidebarBackLabel ? (
+          <Link href={sidebarBackHref} className="explore-back-library mb-2">
+            ← {sidebarBackLabel}
+          </Link>
+        ) : null}
+
         {showExploreBrowse ? (
           <ExploreSidebarBrowse
             mode={exploreSidebarMode}

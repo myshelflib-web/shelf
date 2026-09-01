@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { ExploreHeroSearch } from "@/components/learn/explore/ExploreHeroSearch";
+import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import {
   ExploreAreaId,
@@ -29,6 +30,7 @@ export function ExploreResourceCard({
   href: string;
 }) {
   const router = useRouter();
+  const { startReaderOpen } = useLearnNavigation();
   return (
     <article className="explore-resource-card">
       <span className="explore-resource-type">{typeLabel}</span>
@@ -37,7 +39,10 @@ export function ExploreResourceCard({
       <p className="explore-resource-copy">{copy}</p>
       <button
         type="button"
-        onClick={() => router.push(href)}
+        onClick={() => {
+          startReaderOpen(href);
+          router.push(href);
+        }}
         className="explore-resource-open"
       >
         Open

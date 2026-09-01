@@ -44,6 +44,7 @@ import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { isReaderHref, softReplace } from "@/lib/softNavigate";
 import { getSelectedText, withShortcut } from "@/lib/hotkeys";
 import { rememberGuestLearnArticle } from "@/lib/guestLearnResume";
+import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
 
 const WARM_TABS_PER_PANE = 12;
 
@@ -53,6 +54,7 @@ export function LearnReaderWorkspace({
   scope: Extract<PersonalPageReaderScope, { kind: "learn" }>;
 }) {
   const router = useRouter();
+  const { clearReaderOpen } = useLearnNavigation();
   const { user, loading: authLoading } = useAuth();
   const compactPortrait = useCompactPortrait();
   const isPhone = useIsPhone();
@@ -109,6 +111,10 @@ export function LearnReaderWorkspace({
     : null;
   const pageData = focusedSnap?.pageData ?? null;
   const studyPageId = pageData?.id ?? null;
+
+  useEffect(() => {
+    clearReaderOpen();
+  }, [clearReaderOpen]);
 
   useEffect(() => {
     if (user) return;
