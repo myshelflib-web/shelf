@@ -278,19 +278,25 @@ export function StudyPanel({
                   Study AI
                   {t.streaming ? " · live" : ""}
                 </p>
+                {t.streaming && (
+                  <div
+                    className={
+                      t.content
+                        ? "mb-2.5 pb-2 border-b border-[var(--border)]/50"
+                        : undefined
+                    }
+                  >
+                    <StreamActivity
+                      events={panel.statusEvents}
+                      live
+                      compact={Boolean(t.content)}
+                      keepAliveKey={t.content.length}
+                    />
+                  </div>
+                )}
                 {t.content ? (
                   <StudyAIContent content={t.content} streaming={t.streaming} />
-                ) : (
-                  <StreamActivity
-                    events={panel.statusEvents}
-                    live={Boolean(t.streaming)}
-                  />
-                )}
-                {t.streaming && t.content && panel.statusEvents.length > 0 && (
-                  <p className="mt-2 text-[11px] text-[var(--text-muted)] transition-opacity duration-200">
-                    {panel.statusEvents[panel.statusEvents.length - 1]?.detail}
-                  </p>
-                )}
+                ) : null}
                 {!t.streaming && t.content && (
                   <div className="mt-3 flex flex-wrap gap-3 study-ai-followups">
                     {hasFlashcardDeck(t.content) && (

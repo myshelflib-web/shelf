@@ -269,7 +269,7 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
   abortStudyStreamOnClientDisconnect(res, llmAbort);
 
   try {
-    send("status", { stage: "starting", detail: "Starting Study AI…" });
+    send("status", { stage: "starting", detail: "Getting ready" });
 
     const prepared = await preparePageAsk(
       {
@@ -290,7 +290,7 @@ router.post("/ask/stream", async (req: Request, res: Response) => {
 
     await assertLlmBudget(userId, 1);
 
-    send("status", { stage: "generating", detail: "Writing answer…" });
+    send("status", { stage: "generating", detail: "Composing answer" });
 
     let tokens = 0;
     let answer = "";

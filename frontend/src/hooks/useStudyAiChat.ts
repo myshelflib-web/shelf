@@ -154,7 +154,7 @@ export function useStudyAiChat({
 
       setError("");
       setLoading(true);
-      setStatusEvents([{ stage: "starting", detail: "Starting Study AI…" }]);
+      setStatusEvents([{ stage: "starting", detail: "Getting ready" }]);
       setLiveCitations(undefined);
 
       const parts =

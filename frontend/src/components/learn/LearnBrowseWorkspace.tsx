@@ -99,16 +99,15 @@ function LearnBrowseWorkspaceInner({
             <ShelfExplorerFab onClick={() => setExplorerOpen(true)} />
           ) : null}
           {openingReader ? (
-            <div className="absolute inset-0 z-20 bg-[var(--bg-primary)]">
-              <LearnReaderPaneSkeleton />
-            </div>
-          ) : null}
-          <ExploreMainPane
-            subjectSlug={subjectSlug}
-            topicSlug={topicSlug}
-            areaId={activeArea}
-            returnTo={currentHref}
-          />
+            <LearnReaderPaneSkeleton />
+          ) : (
+            <ExploreMainPane
+              subjectSlug={subjectSlug}
+              topicSlug={topicSlug}
+              areaId={activeArea}
+              returnTo={currentHref}
+            />
+          )}
         </main>
       </div>
 

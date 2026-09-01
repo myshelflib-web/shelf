@@ -251,7 +251,7 @@ router.post("/chats/:id/messages/stream", async (req: Request, res: Response) =>
 
   let persistedUser = false;
   try {
-    send("status", { stage: "starting", detail: "Starting Study AI…" });
+    send("status", { stage: "starting", detail: "Getting ready" });
 
     await assertLlmBudget(userId, 1);
 

@@ -419,30 +419,30 @@ export function toolStatusDetail(name: string): string {
   if (action) return action;
   switch (name) {
     case "library_search":
-      return "Searching your library…";
+      return "Exploring library";
     case "lookup_page":
-      return "Opening a page…";
+      return "Opening page";
     case "list_library":
-      return "Browsing collections…";
+      return "Browsing collections";
     case "lookup_planner":
-      return "Checking your planner…";
+      return "Checking planner";
     case "web_search":
-      return "Searching Google…";
+      return "Searching the web";
     case "lookup_highlights":
-      return "Reading your highlights…";
+      return "Reading highlights";
     case "lookup_recent_pages":
-      return "Checking recent pages…";
+      return "Checking recents";
     case "lookup_starred":
-      return "Opening starred pages…";
+      return "Opening starred pages";
     case "lookup_collection":
-      return "Opening a collection…";
+      return "Opening collection";
     case "lookup_relevancy":
-      return "Reading your syllabus…";
+      return "Reading syllabus";
     case "fetch_url":
-      return "Fetching a web page…";
+      return "Fetching web page";
     case "current_time":
-      return "Checking the date…";
+      return "Checking date";
     default:
-      return "Using a tool…";
+      return "Using a tool";
   }
 }

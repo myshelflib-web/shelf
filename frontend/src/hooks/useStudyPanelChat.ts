@@ -164,7 +164,7 @@ export function useStudyPanelChat({
       busyRef.current = true;
       setBusy(true);
       setError("");
-      setStatusEvents([{ stage: "starting", detail: "Starting Study AI…" }]);
+      setStatusEvents([{ stage: "starting", detail: "Getting ready" }]);
 
       const parts =
         mode === "ask" && text && !opts?.prompt

@@ -195,8 +195,8 @@ export async function* streamAnswerWithRag(
   opts: RagAskOpts
 ): AsyncGenerator<RagStreamEvent> {
   const searchDetail = opts.scopeLabel?.trim()
-    ? `Searching in ${opts.scopeLabel.trim()}…`
-    : "Searching your collections…";
+    ? `Exploring ${opts.scopeLabel.trim()}`
+    : "Exploring library";
   yield { type: "status", stage: "searching", detail: searchDetail };
   const prepared = await prepareRagAsk(opts);
   const scopeHint = opts.scopeLabel?.trim();
@@ -215,7 +215,7 @@ export async function* streamAnswerWithRag(
   yield {
     type: "status",
     stage: "generating",
-    detail: "Writing answer…",
+    detail: "Composing answer",
   };
 
   for await (const ev of streamWithStudyTools(

@@ -7,6 +7,10 @@ import { ExploreWorkspaceShell } from "@/components/learn/explore/ExploreWorkspa
 import { ExploreAreaIcon } from "@/components/learn/explore/ExploreAreaIcon";
 import { ExploreResourceCard } from "@/components/learn/explore/ExploreAreaPane";
 import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
+import {
+  LearnCatalogSkeleton,
+  LearnCollectionSkeleton,
+} from "@/components/learn/LearnBrowseSkeletons";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { useAuth } from "@/hooks/useAuth";
 import { isPremiumUser } from "@/lib/premium";
@@ -175,7 +179,7 @@ export function ExploreMainPane({
           areaId={areaId}
         />
       ) : loading ? (
-        <p className="text-sm text-[var(--text-muted)]">Loading…</p>
+        <LearnCollectionSkeleton />
       ) : (
         <div className="learn-empty">
           Collection not found.{" "}
@@ -315,7 +319,7 @@ function ExploreAreaContent({
           </p>
         </div>
         {loading && resources.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">Loading catalog…</p>
+          <LearnCatalogSkeleton cards={4} />
         ) : resources.length === 0 ? (
           <div className="learn-empty">No public material in this area yet.</div>
         ) : (
@@ -440,7 +444,7 @@ function ExploreCollectionContent({
           </p>
         </div>
         {loading && resources.length === 0 ? (
-          <p className="text-sm text-[var(--text-muted)]">Loading…</p>
+          <LearnCatalogSkeleton cards={4} />
         ) : resources.length === 0 ? (
           <div className="learn-empty">No articles in this view yet.</div>
         ) : (

@@ -84,6 +84,22 @@ export function StudyAiMessageList({
                 Study AI
                 {m.streaming ? " · live" : ""}
               </p>
+              {m.streaming && (
+                <div
+                  className={
+                    m.content
+                      ? "mb-3 pb-2.5 border-b border-[var(--border)]/50"
+                      : undefined
+                  }
+                >
+                  <StreamActivity
+                    events={statusEvents}
+                    live
+                    compact={Boolean(m.content)}
+                    keepAliveKey={m.content.length}
+                  />
+                </div>
+              )}
               {m.content ? (
                 <StudyAIContent
                   content={m.content}
@@ -92,17 +108,7 @@ export function StudyAiMessageList({
                     m.citations ?? (m.streaming ? liveCitations : undefined)
                   }
                 />
-              ) : (
-                <StreamActivity
-                  events={statusEvents}
-                  live={Boolean(m.streaming)}
-                />
-              )}
-              {m.streaming && m.content && statusEvents.length > 0 && (
-                <p className="mt-2 text-[11px] text-[var(--text-muted)]">
-                  {statusEvents[statusEvents.length - 1]?.detail}
-                </p>
-              )}
+              ) : null}
               {!m.streaming && m.content && (
                 <div className="mt-2.5 flex flex-wrap items-center gap-1 study-ai-followups">
                   {hasFlashcardDeck(m.content) && (

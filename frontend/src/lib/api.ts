@@ -1551,7 +1551,7 @@ export const api = {
       handlers: StudySseHandlers & { signal?: AbortSignal } = {}
     ) => {
       const askFallback = async () => {
-        handlers.onStatus?.("generating", "Writing answer…");
+        handlers.onStatus?.("generating", "Composing answer");
         const result = await request<{
           answer: string;
           mode: string;
@@ -1662,7 +1662,7 @@ export const api = {
         signal: opts.signal,
       };
       const chatFallback = async () => {
-        handlers.onStatus?.("generating", "Writing answer…");
+        handlers.onStatus?.("generating", "Composing answer");
         const result = await request<{
           userMessage: import("@/types").ChatMessage;
           assistantMessage: import("@/types").ChatMessage;

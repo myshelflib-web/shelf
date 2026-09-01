@@ -129,7 +129,7 @@ export async function preparePageAsk(
     throw new PageAskPrepareError(400, "question required");
   }
 
-  onStatus?.("loading_page", "Reading this file…");
+  onStatus?.("loading_page", "Reading document");
 
   let title = "";
   let pageBody = "";
@@ -227,7 +227,7 @@ export async function preparePageAsk(
   });
 
   if (needVectors && pageIdForVectors) {
-    onStatus?.("retrieving", "Searching your notes…");
+    onStatus?.("retrieving", "Exploring your library");
     try {
       const retrieved = await retrievePageAskContext(
         userId,

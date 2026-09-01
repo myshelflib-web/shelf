@@ -218,6 +218,11 @@ export async function* streamWithStudyTools(
   for (let round = 0; round < rounds; round++) {
     if (opts?.signal?.aborted) break;
 
+    yield {
+      type: "status",
+      detail: round === 0 ? "Thought briefly" : "Planning next step",
+    };
+
     let roundText = "";
     let toolCalls: ChatToolCall[] | undefined;
     try {
@@ -283,7 +288,7 @@ export async function* streamWithStudyTools(
   }
 
   if (!answer.trim() && !opts?.signal?.aborted) {
-    yield { type: "status", detail: "Finishing answer…" };
+    yield { type: "status", detail: "Polishing answer" };
     try {
       const fallback = await completeChat(
         working,
