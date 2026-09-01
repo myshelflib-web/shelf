@@ -17,7 +17,13 @@ import { LibraryModeTabs } from "@/components/my-content/LibraryModeTabs";
 import { PreloadedSubjectBranch } from "@/components/my-content/PreloadedSubjectBranch";
 import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
 import { LibraryMode } from "@/lib/libraryMode";
+import type { ExploreAreaId } from "@/lib/exploreCatalog";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
+import {
+  ExploreSidebarBrowse,
+  parseExploreAreaFromSearch,
+} from "@/components/learn/explore/ExploreSidebarBrowse";
+import { useSearchParams } from "next/navigation";
 
 interface PreloadedLibrarySidebarProps {
   mode: LibraryMode;
@@ -34,6 +40,8 @@ interface PreloadedLibrarySidebarProps {
     pageId: string;
     scope: PersonalPageReaderScope;
   }) => void;
+  onGuestLibraryClick?: () => void;
+  exploreArea?: ExploreAreaId | null;
   className?: string;
 }
 
@@ -47,8 +55,11 @@ export function PreloadedLibrarySidebar({
   showGoalPicker = false,
   onStudyGoalChange,
   onOpenPage,
+  onGuestLibraryClick,
+  exploreArea: exploreAreaProp,
   className,
 }: PreloadedLibrarySidebarProps) {
+  const searchParams = useSearchParams();
   const { subjects, loading, reload } = useLearnSubjects();
   const [query, setQuery] = useState("");
   const [expandedSubjects, setExpandedSubjects] = useState<
@@ -62,6 +73,9 @@ export function PreloadedLibrarySidebar({
   const activeSubject = browse.subjectSlug;
   const activeTopic = browse.topicSlug;
   const activeArticle = browse.articleSlug;
+  const activeArea =
+    exploreAreaProp ?? parseExploreAreaFromSearch(searchParams.get("area"));
+  const onLearnHome = !currentHref || currentHref === "/learn" || Boolean(activeArea);
 
   useEffect(() => {
     if (!activeSubject) return;
@@ -164,8 +178,17 @@ export function PreloadedLibrarySidebar({
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-1.5 py-2">
-        {loading && subjects.length === 0 ? (
+      <nav className="flex-1 overflow-y-auto px-1.5 py-2 min-h-0 flex flex-col">
+        {onLearnHome && !workspaceMode ? (
+          <ExploreSidebarBrowse
+            activeArea={activeArea}
+            activeSubject={activeSubject}
+            onGuestLibraryClick={onGuestLibraryClick}
+          />
+        ) : null}
+
+        <div className={onLearnHome && !workspaceMode ? "mt-3 pt-2 border-t border-[var(--border-subtle)]" : ""}>
+          {loading && subjects.length === 0 ? (
           <ExplorerSidebarSkeleton />
         ) : filtered.length === 0 ? (
           <p className="px-3 py-6 text-sm text-center text-[var(--text-muted)]">
@@ -197,6 +220,7 @@ export function PreloadedLibrarySidebar({
             })}
           </div>
         )}
+        </div>
       </nav>
     </aside>
   );

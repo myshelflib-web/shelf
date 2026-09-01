@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
 import { StudyGoal, UserSubject } from "@/types";
 import { LibraryMode } from "@/lib/libraryMode";
+import type { ExploreAreaId } from "@/lib/exploreCatalog";
 
 interface LibrarySidePanelProps {
   notebook?: UserSubject;
@@ -30,6 +31,7 @@ interface LibrarySidePanelProps {
   }) => void;
   /** Parent owns the sign-in modal (e.g. LearnReaderWorkspace). */
   onGuestPersonalClick?: () => void;
+  exploreArea?: ExploreAreaId | null;
   returnTo?: string;
   className?: string;
 }
@@ -41,6 +43,7 @@ interface LibrarySidePanelProps {
 export function LibrarySidePanel(props: LibrarySidePanelProps) {
   const {
     onGuestPersonalClick,
+    exploreArea,
     returnTo: returnToProp,
     showGoalPicker,
     onStudyGoalChange,
@@ -88,6 +91,10 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
           showGoalPicker={Boolean(showGoalPicker) && isGuest}
           onStudyGoalChange={onStudyGoalChange}
           onOpenPage={sidebarProps.onOpenPage}
+          onGuestLibraryClick={
+            onGuestPersonalClick ?? (() => setSignInFeature("Your personal library"))
+          }
+          exploreArea={exploreArea}
           className={sidebarProps.className}
         />
         {signInFeature && !onGuestPersonalClick && (

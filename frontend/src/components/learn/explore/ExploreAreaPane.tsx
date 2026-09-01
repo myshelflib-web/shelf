@@ -1,0 +1,218 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import { ExploreHeroSearch } from "@/components/learn/explore/ExploreHeroSearch";
+import { useLearnSubjects } from "@/hooks/useLearnSubjects";
+import {
+  ExploreAreaId,
+  getExploreArea,
+  learnAreaHref,
+  listAreaResources,
+  subjectExploreHref,
+} from "@/lib/exploreCatalog";
+import { searchLearnCatalog } from "@/lib/learnCatalog";
+import { useEffect, useMemo, useState } from "react";
+
+export function ExploreResourceCard({
+  title,
+  typeLabel,
+  meta,
+  copy,
+  href,
+}: {
+  title: string;
+  typeLabel: string;
+  meta: string;
+  copy: string;
+  href: string;
+}) {
+  const router = useRouter();
+  return (
+    <article className="explore-resource-card">
+      <span className="explore-resource-type">{typeLabel}</span>
+      <h3 className="explore-resource-title">{title}</h3>
+      <p className="explore-resource-meta">{meta}</p>
+      <p className="explore-resource-copy">{copy}</p>
+      <button
+        type="button"
+        onClick={() => router.push(href)}
+        className="explore-resource-open"
+      >
+        Open
+      </button>
+    </article>
+  );
+}
+
+export function ExploreAreaPane({
+  areaId,
+  subjectSlug,
+  topicSlug,
+}: {
+  areaId: ExploreAreaId;
+  subjectSlug?: string;
+  topicSlug?: string;
+}) {
+  const router = useRouter();
+  const area = getExploreArea(areaId);
+  const { subjects, loading } = useLearnSubjects();
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+
+  const resources = useMemo(
+    () =>
+      listAreaResources(subjects, areaId, {
+        subjectSlug,
+        topicSlug,
+        query,
+      }),
+    [subjects, areaId, subjectSlug, topicSlug, query]
+  );
+
+  const catalogHits = useMemo(() => {
+    const scoped = subjects.filter((s) =>
+      getExploreArea(areaId).goals.includes(s.studyGoal ?? "GENERAL")
+    );
+    return searchLearnCatalog(scoped, query);
+  }, [subjects, areaId, query]);
+
+  const hits = query.trim()
+    ? catalogHits.length > 0
+      ? catalogHits
+      : resources.map((r) => ({
+          id: r.id,
+          title: r.title,
+          href: r.href,
+          snippet: r.meta,
+        }))
+    : [];
+
+  useEffect(() => {
+    setActive(0);
+  }, [query, areaId, subjectSlug, topicSlug]);
+
+  const activeSubject = subjectSlug
+    ? subjects.find((s) => s.slug === subjectSlug)
+    : undefined;
+
+  return (
+    <div className="h-full overflow-y-auto">
+      <div className="explore-page-inner">
+        <header className="explore-scoped-head">
+          <div className="min-w-0 flex-1">
+            <nav className="explore-breadcrumb" aria-label="Breadcrumb">
+              <Link href="/learn" className="hover:text-[var(--accent)]">
+                Explore
+              </Link>
+              <ChevronRight className="w-3 h-3" aria-hidden />
+              {activeSubject ? (
+                <>
+                  <Link
+                    href={learnAreaHref(areaId)}
+                    className="hover:text-[var(--accent)]"
+                  >
+                    {area.title}
+                  </Link>
+                  <ChevronRight className="w-3 h-3" aria-hidden />
+                  <span className="text-[var(--text-secondary)] truncate">
+                    {activeSubject.name}
+                  </span>
+                </>
+              ) : (
+                <span className="text-[var(--text-secondary)]">{area.title}</span>
+              )}
+            </nav>
+            <h1 className="page-title mt-2">
+              {activeSubject?.name ?? area.title}
+            </h1>
+            <p className="page-subtitle mt-2 max-w-2xl">
+              {activeSubject?.description?.trim() || area.description}
+            </p>
+          </div>
+          <Link href="/learn" className="explore-back-all shrink-0">
+            ← All collections
+          </Link>
+        </header>
+
+        <div className="mt-5">
+          <ExploreHeroSearch
+            query={query}
+            onQueryChange={setQuery}
+            placeholder={`Search within ${area.title}…`}
+            scopeLabel={area.title}
+            hits={hits}
+            searching={loading && Boolean(query.trim())}
+            active={active}
+            onActiveChange={setActive}
+            onOpenHit={(href) => router.push(href)}
+          />
+        </div>
+
+        <section className="explore-section">
+          <div className="explore-section-head">
+            <h2 className="explore-section-title">Available material</h2>
+            <p className="explore-section-copy">
+              Open a resource to read it before saving.
+            </p>
+          </div>
+
+          {loading && resources.length === 0 ? (
+            <p className="text-sm text-[var(--text-muted)]">Loading catalog…</p>
+          ) : resources.length === 0 ? (
+            <div className="learn-empty">
+              {query.trim()
+                ? `No matches in ${area.title} for “${query.trim()}”.`
+                : `No public material in ${area.title} yet.`}{" "}
+              <Link href="/learn" className="text-[var(--accent)]">
+                Browse all areas
+              </Link>
+              .
+            </div>
+          ) : (
+            <div className="explore-resource-grid">
+              {resources.map((resource) => (
+                <ExploreResourceCard key={resource.id} {...resource} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {!subjectSlug && !loading ? (
+          <section className="explore-section">
+            <div className="explore-section-head">
+              <h2 className="explore-section-title">Collections in this area</h2>
+            </div>
+            <div className="explore-collection-grid">
+              {subjects
+                .filter((s) =>
+                  getExploreArea(areaId).goals.includes(s.studyGoal ?? "GENERAL")
+                )
+                .map((subject) => (
+                  <Link
+                    key={subject.id}
+                    href={subjectExploreHref(subject.slug)}
+                    className="explore-collection-card"
+                  >
+                    <span className="explore-collection-mark" aria-hidden>
+                      {subject.icon || subject.name.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="explore-collection-title">
+                        {subject.name}
+                      </span>
+                      <span className="explore-collection-meta">
+                        {subject.topics.length} topic
+                        {subject.topics.length === 1 ? "" : "s"}
+                      </span>
+                    </span>
+                  </Link>
+                ))}
+            </div>
+          </section>
+        ) : null}
+      </div>
+    </div>
+  );
+}
