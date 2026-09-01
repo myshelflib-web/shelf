@@ -209,7 +209,7 @@ export function ContentGenPanel() {
         jobId
       );
       setNotice(
-        `Retrying ${plannedCount} failed page${plannedCount === 1 ? "" : "s"} as a new run.`
+        `Retrying ${plannedCount} page${plannedCount === 1 ? "" : "s"} — held drafts will be revised, crashes rewritten.`
       );
       setExpandedId(nextId);
       setPagedBeyondFirst(false);

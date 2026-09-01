@@ -13,7 +13,9 @@ import { runStarterPackJob } from "./runStarterPack.js";
 
 /**
  * Resume cannot redo FAILED or SKIPPED pages — the cursor already moved past them.
- * This starts a new job whose plan is only those rows.
+ * This starts a new job whose plan is only those rows. Below-score starter
+ * pages keep their last draft on `payload` so the new run revises instead of
+ * writing the page from scratch.
  */
 export async function retryFailedContentGenJob(
   jobId: string,

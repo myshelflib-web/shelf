@@ -230,9 +230,9 @@ function FailedBanner({
               .join(" · ")}
           </p>
           <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
-            Resume will not redo these — the run already moved on. Retry starts a
-            new job with only unpublished pages (empty model replies or score below
-            70).
+            Resume will not redo these. Retry revises held pages from the last
+            draft when we still have it, then publishes if the score clears 70
+            and Dry run is off. Crashes with no draft are written from scratch.
           </p>
         </div>
         <button

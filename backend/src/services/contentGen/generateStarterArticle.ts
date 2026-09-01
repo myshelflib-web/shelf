@@ -86,6 +86,43 @@ async function reviewDraft(
   return { review, usage: { inputTokens: res.inputTokens, outputTokens: res.outputTokens } };
 }
 
+async function reviseOnce(
+  blueprint: StarterPackBlueprint,
+  spec: ResolvedArticleSpec,
+  article: GeneratedArticle,
+  review: RelevanceReview,
+  signal?: AbortSignal
+): Promise<{ article: GeneratedArticle | null; usage: GenerationUsage }> {
+  const res = await generationChat(
+    reviseMessages(blueprint, spec, article, review),
+    {
+      maxTokens: DRAFT_MAX_TOKENS,
+      temperature: 0.25,
+      metricsFlow: "content_gen_revise",
+      reasoningEffort: "medium",
+      signal,
+    }
+  );
+  const parsed = parseGeneratedArticle(res.text);
+  if (!parsed) {
+    logger.warn("contentgen.revise.unparseable", { slug: spec.slug });
+  }
+  return {
+    article: parsed,
+    usage: { inputTokens: res.inputTokens, outputTokens: res.outputTokens },
+  };
+}
+
+function withKeywords(
+  spec: ResolvedArticleSpec,
+  article: GeneratedArticle
+): GeneratedArticle {
+  return {
+    ...article,
+    keywords: [...new Set([...spec.keywords, ...article.keywords])].slice(0, 12),
+  };
+}
+
 /**
  * Draft, then audit against the syllabus checklist, then revise once if the
  * audit flags gaps or factual risk. The final review score is what the admin
@@ -109,33 +146,18 @@ export async function generateStarterArticle(
   let revisions = 0;
 
   while (review.verdict === "revise" && revisions < maxRevisions) {
-    const res = await generationChat(
-      reviseMessages(blueprint, spec, article, review),
-      {
-        maxTokens: DRAFT_MAX_TOKENS,
-        temperature: 0.25,
-        metricsFlow: "content_gen_revise",
-        reasoningEffort: "medium",
-        signal,
-      }
-    );
-    usage = addUsage(usage, res);
+    const revised = await reviseOnce(blueprint, spec, article, review, signal);
+    usage = addUsage(usage, revised.usage);
     revisions += 1;
-
-    const revised = parseGeneratedArticle(res.text);
-    if (!revised) {
-      logger.warn("contentgen.revise.unparseable", { slug: spec.slug });
-      break;
-    }
-    article = revised;
+    if (!revised.article) break;
+    article = revised.article;
 
     reviewed = await reviewDraft(blueprint, spec, article, signal);
     usage = addUsage(usage, reviewed.usage);
     review = reviewed.review;
   }
 
-  // Keep the blueprint keywords even if the model dropped some.
-  article.keywords = [...new Set([...spec.keywords, ...article.keywords])].slice(0, 12);
+  article = withKeywords(spec, article);
 
   logger.info("contentgen.article.generated", {
     slug: spec.slug,
@@ -150,6 +172,65 @@ export async function generateStarterArticle(
     review,
     usage,
     wordCount: articleWordCount(article),
+    revisions,
+  };
+}
+
+/**
+ * One or two revise+recheck cycles from a held draft, using the last review
+ * notes. Cheaper than a full redraft when Retry failed picks up a SKIPPED page.
+ */
+export async function improveStarterArticle(
+  blueprint: StarterPackBlueprint,
+  spec: ResolvedArticleSpec,
+  article: GeneratedArticle,
+  review: RelevanceReview,
+  opts: { maxRevisions?: number; signal?: AbortSignal } = {}
+): Promise<StarterArticleResult> {
+  const maxRevisions = opts.maxRevisions ?? 2;
+  const signal = opts.signal;
+  let usage = emptyUsage();
+  let current = article;
+  let currentReview = review;
+  let revisions = 0;
+
+  const needsWork =
+    currentReview.verdict === "revise" || currentReview.score < MIN_PUBLISH_SCORE;
+
+  while (needsWork && revisions < maxRevisions) {
+    const revised = await reviseOnce(
+      blueprint,
+      spec,
+      current,
+      currentReview,
+      signal
+    );
+    usage = addUsage(usage, revised.usage);
+    revisions += 1;
+    if (!revised.article) break;
+    current = revised.article;
+
+    const reviewed = await reviewDraft(blueprint, spec, current, signal);
+    usage = addUsage(usage, reviewed.usage);
+    currentReview = reviewed.review;
+    if (currentReview.score >= MIN_PUBLISH_SCORE) break;
+  }
+
+  current = withKeywords(spec, current);
+
+  logger.info("contentgen.article.improved", {
+    slug: spec.slug,
+    score: currentReview.score,
+    revisions,
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+  });
+
+  return {
+    article: current,
+    review: currentReview,
+    usage,
+    wordCount: articleWordCount(current),
     revisions,
   };
 }

@@ -24,6 +24,47 @@ describe("jobPlan", () => {
     expect(entries[1]?.slug).toBe("b");
   });
 
+  it("keeps a held draft on retry so the page is revised not rewritten", () => {
+    const entries = uniqueStarterEntries([
+      {
+        title: "Recall",
+        slug: "recall",
+        subjectSlug: "skills",
+        topicSlug: "retention",
+        payload: {
+          v: 1,
+          kind: "STARTER_DRAFT",
+          article: {
+            title: "Recall",
+            metaDescription: "Retrieve, don't reread.",
+            intro: "Test yourself.",
+            sections: [
+              { heading: "Why", paragraphs: ["Cues matter."] },
+              { heading: "How", paragraphs: ["Close the book."] },
+              { heading: "When", paragraphs: ["Space it."] },
+            ],
+            keyTakeaways: ["Retrieve"],
+            examPointers: [],
+            commonMistakes: [],
+            linkages: [],
+            diagram: null,
+            glance: null,
+            keywords: ["recall"],
+          },
+          review: {
+            score: 65,
+            missing: ["Expanding intervals"],
+            corrections: [],
+            vague: [],
+            verdict: "revise",
+          },
+        },
+      },
+    ]);
+    expect(entries[0]?.draft?.review.score).toBe(65);
+    expect(entries[0]?.draft?.article.title).toBe("Recall");
+  });
+
   it("accepts a news plan", () => {
     const plan = asNewsPlan({
       v: 1,

@@ -155,6 +155,7 @@ export type ItemOutcome = {
   inputTokens?: number;
   outputTokens?: number;
   error?: string | null;
+  payload?: Prisma.InputJsonValue;
 };
 
 function persistNotes(
@@ -162,7 +163,7 @@ function persistNotes(
   notes?: string | null
 ): string | null {
   if (!notes || status === "COMPLETED") return null;
-  return notes.slice(0, 500);
+  return notes.slice(0, 1500);
 }
 
 async function advanceJobCursor(jobId: string): Promise<void> {
@@ -203,6 +204,7 @@ export async function recordItemOutcome(
       inputTokens,
       outputTokens,
       error: outcome.error?.slice(0, 500) ?? null,
+      ...(outcome.payload !== undefined ? { payload: outcome.payload } : {}),
     },
   });
 

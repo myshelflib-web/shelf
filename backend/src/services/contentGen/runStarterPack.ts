@@ -16,8 +16,10 @@ import { asStarterPlan, type StarterPlanEntry } from "./jobPlan.js";
 import { generationModelLabel } from "./generationChat.js";
 import {
   generateStarterArticle,
+  improveStarterArticle,
   MIN_PUBLISH_SCORE,
 } from "./generateStarterArticle.js";
+import { packStarterDraft, parseStarterDraft, type StarterDraft } from "./starterDraft.js";
 import { runJobLoop, type LoopItem } from "./jobLoop.js";
 import { claimJob, jobAbortSignal, releaseJob } from "./jobRegistry.js";
 import { STOPPED_BY_ADMIN } from "./stopJob.js";
@@ -127,12 +129,17 @@ async function generateOne(
   studyGoal: StudyGoal,
   spec: ResolvedArticleSpec,
   dryRun: boolean,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  draft?: StarterDraft
 ): Promise<ItemOutcome> {
   const blueprint = blueprintForGoal(studyGoal);
   if (!blueprint) throw new Error(`No starter pack blueprint for ${studyGoal}`);
 
-  const result = await generateStarterArticle(blueprint, spec, { signal });
+  const result = draft
+    ? await improveStarterArticle(blueprint, spec, draft.article, draft.review, {
+        signal,
+      })
+    : await generateStarterArticle(blueprint, spec, { signal });
   if (signal?.aborted) {
     const err = new Error("This operation was aborted");
     err.name = "AbortError";
@@ -151,6 +158,7 @@ async function generateOne(
       reviewNotes: notes,
       wordCount: result.wordCount,
       ...result.usage,
+      payload: packStarterDraft(result.article, result.review),
       error: `Relevance score ${result.review.score} is below the ${MIN_PUBLISH_SCORE} publish threshold`,
     };
   }
@@ -216,6 +224,12 @@ export async function runStarterPackJob(
 
     const leftover = await pendingItems(jobId);
     const plan = asStarterPlan(state.plan);
+    const planDrafts = new Map(
+      (plan?.entries ?? []).map((entry) => [
+        `${entry.subjectSlug}/${entry.slug}`,
+        entry.draft,
+      ])
+    );
 
     const items: LoopItem<StarterPlanEntry>[] = [];
     const leftoverKeys = new Set<string>();
@@ -230,6 +244,7 @@ export async function runStarterPackJob(
             topicSlug: row.topicSlug,
             slug: row.slug,
             title: row.title,
+            draft: parseStarterDraft(row.payload) ?? planDrafts.get(key),
           },
         });
       } else {
@@ -267,7 +282,13 @@ export async function runStarterPackJob(
             error: "Page is no longer in the syllabus catalog",
           };
         }
-        return generateOne(studyGoal, spec, dryRun, jobAbortSignal(jobId));
+        return generateOne(
+          studyGoal,
+          spec,
+          dryRun,
+          jobAbortSignal(jobId),
+          entry.draft
+        );
       },
     });
 
