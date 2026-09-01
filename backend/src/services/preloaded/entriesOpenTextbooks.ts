@@ -78,12 +78,12 @@ export const PRELOADED_CATALOG_OPEN_TEXTBOOKS: PreloadedCatalogEntry[] = [
     topicSlug: "india-open-learning",
     topicTitle: "India — open learning",
     studyGoal: "GENERAL",
-    title: "NCERT ePathshala",
+    title: "e-PG Pathshala",
     slug: "epg-pathshala",
-    sourceUrl: "https://epathshala.nic.in/",
+    sourceUrl: "https://epgp.inflibnet.ac.in/Home",
     license: "LINK_ONLY",
     summary:
-      "NCERT digital textbooks and resources for school classes — official MHRD portal.",
+      "INFLIBNET e-PG Pathshala — open postgraduate e-content across 70+ disciplines (MoE NME-ICT).",
     order: 6,
   },
   {
