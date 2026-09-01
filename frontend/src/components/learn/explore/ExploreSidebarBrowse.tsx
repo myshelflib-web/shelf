@@ -18,10 +18,12 @@ import {
 } from "@/lib/exploreCatalog";
 
 export function ExploreSidebarBrowse({
+  mode,
   activeArea,
   activeSubject,
   onGuestLibraryClick,
 }: {
+  mode: "home" | "area" | "collection";
   activeArea?: ExploreAreaId | null;
   activeSubject?: string | null;
   onGuestLibraryClick?: () => void;
@@ -30,7 +32,6 @@ export function ExploreSidebarBrowse({
   const { user } = useAuth();
   const { subjects } = useLearnSubjects();
   const featured = featuredExploreCollections(subjects);
-
   const scopedRows = activeArea ? areaSidebarRows(subjects, activeArea) : [];
 
   return (
@@ -53,17 +54,23 @@ export function ExploreSidebarBrowse({
       </p>
       <div className="h-px bg-[var(--border-subtle)] -mx-1.5 mb-2" />
 
-      {!activeArea ? (
+      {mode === "collection" && activeSubject ? (
+        <div>
+          <Link href="/learn" className="explore-side-row text-[var(--text-muted)]">
+            ← Back to Explore
+          </Link>
+          <p className="explore-side-label mt-2">Collection</p>
+        </div>
+      ) : mode === "home" ? (
         <>
           <div className="mt-1">
             <p className="explore-side-label">Browse</p>
             {EXPLORE_AREAS.map((area) => {
               const count = countAreaItems(subjects, area.id);
               return (
-                <button
+                <Link
                   key={area.id}
-                  type="button"
-                  onClick={() => router.push(learnAreaHref(area.id))}
+                  href={learnAreaHref(area.id)}
                   className="explore-side-row"
                 >
                   <ExploreAreaIcon tone={area.tone} size="sm" />
@@ -71,7 +78,7 @@ export function ExploreSidebarBrowse({
                   {count > 0 ? (
                     <span className="explore-side-count">{count}</span>
                   ) : null}
-                </button>
+                </Link>
               );
             })}
           </div>
@@ -98,14 +105,16 @@ export function ExploreSidebarBrowse({
             </div>
           ) : null}
         </>
-      ) : (
+      ) : activeArea ? (
         <div>
-          <p className="explore-side-label">
+          <Link href="/learn" className="explore-side-row text-[var(--text-muted)]">
+            ← Back to Explore
+          </Link>
+          <p className="explore-side-label mt-2">
             {EXPLORE_AREAS.find((a) => a.id === activeArea)?.title}
           </p>
-          <button
-            type="button"
-            onClick={() => router.push(learnAreaHref(activeArea))}
+          <Link
+            href={learnAreaHref(activeArea)}
             className={`explore-side-row${
               !activeSubject ? " explore-side-row-active" : ""
             }`}
@@ -117,7 +126,7 @@ export function ExploreSidebarBrowse({
               size="sm"
             />
             <span className="min-w-0 flex-1 truncate">All in area</span>
-          </button>
+          </Link>
           {scopedRows.map((row) => (
             <Link
               key={row.slug}
@@ -135,15 +144,8 @@ export function ExploreSidebarBrowse({
               ) : null}
             </Link>
           ))}
-          <button
-            type="button"
-            onClick={() => router.push("/learn")}
-            className="explore-side-row mt-2 text-[var(--text-muted)]"
-          >
-            ← Back to Explore home
-          </button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

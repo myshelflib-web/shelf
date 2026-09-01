@@ -585,10 +585,14 @@
   color: var(--text-muted);
 }
 
-.explore-side-row {
+.explore-side-row,
+a.explore-side-row,
+a.explore-side-collection {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  text-decoration: none;
+}
   width: 100%;
   min-height: 2.25rem;
   padding: 0 0.4375rem;

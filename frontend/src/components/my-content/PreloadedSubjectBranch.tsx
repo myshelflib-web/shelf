@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   BookOpen,
@@ -25,6 +26,10 @@ export function PreloadedSubjectBranch({
   activeTopic,
   activeArticle,
   workspaceMode,
+  navigateOnSubjectClick = false,
+  navigateOnTopicClick = false,
+  subjectHref: subjectHrefProp,
+  getTopicHref,
   onToggleSubject,
   onToggleTopic,
   onOpenPage,
@@ -36,6 +41,10 @@ export function PreloadedSubjectBranch({
   activeTopic?: string;
   activeArticle?: string;
   workspaceMode: boolean;
+  navigateOnSubjectClick?: boolean;
+  navigateOnTopicClick?: boolean;
+  subjectHref?: string;
+  getTopicHref?: (topicSlug: string) => string;
   onToggleSubject: (slug: string) => void;
   onToggleTopic: (subjectSlug: string, topicSlug: string) => void;
   onOpenPage?: (payload: {
@@ -65,36 +74,53 @@ export function PreloadedSubjectBranch({
     router.push(href);
   };
 
+  const subjectRowClass = clsx(
+    "library-row group flex items-center gap-0.5 px-1.5 py-1 rounded-md",
+    isCurrent
+      ? "bg-[var(--accent-light)] text-[var(--accent)]"
+      : "hover:bg-[var(--bg-elevated)]"
+  );
+
   return (
     <div className="mb-0.5">
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => onToggleSubject(subject.slug)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
+      <div className={subjectRowClass}>
+        <button
+          type="button"
+          aria-label={open ? "Collapse collection" : "Expand collection"}
+          onClick={(e) => {
+            e.stopPropagation();
             onToggleSubject(subject.slug);
-          }
-        }}
-        className={clsx(
-          "library-row group flex items-center gap-0.5 px-1.5 py-1 rounded-md cursor-pointer",
-          isCurrent
-            ? "bg-[var(--accent-light)] text-[var(--accent)]"
-            : "hover:bg-[var(--bg-elevated)]"
-        )}
-      >
-        <span className="p-0.5 text-[var(--text-muted)] shrink-0">
+          }}
+          className="p-0.5 text-[var(--text-muted)] shrink-0 rounded hover:bg-[var(--bg-secondary)]"
+        >
           {open ? (
             <ChevronDown className="w-3.5 h-3.5" />
           ) : (
             <ChevronRight className="w-3.5 h-3.5" />
           )}
-        </span>
-        <FolderMark seed={subject.id} size={14} />
-        <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">
-          {subject.name}
-        </span>
+        </button>
+        {navigateOnSubjectClick && subjectHrefProp ? (
+          <Link
+            href={subjectHrefProp}
+            className="flex flex-1 min-w-0 items-center gap-1.5 py-0.5"
+          >
+            <FolderMark seed={subject.id} size={14} />
+            <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">
+              {subject.name}
+            </span>
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onToggleSubject(subject.slug)}
+            className="flex flex-1 min-w-0 items-center gap-1.5 py-0.5 text-left"
+          >
+            <FolderMark seed={subject.id} size={14} />
+            <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)]">
+              {subject.name}
+            </span>
+          </button>
+        )}
       </div>
 
       {open && (
@@ -108,40 +134,54 @@ export function PreloadedSubjectBranch({
               activeTopic === topic.slug &&
               !activeArticle;
             const tone = folderTone(topic.id);
+            const topicHrefValue = getTopicHref?.(topic.slug);
 
             return (
               <div key={topic.id}>
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => onToggleTopic(subject.slug, topic.slug)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
+                <div className={clsx(subjectRowClass, isTopicActive && "bg-[var(--accent-light)] text-[var(--accent)]")}>
+                  <button
+                    type="button"
+                    aria-label={tOpen ? "Collapse topic" : "Expand topic"}
+                    onClick={(e) => {
+                      e.stopPropagation();
                       onToggleTopic(subject.slug, topic.slug);
-                    }
-                  }}
-                  className={clsx(
-                    "library-row group flex items-center gap-0.5 px-1.5 py-1 rounded-md cursor-pointer",
-                    isTopicActive
-                      ? "bg-[var(--accent-light)] text-[var(--accent)]"
-                      : "hover:bg-[var(--bg-elevated)]"
-                  )}
-                >
-                  <span className="p-0.5 text-[var(--text-muted)] shrink-0">
+                    }}
+                    className="p-0.5 text-[var(--text-muted)] shrink-0 rounded hover:bg-[var(--bg-secondary)]"
+                  >
                     {tOpen ? (
                       <ChevronDown className="w-3 h-3" />
                     ) : (
                       <ChevronRight className="w-3 h-3" />
                     )}
-                  </span>
-                  <BookOpen
-                    className="w-3.5 h-3.5 shrink-0"
-                    style={{ color: tone.fg }}
-                  />
-                  <span className="flex-1 min-w-0 truncate text-[13px] text-[var(--text-secondary)] text-left">
-                    {topic.title}
-                  </span>
+                  </button>
+                  {navigateOnTopicClick && topicHrefValue ? (
+                    <Link
+                      href={topicHrefValue}
+                      className="flex flex-1 min-w-0 items-center gap-1.5 py-0.5"
+                    >
+                      <BookOpen
+                        className="w-3.5 h-3.5 shrink-0"
+                        style={{ color: tone.fg }}
+                      />
+                      <span className="flex-1 min-w-0 truncate text-[13px] text-[var(--text-secondary)] text-left">
+                        {topic.title}
+                      </span>
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onToggleTopic(subject.slug, topic.slug)}
+                      className="flex flex-1 min-w-0 items-center gap-1.5 py-0.5 text-left"
+                    >
+                      <BookOpen
+                        className="w-3.5 h-3.5 shrink-0"
+                        style={{ color: tone.fg }}
+                      />
+                      <span className="flex-1 min-w-0 truncate text-[13px] text-[var(--text-secondary)]">
+                        {topic.title}
+                      </span>
+                    </button>
+                  )}
                 </div>
 
                 {tOpen && articles.length > 0 && (
@@ -152,19 +192,12 @@ export function PreloadedSubjectBranch({
                         activeTopic === topic.slug &&
                         activeArticle === article.slug;
                       return (
-                        <div
+                        <button
                           key={article.id}
-                          role="button"
-                          tabIndex={0}
+                          type="button"
                           onClick={() => openArticle(topic.slug, article)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
-                              openArticle(topic.slug, article);
-                            }
-                          }}
                           className={clsx(
-                            "library-row group flex items-center gap-1 rounded-md text-[13px] min-w-0 px-1.5 py-1 cursor-pointer",
+                            "library-row group flex w-full items-center gap-1 rounded-md text-[13px] min-w-0 px-1.5 py-1 text-left",
                             isActive
                               ? "bg-[var(--accent-light)] text-[var(--accent)]"
                               : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)]"
@@ -175,7 +208,7 @@ export function PreloadedSubjectBranch({
                           {article.isPremium && !isPremium && (
                             <Lock className="w-3 h-3 shrink-0 text-amber-500" />
                           )}
-                        </div>
+                        </button>
                       );
                     })}
                   </div>

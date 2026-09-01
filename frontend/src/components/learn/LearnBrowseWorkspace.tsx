@@ -1,26 +1,18 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { LibrarySidePanel } from "@/components/my-content/LibrarySidePanel";
-import { LearnCollectionPane } from "@/components/learn/LearnCollectionPane";
-import { ExploreAreaPane } from "@/components/learn/explore/ExploreAreaPane";
-import { ExploreHomePane } from "@/components/learn/explore/ExploreHomePane";
+import { ExploreMainPane } from "@/components/learn/explore/ExploreMainPane";
 import { SignInPromptModal } from "@/components/learn/SignInPromptModal";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { ShelfExplorerFab } from "@/components/ShelfExplorerFab";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
 import { useIsPhone } from "@/hooks/useIsPhone";
 import { useLearnStudyGoal } from "@/hooks/useLearnStudyGoal";
-import { useLearnSubjects } from "@/hooks/useLearnSubjects";
-import {
-  featuredGoalFor,
-  groupSubjectsByGoal,
-  subjectHref,
-  topicHref,
-} from "@/lib/learnCatalog";
+import { subjectHref, topicHref } from "@/lib/learnCatalog";
 import { areaForGoal } from "@/lib/exploreCatalog";
 import { parseExploreAreaFromSearch } from "@/components/learn/explore/ExploreSidebarBrowse";
 import { StudyGoal } from "@/types";
@@ -56,14 +48,15 @@ function LearnBrowseWorkspaceInner({
   const compactPortrait = useCompactPortrait();
   const isPhone = useIsPhone();
   const searchParams = useSearchParams();
-  const { goal, setGuestGoal, showGoalPicker } = useLearnStudyGoal(initialGoal);
-  const { subjects, loading } = useLearnSubjects();
+  const { setGuestGoal, showGoalPicker } = useLearnStudyGoal(initialGoal);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [signInFeature, setSignInFeature] = useState<string | null>(null);
 
   const areaFromQuery = parseExploreAreaFromSearch(searchParams.get("area"));
   const activeArea =
-    areaFromQuery ?? (initialGoal ? areaForGoal(initialGoal) : null);
+    subjectSlug || topicSlug
+      ? null
+      : areaFromQuery ?? (initialGoal ? areaForGoal(initialGoal) : null);
 
   const currentHref =
     topicSlug && subjectSlug
@@ -74,38 +67,13 @@ function LearnBrowseWorkspaceInner({
           ? `/learn?area=${activeArea}`
           : "/learn";
 
-  const groups = useMemo(
-    () => groupSubjectsByGoal(subjects, goal),
-    [subjects, goal]
-  );
-  const activeSubject = subjectSlug
-    ? subjects.find((s) => s.slug === subjectSlug)
-    : undefined;
-  const featuredGoal = featuredGoalFor(goal, activeSubject);
-
-  const mainPane = subjectSlug ? (
-    <LearnCollectionPane
-      subject={activeSubject}
-      topicSlug={topicSlug}
-      groups={groups}
-      featuredGoal={featuredGoal}
-      loading={loading}
-    />
-  ) : activeArea ? (
-    <ExploreAreaPane areaId={activeArea} />
-  ) : (
-    <ExploreHomePane />
-  );
-
   const libraryExplorer = (
     <LibrarySidePanel
       currentHref={currentHref}
       workspaceMode={false}
       showGoalPicker={showGoalPicker}
       onStudyGoalChange={setGuestGoal}
-      onGuestPersonalClick={() =>
-        setSignInFeature("Your personal library")
-      }
+      onGuestPersonalClick={() => setSignInFeature("Your personal library")}
       exploreArea={activeArea}
       returnTo={currentHref}
       className={compactPortrait ? "w-full border-r-0" : undefined}
@@ -127,7 +95,12 @@ function LearnBrowseWorkspaceInner({
           {compactPortrait && !explorerOpen ? (
             <ShelfExplorerFab onClick={() => setExplorerOpen(true)} />
           ) : null}
-          {mainPane}
+          <ExploreMainPane
+            subjectSlug={subjectSlug}
+            topicSlug={topicSlug}
+            areaId={activeArea}
+            returnTo={currentHref}
+          />
         </main>
       </div>
 

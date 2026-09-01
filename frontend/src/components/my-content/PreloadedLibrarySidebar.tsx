@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   FoldVertical,
   FolderOpen,
@@ -9,7 +10,13 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { STUDY_GOAL_LABELS } from "@/lib/studyGoal";
-import { matchesSearch, parseLearnPath, subjectGoal } from "@/lib/learnCatalog";
+import {
+  matchesSearch,
+  parseLearnPath,
+  subjectGoal,
+  subjectHref,
+  topicHref,
+} from "@/lib/learnCatalog";
 import { GuestStudyGoalSelect } from "@/components/learn/GuestStudyGoalSelect";
 import { StudyGoal } from "@/types";
 import { ExplorerSidebarSkeleton } from "@/components/dashboard/DashboardSkeletons";
@@ -19,9 +26,7 @@ import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
 import { LibraryMode } from "@/lib/libraryMode";
 import type { ExploreAreaId } from "@/lib/exploreCatalog";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
-import {
-  ExploreSidebarBrowse,
-} from "@/components/learn/explore/ExploreSidebarBrowse";
+import { ExploreSidebarBrowse } from "@/components/learn/explore/ExploreSidebarBrowse";
 
 interface PreloadedLibrarySidebarProps {
   mode: LibraryMode;
@@ -71,9 +76,26 @@ export function PreloadedLibrarySidebar({
   const activeTopic = browse.topicSlug;
   const activeArticle = browse.articleSlug;
   const activeArea = exploreAreaProp ?? null;
-  const onLearnHome = !currentHref || currentHref === "/learn" || Boolean(activeArea);
+
+  const isExploreArea = !workspaceMode && !activeSubject && Boolean(activeArea);
+  const isCollectionView = !workspaceMode && Boolean(activeSubject);
+
+  const activeSubjectData = activeSubject
+    ? subjects.find((s) => s.slug === activeSubject)
+    : undefined;
 
   useEffect(() => {
+    if (!activeSubject || !activeSubjectData) return;
+    setExpandedSubjects({ [activeSubject]: true });
+    const topics: Record<string, boolean> = {};
+    for (const t of activeSubjectData.topics) {
+      topics[`${activeSubject}:${t.slug}`] = true;
+    }
+    setExpandedTopics(topics);
+  }, [activeSubject, activeSubjectData]);
+
+  useEffect(() => {
+    if (isCollectionView || workspaceMode) return;
     if (!activeSubject) return;
     setExpandedSubjects((prev) =>
       prev[activeSubject] ? prev : { ...prev, [activeSubject]: true }
@@ -84,10 +106,15 @@ export function PreloadedLibrarySidebar({
         prev[key] ? prev : { ...prev, [key]: true }
       );
     }
-  }, [activeSubject, activeTopic]);
+  }, [activeSubject, activeTopic, isCollectionView, workspaceMode]);
 
   const filtered = useMemo(() => {
     const byQuery = subjects.filter((s) => matchesSearch(s, query));
+    if (isCollectionView && activeSubjectData) {
+      return matchesSearch(activeSubjectData, query)
+        ? [activeSubjectData]
+        : [];
+    }
     if (studyGoal === "GENERAL") return byQuery;
     const forGoal = byQuery.filter((s) => subjectGoal(s) === studyGoal);
     const active = subjects.find((s) => s.slug === activeSubject);
@@ -95,7 +122,14 @@ export function PreloadedLibrarySidebar({
       return [active, ...forGoal];
     }
     return forGoal;
-  }, [subjects, query, studyGoal, activeSubject]);
+  }, [
+    subjects,
+    query,
+    studyGoal,
+    activeSubject,
+    isCollectionView,
+    activeSubjectData,
+  ]);
 
   const toggleSubject = (slug: string) => {
     setExpandedSubjects((prev) => ({ ...prev, [slug]: !prev[slug] }));
@@ -110,6 +144,16 @@ export function PreloadedLibrarySidebar({
     setExpandedSubjects({});
     setExpandedTopics({});
   };
+
+  const exploreSidebarMode = isCollectionView
+    ? "collection"
+    : isExploreArea
+      ? "area"
+      : "home";
+
+  const showFullTree = workspaceMode;
+  const showExploreBrowse = !workspaceMode && !isCollectionView;
+  const showCollectionTree = isCollectionView;
 
   return (
     <aside
@@ -127,7 +171,9 @@ export function PreloadedLibrarySidebar({
         <div className="flex items-center gap-1 min-w-0 px-1">
           <FolderOpen className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
           <h2 className="font-semibold text-sm truncate flex-1 min-w-0">
-            Explorer
+            {isCollectionView && activeSubjectData
+              ? activeSubjectData.name
+              : "Explorer"}
           </h2>
           <div className="flex items-center shrink-0">
             <button
@@ -141,24 +187,26 @@ export function PreloadedLibrarySidebar({
                 className={clsx("w-4 h-4", loading && "animate-spin")}
               />
             </button>
-            <button
-              type="button"
-              title="Collapse all collections and topics"
-              aria-label="Collapse all"
-              onClick={collapseAll}
-              className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
-            >
-              <FoldVertical className="w-4 h-4" />
-            </button>
+            {!isCollectionView ? (
+              <button
+                type="button"
+                title="Collapse all collections and topics"
+                aria-label="Collapse all"
+                onClick={collapseAll}
+                className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
+              >
+                <FoldVertical className="w-4 h-4" />
+              </button>
+            ) : null}
           </div>
         </div>
-        {showGoalPicker && onStudyGoalChange ? (
+        {showGoalPicker && onStudyGoalChange && !isCollectionView ? (
           <GuestStudyGoalSelect
             value={studyGoal}
             onChange={onStudyGoalChange}
             compact
           />
-        ) : studyGoal !== "GENERAL" ? (
+        ) : studyGoal !== "GENERAL" && !isCollectionView ? (
           <p className="text-[11px] text-[var(--text-muted)] px-1">
             {STUDY_GOAL_LABELS[studyGoal]} curriculum
           </p>
@@ -168,55 +216,72 @@ export function PreloadedLibrarySidebar({
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search preloaded…"
+            placeholder={
+              isCollectionView ? "Search this collection…" : "Search preloaded…"
+            }
             className="w-full pl-8 pr-3 py-1.5 rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
           />
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-1.5 py-2 min-h-0 flex flex-col">
-        {onLearnHome && !workspaceMode ? (
+      <nav className="flex-1 overflow-y-auto px-1.5 py-2 min-h-0">
+        {showExploreBrowse ? (
           <ExploreSidebarBrowse
+            mode={exploreSidebarMode}
             activeArea={activeArea}
             activeSubject={activeSubject}
             onGuestLibraryClick={onGuestLibraryClick}
           />
         ) : null}
 
-        <div className={onLearnHome && !workspaceMode ? "mt-3 pt-2 border-t border-[var(--border-subtle)]" : ""}>
-          {loading && subjects.length === 0 ? (
-          <ExplorerSidebarSkeleton />
-        ) : filtered.length === 0 ? (
-          <p className="px-3 py-6 text-sm text-center text-[var(--text-muted)]">
-            No preloaded material yet.
-          </p>
-        ) : (
-          <div className="space-y-0.5">
-            <div className="px-2 py-1">
-              <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium">
-                Collections
+        {(showCollectionTree || showFullTree) && (
+          <div
+            className={
+              showExploreBrowse
+                ? "mt-3 pt-2 border-t border-[var(--border-subtle)]"
+                : ""
+            }
+          >
+            {loading && subjects.length === 0 ? (
+              <ExplorerSidebarSkeleton />
+            ) : filtered.length === 0 ? (
+              <p className="px-3 py-6 text-sm text-center text-[var(--text-muted)]">
+                No preloaded material yet.
               </p>
-            </div>
-            {filtered.map((subject) => {
-              return (
-                <PreloadedSubjectBranch
-                  key={subject.id}
-                  subject={subject}
-                  open={expandedSubjects[subject.slug] ?? false}
-                  expandedTopics={expandedTopics}
-                  activeSubject={activeSubject}
-                  activeTopic={activeTopic}
-                  activeArticle={activeArticle}
-                  workspaceMode={workspaceMode}
-                  onToggleSubject={toggleSubject}
-                  onToggleTopic={toggleTopic}
-                  onOpenPage={onOpenPage}
-                />
-              );
-            })}
+            ) : (
+              <div className="space-y-0.5">
+                {!isCollectionView && showFullTree ? (
+                  <div className="px-2 py-1">
+                    <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium">
+                      Collections
+                    </p>
+                  </div>
+                ) : null}
+                {filtered.map((subject) => (
+                  <PreloadedSubjectBranch
+                    key={subject.id}
+                    subject={subject}
+                    open={expandedSubjects[subject.slug] ?? isCollectionView}
+                    expandedTopics={expandedTopics}
+                    activeSubject={activeSubject}
+                    activeTopic={activeTopic}
+                    activeArticle={activeArticle}
+                    workspaceMode={workspaceMode}
+                    navigateOnSubjectClick={!workspaceMode}
+                    navigateOnTopicClick={!workspaceMode}
+                    subjectHref={subjectHref(subject.slug)}
+                    onToggleSubject={toggleSubject}
+                    onToggleTopic={toggleTopic}
+                    onOpenPage={onOpenPage}
+                    getTopicHref={(topicSlug) =>
+                      topicHref(subject.slug, topicSlug)
+                    }
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
-        </div>
       </nav>
     </aside>
   );
