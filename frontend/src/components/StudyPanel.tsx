@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Download, Layers, MessageSquareText, X } from "lucide-react";
 import { isPremiumUser } from "@/lib/premium";
 import { getStoredStudyDepth, resolveStudyDepth, type StudyDepth } from "@/lib/studyDepth";
@@ -19,6 +20,9 @@ import { FlashcardsStudyModal } from "./study-ai/FlashcardsStudyModal";
 import { SaveAnswerModal } from "./study-ai/SaveAnswerModal";
 import { StreamActivity } from "./study-ai/StreamActivity";
 import { StudyPanelComposer } from "./study-ai/StudyPanelComposer";
+import { StudyAiSuggestChips } from "./study-ai/StudyAiSuggestChips";
+import { studyAiSendParts } from "@/lib/studyAiCommands";
+import { quizSetupHref } from "@/lib/quiz/href";
 
 interface StudyPanelProps {
   articleId?: string;
@@ -46,6 +50,7 @@ export function StudyPanel({
   guestLocked = false,
   onGuestLockedClick,
 }: StudyPanelProps) {
+  const router = useRouter();
   const { user } = useAuth();
   const memoryLimit = isPremiumUser(user) ? 300 : 30;
   const [depth, setDepth] = useState<StudyDepth>(() =>
@@ -105,8 +110,36 @@ export function StudyPanel({
     Boolean(guestLocked || user?.name) && !panel.restoring;
   const greetingName = user?.name ?? "there";
 
+  const runSuggestion = (insert: string, label?: string) => {
+    const parts = studyAiSendParts(insert, "page", { label });
+    if (parts.kind === "mode") {
+      const ctx = contextImage();
+      void panel.run(parts.mode, undefined, ctx.image, {
+        skipHistoryImage: ctx.ephemeral,
+      });
+      return;
+    }
+    if (parts.kind === "quiz") {
+      router.push(
+        quizSetupHref({
+          contextKind: "PAGE",
+          pageId: userTopicId,
+          focus: parts.topic,
+        })
+      );
+      return;
+    }
+    if (parts.kind === "send") {
+      const ctx = contextImage();
+      void panel.run("ask", parts.display, ctx.image, {
+        skipHistoryImage: ctx.ephemeral,
+        prompt: parts.prompt,
+      });
+    }
+  };
+
   return (
-    <div className="flex flex-col min-h-0 h-full">
+    <div className="relative flex flex-col min-h-0 h-full">
       {embedMode && (
         <p className="text-[12px] text-[var(--text-secondary)] mb-3 leading-relaxed shrink-0">
           Highlights and sending selected text are not available in embeds. Ask
@@ -169,9 +202,9 @@ export function StudyPanel({
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 mb-3 pr-0.5">
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 mb-3 pr-0.5 pb-28">
         {showGreeting && !chatting && (
-          <div className="space-y-2 pt-0.5">
+          <div className="space-y-3 pt-0.5">
             <GreetingBlock
               name={greetingName}
               size="md"
@@ -184,6 +217,15 @@ export function StudyPanel({
               surface="studyPanel"
               className="text-[12px] text-[var(--text-muted)] leading-relaxed"
             />
+            {!guestLocked && (
+              <StudyAiSuggestChips
+                scope="page"
+                count={4}
+                disabled={panel.busy}
+                showHint={false}
+                onPick={(item) => runSuggestion(item.insert, item.label)}
+              />
+            )}
           </div>
         )}
         {!showGreeting && !user?.name && panel.turns.length === 0 && !panel.busy && (

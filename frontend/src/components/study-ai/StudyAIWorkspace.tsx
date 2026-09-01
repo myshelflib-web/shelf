@@ -438,7 +438,7 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
                 ? "followup"
                 : "suggest"
             }
-            showSuggestions={!empty}
+            showSuggestions={false}
             quizLaunch={{
               contextKind: threadMeta?.contextKind,
               notebookId: threadMeta?.contextNotebookId,

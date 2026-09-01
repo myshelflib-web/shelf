@@ -197,6 +197,7 @@ export function StudyAiComposer({
                 mode={suggestMode}
                 count={suggestMode === "followup" ? 3 : 4}
                 disabled={loading}
+                showHint={false}
                 onPick={(item) =>
                   runResolved(item.insert, undefined, item.label)
                 }
