@@ -79,7 +79,9 @@ export function PreloadedLibrarySidebar({
   const activeArea = exploreAreaProp ?? null;
 
   const isExploreArea = !workspaceMode && !activeSubject && Boolean(activeArea);
-  const isCollectionView = !workspaceMode && Boolean(activeSubject);
+  const isBrowseCollection = !workspaceMode && Boolean(activeSubject);
+  const isReaderCollection = workspaceMode && Boolean(activeSubject);
+  const isScopedCollection = isBrowseCollection || isReaderCollection;
 
   const activeSubjectData = activeSubject
     ? subjects.find((s) => s.slug === activeSubject)
@@ -96,7 +98,7 @@ export function PreloadedLibrarySidebar({
   }, [activeSubject, activeSubjectData, activeTopic]);
 
   useEffect(() => {
-    if (isCollectionView || workspaceMode) return;
+    if (isScopedCollection || workspaceMode) return;
     if (!activeSubject) return;
     setExpandedSubjects((prev) =>
       prev[activeSubject] ? prev : { ...prev, [activeSubject]: true }
@@ -107,11 +109,11 @@ export function PreloadedLibrarySidebar({
         prev[key] ? prev : { ...prev, [key]: true }
       );
     }
-  }, [activeSubject, activeTopic, isCollectionView, workspaceMode]);
+  }, [activeSubject, activeTopic, isScopedCollection, workspaceMode]);
 
   const filtered = useMemo(() => {
     const byQuery = subjects.filter((s) => matchesSearch(s, query));
-    if (isCollectionView && activeSubjectData) {
+    if (isScopedCollection && activeSubjectData) {
       return matchesSearch(activeSubjectData, query)
         ? [activeSubjectData]
         : [];
@@ -128,7 +130,7 @@ export function PreloadedLibrarySidebar({
     query,
     studyGoal,
     activeSubject,
-    isCollectionView,
+    isScopedCollection,
     activeSubjectData,
   ]);
 
@@ -146,24 +148,24 @@ export function PreloadedLibrarySidebar({
     setExpandedTopics({});
   };
 
-  const exploreSidebarMode = isCollectionView
+  const exploreSidebarMode = isBrowseCollection
     ? "collection"
     : isExploreArea
       ? "area"
       : "home";
 
-  const showFullTree = workspaceMode;
-  const showExploreBrowse = !workspaceMode && !isCollectionView;
-  const showCollectionTree = isCollectionView;
+  const showFullTree = workspaceMode && !activeSubject;
+  const showExploreBrowse = !workspaceMode && !isBrowseCollection;
+  const showCollectionTree = isScopedCollection;
 
-  const sidebarBackHref = isCollectionView
+  const sidebarBackHref = isScopedCollection
     ? activeTopic && activeSubject
       ? subjectHref(activeSubject)
       : activeArea
         ? learnAreaHref(activeArea)
         : "/learn"
     : null;
-  const sidebarBackLabel = isCollectionView
+  const sidebarBackLabel = isScopedCollection
     ? activeTopic && activeSubjectData
       ? activeSubjectData.name
       : activeArea
@@ -187,7 +189,7 @@ export function PreloadedLibrarySidebar({
         <div className="flex items-center gap-1 min-w-0 px-1">
           <FolderOpen className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
           <h2 className="font-semibold text-sm truncate flex-1 min-w-0">
-            {isCollectionView && activeSubjectData
+            {isScopedCollection && activeSubjectData
               ? activeSubjectData.name
               : "Explorer"}
           </h2>
@@ -203,7 +205,7 @@ export function PreloadedLibrarySidebar({
                 className={clsx("w-4 h-4", loading && "animate-spin")}
               />
             </button>
-            {!isCollectionView ? (
+            {!isScopedCollection ? (
               <button
                 type="button"
                 title="Collapse all collections and topics"
@@ -216,13 +218,13 @@ export function PreloadedLibrarySidebar({
             ) : null}
           </div>
         </div>
-        {showGoalPicker && onStudyGoalChange && !isCollectionView ? (
+        {showGoalPicker && onStudyGoalChange && !isScopedCollection ? (
           <GuestStudyGoalSelect
             value={studyGoal}
             onChange={onStudyGoalChange}
             compact
           />
-        ) : studyGoal !== "GENERAL" && !isCollectionView ? (
+        ) : studyGoal !== "GENERAL" && !isScopedCollection ? (
           <p className="text-[11px] text-[var(--text-muted)] px-1">
             {STUDY_GOAL_LABELS[studyGoal]} curriculum
           </p>
@@ -233,7 +235,7 @@ export function PreloadedLibrarySidebar({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={
-              isCollectionView ? "Search this collection…" : "Search preloaded…"
+              isScopedCollection ? "Search this collection…" : "Search preloaded…"
             }
             className="w-full pl-8 pr-3 py-1.5 rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
           />
@@ -241,7 +243,7 @@ export function PreloadedLibrarySidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto px-1.5 py-2 min-h-0">
-        {isCollectionView && sidebarBackHref && sidebarBackLabel ? (
+        {isScopedCollection && sidebarBackHref && sidebarBackLabel ? (
           <Link href={sidebarBackHref} className="explore-back-library mb-2">
             ← {sidebarBackLabel}
           </Link>
@@ -271,20 +273,13 @@ export function PreloadedLibrarySidebar({
               </p>
             ) : (
               <div className="space-y-0.5">
-                {!isCollectionView && showFullTree ? (
-                  <div className="px-2 py-1">
-                    <p className="text-[10px] uppercase tracking-wide text-[var(--text-muted)] font-medium">
-                      Collections
-                    </p>
-                  </div>
-                ) : null}
                 {filtered.map((subject) => (
                   <PreloadedSubjectBranch
                     key={subject.id}
                     subject={subject}
                     open={
                       expandedSubjects[subject.slug] ??
-                      (isCollectionView && subject.slug === activeSubject)
+                      (isScopedCollection && subject.slug === activeSubject)
                     }
                     expandedTopics={expandedTopics}
                     activeSubject={activeSubject}

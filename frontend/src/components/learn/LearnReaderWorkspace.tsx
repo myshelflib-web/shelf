@@ -40,6 +40,7 @@ import { useCompactPortrait } from "@/hooks/useCompactPortrait";
 import { useIsPhone } from "@/hooks/useIsPhone";
 import { useReaderCompactInit } from "@/hooks/useReaderCompactInit";
 import { useLearnStudyGoal } from "@/hooks/useLearnStudyGoal";
+import { subjectHref, topicHref } from "@/lib/learnCatalog";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { isReaderHref, softReplace } from "@/lib/softNavigate";
 import { getSelectedText, withShortcut } from "@/lib/hotkeys";
@@ -257,12 +258,15 @@ export function LearnReaderWorkspace({
         state.panes.reduce((n, p) => n + p.tabs.length, 0) <= 1;
       const { nextFocusHref, emptied } = closeTab(paneId, tabKey);
       if (isLastOverall || emptied) {
-        router.push("/learn");
+        const exitBrowseHref = routeScope.topicSlug
+          ? topicHref(routeScope.subjectSlug, routeScope.topicSlug)
+          : subjectHref(routeScope.subjectSlug);
+        router.push(exitBrowseHref);
         return;
       }
       if (nextFocusHref) syncReaderUrl(nextFocusHref);
     },
-    [state.panes, closeTab, router, syncReaderUrl]
+    [state.panes, closeTab, router, syncReaderUrl, routeScope]
   );
 
   const handleOpenTab = useCallback(
