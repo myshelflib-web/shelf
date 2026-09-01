@@ -30,9 +30,8 @@ export type StarterArticleResult = {
 };
 
 /** First pass without thinking; think only if the JSON draft does not parse. */
-const DRAFT_MAX_TOKENS = 8192;
-const DRAFT_THINK_MAX_TOKENS = 12_288;
-const RECHECK_MAX_TOKENS = 2048;
+const DRAFT_MAX_TOKENS = 12_288;
+const RECHECK_MAX_TOKENS = 4096;
 
 async function draftOnce(
   blueprint: StarterPackBlueprint,
@@ -43,7 +42,7 @@ async function draftOnce(
   for (let attempt = 1; attempt <= 2; attempt++) {
     const think = attempt > 1;
     const res = await generationChat(draftMessages(blueprint, spec), {
-      maxTokens: think ? DRAFT_THINK_MAX_TOKENS : DRAFT_MAX_TOKENS,
+      maxTokens: DRAFT_MAX_TOKENS,
       temperature: 0.35,
       metricsFlow: "content_gen_draft",
       reasoningEffort: think ? "medium" : null,
@@ -108,7 +107,7 @@ export async function generateStarterArticle(
     const res = await generationChat(
       reviseMessages(blueprint, spec, article, review),
       {
-        maxTokens: DRAFT_THINK_MAX_TOKENS,
+        maxTokens: DRAFT_MAX_TOKENS,
         temperature: 0.25,
         metricsFlow: "content_gen_revise",
         reasoningEffort: "medium",

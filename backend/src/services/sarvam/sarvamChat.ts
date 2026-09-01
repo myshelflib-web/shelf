@@ -12,6 +12,13 @@ import {
   sarvamMaxOutputTokens,
   sarvamModel,
 } from "./sarvamConfig.js";
+import {
+  sarvamAuthHeaders,
+  sarvamCompletionPayload,
+  type SarvamReasoningEffort,
+} from "./sarvamRequest.js";
+
+export type { SarvamReasoningEffort };
 
 export class SarvamNotConfiguredError extends Error {
   constructor() {
@@ -20,15 +27,12 @@ export class SarvamNotConfiguredError extends Error {
   }
 }
 
-/** Sarvam 105B thinking. `null` turns it off (short JSON / probes). */
-export type SarvamReasoningEffort = "low" | "medium" | "high" | null;
-
 export type SarvamChatOpts = {
   maxTokens?: number;
   temperature?: number;
   model?: string;
   signal?: AbortSignal;
-  /** Default off. Thinking is turned on only when a short call comes back empty. */
+  /** Default off. On only for revise / unparseable-draft retry. */
   reasoningEffort?: SarvamReasoningEffort;
 };
 
@@ -46,10 +50,6 @@ function approxTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
-function bumpMaxTokens(current: number): number {
-  return Math.min(MAX_COMPLETION_TOKENS, current + 4096);
-}
-
 async function requestOnce(
   messages: ChatMessage[],
   opts: SarvamChatOpts & { reasoningEffort: SarvamReasoningEffort; maxTokens: number }
@@ -64,18 +64,16 @@ async function requestOnce(
   try {
     res = await fetchWithRetry(`${baseUrl}/chat/completions`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: opts.temperature ?? 0.3,
-        max_tokens: opts.maxTokens,
-        stream: false,
-        reasoning_effort: opts.reasoningEffort,
-      }),
+      headers: sarvamAuthHeaders(apiKey),
+      body: JSON.stringify(
+        sarvamCompletionPayload({
+          model,
+          messages,
+          temperature: opts.temperature ?? 0.3,
+          maxTokens: opts.maxTokens,
+          reasoningEffort: opts.reasoningEffort,
+        })
+      ),
       signal: opts.signal,
       timeoutMs: 180_000,
       retry: { label: "sarvam_chat", attempts: 3 },
@@ -157,12 +155,9 @@ export async function sarvamChat(
       maxTokens,
     });
 
-    maxTokens = bumpMaxTokens(maxTokens);
-    if (reasoningEffort === null) {
-      reasoningEffort = "low";
-    } else if (reasoningEffort === "low") {
-      reasoningEffort = "medium";
-    }
+    // Empty + length + huge reasoning = thinking ate the budget. Keep it off.
+    maxTokens = MAX_COMPLETION_TOKENS;
+    reasoningEffort = null;
   }
 
   throw new Error(
