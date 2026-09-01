@@ -87,7 +87,7 @@ export function CurrentAffairsDashboard() {
                 value: g,
                 label: STUDY_GOAL_LABELS[g],
               }))}
-              ariaLabel="Exam track"
+              aria-label="Exam track"
             />
             <button
               type="button"

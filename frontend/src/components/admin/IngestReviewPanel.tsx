@@ -121,7 +121,7 @@ export function IngestReviewPanel() {
               { value: "PUBLISHED", label: "Published" },
               { value: "REJECTED", label: "Rejected" },
             ]}
-            ariaLabel="Queue filter"
+            aria-label="Queue filter"
           />
         </div>
 
