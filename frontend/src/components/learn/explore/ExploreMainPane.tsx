@@ -295,9 +295,6 @@ function ExploreAreaContent({
           <h1 className="page-title mt-2">{area.title}</h1>
           <p className="page-subtitle mt-2 max-w-2xl">{area.description}</p>
         </div>
-        <Link href="/learn" className="explore-back-all shrink-0">
-          ← All areas
-        </Link>
       </header>
 
       <section className="explore-section !mt-4">
@@ -376,9 +373,6 @@ function ExploreCollectionContent({
               "Browse public material in this collection. Open any file to read it, then save a copy to your Library."}
           </p>
         </div>
-        <Link href="/learn" className="explore-back-all shrink-0">
-          ← Explore home
-        </Link>
       </header>
 
       {!topic && subject.topics.length > 0 ? (

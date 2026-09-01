@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import {
   FoldVertical,
   FolderOpen,
@@ -25,10 +24,8 @@ import { PreloadedSubjectBranch } from "@/components/my-content/PreloadedSubject
 import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
 import { LibraryMode } from "@/lib/libraryMode";
 import type { ExploreAreaId } from "@/lib/exploreCatalog";
-import { useRouter } from "next/navigation";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { ExploreSidebarBrowse } from "@/components/learn/explore/ExploreSidebarBrowse";
-import { useAuth } from "@/hooks/useAuth";
 
 interface PreloadedLibrarySidebarProps {
   mode: LibraryMode;
@@ -65,8 +62,6 @@ export function PreloadedLibrarySidebar({
   className,
 }: PreloadedLibrarySidebarProps) {
   const { subjects, loading, reload } = useLearnSubjects();
-  const router = useRouter();
-  const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [expandedSubjects, setExpandedSubjects] = useState<
     Record<string, boolean>
@@ -229,37 +224,11 @@ export function PreloadedLibrarySidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto px-1.5 py-2 min-h-0">
-        {!workspaceMode && isCollectionView ? (
-          <div className="px-0.5 pb-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (!user) {
-                  onGuestLibraryClick?.();
-                  return;
-                }
-                router.push("/my-content");
-              }}
-              className="explore-back-library"
-            >
-              ← My Library
-            </button>
-            <Link href="/learn" className="explore-back-library block mt-0.5">
-              ← Back to Explore
-            </Link>
-            <p className="px-1.5 pt-2 pb-1 text-sm font-semibold text-[var(--text-primary)]">
-              Explore
-            </p>
-            <div className="h-px bg-[var(--border-subtle)] -mx-1.5 mb-2" />
-          </div>
-        ) : null}
-
         {showExploreBrowse ? (
           <ExploreSidebarBrowse
             mode={exploreSidebarMode}
             activeArea={activeArea}
             activeSubject={activeSubject}
-            onGuestLibraryClick={onGuestLibraryClick}
           />
         ) : null}
 

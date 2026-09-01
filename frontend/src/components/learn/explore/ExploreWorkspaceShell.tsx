@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { LogIn, UserPlus } from "lucide-react";
+import clsx from "clsx";
 import { GreetingBlock } from "@/components/GreetingBlock";
 import { LivelyLine } from "@/components/LivelyLine";
 import { LibrarySuggestChips } from "@/components/LibrarySuggestChips";
@@ -9,6 +10,9 @@ import { ExploreHeroSearch } from "@/components/learn/explore/ExploreHeroSearch"
 import { useAuth } from "@/hooks/useAuth";
 import { useLivelyGreeting } from "@/hooks/useLivelyCopy";
 import type { LearnSearchHit } from "@/lib/learnCatalog";
+
+const authPill =
+  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]";
 
 export function ExploreWorkspaceShell({
   returnTo,
@@ -43,7 +47,7 @@ export function ExploreWorkspaceShell({
   const registerNext = `/login?register=1&next=${encodeURIComponent(returnTo)}`;
 
   return (
-    <div className="explore-workspace">
+    <div className="explore-workspace relative">
       <header className="explore-workspace-header">
         <div className="explore-page-inner explore-page-header">
           <div className="explore-home-head">
@@ -89,39 +93,31 @@ export function ExploreWorkspaceShell({
         </div>
       </header>
 
-      <div className="explore-workspace-scroll">
+      <div
+        className={clsx(
+          "explore-workspace-scroll",
+          !user && "explore-workspace-scroll-guest"
+        )}
+      >
         <div className="explore-page-inner explore-page-body">{children}</div>
       </div>
 
       {!user ? (
-        <footer className="explore-workspace-footer">
-          <div className="explore-page-inner">
-            <div className="explore-auth-actions">
-              <Link href={loginNext} className="explore-auth-card">
-                <LogIn className="w-5 h-5 text-[var(--accent)] shrink-0" />
-                <span>
-                  <span className="block text-sm font-medium text-[var(--text-primary)]">
-                    Sign in
-                  </span>
-                  <span className="block text-xs text-[var(--text-muted)]">
-                    Keep copies and use Study AI
-                  </span>
-                </span>
-              </Link>
-              <Link href={registerNext} className="explore-auth-card">
-                <UserPlus className="w-5 h-5 text-[var(--accent)] shrink-0" />
-                <span>
-                  <span className="block text-sm font-medium text-[var(--text-primary)]">
-                    Create account
-                  </span>
-                  <span className="block text-xs text-[var(--text-muted)]">
-                    Start your personal shelves
-                  </span>
-                </span>
-              </Link>
-            </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-3">
+          <div className="pointer-events-auto flex items-center gap-0.5 sm:gap-1 px-1.5 py-1 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] shadow-[0_8px_28px_rgba(0,0,0,0.14)] max-w-full overflow-x-auto">
+            <Link href={loginNext} className={authPill}>
+              <LogIn className="w-4 h-4 text-[var(--accent)]" />
+              Sign in
+            </Link>
+            <Link
+              href={registerNext}
+              className={clsx(authPill, "text-[var(--accent)] bg-[var(--accent-light)] hover:opacity-90")}
+            >
+              <UserPlus className="w-4 h-4" />
+              Create account
+            </Link>
           </div>
-        </footer>
+        </div>
       ) : null}
     </div>
   );

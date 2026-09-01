@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Folder } from "lucide-react";
 import { ExploreAreaIcon } from "@/components/learn/explore/ExploreAreaIcon";
-import { useAuth } from "@/hooks/useAuth";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import {
   EXPLORE_AREAS,
@@ -21,35 +19,18 @@ export function ExploreSidebarBrowse({
   mode,
   activeArea,
   activeSubject,
-  onGuestLibraryClick,
 }: {
   mode: "home" | "area" | "collection";
   activeArea?: ExploreAreaId | null;
   activeSubject?: string | null;
-  onGuestLibraryClick?: () => void;
 }) {
-  const router = useRouter();
-  const { user } = useAuth();
   const { subjects } = useLearnSubjects();
   const featured = featuredExploreCollections(subjects);
   const scopedRows = activeArea ? areaSidebarRows(subjects, activeArea) : [];
 
   return (
     <div className="px-1.5 pb-2">
-      <button
-        type="button"
-        onClick={() => {
-          if (!user) {
-            onGuestLibraryClick?.();
-            return;
-          }
-          router.push("/my-content");
-        }}
-        className="explore-back-library"
-      >
-        ← My Library
-      </button>
-      <p className="px-1.5 pt-1 pb-2 text-sm font-semibold text-[var(--text-primary)]">
+      <p className="px-1.5 pb-2 text-sm font-semibold text-[var(--text-primary)]">
         Explore
       </p>
       <div className="h-px bg-[var(--border-subtle)] -mx-1.5 mb-2" />
@@ -100,10 +81,7 @@ export function ExploreSidebarBrowse({
         </>
       ) : activeArea ? (
         <div>
-          <Link href="/learn" className="explore-side-row text-[var(--text-muted)]">
-            ← Back to Explore
-          </Link>
-          <p className="explore-side-label mt-2">
+          <p className="explore-side-label">
             {EXPLORE_AREAS.find((a) => a.id === activeArea)?.title}
           </p>
           <Link
