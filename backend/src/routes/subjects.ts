@@ -73,7 +73,12 @@ router.get("/", async (req: Request, res: Response) => {
       },
     },
   });
-  res.json({ subjects });
+  res.json({
+    subjects: subjects.map((subject) => ({
+      ...subject,
+      topics: subject.topics.filter((topic) => topic.articles.length > 0),
+    })),
+  });
 });
 
 router.get("/:slug", async (req: Request, res: Response) => {
@@ -91,7 +96,12 @@ router.get("/:slug", async (req: Request, res: Response) => {
     res.status(404).json({ error: "Subject not found" });
     return;
   }
-  res.json({ subject });
+  res.json({
+    subject: {
+      ...subject,
+      topics: subject.topics.filter((topic) => topic.articles.length > 0),
+    },
+  });
 });
 
 router.get(

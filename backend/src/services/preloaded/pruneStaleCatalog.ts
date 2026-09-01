@@ -1,6 +1,9 @@
 import prisma from "../../utils/prisma.js";
 import { logger } from "../../utils/logger.js";
-import { ALL_PRELOADED_CATALOG } from "./catalogIndex.js";
+import {
+  ALL_PRELOADED_CATALOG,
+  PRELOADED_SUBJECT_SLUGS,
+} from "./catalogIndex.js";
 import { deleteAdminArticleStorage } from "./adminArticleStorage.js";
 
 function catalogKey(subjectSlug: string, topicSlug: string, articleSlug: string): string {
@@ -12,9 +15,8 @@ export async function pruneStalePreloadedArticles(): Promise<{ archived: number 
     ALL_PRELOADED_CATALOG.map((e) => catalogKey(e.subjectSlug, e.topicSlug, e.slug))
   );
 
-  const subjectSlugs = [...new Set(ALL_PRELOADED_CATALOG.map((e) => e.subjectSlug))];
   const subjects = await prisma.subject.findMany({
-    where: { slug: { in: subjectSlugs } },
+    where: { slug: { in: PRELOADED_SUBJECT_SLUGS } },
     select: {
       slug: true,
       topics: {

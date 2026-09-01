@@ -21,5 +21,6 @@ describe("copyrightCompliance", () => {
   it("catalog audit has no error-level findings for seeded entries", () => {
     const report = auditCopyrightCompliance();
     expect(report.summary.error).toBe(0);
+    expect(report.summary.linkOnlyCatalogEntries).toBe(0);
   });
 });

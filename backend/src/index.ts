@@ -21,6 +21,7 @@ import adminIngestRoutes from "./routes/adminIngest.js";
 import adminPreloadedRoutes from "./routes/adminPreloaded.js";
 import adminContentGenRoutes from "./routes/adminContentGen.js";
 import { resumePendingContentGenJobs } from "./services/contentGen/resumeJobs.js";
+import { pruneStalePreloadedArticles } from "./services/preloaded/pruneStaleCatalog.js";
 import currentAffairsRoutes from "./routes/currentAffairs.js";
 import libraryFolderRoutes from "./routes/libraryFolders.js";
 import myContentRoutes from "./routes/myContent.js";
@@ -229,4 +230,7 @@ app.listen(PORT, () => {
   startLinkHealthScheduler();
   startPreloadedLinkHealthScheduler();
   void resumePendingContentGenJobs();
+  void pruneStalePreloadedArticles().catch((err) =>
+    logger.warn("preloaded.prune.boot_failed", errorFields(err))
+  );
 });

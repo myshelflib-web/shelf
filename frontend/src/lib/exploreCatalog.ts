@@ -209,11 +209,9 @@ export function featuredExploreCollections(subjects: Subject[]): Subject[] {
 
   const preferredSlugs = [
     "ncert",
-    "official-portals",
-    "gate-official",
-    "law-official",
-    "medicine-official",
-    "open-textbooks",
+    "study-skills-learning",
+    "study-skills-exam-craft",
+    "upsc-polity",
   ];
   for (const slug of preferredSlugs) {
     const match = withArticles.find((s) => s.slug === slug && !seen.has(s.id));
