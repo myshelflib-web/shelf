@@ -41,6 +41,7 @@ import {
   SharedByBanner,
 } from "./SharedDocChrome";
 import { PreloadedSaveBanner } from "./PreloadedSaveBanner";
+import { PreloadedOfficialOpenBar } from "@/components/learn/PreloadedOfficialOpenBar";
 import {
   promptPreloadedSave,
   resolveAnnotationLock,
@@ -119,6 +120,7 @@ export interface LoadedPage {
   saveMode?: "copy_admin" | "download_remote" | "link" | "none";
   embeddable?: boolean | null;
   linkStatus?: string | null;
+  sourceLicense?: import("@/types").IngestLicense | null;
   subjectMeta?: { name: string; slug: string; icon?: string | null } | null;
   /** Present when opened via share / link. */
   access?: import("@/types").PageAccessInfo;
@@ -157,6 +159,7 @@ async function fetchCurriculumPage(
     saveMode: article.saveMode ?? "link",
     embeddable: article.embeddable ?? null,
     linkStatus: article.linkStatus ?? null,
+    sourceLicense: article.sourceLicense ?? null,
     subjectMeta: article.topic.subject,
     topicMeta: { title: article.topic.title, slug: article.topic.slug },
   };
@@ -172,6 +175,7 @@ async function fetchPage(scope: PersonalPageReaderScope): Promise<{
   saveMode?: "copy_admin" | "download_remote" | "link" | "none";
   embeddable?: boolean | null;
   linkStatus?: string | null;
+  sourceLicense?: import("@/types").IngestLicense | null;
   subjectMeta?: { name: string; slug: string; icon?: string | null } | null;
   topicMeta?: { title: string; slug: string } | null;
   access?: import("@/types").PageAccessInfo;
@@ -189,6 +193,7 @@ async function fetchPage(scope: PersonalPageReaderScope): Promise<{
       saveMode: curriculum.saveMode,
       embeddable: curriculum.embeddable,
       linkStatus: curriculum.linkStatus,
+      sourceLicense: curriculum.sourceLicense,
       subjectMeta: curriculum.subjectMeta,
       topicMeta: curriculum.topicMeta,
     };
@@ -483,6 +488,7 @@ export function DocumentPane({
           saveMode,
           embeddable,
           linkStatus,
+          sourceLicense,
           subjectMeta,
           topicMeta,
           access,
@@ -545,6 +551,7 @@ export function DocumentPane({
           saveMode,
           embeddable,
           linkStatus,
+          sourceLicense,
           subjectMeta: subjectMeta ?? null,
           access,
         };
@@ -1177,6 +1184,7 @@ export function DocumentPane({
       sourceUrl: pageData?.sourceUrl,
       embeddable: pageData?.embeddable,
       linkStatus: pageData?.linkStatus,
+      sourceLicense: pageData?.sourceLicense,
     });
   const linkEmbedHintValue =
     isLink &&
@@ -1184,6 +1192,7 @@ export function DocumentPane({
       sourceUrl: pageData?.sourceUrl,
       embeddable: pageData?.embeddable,
       linkStatus: pageData?.linkStatus,
+      sourceLicense: pageData?.sourceLicense,
     });
   const learnEmbedStatusProbe =
     scope.kind === "learn" && isPreloadedDoc && isLink
@@ -1213,6 +1222,13 @@ export function DocumentPane({
   const officialSourceAttribution =
     pageData?.isPreloaded && isPdf
       ? formatOfficialSourceAttribution(pageData.sourceUrl)
+      : null;
+  const preloadedPortalUrl =
+    isPreloadedDoc &&
+    pageData?.sourceUrl?.trim() &&
+    !isPdf &&
+    pageData.linkStatus !== "BROKEN"
+      ? pageData.sourceUrl.trim()
       : null;
 
   const crumbNotebook =
@@ -1434,6 +1450,10 @@ export function DocumentPane({
               saveMode={pageData.saveMode}
               onOpen={onNavigate}
             />
+          )}
+
+          {preloadedPortalUrl && showChrome && (
+            <PreloadedOfficialOpenBar url={preloadedPortalUrl} />
           )}
 
           {pageData.access && !pageData.access.isOwner && showChrome && (

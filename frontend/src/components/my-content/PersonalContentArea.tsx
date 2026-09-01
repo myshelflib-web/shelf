@@ -125,6 +125,22 @@ export function PersonalContentArea({
   );
 
   useEffect(() => {
+    if (editing || !fragment.includes("preloaded-official-fallback")) return;
+    const root = containerRef.current;
+    if (!root) return;
+    const onClick = (event: MouseEvent) => {
+      const anchor = (event.target as HTMLElement).closest(
+        "a.preloaded-official-fallback__cta"
+      ) as HTMLAnchorElement | null;
+      if (!anchor?.href) return;
+      event.preventDefault();
+      window.open(anchor.href, "_blank", "noopener,noreferrer");
+    };
+    root.addEventListener("click", onClick);
+    return () => root.removeEventListener("click", onClick);
+  }, [editing, fragment]);
+
+  useEffect(() => {
     if (editing) return;
     const root = containerRef.current;
     if (!root) return;
@@ -152,6 +168,22 @@ export function PersonalContentArea({
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
   }, [clipMode, onClip]);
+
+  useEffect(() => {
+    if (editing || !fragment.includes("preloaded-official-fallback")) return;
+    const root = containerRef.current;
+    if (!root) return;
+    const onClick = (event: MouseEvent) => {
+      const anchor = (event.target as HTMLElement).closest(
+        "a.preloaded-official-fallback__cta"
+      ) as HTMLAnchorElement | null;
+      if (!anchor?.href) return;
+      event.preventDefault();
+      window.open(anchor.href, "_blank", "noopener,noreferrer");
+    };
+    root.addEventListener("click", onClick);
+    return () => root.removeEventListener("click", onClick);
+  }, [editing, fragment]);
 
   useEffect(() => {
     onScrollContainer?.(containerRef.current);

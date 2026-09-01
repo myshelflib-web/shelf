@@ -20,6 +20,7 @@ export function resolvePreloadedLearnPage(
     | "summary"
     | "embeddable"
     | "linkStatus"
+    | "sourceLicense"
   >
 ): ResolvedPreloadedLearnPage {
   const sourceUrl = article.sourceUrl?.trim() || null;
@@ -27,6 +28,7 @@ export function resolvePreloadedLearnPage(
     sourceUrl,
     embeddable: article.embeddable,
     linkStatus: article.linkStatus,
+    sourceLicense: article.sourceLicense,
   });
 
   if (article.hasPdf || isPdfSourceUrl(sourceUrl)) {

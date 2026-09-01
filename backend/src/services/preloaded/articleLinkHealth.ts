@@ -7,6 +7,7 @@ import {
 } from "../publicLinkCheck.js";
 import { repairNcertPdfLink } from "./ncertUrlRepair.js";
 import { suggestOfficialUrl } from "./urlRepair.js";
+import { applyLinkEmbedPolicy } from "../linkEmbedPolicy.js";
 
 export type ArticleLinkCheckResult = PublicLinkCheckResult & {
   sourceUrlUpdated: boolean;
@@ -39,6 +40,7 @@ async function maybeRepairArticleUrl(articleId: string): Promise<boolean> {
   const article = await prisma.article.findUnique({
     where: { id: articleId },
     include: {
+      ingestItem: { select: { license: true } },
       topic: {
         select: {
           title: true,
@@ -74,15 +76,19 @@ async function maybeRepairArticleUrl(articleId: string): Promise<boolean> {
   if (!suggestion || suggestion.confidence === "low") return false;
 
   const verified = await checkPublicLink(suggestion.url);
-  if (verified.linkStatus !== "OK") return false;
+  if (verified.linkStatus === "BROKEN") return false;
+  const policy = applyLinkEmbedPolicy(verified, {
+    sourceUrl: suggestion.url,
+    license: article.ingestItem?.license ?? article.sourceLicense ?? null,
+  });
 
   await prisma.article.update({
     where: { id: articleId },
     data: {
-      sourceUrl: verified.finalUrl,
-      sourceUrlChecked: verified.finalUrl,
-      linkStatus: verified.linkStatus,
-      embeddable: verified.embeddable,
+      sourceUrl: policy.finalUrl,
+      sourceUrlChecked: policy.finalUrl,
+      linkStatus: policy.linkStatus,
+      embeddable: policy.embeddable,
       lastHttpStatus: verified.lastHttpStatus,
       lastLinkCheckAt: new Date(),
       lastUrlRepairAt: new Date(),
@@ -112,11 +118,18 @@ function resolveSourceUrlUpdate(
 export async function checkArticleLink(articleId: string): Promise<ArticleLinkCheckResult> {
   const article = await prisma.article.findUnique({
     where: { id: articleId },
-    select: { id: true, sourceUrl: true, pdfKey: true },
+    select: {
+      id: true,
+      sourceUrl: true,
+      pdfKey: true,
+      sourceLicense: true,
+      ingestItem: { select: { license: true } },
+    },
   });
   if (!article) throw new Error("Article not found.");
 
   const url = article.sourceUrl?.trim();
+  const license = article.ingestItem?.license ?? article.sourceLicense ?? null;
   if (!url || article.pdfKey) {
     const empty: ArticleLinkCheckResult = {
       linkStatus: "UNKNOWN",
@@ -133,7 +146,8 @@ export async function checkArticleLink(articleId: string): Promise<ArticleLinkCh
     return empty;
   }
 
-  const result = await checkPublicLink(url);
+  const probed = await checkPublicLink(url);
+  const result = applyLinkEmbedPolicy(probed, { sourceUrl: url, license });
   const nextSourceUrl = resolveSourceUrlUpdate(url, result);
   let repaired = false;
 
@@ -149,17 +163,21 @@ export async function checkArticleLink(articleId: string): Promise<ArticleLinkCh
     },
   });
 
-  if (result.linkStatus === "BROKEN") {
+  if (probed.linkStatus === "BROKEN") {
     const ncertFixed = await repairNcertPdfLink(url);
     if (ncertFixed) {
+      const ncertPolicy = applyLinkEmbedPolicy(ncertFixed, {
+        sourceUrl: ncertFixed.repairedUrl,
+        license,
+      });
       await prisma.article.update({
         where: { id: articleId },
         data: {
           sourceUrl: ncertFixed.repairedUrl,
-          sourceUrlChecked: ncertFixed.finalUrl,
-          linkStatus: ncertFixed.linkStatus,
-          embeddable: ncertFixed.embeddable,
-          lastHttpStatus: ncertFixed.lastHttpStatus,
+          sourceUrlChecked: ncertPolicy.finalUrl,
+          linkStatus: ncertPolicy.linkStatus,
+          embeddable: ncertPolicy.embeddable,
+          lastHttpStatus: ncertPolicy.lastHttpStatus,
           lastLinkCheckAt: new Date(),
         },
       });
@@ -176,7 +194,7 @@ export async function checkArticleLink(articleId: string): Promise<ArticleLinkCh
         })
       );
       return {
-        ...ncertFixed,
+        ...ncertPolicy,
         finalUrl: ncertFixed.repairedUrl,
         sourceUrlUpdated: true,
         repaired: true,

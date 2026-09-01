@@ -228,6 +228,10 @@ export function EmbedViewer({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-[var(--accent)] hover:underline px-2 py-1"
             title="Open linked page in a new browser tab"
+            onClick={(e) => {
+              e.preventDefault();
+              window.open(url, "_blank", "noopener,noreferrer");
+            }}
           >
             <ExternalLink className="w-3.5 h-3.5" />
             Open
@@ -323,6 +327,10 @@ export function EmbedViewer({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="chip-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      window.open(url, "_blank", "noopener,noreferrer");
+                    }}
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
                     Open in browser

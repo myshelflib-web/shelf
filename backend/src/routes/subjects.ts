@@ -9,6 +9,10 @@ import { param } from "../utils/param.js";
 import { isStudyGoal } from "../studyGoal.js";
 import { registerSubjectArticlePdfRoutes } from "./subjectsArticlePdf.js";
 import { buildPreloadedSummaryHtml } from "../services/preloaded/buildSummaryHtml.js";
+import {
+  applyLinkEmbedPolicy,
+  effectiveLinkEmbeddable,
+} from "../services/linkEmbedPolicy.js";
 
 const router = Router();
 
@@ -246,10 +250,15 @@ router.get(
       );
     }
 
-    const embeddable =
-      article.embeddable ??
-      article.ingestItem?.embeddable ??
-      null;
+    const embeddable = effectiveLinkEmbeddable({
+      sourceUrl: savePolicy.embedUrl ?? article.sourceUrl,
+      license: savePolicy.license,
+      embeddable:
+        article.embeddable ??
+        article.ingestItem?.embeddable ??
+        null,
+      linkStatus: article.linkStatus,
+    });
 
     res.json({
       article: {
@@ -305,7 +314,14 @@ router.get(
     }
     const article = await prisma.article.findUnique({
       where: { topicId_slug: { topicId: topic.id, slug: articleSlug } },
-      select: { id: true, sourceUrl: true, pdfKey: true, status: true },
+      select: {
+        id: true,
+        sourceUrl: true,
+        pdfKey: true,
+        status: true,
+        sourceLicense: true,
+        ingestItem: { select: { license: true } },
+      },
     });
     if (!article || article.status !== "PUBLISHED") {
       res.status(404).json({ error: "Article not found" });
@@ -318,21 +334,26 @@ router.get(
       return;
     }
 
-    const result = await checkPublicLink(url);
+    const license =
+      article.ingestItem?.license ?? article.sourceLicense ?? null;
+    const checked = applyLinkEmbedPolicy(await checkPublicLink(url), {
+      sourceUrl: url,
+      license,
+    });
     await prisma.article.update({
       where: { id: article.id },
       data: {
-        linkStatus: result.linkStatus,
-        embeddable: result.embeddable,
-        lastHttpStatus: result.lastHttpStatus,
+        linkStatus: checked.linkStatus,
+        embeddable: checked.embeddable,
+        lastHttpStatus: checked.lastHttpStatus,
         lastLinkCheckAt: new Date(),
-        sourceUrlChecked: result.finalUrl,
+        sourceUrlChecked: checked.finalUrl,
       },
     });
     res.json({
-      embeddable: result.embeddable,
-      linkStatus: result.linkStatus,
-      finalUrl: result.finalUrl,
+      embeddable: checked.embeddable,
+      linkStatus: checked.linkStatus,
+      finalUrl: checked.finalUrl,
     });
   }
 );

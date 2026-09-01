@@ -496,6 +496,8 @@ const EMBED_CHECK_TIMEOUT_MS = 12_000;
 /**
  * Probe a public URL’s framing headers (does not download the full body).
  */
+import { isKnownNonEmbedUrl } from "./linkEmbedPolicy.js";
+
 export async function checkUrlEmbeddable(
   url: string
 ): Promise<{ embeddable: boolean; finalUrl: string }> {
@@ -503,11 +505,17 @@ export async function checkUrlEmbeddable(
   if (!start) {
     return { embeddable: false, finalUrl: url };
   }
+  if (isKnownNonEmbedUrl(start)) {
+    return { embeddable: false, finalUrl: start };
+  }
 
   let current = start;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const safe = parsePublicHttpUrl(current);
     if (!safe) return { embeddable: false, finalUrl: current };
+    if (isKnownNonEmbedUrl(safe)) {
+      return { embeddable: false, finalUrl: safe };
+    }
 
     let res: Response;
     try {
@@ -523,17 +531,16 @@ export async function checkUrlEmbeddable(
         },
       });
     } catch {
-      // Unknown — let the browser try the iframe
-      return { embeddable: true, finalUrl: safe };
+      return { embeddable: false, finalUrl: safe };
     }
 
     if ([301, 302, 303, 307, 308].includes(res.status)) {
       const loc = res.headers.get("location");
-      if (!loc) return { embeddable: true, finalUrl: safe };
+      if (!loc) return { embeddable: false, finalUrl: safe };
       try {
         current = new URL(loc, safe).toString();
       } catch {
-        return { embeddable: true, finalUrl: safe };
+        return { embeddable: false, finalUrl: safe };
       }
       // Drain/cancel body if any
       try {
@@ -553,6 +560,6 @@ export async function checkUrlEmbeddable(
     return { embeddable, finalUrl: safe };
   }
 
-  return { embeddable: true, finalUrl: current };
+  return { embeddable: false, finalUrl: current };
 }
 

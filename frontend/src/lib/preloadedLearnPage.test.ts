@@ -12,6 +12,7 @@ describe("resolvePreloadedLearnPage", () => {
         summary: "History",
         embeddable: null,
         linkStatus: "UNKNOWN",
+        sourceLicense: null,
       }).contentType
     ).toBe("PDF");
   });
@@ -26,6 +27,7 @@ describe("resolvePreloadedLearnPage", () => {
         summary: "Notes",
         embeddable: true,
         linkStatus: "OK",
+        sourceLicense: "OFFICIAL_DOCUMENT",
       })
     ).toMatchObject({ contentType: "LINK", useLinkEmbed: true });
   });
@@ -39,9 +41,25 @@ describe("resolvePreloadedLearnPage", () => {
       summary: "Central bank portal",
       embeddable: false,
       linkStatus: "BLOCKED_EMBED",
+      sourceLicense: "LINK_ONLY",
     });
     expect(resolved.contentType).toBe("HTML");
     expect(resolved.content).toContain("Central bank portal");
+    expect(resolved.content).toContain("Open on official site");
+  });
+
+  it("shows summary HTML when MCA was incorrectly marked embeddable", () => {
+    const resolved = resolvePreloadedLearnPage({
+      title: "Ministry of Corporate Affairs",
+      content: null,
+      hasPdf: false,
+      sourceUrl: "https://www.mca.gov.in/",
+      summary: "Companies Act and corporate law notifications from MCA.",
+      embeddable: true,
+      linkStatus: "OK",
+      sourceLicense: "LINK_ONLY",
+    });
+    expect(resolved).toMatchObject({ contentType: "HTML", useLinkEmbed: false });
     expect(resolved.content).toContain("Open on official site");
   });
 });
