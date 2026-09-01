@@ -8,6 +8,7 @@ import {
   runArticleLinkHealthBatch,
 } from "../services/preloaded/articleLinkHealth.js";
 import { auditPreloadedCatalog } from "../services/preloaded/catalogAudit.js";
+import { auditCopyrightCompliance } from "../services/preloaded/copyrightCompliance.js";
 import prisma from "../utils/prisma.js";
 import { param } from "../utils/param.js";
 
@@ -95,6 +96,15 @@ router.post(
 
     const result = await checkArticleLink(article.id);
     res.json(result);
+  }
+);
+
+router.get(
+  "/preloaded/copyright-audit",
+  authMiddleware,
+  adminMiddleware,
+  async (_req: Request, res: Response) => {
+    res.json(auditCopyrightCompliance());
   }
 );
 

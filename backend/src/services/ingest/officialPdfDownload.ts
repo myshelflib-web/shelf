@@ -1,10 +1,12 @@
 import { parsePublicHttpUrl } from "../../utils/publicUrl.js";
 import { fetchWithRetry } from "../../utils/fetchRetry.js";
 import { ingestFetchHeaders } from "./ingestHttp.js";
+import { assertOfficialRedistributionAllowed } from "../preloaded/copyrightCompliance.js";
 
 export const OFFICIAL_PDF_MAX_BYTES = 50 * 1024 * 1024;
 
 export async function downloadOfficialPdf(url: string): Promise<Buffer> {
+  assertOfficialRedistributionAllowed(url);
   const safe = parsePublicHttpUrl(url);
   if (!safe) throw new Error("PDF URL is not allowed.");
 

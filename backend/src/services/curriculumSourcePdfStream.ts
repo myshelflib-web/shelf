@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 import { parsePublicHttpUrl } from "../utils/publicUrl.js";
 import { fetchWithRetry } from "../utils/fetchRetry.js";
 import { ingestFetchHeaders } from "./ingest/ingestHttp.js";
+import { assertOfficialRedistributionAllowed } from "./preloaded/copyrightCompliance.js";
 
 /** Stream an official PDF URL through Shelf (Range-aware) for the Learn reader. */
 export async function pipeRemoteSourcePdf(
@@ -9,6 +10,7 @@ export async function pipeRemoteSourcePdf(
   res: Response,
   sourceUrl: string
 ): Promise<void> {
+  assertOfficialRedistributionAllowed(sourceUrl);
   const safe = parsePublicHttpUrl(sourceUrl.trim());
   if (!safe) {
     res.status(400).json({ error: "PDF URL is not allowed." });
