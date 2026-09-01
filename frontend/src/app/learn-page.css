@@ -280,10 +280,39 @@
 }
 
 /* Explore library landing (/learn) */
+.explore-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.explore-workspace-header {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+}
+
+.explore-workspace-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.explore-workspace-footer {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  padding: 0.875rem 0 1rem;
+}
+
 .explore-page-inner {
   max-width: 56rem;
   margin: 0 auto;
-  padding: 1.75rem 1.25rem 3rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
 }
 
 @media (min-width: 640px) {
@@ -291,6 +320,61 @@
     padding-left: 2rem;
     padding-right: 2rem;
   }
+}
+
+.explore-page-header {
+  padding-top: 1.5rem;
+  padding-bottom: 1.25rem;
+}
+
+.explore-page-body {
+  padding-top: 1.25rem;
+  padding-bottom: 2rem;
+}
+
+.explore-auth-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+  .explore-auth-actions {
+    flex-direction: row;
+    align-items: stretch;
+  }
+}
+
+.explore-auth-card {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  text-decoration: none;
+  text-align: left;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.explore-auth-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: var(--bg-elevated);
+}
+
+.explore-auth-card-single {
+  flex: none;
+  width: min(100%, 20rem);
 }
 
 .explore-home-head {
@@ -318,7 +402,11 @@
 }
 
 .explore-section {
-  margin-top: 1.75rem;
+  margin-top: 1.5rem;
+}
+
+.explore-section:first-child {
+  margin-top: 0;
 }
 
 .explore-section-head {
@@ -570,6 +658,8 @@
   font-size: 0.625rem;
   font-weight: 650;
   color: var(--text-muted);
+  text-decoration: none;
+  text-align: left;
 }
 
 .explore-back-library:hover {

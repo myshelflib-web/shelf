@@ -54,14 +54,7 @@ export function ExploreSidebarBrowse({
       </p>
       <div className="h-px bg-[var(--border-subtle)] -mx-1.5 mb-2" />
 
-      {mode === "collection" && activeSubject ? (
-        <div>
-          <Link href="/learn" className="explore-side-row text-[var(--text-muted)]">
-            ← Back to Explore
-          </Link>
-          <p className="explore-side-label mt-2">Collection</p>
-        </div>
-      ) : mode === "home" ? (
+      {mode === "collection" && activeSubject ? null : mode === "home" ? (
         <>
           <div className="mt-1">
             <p className="explore-side-label">Browse</p>

@@ -25,8 +25,10 @@ import { PreloadedSubjectBranch } from "@/components/my-content/PreloadedSubject
 import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
 import { LibraryMode } from "@/lib/libraryMode";
 import type { ExploreAreaId } from "@/lib/exploreCatalog";
+import { useRouter } from "next/navigation";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { ExploreSidebarBrowse } from "@/components/learn/explore/ExploreSidebarBrowse";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PreloadedLibrarySidebarProps {
   mode: LibraryMode;
@@ -63,6 +65,8 @@ export function PreloadedLibrarySidebar({
   className,
 }: PreloadedLibrarySidebarProps) {
   const { subjects, loading, reload } = useLearnSubjects();
+  const router = useRouter();
+  const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [expandedSubjects, setExpandedSubjects] = useState<
     Record<string, boolean>
@@ -87,12 +91,12 @@ export function PreloadedLibrarySidebar({
   useEffect(() => {
     if (!activeSubject || !activeSubjectData) return;
     setExpandedSubjects({ [activeSubject]: true });
-    const topics: Record<string, boolean> = {};
-    for (const t of activeSubjectData.topics) {
-      topics[`${activeSubject}:${t.slug}`] = true;
+    if (activeTopic) {
+      setExpandedTopics({ [`${activeSubject}:${activeTopic}`]: true });
+    } else {
+      setExpandedTopics({});
     }
-    setExpandedTopics(topics);
-  }, [activeSubject, activeSubjectData]);
+  }, [activeSubject, activeSubjectData, activeTopic]);
 
   useEffect(() => {
     if (isCollectionView || workspaceMode) return;
@@ -225,6 +229,31 @@ export function PreloadedLibrarySidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto px-1.5 py-2 min-h-0">
+        {!workspaceMode && isCollectionView ? (
+          <div className="px-0.5 pb-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (!user) {
+                  onGuestLibraryClick?.();
+                  return;
+                }
+                router.push("/my-content");
+              }}
+              className="explore-back-library"
+            >
+              ← My Library
+            </button>
+            <Link href="/learn" className="explore-back-library block mt-0.5">
+              ← Back to Explore
+            </Link>
+            <p className="px-1.5 pt-2 pb-1 text-sm font-semibold text-[var(--text-primary)]">
+              Explore
+            </p>
+            <div className="h-px bg-[var(--border-subtle)] -mx-1.5 mb-2" />
+          </div>
+        ) : null}
+
         {showExploreBrowse ? (
           <ExploreSidebarBrowse
             mode={exploreSidebarMode}
@@ -261,7 +290,10 @@ export function PreloadedLibrarySidebar({
                   <PreloadedSubjectBranch
                     key={subject.id}
                     subject={subject}
-                    open={expandedSubjects[subject.slug] ?? isCollectionView}
+                    open={
+                      expandedSubjects[subject.slug] ??
+                      (isCollectionView && subject.slug === activeSubject)
+                    }
                     expandedTopics={expandedTopics}
                     activeSubject={activeSubject}
                     activeTopic={activeTopic}
