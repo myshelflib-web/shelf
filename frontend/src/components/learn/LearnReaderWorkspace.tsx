@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import clsx from "clsx";
 import {
   Group,
   Panel,
@@ -55,7 +56,7 @@ export function LearnReaderWorkspace({
   scope: Extract<PersonalPageReaderScope, { kind: "learn" }>;
 }) {
   const router = useRouter();
-  const { clearReaderOpen } = useLearnNavigation();
+  const { clearReaderOpen, startBrowseReturn } = useLearnNavigation();
   const { user, loading: authLoading } = useAuth();
   const compactPortrait = useCompactPortrait();
   const isPhone = useIsPhone();
@@ -76,6 +77,8 @@ export function LearnReaderWorkspace({
   >({});
   const handlersRef = useRef<Record<string, DocumentPaneHandlers>>({});
   const [warmKeys, setWarmKeys] = useState<Record<string, string[]>>({});
+  const [exitingBrowse, setExitingBrowse] = useState(false);
+  const exitTimerRef = useRef<number | null>(null);
 
   const workspace = useReaderWorkspace(routeScope);
   const {
@@ -116,6 +119,32 @@ export function LearnReaderWorkspace({
   useEffect(() => {
     clearReaderOpen();
   }, [clearReaderOpen]);
+
+  useEffect(
+    () => () => {
+      if (exitTimerRef.current !== null) {
+        window.clearTimeout(exitTimerRef.current);
+      }
+    },
+    []
+  );
+
+  const navigateToBrowse = useCallback(
+    (href: string) => {
+      if (exitTimerRef.current !== null) return;
+      const delayMs = startBrowseReturn();
+      if (delayMs <= 0) {
+        router.push(href);
+        return;
+      }
+      setExitingBrowse(true);
+      exitTimerRef.current = window.setTimeout(() => {
+        exitTimerRef.current = null;
+        router.push(href);
+      }, delayMs);
+    },
+    [router, startBrowseReturn]
+  );
 
   useEffect(() => {
     if (user) return;
@@ -261,12 +290,12 @@ export function LearnReaderWorkspace({
         const exitBrowseHref = routeScope.topicSlug
           ? topicHref(routeScope.subjectSlug, routeScope.topicSlug)
           : subjectHref(routeScope.subjectSlug);
-        router.push(exitBrowseHref);
+        navigateToBrowse(exitBrowseHref);
         return;
       }
       if (nextFocusHref) syncReaderUrl(nextFocusHref);
     },
-    [state.panes, closeTab, router, syncReaderUrl, routeScope]
+    [state.panes, closeTab, syncReaderUrl, routeScope, navigateToBrowse]
   );
 
   const handleOpenTab = useCallback(
@@ -412,7 +441,11 @@ export function LearnReaderWorkspace({
       <div className="flex flex-1 overflow-hidden min-h-0">
         <Group
           orientation="horizontal"
-          className={`flex-1 min-h-0 ${layoutCompact ? "reader-shell-compact" : ""}`}
+          className={clsx(
+            "flex-1 min-h-0 learn-reader-shell",
+            layoutCompact && "reader-shell-compact",
+            exitingBrowse && "learn-reader-shell-exit"
+          )}
           id="learn-reader-shell"
         >
           <Panel

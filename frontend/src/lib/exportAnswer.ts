@@ -76,6 +76,22 @@ const EXPORT_STYLES = `
     color: #666666;
     margin-bottom: 0.35em;
   }
+  .study-ai-try-next-export {
+    margin: 1em 0;
+    padding: 10px 12px;
+    border: 1px solid #d8dcf5;
+    border-radius: 10px;
+    background: #f7f7fb;
+    page-break-inside: avoid;
+  }
+  .study-ai-try-next-label {
+    font-size: 9pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #5555aa;
+    margin-bottom: 0.35em;
+  }
   .katex {
     font-size: 1.05em;
     color: #111111;

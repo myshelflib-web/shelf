@@ -116,9 +116,19 @@ type Block =
   | { type: "h2" | "h3" | "h4"; text: string }
   | { type: "ul" | "ol"; items: string[] }
   | { type: "p"; text: string }
+  | { type: "tryNext"; body: string }
   | { type: "table"; headers: string[]; rows: string[][] }
   | { type: "code"; lang: string; text: string }
   | { type: "math"; text: string; display: boolean };
+
+function tryNextBodyFromHeading(text: string): string | null {
+  const match = text.match(/^try next:?\s+(.+)$/i);
+  return match ? match[1].trim() : null;
+}
+
+function pushTryNextBlock(blocks: Block[], body: string) {
+  blocks.push({ type: "tryNext", body });
+}
 
 function splitTableRow(line: string): string[] {
   let s = line.trim();
@@ -276,7 +286,29 @@ function parseBlocks(content: string): Block[] {
       blocks.push({ type: "h4", text: h4[1] });
     } else if (h3) {
       flushList();
-      blocks.push({ type: "h3", text: h3[1] });
+      const inlineBody = tryNextBodyFromHeading(h3[1]);
+      if (inlineBody !== null) {
+        pushTryNextBlock(blocks, inlineBody);
+      } else if (/^try next:?$/i.test(h3[1].trim())) {
+        let body = "";
+        let j = i + 1;
+        while (j < lines.length && !lines[j].trim()) j += 1;
+        if (j < lines.length) {
+          const next = lines[j].trim();
+          const isBody =
+            !/^#{1,4}\s/.test(next) &&
+            !/^[-*•]\s/.test(next) &&
+            !/^\d+\.\s/.test(next) &&
+            !next.startsWith("```");
+          if (isBody) {
+            body = next;
+            i = j;
+          }
+        }
+        pushTryNextBlock(blocks, body);
+      } else {
+        blocks.push({ type: "h3", text: h3[1] });
+      }
     } else if (h2 || h1) {
       flushList();
       blocks.push({ type: "h2", text: (h2 ?? h1)![1] });
@@ -336,6 +368,15 @@ export function StudyAIContent({
             return <h3 key={i}>{inline(block.text)}</h3>;
           case "h4":
             return <h4 key={i}>{inline(block.text)}</h4>;
+          case "tryNext":
+            return (
+              <div key={i} className="study-ai-try-next">
+                <p className="study-ai-try-next-label">Try next</p>
+                {block.body ? (
+                  <p className="study-ai-try-next-body">{inline(block.body)}</p>
+                ) : null}
+              </div>
+            );
           case "ul":
             return (
               <ul key={i}>

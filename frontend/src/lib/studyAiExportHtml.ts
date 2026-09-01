@@ -189,7 +189,33 @@ export function markdownToExportHtml(md: string): string {
       out.push(`<h2>${inlineMarkdownToExportHtml((h1 ?? h2)![1])}</h2>`);
     } else if (h3) {
       closeLists();
-      out.push(`<h3>${inlineMarkdownToExportHtml(h3[1])}</h3>`);
+      const inlineBody = h3[1].match(/^try next:?\s+(.+)$/i)?.[1]?.trim();
+      if (inlineBody) {
+        out.push(
+          `<div class="study-ai-try-next-export"><div class="study-ai-try-next-label">Try next</div><p>${inlineMarkdownToExportHtml(inlineBody)}</p></div>`
+        );
+      } else if (/^try next:?$/i.test(h3[1].trim())) {
+        let body = "";
+        let j = i + 1;
+        while (j < lines.length && !lines[j].trim()) j += 1;
+        if (j < lines.length) {
+          const next = lines[j].trim();
+          const isBody =
+            !/^#{1,4}\s/.test(next) &&
+            !/^[-*•]\s/.test(next) &&
+            !/^\d+\.\s/.test(next) &&
+            !next.startsWith("```");
+          if (isBody) {
+            body = next;
+            i = j;
+          }
+        }
+        out.push(
+          `<div class="study-ai-try-next-export"><div class="study-ai-try-next-label">Try next</div>${body ? `<p>${inlineMarkdownToExportHtml(body)}</p>` : ""}</div>`
+        );
+      } else {
+        out.push(`<h3>${inlineMarkdownToExportHtml(h3[1])}</h3>`);
+      }
     } else if (h4) {
       closeLists();
       out.push(`<h4>${inlineMarkdownToExportHtml(h4[1])}</h4>`);

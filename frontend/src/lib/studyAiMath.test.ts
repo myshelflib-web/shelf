@@ -3,6 +3,7 @@ import {
   inlineMarkdownToExportHtml,
   looksLikeTex,
   normalizeStudyMarkdown,
+  normalizeTryNextMarkdown,
   renderMathHtml,
   splitInlineMath,
 } from "./studyAiMath";
@@ -46,6 +47,14 @@ describe("studyAiMath", () => {
       "\\int_{b}^{a} [s(x)+t(x)] \\, dx$$"
     );
     expect(out).toContain("$$\n\\int_{b}^{a} [s(x)+t(x)] \\, dx\n$$");
+  });
+
+  it("lifts bullet + heading Try next into a callout block", () => {
+    const out = normalizeTryNextMarkdown(
+      '- ### Try next: Type "quiz" for a drill.'
+    );
+    expect(out).toContain("### Try next");
+    expect(out).toContain('Type "quiz"');
   });
 
   it("does not treat a heading as tex", () => {

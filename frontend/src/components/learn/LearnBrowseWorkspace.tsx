@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import clsx from "clsx";
 import { Header } from "@/components/Header";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { LibrarySidePanel } from "@/components/my-content/LibrarySidePanel";
@@ -51,9 +52,16 @@ function LearnBrowseWorkspaceInner({
   const isPhone = useIsPhone();
   const searchParams = useSearchParams();
   const { setGuestGoal, showGoalPicker } = useLearnStudyGoal(initialGoal);
-  const { openingReader } = useLearnNavigation();
+  const { openingReader, returningToBrowse, completeBrowseReturn } =
+    useLearnNavigation();
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [signInFeature, setSignInFeature] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!returningToBrowse) return;
+    const timeout = window.setTimeout(() => completeBrowseReturn(), 320);
+    return () => window.clearTimeout(timeout);
+  }, [returningToBrowse, completeBrowseReturn]);
 
   const areaFromQuery = parseExploreAreaFromSearch(searchParams.get("area"));
   const activeArea =
@@ -91,9 +99,11 @@ function LearnBrowseWorkspaceInner({
           <div className="h-full w-72 shrink-0">{libraryExplorer}</div>
         ) : null}
         <main
-          className={`flex-1 min-h-0 overflow-hidden bg-[var(--bg-primary)] relative ${
-            compactPortrait ? "pt-10" : ""
-          }`}
+          className={clsx(
+            "flex-1 min-h-0 overflow-hidden bg-[var(--bg-primary)] relative",
+            compactPortrait && "pt-10",
+            returningToBrowse && "learn-browse-pane-enter"
+          )}
         >
           {compactPortrait && !explorerOpen ? (
             <ShelfExplorerFab onClick={() => setExplorerOpen(true)} />

@@ -706,3 +706,46 @@ a.explore-side-row {
   justify-content: center;
   flex-shrink: 0;
 }
+
+/* Learn reader ↔ browse transitions */
+.learn-reader-shell {
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease;
+}
+
+.learn-reader-shell-exit {
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+}
+
+.learn-browse-pane-enter {
+  animation: learn-browse-pane-in 0.32s ease forwards;
+}
+
+@keyframes learn-browse-pane-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .learn-reader-shell {
+    transition: none;
+  }
+
+  .learn-reader-shell-exit {
+    opacity: 1;
+    transform: none;
+  }
+
+  .learn-browse-pane-enter {
+    animation: none;
+  }
+}

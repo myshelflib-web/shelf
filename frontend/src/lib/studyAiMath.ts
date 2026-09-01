@@ -45,7 +45,39 @@ export function normalizeStudyMarkdown(src: string): string {
     return `\n\n$$\n${String(tex).trim()}\n$$\n\n`;
   });
 
+  s = normalizeTryNextMarkdown(s);
+
   return s.replace(/\n{3,}/g, "\n\n");
+}
+
+/** Lift common model quirks so ### Try next renders as a callout, not raw markdown. */
+export function normalizeTryNextMarkdown(src: string): string {
+  let s = src;
+
+  s = s.replace(
+    /^[-*•]\s+#{1,4}\s*Try next:?\s*(.*)$/gim,
+    (_m, rest: string) => {
+      const body = rest.trim();
+      return body ? `### Try next\n\n${body}` : "### Try next";
+    }
+  );
+
+  s = s.replace(
+    /^[-*•]\s+\*{0,2}Try next:?\*{0,2}\s*(.*)$/gim,
+    (_m, rest: string) => {
+      const body = rest.trim();
+      return body ? `### Try next\n\n${body}` : "### Try next";
+    }
+  );
+
+  s = s.replace(
+    /^#{1,4}\s*Try next:?\s+(.+)$/gim,
+    (_m, rest: string) => `### Try next\n\n${rest.trim()}`
+  );
+
+  s = s.replace(/^#{1,4}\s*Try next:?\s*$/gim, "### Try next");
+
+  return s;
 }
 
 /** Skip KaTeX when a "math" block is actually leftover markdown. */
