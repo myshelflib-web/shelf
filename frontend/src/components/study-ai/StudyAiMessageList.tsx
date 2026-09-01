@@ -75,31 +75,25 @@ export function StudyAiMessageList({
               <ShelfLogo size={18} />
             </div>
             <div className="min-w-0 max-w-[92%] rounded-2xl rounded-bl-md border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-3">
-              <p className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-2">
+              <div className="mb-2">
+                <p className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                  {m.streaming ? (
+                    <span className="study-ai-live-dot" aria-hidden />
+                  ) : (
+                    <Sparkles className="w-3 h-3" />
+                  )}
+                  Study AI
+                  {m.streaming ? " · live" : ""}
+                </p>
                 {m.streaming ? (
-                  <span className="study-ai-live-dot" aria-hidden />
-                ) : (
-                  <Sparkles className="w-3 h-3" />
-                )}
-                Study AI
-                {m.streaming ? " · live" : ""}
-              </p>
-              {m.streaming && (
-                <div
-                  className={
-                    m.content
-                      ? "mb-3 pb-2.5 border-b border-[var(--border)]/50"
-                      : undefined
-                  }
-                >
                   <StreamActivity
                     events={statusEvents}
                     live
-                    compact={Boolean(m.content)}
                     keepAliveKey={m.content.length}
+                    className="mt-1.5"
                   />
-                </div>
-              )}
+                ) : null}
+              </div>
               {m.content ? (
                 <StudyAIContent
                   content={m.content}

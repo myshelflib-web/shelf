@@ -271,29 +271,23 @@ export function StudyPanel({
           ) : (
             <div key={t.id} className="study-ai-msg flex justify-start">
               <div className="max-w-[96%] w-full rounded-2xl rounded-bl-md border border-[var(--border)] bg-[var(--bg-secondary)] px-3.5 py-3">
-                <p className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-2">
+                <div className="mb-2">
+                  <p className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-[var(--text-muted)]">
+                    {t.streaming ? (
+                      <span className="study-ai-live-dot" aria-hidden />
+                    ) : null}
+                    Study AI
+                    {t.streaming ? " · live" : ""}
+                  </p>
                   {t.streaming ? (
-                    <span className="study-ai-live-dot" aria-hidden />
-                  ) : null}
-                  Study AI
-                  {t.streaming ? " · live" : ""}
-                </p>
-                {t.streaming && (
-                  <div
-                    className={
-                      t.content
-                        ? "mb-2.5 pb-2 border-b border-[var(--border)]/50"
-                        : undefined
-                    }
-                  >
                     <StreamActivity
                       events={panel.statusEvents}
                       live
-                      compact={Boolean(t.content)}
                       keepAliveKey={t.content.length}
+                      className="mt-1.5"
                     />
-                  </div>
-                )}
+                  ) : null}
+                </div>
                 {t.content ? (
                   <StudyAIContent content={t.content} streaming={t.streaming} />
                 ) : null}

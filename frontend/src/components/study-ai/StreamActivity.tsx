@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check } from "lucide-react";
-import { ThinkingIndicator } from "@/components/GreetingAccent";
 import {
   STREAM_PULSE_PHRASES,
   displayStreamStatusDetail,
@@ -16,21 +14,25 @@ export type StreamStatusEvent = {
 const PULSE_IDLE_MS = 1800;
 const PULSE_ROTATE_MS = 2600;
 
-function labelFor(raw: string, done: boolean) {
-  return displayStreamStatusDetail(raw, done);
+function labelFor(raw: string) {
+  return displayStreamStatusDetail(raw, false);
 }
 
+/**
+ * Transient stream status — one subtle line while the model prepares an answer.
+ * Hidden once answer text starts (keepAliveKey > 0). Never exported or printed.
+ */
 export function StreamActivity({
   events,
   live,
-  compact = false,
   keepAliveKey,
+  className = "",
 }: {
   events: StreamStatusEvent[];
   live: boolean;
-  compact?: boolean;
-  /** Resets idle pulse when streamed output grows (e.g. content length). */
+  /** Hides activity once streamed output begins (e.g. content length). */
   keepAliveKey?: string | number;
+  className?: string;
 }) {
   const lastEventAtRef = useRef(Date.now());
   const [pulseIdx, setPulseIdx] = useState(-1);
@@ -56,59 +58,29 @@ export function StreamActivity({
     return () => window.clearInterval(id);
   }, [live]);
 
+  if (!live) return null;
+  if (typeof keepAliveKey === "number" && keepAliveKey > 0) return null;
+  if (typeof keepAliveKey === "string" && keepAliveKey.length > 0) return null;
+
   const lastEvent = events[events.length - 1];
   const pulseLabel =
     pulseIdx >= 0 ? STREAM_PULSE_PHRASES[pulseIdx] : null;
   const currentRaw =
-    pulseLabel ?? lastEvent?.detail ?? (live ? "Getting ready" : "Working");
-  const currentLabel = labelFor(currentRaw, false);
-
-  if (events.length === 0) {
-    return live ? (
-      <ThinkingIndicator
-        label={currentLabel}
-        className={compact ? "text-[11px]" : undefined}
-      />
-    ) : null;
-  }
-
-  const textClass = compact
-    ? "text-[11px] text-[var(--text-muted)]"
-    : "text-[12px] text-[var(--text-muted)]";
+    pulseLabel ?? lastEvent?.detail ?? "Getting ready";
+  const currentLabel = labelFor(currentRaw);
 
   return (
-    <ul
-      className={compact ? "space-y-1" : "space-y-1.5"}
+    <p
+      className={`study-ai-stream-activity flex items-center gap-2 text-[11px] leading-snug text-[var(--text-muted)] ${className}`}
+      data-export-ignore="true"
       aria-live="polite"
-      aria-label="Study AI activity"
     >
-      {events.slice(-5).map((event, i, slice) => {
-        const absoluteIndex = events.length - slice.length + i;
-        const isLast = absoluteIndex === events.length - 1;
-        const current = live && isLast;
-        const detail = current
-          ? currentLabel
-          : labelFor(event.detail, true);
-        return (
-          <li
-            key={`${event.stage}-${absoluteIndex}-${event.detail}`}
-            className="study-ai-status-item"
-            style={{ animationDelay: `${Math.min(i, 4) * 40}ms` }}
-          >
-            {current ? (
-              <ThinkingIndicator
-                label={detail}
-                className={compact ? "text-[11px]" : undefined}
-              />
-            ) : (
-              <p className={`flex items-center gap-2 ${textClass}`}>
-                <Check className="w-3 h-3 shrink-0 text-[var(--accent)]" />
-                <span>{detail}</span>
-              </p>
-            )}
-          </li>
-        );
-      })}
-    </ul>
+      <span className="thinking-bars thinking-bars-sm" aria-hidden>
+        <span />
+        <span />
+        <span />
+      </span>
+      <span>{currentLabel}…</span>
+    </p>
   );
 }

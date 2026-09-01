@@ -95,7 +95,11 @@ function buildChatExportInnerHtml(
 ): string {
   const pageTitle = title.trim() || "Study AI chat";
   const parts = messages
-    .filter((m) => m.content.trim())
+    .filter(
+      (m) =>
+        m.content.trim() &&
+        !(m as ChatMessage & { streaming?: boolean }).streaming
+    )
     .map((m) => {
       const label = m.role === "user" ? "You" : "Study AI";
       const cls = m.role === "user" ? "msg-user" : "msg-ai";
@@ -301,7 +305,11 @@ async function downloadPlainTextPdf(title: string, text: string) {
 
 function chatToPlainText(title: string, messages: ChatMessage[]): string {
   return messages
-    .filter((m) => m.content.trim())
+    .filter(
+      (m) =>
+        m.content.trim() &&
+        !(m as ChatMessage & { streaming?: boolean }).streaming
+    )
     .map((m) => {
       const who = m.role === "user" ? "You" : "Study AI";
       return `${who}:\n${m.content.trim()}\n`;
@@ -344,7 +352,11 @@ export async function downloadChatPdf(
   title: string,
   messages: ChatMessage[]
 ) {
-  const transcript = messages.filter((m) => m.content.trim());
+  const transcript = messages.filter(
+    (m) =>
+      m.content.trim() &&
+      !(m as ChatMessage & { streaming?: boolean }).streaming
+  );
   if (transcript.length === 0) {
     throw new Error("Nothing to export yet.");
   }

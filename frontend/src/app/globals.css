@@ -618,6 +618,33 @@
   animation: fade-in-up 0.22s ease-out both;
 }
 
+/* Transient Study AI stream status — UI only, not chat content */
+.study-ai-stream-activity {
+  animation: fade-in-up 0.22s ease-out both;
+}
+
+.thinking-bars-sm {
+  height: 10px;
+}
+
+.thinking-bars-sm span:nth-child(1) {
+  height: 5px;
+}
+
+.thinking-bars-sm span:nth-child(2) {
+  height: 9px;
+}
+
+.thinking-bars-sm span:nth-child(3) {
+  height: 6px;
+}
+
+@media print {
+  .study-ai-stream-activity {
+    display: none !important;
+  }
+}
+
 .study-ai-context-chip {
   background: color-mix(in srgb, var(--accent) 14%, var(--bg-secondary));
   color: var(--accent);
