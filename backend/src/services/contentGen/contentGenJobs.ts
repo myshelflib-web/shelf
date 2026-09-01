@@ -323,10 +323,10 @@ export async function hasRunningJob(): Promise<boolean> {
   return running > 0;
 }
 
-/** Failed page rows for a finished job — used to start a retry run. */
+/** Failed or below-score page rows for a finished job — used to start a retry run. */
 export async function listFailedContentGenItems(jobId: string) {
   return prisma.contentGenItem.findMany({
-    where: { jobId, status: "FAILED" },
+    where: { jobId, status: { in: ["FAILED", "SKIPPED"] } },
     orderBy: { createdAt: "asc" },
     select: {
       title: true,

@@ -12,8 +12,8 @@ import { runNewsPackJob } from "./news/runNewsPack.js";
 import { runStarterPackJob } from "./runStarterPack.js";
 
 /**
- * Resume cannot redo FAILED pages — the cursor already moved past them.
- * This starts a new job whose plan is only those failed rows.
+ * Resume cannot redo FAILED or SKIPPED pages — the cursor already moved past them.
+ * This starts a new job whose plan is only those rows.
  */
 export async function retryFailedContentGenJob(
   jobId: string,
@@ -35,7 +35,7 @@ export async function retryFailedContentGenJob(
   const failed = await listFailedContentGenItems(jobId);
   if (failed.length === 0) {
     throw new Error(
-      "No failed page rows left to retry. They may have been pruned — generate the pack again with Skip published."
+      "No failed or held page rows left to retry. They may have been pruned — generate the pack again with Skip published."
     );
   }
 

@@ -153,11 +153,21 @@ function FailedBanner({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-[11px] font-medium text-amber-300">
-            {job.failedCount} page{job.failedCount === 1 ? "" : "s"} failed
+            {[
+              job.failedCount > 0
+                ? `${job.failedCount} failed`
+                : null,
+              job.skippedCount > 0
+                ? `${job.skippedCount} held below score`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
           <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
             Resume will not redo these — the run already moved on. Retry starts a
-            new job with only the failed pages.
+            new job with only unpublished pages (empty model replies or score below
+            70).
           </p>
         </div>
         <button
@@ -298,7 +308,7 @@ export function ContentGenJobsSection({
                     onResume={() => onResume(job.id)}
                   />
                 )}
-                {job.failedCount > 0 &&
+                {(job.failedCount > 0 || job.skippedCount > 0) &&
                   job.status !== "QUEUED" &&
                   job.status !== "RUNNING" &&
                   job.status !== "PAUSED" && (
