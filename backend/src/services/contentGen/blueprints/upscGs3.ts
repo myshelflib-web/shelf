@@ -1,0 +1,475 @@
+import type { StarterSubject } from "../types.js";
+
+const RBI = "https://www.rbi.org.in/";
+const BUDGET = "https://www.indiabudget.gov.in/";
+const DEA = "https://dea.gov.in/";
+const CBIC = "https://www.cbic.gov.in/";
+const MOSPI = "https://mospi.gov.in/";
+const MOEF = "https://moef.gov.in/";
+const PARIS = "https://unfccc.int/process-and-meetings/the-paris-agreement";
+const CPCB = "https://cpcb.nic.in/";
+const ISRO = "https://www.isro.gov.in/";
+const MHA = "https://www.mha.gov.in/";
+const MEITY = "https://www.meity.gov.in/";
+const AGRICOOP = "https://agricoop.gov.in/";
+
+const ECONOMY_ANCHOR = "GS Paper III — Indian Economy and issues relating to planning, mobilization of resources, growth, development and employment.";
+const ENV_ANCHOR = "GS Paper III — Conservation, environmental pollution and degradation, environmental impact assessment.";
+const TECH_ANCHOR = "GS Paper III — Awareness in the fields of IT, Space, Computers, robotics, nano-technology, bio-technology and issues relating to intellectual property rights.";
+
+export const UPSC_ECONOMY: StarterSubject = {
+  slug: "upsc-economy",
+  name: "Indian Economy",
+  description: "Macro aggregates, money and banking, public finance and sectoral growth as GS Paper III frames them.",
+  paper: "GS Paper III",
+  topics: [
+    {
+      slug: "macro-fundamentals",
+      title: "Macroeconomic Fundamentals",
+      articles: [
+        {
+          slug: "national-income-aggregates",
+          title: "National Income: GDP, GVA and Reading Real Growth",
+          syllabusAnchor: ECONOMY_ANCHOR,
+          mustCover: [
+            "GVA at basic prices versus GDP at market prices, and the identity GDP = GVA + product taxes - product subsidies",
+            "The three measurement routes — production, income and expenditure — and why they must arrive at the same total",
+            "Expenditure-side components: private final consumption, government final consumption, gross fixed capital formation, change in stocks and net exports",
+            "Nominal versus real GDP, and why growth is always quoted at constant prices",
+            "The GDP deflator, defined as nominal divided by real GDP, and how its coverage differs from CPI",
+            "Why the base year is revised, what changed when the series moved to the 2011-12 base, and why two series are not directly comparable",
+            "NDP, GNI and NNI: the depreciation and net factor income from abroad adjustments",
+            "The estimate cycle — advance, provisional and revised estimates — and why headline growth gets restated",
+            "What GDP does not capture: distribution, unpaid work, informal activity and environmental depletion",
+          ],
+          worked: ["Given nominal GDP for two years and a price index, compute real GDP, real growth and the implicit deflator, showing each step"],
+          traps: [
+            "Treating GVA and GDP as interchangeable when comparing sectoral growth with headline growth",
+            "Comparing growth rates drawn from two different base-year series",
+            "Using CPI to deflate GDP — the deflator covers all output, not consumption alone",
+          ],
+          officialSources: [MOSPI],
+          diagram: "hierarchy",
+          keywords: ["GDP vs GVA", "real vs nominal GDP", "GDP deflator", "national income accounting UPSC"],
+          order: 0,
+        },
+        {
+          slug: "inflation-measurement-and-drivers",
+          title: "Inflation: CPI, WPI and What the MPC Actually Targets",
+          syllabusAnchor: ECONOMY_ANCHOR,
+          mustCover: [
+            "CPI-Combined versus WPI: retail versus wholesale transaction stage, coverage of services, the weight of food, and the compiling agency for each",
+            "Why the two indices diverge, and which one the Monetary Policy Committee is statutorily required to target",
+            "Headline versus core inflation, and why food and fuel are stripped out of core",
+            "Demand-pull versus cost-push inflation, and why the policy response differs between them",
+            "Imported inflation through the crude price and exchange rate channels",
+            "The base effect, and why a falling inflation rate does not mean falling prices",
+            "Who inflation hurts most: fixed-income earners, savers in nominal assets, and poor households with a high food share",
+            "Deflation, disinflation and stagflation kept strictly distinct",
+          ],
+          worked: ["Compute year-on-year inflation from an illustrative index series and show how the same price path yields different rates through the base effect"],
+          traps: [
+            "Saying the MPC targets WPI, or that it targets core inflation",
+            "Calling disinflation deflation",
+          ],
+          officialSources: [MOSPI, RBI],
+          diagram: "compare",
+          keywords: ["CPI vs WPI", "core inflation India", "inflation targeting RBI", "demand pull cost push inflation"],
+          order: 1,
+        },
+      ],
+    },
+    {
+      slug: "money-and-banking",
+      title: "Money, Banking and Monetary Policy",
+      articles: [
+        {
+          slug: "monetary-policy-framework",
+          title: "Monetary Policy Framework: MPC, Corridor and Transmission",
+          syllabusAnchor: ECONOMY_ANCHOR,
+          mustCover: [
+            "The 2016 amendment of the RBI Act: statutory basis for flexible inflation targeting and for the Monetary Policy Committee",
+            "MPC composition — six members, three from the RBI with the Governor as chair, three appointed by the central government — and the Governor's casting vote",
+            "The target notified by the central government: 4 per cent CPI-Combined with a plus or minus 2 percentage point tolerance band, notified every five years",
+            "What counts as failure of the framework — inflation outside the band for three consecutive quarters — and the report the RBI must then submit",
+            "The liquidity adjustment facility corridor: repo as the policy rate, the standing deposit facility as the floor since 2022, the marginal standing facility as the ceiling, and reverse repo's changed role",
+            "CRR versus SLR: what each is held as, who earns a return on it, and what each actually constrains",
+            "Open market operations and forex operations as durable liquidity tools",
+            "Stance versus rate action, and what accommodative, neutral and withdrawal of accommodation signal",
+            "Transmission: why MCLR pricing was slow, and how external benchmark linked lending rates changed pass-through on new floating retail and MSME loans",
+          ],
+          worked: ["Trace a 25 basis point repo cut through the corridor, the call money rate, EBLR-linked loans and demand, naming the lag at each stage"],
+          traps: [
+            "Treating CRR and SLR as the same instrument — SLR is held in approved securities and earns a return, CRR is a cash balance with the RBI",
+            "Assuming reverse repo is still the corridor floor after the standing deposit facility was introduced",
+          ],
+          officialSources: [RBI],
+          diagram: "flow",
+          keywords: ["monetary policy committee India", "flexible inflation targeting", "LAF corridor repo SDF MSF", "monetary policy transmission EBLR"],
+          order: 0,
+        },
+        {
+          slug: "banking-health-npa-and-resolution",
+          title: "Banking Health: NPAs, SARFAESI, IBC and Recapitalisation",
+          syllabusAnchor: ECONOMY_ANCHOR,
+          mustCover: [
+            "Asset classification: standard, special mention accounts, substandard, doubtful and loss, with the 90-day overdue test for an NPA",
+            "Gross versus net NPA, provisioning norms, and the provision coverage ratio",
+            "The twin balance sheet problem: how stressed corporate leverage became stressed bank assets",
+            "SARFAESI Act 2002: the Section 13(2) demand notice, Section 13(4) enforcement without court intervention, and the DRT route",
+            "Insolvency and Bankruptcy Code 2016: initiation by financial creditors under Section 7 and operational creditors under Section 9, the committee of creditors, the 330-day outer limit for the resolution process, and the Section 53 distribution waterfall",
+            "Asset reconstruction companies and the bad-bank structure as alternatives to on-balance-sheet resolution",
+            "Recapitalisation of public sector banks and consolidation through mergers",
+            "Priority sector lending: the 40 per cent of adjusted net bank credit target, its sub-targets, and priority sector lending certificates",
+            "Capital adequacy under Basel III as a concept: risk-weighted assets, capital to risk-weighted assets ratio and common equity tier 1",
+          ],
+          worked: ["Work one illustrative loan from default through classification, provisioning and resolution, showing what the bank books at each stage"],
+          traps: [
+            "Equating a technical write-off with a waiver — recovery efforts continue after a write-off",
+            "Describing the IBC as a recovery law; it is a time-bound resolution framework with liquidation as the fallback",
+            "Assuming a secured creditor needs a tribunal order before acting under SARFAESI",
+          ],
+          officialSources: [RBI],
+          diagram: "flow",
+          keywords: ["NPA classification India", "SARFAESI Act 2002", "IBC 2016 resolution process", "priority sector lending norms"],
+          order: 1,
+        },
+      ],
+    },
+    {
+      slug: "public-finance",
+      title: "Public Finance and Taxation",
+      articles: [
+        {
+          slug: "budget-structure-and-deficits",
+          title: "The Union Budget and the Deficit Family",
+          syllabusAnchor: "GS Paper III — Government Budgeting.",
+          mustCover: [
+            "Constitutional scaffolding: the annual financial statement under Article 112, the Consolidated Fund and Contingency Fund under Articles 266 and 267, and appropriation under Article 114",
+            "Receipts: revenue receipts (tax and non-tax) versus capital receipts (borrowings, recoveries of loans, disinvestment)",
+            "Expenditure: revenue versus capital, and why the capital expenditure share matters for growth",
+            "Fiscal deficit defined as total expenditure minus total receipts excluding borrowings",
+            "Revenue deficit; primary deficit as fiscal deficit minus interest payments; effective revenue deficit as revenue deficit minus grants for creation of capital assets",
+            "FRBM Act 2003: the discipline it imposes, the escape clause, and the statements laid before Parliament",
+            "The FRBM Review Committee under N.K. Singh (2017): debt-to-GDP as the primary anchor, the 60 per cent general government path split 40 for the Centre and 20 for the states, and the proposed fiscal council",
+            "Off-budget borrowing and extra-budgetary resources, and why they understate the true fiscal position",
+            "How the deficit is financed, and the crowding-out and debt-sustainability arguments including the interest rate versus growth rate comparison",
+          ],
+          worked: [
+            "Compute fiscal deficit, revenue deficit, primary deficit and effective revenue deficit from a small illustrative receipts-and-expenditure table",
+            "Show how reclassifying one grant from revenue to capital changes three of those four numbers",
+          ],
+          traps: [
+            "Counting borrowings as receipts when computing the fiscal deficit",
+            "Assuming a zero revenue deficit implies a zero fiscal deficit",
+          ],
+          officialSources: [BUDGET, DEA],
+          diagram: "flow",
+          keywords: ["fiscal deficit vs revenue deficit", "primary deficit formula", "FRBM Act 2003", "government budgeting UPSC"],
+          order: 0,
+        },
+        {
+          slug: "taxation-and-gst-architecture",
+          title: "Taxation: Direct, Indirect and the GST Architecture",
+          syllabusAnchor: ECONOMY_ANCHOR,
+          mustCover: [
+            "Direct versus indirect taxes on incidence, shiftability, progressivity and cost of collection",
+            "The constitutional basis of GST: Article 246A concurrent taxing power, Article 269A on inter-state supply, and Article 279A creating the Council",
+            "GST as a destination-based value-added tax, and how input tax credit removes cascading",
+            "The CGST, SGST, UTGST and IGST split, the compensation cess, and how IGST is apportioned between Centre and states",
+            "GST Council composition and voting: the Centre holding one-third and states two-thirds of weighted votes, with decisions by a three-fourths majority",
+            "What sits outside GST: alcoholic liquor for human consumption, and the petroleum products kept out for now",
+            "Tax buoyancy versus tax elasticity, defined precisely, and why buoyancy above one matters",
+            "Why the tax-to-GDP ratio stays low: narrow base, exemptions, informality and litigation",
+            "Cesses and surcharges, and their effect on the divisible pool shared with states",
+          ],
+          worked: ["Trace one good through a two-stage supply chain and compute GST payable at each stage after input tax credit"],
+          traps: [
+            "Calling GST a purely central tax, or treating Council recommendations as binding on legislatures",
+            "Confusing buoyancy, measured on actual collections, with elasticity, which holds the tax structure constant",
+          ],
+          officialSources: [CBIC, DEA],
+          diagram: "hierarchy",
+          keywords: ["GST Council Article 279A", "input tax credit GST", "direct vs indirect taxes", "tax buoyancy elasticity"],
+          order: 1,
+        },
+      ],
+    },
+    {
+      slug: "growth-and-sectors",
+      title: "Growth, Sectors and the External Economy",
+      articles: [
+        {
+          slug: "agriculture-support-and-markets",
+          title: "Agriculture: MSP, Procurement and Market Institutions",
+          syllabusAnchor: "GS Paper III — Issues related to direct and indirect farm subsidies and minimum support prices; Public Distribution System- objectives, functioning, limitations, revamping; issues of buffer stocks and food security.",
+          mustCover: [
+            "How MSP is set: the CACP recommendation, the Cabinet decision, and which crops are covered",
+            "Cost concepts A2, A2+FL and C2, and which of them the 50 per cent margin recommendation of the National Commission on Farmers was applied to",
+            "Procurement: the Food Corporation of India, decentralised procurement, buffer norms, and the link to the Public Distribution System and the National Food Security Act 2013",
+            "Why price support is concentrated in a few crops and regions, and the cropping-pattern and groundwater consequences",
+            "APMC regulation: mandi fees, commission agents, and the arguments for and against loosening the mandi monopoly",
+            "Market reform instruments: the 2017 model agricultural produce and livestock marketing Act, eNAM, contract farming and farmer producer organisations",
+            "Input subsidies for fertiliser and power versus direct income support, compared on leakage, distortion and reach of tenants",
+            "Institutional credit and risk cover: Kisan Credit Card, priority sector norms and crop insurance",
+          ],
+          worked: ["Compare a per-quintal price support with an equivalent per-hectare income transfer on exchequer cost, cropping incentive and reach of tenant farmers"],
+          traps: [
+            "Treating MSP as a legal entitlement, or as announced for every crop",
+            "Treating announcement and procurement as the same thing — an MSP without procurement does not reach the farmer",
+          ],
+          officialSources: [AGRICOOP],
+          diagram: "flow",
+          keywords: ["minimum support price CACP", "APMC reform eNAM", "farm subsidies vs income support", "buffer stock food security"],
+          order: 0,
+        },
+        {
+          slug: "industry-and-infrastructure",
+          title: "Industry and Infrastructure: PLI, Climate and Financing",
+          syllabusAnchor: "GS Paper III — Effects of liberalization on the economy, changes in industrial policy and their effects on industrial growth.",
+          mustCover: [
+            "Why manufacturing's share of output and employment has stayed flat despite sustained policy attention",
+            "Production linked incentive schemes as instruments: incentives paid on incremental sales against investment and production thresholds, and how that differs from earlier input and capital subsidies",
+            "The MSME definition after the 2020 shift to composite investment-and-turnover criteria, and the incentive to stay small",
+            "Ease of doing business read as compliance burden: contract enforcement, land, permits and dispute resolution",
+            "Infrastructure financing instruments: budgetary capital outlay, PPP models such as build-operate-transfer and hybrid annuity, InvITs, the National Investment and Infrastructure Fund, and municipal bonds",
+            "Why banks were the wrong lenders for long-gestation projects, and the asset-liability mismatch case for bond markets and development finance institutions",
+            "Coordination platforms: the National Infrastructure Pipeline, the PM Gati Shakti master plan, and asset monetisation",
+            "Logistics cost and connectivity as the link from infrastructure to competitiveness",
+          ],
+          worked: ["Compare an output-linked incentive with an upfront capital subsidy on fiscal risk, monitoring burden and who carries demand risk"],
+          traps: [
+            "Describing PLI as a subsidy on investment rather than on incremental production or sales",
+            "Treating PPP as private financing with no contingent liability for the state",
+          ],
+          officialSources: [DEA],
+          diagram: "compare",
+          keywords: ["production linked incentive scheme", "infrastructure financing India", "PPP models BOT HAM", "industrial policy UPSC"],
+          order: 1,
+        },
+        {
+          slug: "external-sector-bop-and-rupee",
+          title: "External Sector: Balance of Payments, Rupee and Reserves",
+          syllabusAnchor: ECONOMY_ANCHOR,
+          mustCover: [
+            "BoP structure: the current account (merchandise trade, services, primary income, secondary income including remittances) and the capital and financial account",
+            "Why the BoP always balances, and the role of errors and omissions and of reserve movements",
+            "The current account deficit: what drives it, how it is financed, and why the financing mix matters as much as the level",
+            "FDI versus FPI versus external commercial borrowing on volatility, maturity and control",
+            "Exchange rate regimes — fixed, free float and managed float — and where India's arrangement sits",
+            "NEER and REER, and what a real appreciation does to competitiveness",
+            "Convertibility: current account convertibility accepted under the IMF Articles of Agreement in 1994, contrasted with partial capital account convertibility and the Tarapore Committee roadmap",
+            "Forex reserves: composition, why they are accumulated, and adequacy judged by import cover and short-term external debt",
+            "The impossible trinity, and the choices it forces between exchange rate management, capital mobility and monetary autonomy",
+          ],
+          worked: ["From an illustrative current and capital account, compute the current account balance and show what reserve change closes the BoP"],
+          traps: [
+            "Treating any current account deficit as bad — it can reflect investment-led import of capital goods",
+            "Calling the rupee freely floating, or claiming full capital account convertibility",
+          ],
+          officialSources: [RBI, DEA],
+          diagram: "hierarchy",
+          keywords: ["balance of payments India", "current account deficit financing", "exchange rate regime rupee", "forex reserves adequacy"],
+          order: 2,
+        },
+      ],
+    },
+  ],
+};
+
+export const UPSC_ENVIRONMENT: StarterSubject = {
+  slug: "upsc-environment",
+  name: "Environment & Ecology",
+  description: "Ecology fundamentals, climate negotiations, and India's conservation and pollution law under GS Paper III.",
+  paper: "GS Paper III",
+  topics: [
+    {
+      slug: "ecology-fundamentals",
+      title: "Ecology Fundamentals",
+      articles: [
+        {
+          slug: "ecosystems-energy-flow-and-biodiversity",
+          title: "Ecosystems, Energy Flow and Biodiversity Basics",
+          syllabusAnchor: ENV_ANCHOR,
+          mustCover: [
+            "Ecosystem structure: producers, consumers and decomposers, with abiotic factors setting the limits",
+            "Food chains versus food webs, grazing versus detritus chains, and why webs are more stable",
+            "Trophic levels and Lindeman's ten per cent law of energy transfer",
+            "Ecological pyramids of number, biomass and energy, and why the energy pyramid is always upright while the other two can invert",
+            "Gross and net primary productivity, and what limits productivity across biomes",
+            "Biogeochemical cycles: gaseous cycles such as carbon and nitrogen versus sedimentary cycles such as phosphorus and sulphur",
+            "Ecological succession: primary versus secondary, from pioneer community to climax",
+            "Biodiversity at genetic, species and ecosystem levels, with species richness distinguished from evenness",
+            "Hotspot criteria — at least 1,500 endemic vascular plant species and at least 70 per cent of primary vegetation lost — and India's four hotspots: the Himalaya, Indo-Burma, the Western Ghats and Sri Lanka, and Sundaland including the Nicobar Islands",
+          ],
+          worked: ["Push a stated primary productivity through four trophic levels and explain why chains rarely exceed four or five links"],
+          traps: [
+            "Assuming an inverted pyramid of energy is possible",
+            "Calling any species-rich area a hotspot without applying the endemism and habitat-loss criteria",
+          ],
+          officialSources: [MOEF],
+          diagram: "hierarchy",
+          keywords: ["ecological pyramids energy flow", "ten percent law Lindeman", "biodiversity hotspots India", "ecosystem structure UPSC"],
+          order: 0,
+        },
+      ],
+    },
+    {
+      slug: "climate-governance",
+      title: "Climate Change Governance",
+      articles: [
+        {
+          slug: "climate-negotiations-and-india",
+          title: "Climate Governance: UNFCCC to Paris, and India's Pledges",
+          syllabusAnchor: ENV_ANCHOR,
+          mustCover: [
+            "UNFCCC 1992: the Article 2 objective of stabilising greenhouse gas concentrations, and the Annex I and non-Annex I division",
+            "Common but differentiated responsibilities and respective capabilities, and why it anchors India's negotiating position",
+            "Kyoto Protocol 1997: binding targets for Annex B parties and the flexibility mechanisms including the Clean Development Mechanism",
+            "Paris Agreement 2015: the goal of holding warming well below 2 degrees while pursuing 1.5, and the shift from top-down targets to nationally determined contributions",
+            "NDCs and the ratchet mechanism, the enhanced transparency framework, and the global stocktake every five years",
+            "Climate finance and technology transfer as the developing-country demand, and the loss and damage fund",
+            "Article 6 cooperative approaches and internationally transferred mitigation outcomes",
+            "India's pledges: net zero by 2070 and the Panchamrit commitments announced at COP26",
+            "Domestic architecture: the NAPCC and its eight national missions, state action plans, and the carbon credit trading scheme notified under the Energy Conservation Act as amended in 2022",
+          ],
+          worked: ["Contrast Kyoto and Paris on the legal form of targets, who is covered, compliance and review"],
+          traps: [
+            "Saying NDCs are binding in content — the binding obligations are procedural, on submission and reporting",
+            "Reading net zero as zero emissions rather than emissions net of removals",
+          ],
+          officialSources: [PARIS, MOEF],
+          diagram: "timeline",
+          keywords: ["UNFCCC Kyoto Paris comparison", "CBDR-RC principle", "India net zero 2070", "carbon market Energy Conservation Act"],
+          order: 0,
+        },
+      ],
+    },
+    {
+      slug: "conservation-and-pollution",
+      title: "Conservation and Pollution Control",
+      articles: [
+        {
+          slug: "conservation-law-and-pollution-control",
+          title: "Conservation Law, EIA and Pollution Control Regulators",
+          syllabusAnchor: ENV_ANCHOR,
+          mustCover: [
+            "Protected area categories: national park, wildlife sanctuary, conservation reserve and community reserve, and how permitted activities and rights differ across them",
+            "Wildlife (Protection) Act 1972: the schedule structure and degrees of protection, the National Board for Wildlife, and how the 2022 amendment reorganised the schedules and added CITES compliance",
+            "Project Tiger and the National Tiger Conservation Authority, with critical tiger habitat and buffer zones",
+            "Forest (Conservation) Act 1980: prior central approval for diversion of forest land, compensatory afforestation, net present value and CAMPA funds",
+            "How the gram sabha consent requirement under the Forest Rights Act 2006 interacts with diversion and with protected areas",
+            "Biological Diversity Act 2002: the three tiers of NBA, State Biodiversity Boards and Biodiversity Management Committees, access and benefit sharing, and People's Biodiversity Registers",
+            "Environment (Protection) Act 1986 as the umbrella statute, with the Water Act 1974 and Air Act 1981 creating the CPCB and state boards",
+            "The EIA process under the EIA Notification 2006: screening, scoping, public consultation and appraisal, and Category A versus Category B projects",
+            "Pollution control in practice: consent to establish and operate, the National Clean Air Programme as a city-level framework, and the National Green Tribunal under the 2010 Act",
+          ],
+          worked: ["Walk one illustrative project through screening, scoping, public consultation and appraisal, naming who decides at each step"],
+          traps: [
+            "Assuming every project needs a full EIA — Category B2 and exempted activities do not",
+            "Reading the Forest (Conservation) Act as a ban on diversion; it requires prior approval and compensation",
+          ],
+          officialSources: [MOEF, CPCB],
+          diagram: "flow",
+          keywords: ["EIA notification 2006 process", "Wildlife Protection Act 1972 schedules", "Forest Conservation Act 1980", "National Clean Air Programme"],
+          order: 0,
+        },
+      ],
+    },
+  ],
+};
+
+export const UPSC_SCITECH_SECURITY: StarterSubject = {
+  slug: "upsc-science-tech-security",
+  name: "Science, Technology & Internal Security",
+  description: "Space, biotechnology and emerging technology alongside internal security, cyber and financial crime in GS Paper III.",
+  paper: "GS Paper III",
+  topics: [
+    {
+      slug: "science-and-technology",
+      title: "Science and Technology",
+      articles: [
+        {
+          slug: "space-programme-and-applications",
+          title: "India's Space Programme: Capability and Civilian Uses",
+          syllabusAnchor: TECH_ANCHOR,
+          mustCover: [
+            "Institutional map: the Department of Space and ISRO, NSIL as the commercial arm, and IN-SPACe as the authorisation and promotion body",
+            "Launch vehicle classes — SSLV, PSLV, GSLV and LVM3 — matched to payload mass and target orbit",
+            "Orbits and their uses: low earth and sun-synchronous for remote sensing, geostationary transfer to geostationary for communication",
+            "Remote sensing applications: crop and drought assessment, forest cover, disaster response mapping and cartography",
+            "NavIC as a regional navigation system, and how regional coverage differs from a global constellation",
+            "Communication satellites in tele-education, telemedicine, broadcasting and connectivity for remote areas",
+            "The Indian Space Policy 2023, and what authorising private launch and satellite activity changes",
+            "Exploration missions as capability demonstrations, and the dual-use and space debris concerns that follow",
+          ],
+          worked: ["Match three stated mission requirements to the right launch vehicle and orbit, justifying each choice by payload mass and altitude"],
+          traps: [
+            "Treating NavIC as a global positioning system",
+            "Assuming a geostationary orbit suits high-resolution earth observation",
+          ],
+          officialSources: [ISRO],
+          diagram: "hierarchy",
+          keywords: ["ISRO launch vehicles PSLV GSLV", "NavIC regional navigation", "Indian Space Policy 2023", "remote sensing applications India"],
+          order: 0,
+        },
+        {
+          slug: "biotech-and-emerging-technology-policy",
+          title: "Biotechnology and Emerging Tech as Policy Questions",
+          syllabusAnchor: TECH_ANCHOR,
+          mustCover: [
+            "Recombinant DNA basics: restriction enzymes, plasmid vectors, transformation and selection of transformants",
+            "PCR and its diagnostic use, and what a real-time assay adds",
+            "Gene editing as a category: how a targeted nuclease system such as CRISPR-Cas9 differs from inserting a foreign gene",
+            "GM regulation in India: the GEAC under the 1989 Rules framed under the Environment (Protection) Act 1986, and Bt cotton as the only GM crop approved for commercial cultivation",
+            "The regulatory distinction that lets certain genome-edited plants take a lighter approval route than transgenics",
+            "Vaccine platforms compared: live attenuated, inactivated, subunit, viral vector and mRNA, on cold chain need and speed of redesign",
+            "AI as a policy problem: training data and privacy under the Digital Personal Data Protection Act 2023, bias, compute access, liability and labour effects",
+            "Semiconductors as a supply-chain problem: fabrication capital intensity, node maturity, and the split between design, fabrication and packaging",
+            "Quantum computing as a security problem: the threat to current public-key cryptography and the case for post-quantum migration, with the National Quantum Mission as the domestic effort",
+          ],
+          worked: ["Compare a transgenic crop and a genome-edited crop on what is introduced, the approval route, and the public acceptance argument"],
+          traps: [
+            "Using genetically modified and gene-edited interchangeably when their regulatory treatment differs",
+            "Writing emerging-technology answers as product news instead of capability, governance and risk",
+          ],
+          officialSources: [MEITY],
+          diagram: "compare",
+          keywords: ["CRISPR gene editing India", "GEAC GM crop regulation", "semiconductor supply chain India", "national quantum mission"],
+          order: 1,
+        },
+      ],
+    },
+    {
+      slug: "internal-security",
+      title: "Internal Security",
+      articles: [
+        {
+          slug: "internal-security-cyber-and-money-laundering",
+          title: "Internal Security: Extremism, Cyber Threats and the PMLA",
+          syllabusAnchor: "GS Paper III — Challenges to internal security through communication networks, role of media and social networking sites in internal security challenges, basics of cyber security; money-laundering and its prevention.",
+          mustCover: [
+            "Left wing extremism: development deficit and land and forest grievances as drivers, the forest and mineral belt geography, and the security-plus-development response",
+            "Insurgency in the North East: ethnic and autonomy demands, political settlements and ceasefire arrangements, and AFSPA 1958 with its disturbed area notification",
+            "Terrorism and its legal architecture: UAPA 1967 including designation of individuals as terrorists after the 2019 amendment, and the NIA under the NIA Act 2008",
+            "Who does what: police and public order as State List subjects, central armed police forces in support, and intelligence coordination through the Multi Agency Centre and NATGRID",
+            "External state and non-state actors: cross-border support, funding channels, arms and drug routes, and radicalisation over communication networks",
+            "Cyber security architecture: CERT-In under Section 70B and NCIIPC under Section 70A of the IT Act 2000, and the Indian Cyber Crime Coordination Centre under the Home Ministry",
+            "Cyber threats in practice: malware, ransomware and phishing, protection of critical information infrastructure, incident reporting duties, and why attribution is hard",
+            "Money laundering as placement, layering and integration, carried through shell companies, trade mis-invoicing, hawala and crypto assets",
+            "PMLA 2002: scheduled offences, the Enforcement Directorate's attachment power, the Adjudicating Authority, the Section 45 bail conditions, FIU-IND reporting by banks, and FATF mutual evaluation with the grey list as external discipline",
+          ],
+          worked: ["Trace illicit proceeds through placement, layering and integration, marking the reporting or enforcement trigger available at each stage"],
+          traps: [
+            "Treating law and order as a Union responsibility — police and public order sit in the State List",
+            "Confusing money laundering with tax evasion or with terror financing; the offences and the governing statutes differ",
+          ],
+          officialSources: [MHA, MEITY],
+          diagram: "flow",
+          keywords: ["internal security challenges UPSC", "cyber security architecture India", "PMLA 2002 money laundering", "left wing extremism India"],
+          order: 0,
+        },
+      ],
+    },
+  ],
+};

@@ -24,10 +24,12 @@ import { telegramSavePdfs } from "./posts/telegram-save-pdfs";
 import { studyAiActions } from "./posts/study-ai-actions";
 import { studyAiDepthModes } from "./posts/study-ai-depth-modes";
 import { currentAffairsIngest } from "./posts/current-affairs-ingest";
+import { examStarterPacks } from "./posts/exam-starter-packs";
 import { EXTRA_BLOG_POSTS } from "./posts/extra";
 
 const ALL_POSTS: BlogPost[] = [
   ...EXTRA_BLOG_POSTS,
+  examStarterPacks,
   currentAffairsIngest,
   youtubeLectures,
   studyAiDepthModes,

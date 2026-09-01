@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Files,
   Rss,
+  Sparkles,
 } from "lucide-react";
 
 const links = [
@@ -20,6 +21,7 @@ const links = [
   { href: "/admin/bulk-upload", label: "Bulk import", icon: Files },
   { href: "/admin/topics", label: "Manage Articles", icon: FileText },
   { href: "/admin/ingest", label: "Ingestion", icon: Rss },
+  { href: "/admin/content", label: "Content generation", icon: Sparkles },
   { href: "/admin/blog", label: "Blog", icon: BookOpen },
   { href: "/admin/coupons", label: "Coupons", icon: Ticket },
 ];

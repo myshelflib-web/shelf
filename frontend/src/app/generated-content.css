@@ -1,0 +1,449 @@
+/*
+ * Styling for AI-generated study pages served from S3.
+ * The reader sanitizer strips <style>, style attributes and <svg>, but keeps
+ * element classes — so diagrams are class-annotated HTML styled from here.
+ */
+
+/* Masthead — subject trail, title, then the syllabus line it answers. */
+
+.prose-content .shelf-doc-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.prose-content .shelf-doc-chip {
+  padding: 0.1rem 0.45rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.prose-content .shelf-doc-anchor {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* Body */
+
+.prose-content .shelf-doc-intro {
+  font-size: 1.08rem;
+  line-height: 1.8;
+  color: var(--text-primary);
+  margin: 0 0 2rem;
+  padding-left: 1rem;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.prose-content .shelf-doc-section {
+  margin-bottom: 0.5rem;
+}
+
+.prose-content .shelf-doc-section > h2 {
+  margin-top: 2.25rem;
+  padding-top: 0.15rem;
+}
+
+.prose-content .shelf-generated > .shelf-doc-section:first-of-type > h2 {
+  margin-top: 1.5rem;
+}
+
+.prose-content .shelf-doc-bullets {
+  margin: 0.75rem 0 1.25rem;
+  padding-left: 1.1rem;
+}
+
+/* Tables — scrollable on narrow panes, with the caption below. */
+
+.prose-content .shelf-doc-table {
+  margin: 1.5rem 0 1.75rem;
+  padding: 0;
+  overflow-x: auto;
+}
+
+.prose-content .shelf-doc-table table {
+  margin: 0;
+  min-width: 30rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+
+.prose-content .shelf-doc-table th {
+  background: var(--bg-elevated);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  vertical-align: bottom;
+}
+
+.prose-content .shelf-doc-table td {
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 0.65rem 0.8rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  vertical-align: top;
+}
+
+.prose-content .shelf-doc-table td:first-child {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.prose-content .shelf-doc-table td + td,
+.prose-content .shelf-doc-table th + th {
+  border-left: 1px solid var(--border);
+}
+
+.prose-content .shelf-doc-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.prose-content .shelf-doc-table figcaption {
+  margin-top: 0.6rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* Callouts — takeaways, exam pointers, mistakes, linkages. */
+
+.prose-content .shelf-callout {
+  margin: 2rem 0;
+  padding: 1.1rem 1.25rem 1.25rem;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: 0.75rem;
+  background: var(--bg-secondary);
+}
+
+.prose-content .shelf-callout > h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.prose-content .shelf-callout ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prose-content .shelf-callout li {
+  position: relative;
+  margin: 0 0 0.55rem;
+  padding-left: 1.1rem;
+  line-height: 1.7;
+}
+
+.prose-content .shelf-callout li:last-child {
+  margin-bottom: 0;
+}
+
+.prose-content .shelf-callout li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.65rem;
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.65;
+}
+
+.prose-content .shelf-callout-takeaways {
+  border-left-color: var(--accent);
+}
+.prose-content .shelf-callout-takeaways > h2 {
+  color: var(--accent);
+}
+.prose-content .shelf-callout-takeaways li::before {
+  color: var(--accent);
+}
+
+.prose-content .shelf-callout-pointers {
+  border-left-color: #6aa9ff;
+}
+.prose-content .shelf-callout-pointers > h2 {
+  color: #6aa9ff;
+}
+.prose-content .shelf-callout-pointers li::before {
+  color: #6aa9ff;
+}
+
+.prose-content .shelf-callout-mistakes {
+  border-left-color: #e5895f;
+}
+.prose-content .shelf-callout-mistakes > h2 {
+  color: #e5895f;
+}
+.prose-content .shelf-callout-mistakes li::before {
+  color: #e5895f;
+}
+
+.prose-content .shelf-callout-linkages {
+  border-left-color: var(--border);
+  background: transparent;
+}
+.prose-content .shelf-callout-linkages > h2 {
+  color: var(--text-muted);
+}
+.prose-content .shelf-callout-linkages li::before {
+  color: var(--text-muted);
+}
+
+.prose-content .shelf-doc-sources {
+  margin-top: 2.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.prose-content .shelf-doc-sources h2 {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 0;
+}
+
+.prose-content .shelf-doc-sources a {
+  word-break: break-word;
+}
+
+/* Diagrams */
+
+.prose-content .shelf-diagram {
+  margin: 1.75rem 0;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--bg-secondary);
+}
+
+.prose-content .shelf-diagram__title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.9rem;
+}
+
+.prose-content .shelf-diagram__caption {
+  margin: 0.9rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.prose-content .shelf-diagram__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.prose-content .shelf-diagram__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--bg-elevated);
+  position: relative;
+}
+
+.prose-content .shelf-diagram__index {
+  flex: 0 0 auto;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.prose-content .shelf-diagram__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.prose-content .shelf-diagram__label {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.prose-content .shelf-diagram__detail {
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* Connector between steps for flow and timeline diagrams. */
+.prose-content .shelf-diagram--flow .shelf-diagram__step:not(:last-child)::after,
+.prose-content
+  .shelf-diagram--timeline
+  .shelf-diagram__step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 1.55rem;
+  bottom: -0.55rem;
+  height: 0.55rem;
+  width: 1px;
+  background: var(--border);
+}
+
+.prose-content .shelf-diagram--hierarchy .shelf-diagram__step {
+  border-left: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.prose-content .shelf-diagram__grid {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  overflow: hidden;
+}
+
+.prose-content .shelf-diagram__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+}
+
+.prose-content .shelf-diagram__row:last-child {
+  border-bottom: none;
+}
+
+.prose-content .shelf-diagram__row--head {
+  background: var(--bg-elevated);
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+.prose-content .shelf-diagram__cell {
+  padding: 0.65rem 0.85rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.prose-content .shelf-diagram__cell + .shelf-diagram__cell {
+  border-left: 1px solid var(--border);
+}
+
+.prose-content .shelf-diagram__cards,
+.prose-content .shelf-glance__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.prose-content .shelf-diagram__card,
+.prose-content .shelf-glance__card {
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--bg-elevated);
+}
+
+.prose-content .shelf-glance {
+  margin: 0 0 2rem;
+  padding: 1rem 1.1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--bg-secondary);
+}
+
+.prose-content .shelf-glance > h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.prose-content .shelf-glance__label,
+.prose-content .shelf-diagram__card .shelf-diagram__label {
+  font-weight: 600;
+  font-size: 0.88rem;
+  margin: 0 0 0.25rem;
+}
+
+.prose-content .shelf-glance__detail {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.prose-content .shelf-diagram__cycle {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.prose-content .shelf-diagram__cycle-step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+  background: var(--bg-elevated);
+}
+
+@media (max-width: 640px) {
+  .prose-content .shelf-diagram__row {
+    grid-template-columns: 1fr;
+  }
+
+  .prose-content .shelf-diagram__cell + .shelf-diagram__cell {
+    border-left: none;
+    border-top: 1px solid var(--border);
+  }
+
+  .prose-content .shelf-diagram__cards,
+  .prose-content .shelf-glance__grid,
+  .prose-content .shelf-diagram__cycle {
+    grid-template-columns: 1fr;
+  }
+}

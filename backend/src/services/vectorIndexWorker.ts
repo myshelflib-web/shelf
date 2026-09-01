@@ -11,6 +11,7 @@ import { isTransientError, withRetry } from "../utils/retry.js";
 import { withDbRetry } from "../utils/dbRetry.js";
 import { recordVectorIndexPage } from "../utils/appMetrics.js";
 import { TimeoutError, withTimeout } from "../utils/timeout.js";
+import { isAnyContentGenInFlight } from "./contentGen/jobRegistry.js";
 
 const DEFAULT_INTERVAL_MS = 120_000;
 /** Keep at 1 on small Render instances — embed + pdf.js of two pages OOMs 512MB. */
@@ -197,6 +198,11 @@ async function indexPageWithReliability(pageId: string): Promise<void> {
 
 export async function runVectorIndexBatch(batchSize?: number): Promise<number> {
   if (!isVectorConfigured()) return 0;
+
+  if (isAnyContentGenInFlight()) {
+    logger.info("vector_worker.deferred", { reason: "content_gen" });
+    return 0;
+  }
 
   if (Date.now() < pauseUntil) {
     logger.info("vector_worker.paused_rate_limit", {

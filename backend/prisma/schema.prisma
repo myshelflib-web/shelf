@@ -293,6 +293,134 @@ model IngestJob {
   @@index([phase, status, createdAt])
 }
 
+/// One admin-triggered content generation run (starter pack or news batch).
+model ContentGenJob {
+  id             String           @id @default(uuid())
+  kind           ContentGenKind
+  status         ContentGenStatus @default(QUEUED)
+  studyGoal      StudyGoal
+  /// Provider label + model actually used, e.g. "sarvam/sarvam-105b".
+  model          String
+  /// Dry runs generate + score content without writing Articles.
+  dryRun         Boolean          @default(false)
+  plannedCount   Int              @default(0)
+  completedCount Int              @default(0)
+  failedCount    Int              @default(0)
+  skippedCount   Int              @default(0)
+  inputTokens    Int              @default(0)
+  outputTokens   Int              @default(0)
+  /// Estimated spend in paise (1 INR = 100 paise).
+  costPaise      Int              @default(0)
+  requestedById  String?
+  error          String?
+  /// Set when the provider went down mid-run; the watcher resumes from here.
+  pausedReason   String?
+  pausedAt       DateTime?
+  resumeAttempts Int              @default(0)
+  /// Compact run plan (slug list or news clusters). Cleared when the job finishes.
+  plan           Json?
+  /// Next index into `plan` after a pause or restart. Item rows are created lazily.
+  cursor         Int              @default(0)
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  items ContentGenItem[]
+
+  @@index([kind, createdAt])
+  @@index([status, createdAt])
+}
+
+/// One generated article inside a ContentGenJob.
+model ContentGenItem {
+  id             String           @id @default(uuid())
+  jobId          String
+  title          String
+  slug           String
+  subjectSlug    String
+  topicSlug      String
+  status         ContentGenStatus @default(QUEUED)
+  /// 0-100 relevance score from the recheck pass.
+  relevanceScore Int?
+  reviewNotes    String?          @db.Text
+  /// Legacy news-cluster payload; new jobs keep clusters on ContentGenJob.plan.
+  payload        Json?
+  articleId      String?
+  wordCount      Int              @default(0)
+  inputTokens    Int              @default(0)
+  outputTokens   Int              @default(0)
+  error          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  job ContentGenJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, status])
+}
+
+/// One candidate study page, expanded from an official syllabus unit and
+/// curated by an admin before any tokens are spent generating it.
+model SyllabusTopic {
+  id          String    @id @default(uuid())
+  studyGoal   StudyGoal
+  /// Where the page lands in Learn.
+  subjectSlug String
+  subjectName String
+  paper       String?
+  topicSlug   String
+  topicTitle  String
+  slug        String
+  title       String
+  /// Verbatim syllabus line this page serves.
+  syllabusAnchor String @db.Text
+  /// Which syllabus unit produced it, e.g. "upsc:gs3:economy-planning".
+  unitKey     String
+  /// 1 = high-yield core, 2 = full syllabus, 3 = deep sub-topic.
+  priority    Int       @default(2)
+  /// Sort position within its topic.
+  order       Int       @default(0)
+
+  status TopicCurationStatus @default(PROPOSED)
+  /// Synthesised blueprint: mustCover, worked, traps, keywords, diagram kind.
+  spec       Json?
+  specModel  String?
+  /// Shared key so one page can serve several goals with the same syllabus.
+  canonicalKey String?
+
+  articleId    String?
+  generatedAt  DateTime?
+  reviewNotes  String?  @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([studyGoal, slug])
+  @@index([studyGoal, status, priority])
+  @@index([subjectSlug, topicSlug])
+  @@index([canonicalKey])
+  @@index([unitKey])
+}
+
+/// An official document indexed into the admin grounding corpus.
+model CorpusDocument {
+  id     String @id @default(uuid())
+  /// Stable key: ingest item id, article id or source URL hash.
+  sourceKey  String @unique
+  title      String
+  sourceName String
+  canonicalUrl String?
+  studyGoals StudyGoal[]
+  subjectSlug String?
+  chunkCount Int      @default(0)
+  tokenCount Int      @default(0)
+  indexedAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([sourceName])
+  @@index([subjectSlug])
+}
+
 enum ContentStatus {
   DRAFT
   PROCESSING
@@ -351,6 +479,33 @@ enum IngestJobStatus {
   RUNNING
   COMPLETED
   FAILED
+}
+
+enum ContentGenKind {
+  STARTER_PACK
+  NEWS_BRIEF
+  /// Expands official syllabus units into candidate page topics.
+  TOPIC_EXPANSION
+  /// Writes the generation blueprint for each approved topic.
+  SPEC_SYNTHESIS
+  /// Generates pages from approved, spec'd topics.
+  CORPUS_PAGE
+}
+
+enum TopicCurationStatus {
+  PROPOSED
+  APPROVED
+  REJECTED
+  GENERATED
+}
+
+enum ContentGenStatus {
+  QUEUED
+  RUNNING
+  PAUSED
+  COMPLETED
+  FAILED
+  SKIPPED
 }
 
 enum PdfViewMode {

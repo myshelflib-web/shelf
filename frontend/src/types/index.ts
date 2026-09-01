@@ -435,6 +435,104 @@ export interface IngestJobRow {
   item: { title: string } | null;
 }
 
+export type ContentGenStatus =
+  | "QUEUED"
+  | "RUNNING"
+  | "PAUSED"
+  | "COMPLETED"
+  | "FAILED"
+  | "SKIPPED";
+
+export interface ContentGenPackSubject {
+  slug: string;
+  name: string;
+  paper: string | null;
+  articleCount: number;
+}
+
+export interface ContentGenPack {
+  studyGoal: StudyGoal;
+  label: string;
+  articleCount: number;
+  subjects: ContentGenPackSubject[];
+}
+
+export interface ContentGenOverview {
+  provider: {
+    configured: boolean;
+    model: string;
+    baseUrl: string;
+    inputInrPerMtok: number;
+    outputInrPerMtok: number;
+  };
+  packs: ContentGenPack[];
+  totalPages: number;
+  estimatedCostPaise: number;
+  estimatedBytes: number;
+  perPageCostPaise: number;
+  perPageBytes: number;
+  tokensPerPage: { input: number; output: number };
+  pipeline: string;
+  busy: boolean;
+}
+
+export interface ContentGenJobRow {
+  id: string;
+  kind: "STARTER_PACK" | "NEWS_BRIEF";
+  status: ContentGenStatus;
+  studyGoal: StudyGoal;
+  model: string;
+  dryRun: boolean;
+  plannedCount: number;
+  completedCount: number;
+  failedCount: number;
+  skippedCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  costPaise: number;
+  error: string | null;
+  pausedReason: string | null;
+  pausedAt: string | null;
+  resumeAttempts: number;
+  cursor: number;
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+}
+
+export interface ContentGenItemRow {
+  id: string;
+  title: string;
+  slug: string;
+  subjectSlug: string;
+  topicSlug: string;
+  status: ContentGenStatus;
+  relevanceScore: number | null;
+  reviewNotes: string | null;
+  articleId: string | null;
+  wordCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  error: string | null;
+}
+
+export interface ContentGenJobDetail extends ContentGenJobRow {
+  cursor: number;
+}
+
+export interface ContentGenItemsPage {
+  items: ContentGenItemRow[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+export interface ContentGenNewsCluster {
+  key: string;
+  leadTitle: string;
+  sourceCount: number;
+  sources: string[];
+}
+
 export interface CurrentAffairsItem {
   id: string;
   slug: string;

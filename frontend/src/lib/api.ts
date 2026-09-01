@@ -798,6 +798,69 @@ export const api = {
       request<{ jobs: import("@/types").IngestJobRow[] }>(
         `/api/admin/ingest/jobs?limit=${limit}`
       ),
+    contentGenOverview: () =>
+      request<import("@/types").ContentGenOverview>(
+        "/api/admin/content-gen/overview"
+      ),
+    contentGenJobs: (limit = 20) =>
+      request<{ jobs: import("@/types").ContentGenJobRow[] }>(
+        `/api/admin/content-gen/jobs?limit=${limit}`
+      ),
+    contentGenJob: (id: string) =>
+      request<{ job: import("@/types").ContentGenJobDetail }>(
+        `/api/admin/content-gen/jobs/${id}`
+      ),
+    contentGenJobItems: (
+      id: string,
+      opts?: { cursor?: string; limit?: number }
+    ) => {
+      const params = new URLSearchParams();
+      if (opts?.cursor) params.set("cursor", opts.cursor);
+      if (opts?.limit) params.set("limit", String(opts.limit));
+      const q = params.toString();
+      return request<import("@/types").ContentGenItemsPage>(
+        `/api/admin/content-gen/jobs/${id}/items${q ? `?${q}` : ""}`
+      );
+    },
+    contentGenResume: (id: string) =>
+      request<{ ok: true }>(`/api/admin/content-gen/jobs/${id}/resume`, {
+        method: "POST",
+      }),
+    contentGenStarterPack: (body: {
+      studyGoal: import("@/types").StudyGoal;
+      subjectSlug?: string;
+      limit?: number;
+      dryRun?: boolean;
+      skipExisting?: boolean;
+    }) =>
+      request<{ jobId: string; plannedCount: number }>(
+        "/api/admin/content-gen/starter-pack",
+        { method: "POST", body: JSON.stringify(body) }
+      ),
+    contentGenNewsPlan: (body: {
+      studyGoal: import("@/types").StudyGoal;
+      limit?: number;
+      windowDays?: number;
+      minSources?: number;
+    }) =>
+      request<{
+        totalItems: number;
+        clusters: import("@/types").ContentGenNewsCluster[];
+      }>("/api/admin/content-gen/news/plan", {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    contentGenNews: (body: {
+      studyGoal: import("@/types").StudyGoal;
+      limit?: number;
+      windowDays?: number;
+      minSources?: number;
+      dryRun?: boolean;
+    }) =>
+      request<{ jobId: string; plannedCount: number }>(
+        "/api/admin/content-gen/news",
+        { method: "POST", body: JSON.stringify(body) }
+      ),
   },
 
   currentAffairs: {
