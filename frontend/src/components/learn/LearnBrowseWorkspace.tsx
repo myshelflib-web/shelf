@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
+import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { LibrarySidePanel } from "@/components/my-content/LibrarySidePanel";
 import { LearnCollectionPane } from "@/components/learn/LearnCollectionPane";
 import { ExploreAreaPane } from "@/components/learn/explore/ExploreAreaPane";
@@ -24,14 +25,32 @@ import { areaForGoal } from "@/lib/exploreCatalog";
 import { parseExploreAreaFromSearch } from "@/components/learn/explore/ExploreSidebarBrowse";
 import { StudyGoal } from "@/types";
 
-export function LearnBrowseWorkspace({
+export function LearnBrowseWorkspace(props: {
+  subjectSlug?: string;
+  topicSlug?: string;
+  /** Pre-select a study track (e.g. /learn/tracks/gate). */
+  initialGoal?: StudyGoal;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <div className="h-full flex items-center justify-center">
+          <ThinkingIndicator label="Loading" />
+        </div>
+      }
+    >
+      <LearnBrowseWorkspaceInner {...props} />
+    </Suspense>
+  );
+}
+
+function LearnBrowseWorkspaceInner({
   subjectSlug,
   topicSlug,
   initialGoal,
 }: {
   subjectSlug?: string;
   topicSlug?: string;
-  /** Pre-select a study track (e.g. /learn/tracks/gate). */
   initialGoal?: StudyGoal;
 }) {
   const compactPortrait = useCompactPortrait();

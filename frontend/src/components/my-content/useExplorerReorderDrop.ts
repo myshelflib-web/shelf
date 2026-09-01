@@ -3,7 +3,6 @@
 import { useCallback, useState, type DragEvent } from "react";
 import {
   parseReorderDrag,
-  reorderBefore,
   SHELF_REORDER_MIME,
   type ReorderDragPayload,
 } from "@/lib/libraryReorder";
@@ -86,20 +85,8 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
       const drag = readDrag(e);
       if (!drag) return;
 
-      if (hint.kind === "subject" && drag.kind === "subject" && context.subjectIds) {
-        const next = reorderBefore(context.subjectIds, drag.id, hint.beforeId);
-        if (next.join(",") === context.subjectIds.join(",")) return;
-        await handlers.onReorderSubjects(next);
-        return;
-      }
-
       if (hint.kind === "topic" && drag.kind === "topic") {
-        if (drag.subjectId === hint.subjectId && context.topicIds) {
-          const next = reorderBefore(context.topicIds, drag.id, hint.beforeId);
-          if (next.join(",") === context.topicIds.join(",")) return;
-          await handlers.onReorderTopics(hint.subjectId, next);
-          return;
-        }
+        if (drag.subjectId === hint.subjectId) return;
         await handlers.onMoveTopic({
           groupId: drag.id,
           sourceSubjectId: drag.subjectId!,
@@ -115,6 +102,17 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
           subjectId: hint.subjectId,
           topicGroupId: null,
           beforePageId: null,
+        });
+        return;
+      }
+
+      if (hint.kind === "subject-row" && drag.kind === "topic") {
+        if (drag.subjectId === hint.subjectId) return;
+        await handlers.onMoveTopic({
+          groupId: drag.id,
+          sourceSubjectId: drag.subjectId!,
+          targetSubjectId: hint.subjectId,
+          beforeGroupId: null,
         });
         return;
       }

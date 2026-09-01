@@ -21,9 +21,7 @@ import type { ExploreAreaId } from "@/lib/exploreCatalog";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import {
   ExploreSidebarBrowse,
-  parseExploreAreaFromSearch,
 } from "@/components/learn/explore/ExploreSidebarBrowse";
-import { useSearchParams } from "next/navigation";
 
 interface PreloadedLibrarySidebarProps {
   mode: LibraryMode;
@@ -59,7 +57,6 @@ export function PreloadedLibrarySidebar({
   exploreArea: exploreAreaProp,
   className,
 }: PreloadedLibrarySidebarProps) {
-  const searchParams = useSearchParams();
   const { subjects, loading, reload } = useLearnSubjects();
   const [query, setQuery] = useState("");
   const [expandedSubjects, setExpandedSubjects] = useState<
@@ -73,8 +70,7 @@ export function PreloadedLibrarySidebar({
   const activeSubject = browse.subjectSlug;
   const activeTopic = browse.topicSlug;
   const activeArticle = browse.articleSlug;
-  const activeArea =
-    exploreAreaProp ?? parseExploreAreaFromSearch(searchParams.get("area"));
+  const activeArea = exploreAreaProp ?? null;
   const onLearnHome = !currentHref || currentHref === "/learn" || Boolean(activeArea);
 
   useEffect(() => {

@@ -40,7 +40,6 @@ interface ExplorerPageRowProps {
   onSelectionChange: (next: Set<ExplorerSelectionKey>) => void;
   enablePageDrag: boolean;
   libraryMoveEnabled?: boolean;
-  showDragAffordance?: boolean;
   subjectId?: string | null;
   topicGroupId?: string | null;
   showPageDrop?: boolean;
@@ -70,7 +69,6 @@ export function ExplorerPageRow({
   onSelectionChange,
   enablePageDrag,
   libraryMoveEnabled = false,
-  showDragAffordance = false,
   subjectId = null,
   topicGroupId = null,
   showPageDrop = false,
@@ -195,7 +193,6 @@ export function ExplorerPageRow({
           <>
             <ExplorerDragGrip
               active={Boolean(libraryMoveEnabled && startReorderDrag)}
-              showHint={showDragAffordance && !libraryMoveEnabled}
               label="Drag to move file"
               iconClassName="w-3 h-3"
               onDragStart={(e) =>

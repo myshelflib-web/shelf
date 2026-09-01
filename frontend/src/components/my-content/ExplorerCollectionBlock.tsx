@@ -38,9 +38,6 @@ import { useAppDialog } from "@/hooks/useAppDialog";
 
 interface ExplorerCollectionBlockProps {
   nb: UserSubject;
-  nbIndex: number;
-  treeSubjectCount: number;
-  subjectIds: string[];
   open: boolean;
   isPinned: boolean;
   isCurrentNotebook: boolean;
@@ -52,8 +49,7 @@ interface ExplorerCollectionBlockProps {
   selectionMode: boolean;
   selected: Set<ExplorerSelectionKey>;
   onSelectionChange: (next: Set<ExplorerSelectionKey>) => void;
-  reorderEnabled: boolean;
-  showDragAffordance: boolean;
+  libraryMoveEnabled: boolean;
   searching: boolean;
   dropHint: ExplorerDropHint | null;
   activeDrag: ReorderDragPayload | null;
@@ -94,9 +90,6 @@ interface ExplorerCollectionBlockProps {
 
 export function ExplorerCollectionBlock({
   nb,
-  nbIndex,
-  treeSubjectCount,
-  subjectIds,
   open,
   isPinned,
   isCurrentNotebook,
@@ -108,8 +101,7 @@ export function ExplorerCollectionBlock({
   selectionMode,
   selected,
   onSelectionChange,
-  reorderEnabled,
-  showDragAffordance,
+  libraryMoveEnabled,
   searching,
   dropHint,
   activeDrag,
@@ -135,28 +127,20 @@ export function ExplorerCollectionBlock({
   const loose = getNotebookPages(nb);
   const groups = getTopicGroups(nb);
   const subjectKey = subjectSelectionKey(nb.id);
-  const groupIds = groups.map((g) => g.id);
+  const looseIds = loose.map((p) => p.id);
 
   const toggleSubject = () =>
     onSelectionChange(toggleSelectionKey(selected, subjectKey));
 
-  const showSubjectDrop =
-    reorderEnabled &&
+  const showSubjectRowDrop =
+    libraryMoveEnabled &&
     !selectionMode &&
     !searching &&
-    dropHint?.kind === "subject" &&
-    dropHint.beforeId === nb.id;
-
-  const looseIds = loose.map((p) => p.id);
-  const showSubjectRowDrop =
-    reorderEnabled &&
-    !selectionMode &&
     dropHint?.kind === "subject-row" &&
     dropHint.subjectId === nb.id;
 
   return (
     <div className="mb-0.5">
-      <ExplorerDropLine active={showSubjectDrop} />
       <div
         role="button"
         tabIndex={0}
@@ -168,32 +152,22 @@ export function ExplorerCollectionBlock({
           }
         }}
         onDragOver={
-          reorderEnabled && !selectionMode && !searching
+          libraryMoveEnabled && !selectionMode && !searching
             ? (e) => {
-                if (activeDrag?.kind === "page") {
+                if (activeDrag?.kind === "page" || activeDrag?.kind === "topic") {
                   allowReorderDrop({ kind: "subject-row", subjectId: nb.id }, e);
-                  return;
                 }
-                allowReorderDrop({ kind: "subject", beforeId: nb.id }, e);
               }
             : undefined
         }
         onDragLeave={clearDropHint}
         onDrop={
-          reorderEnabled && !selectionMode && !searching
+          libraryMoveEnabled && !selectionMode && !searching
             ? (e) => {
-                if (activeDrag?.kind === "page") {
-                  void finishReorderDrop(
-                    { kind: "subject-row", subjectId: nb.id },
-                    e,
-                    {}
-                  );
-                  return;
-                }
                 void finishReorderDrop(
-                  { kind: "subject", beforeId: nb.id },
+                  { kind: "subject-row", subjectId: nb.id },
                   e,
-                  { subjectIds }
+                  {}
                 );
               }
             : undefined
@@ -210,13 +184,7 @@ export function ExplorerCollectionBlock({
             onToggle={toggleSubject}
           />
         ) : (
-          <ExplorerDragGrip
-            active={reorderEnabled && !searching}
-            showHint={showDragAffordance && (!reorderEnabled || searching)}
-            label="Drag to reorder folder"
-            onDragStart={(e) => startReorderDrag({ kind: "subject", id: nb.id }, e)}
-            onDragEnd={clearDropHint}
-          />
+          <span className="w-[18px] shrink-0" aria-hidden />
         )}
         <span className="p-0.5 text-[var(--text-muted)] shrink-0">
           {open ? (
@@ -284,11 +252,10 @@ export function ExplorerCollectionBlock({
                 selected={selected}
                 onSelectionChange={onSelectionChange}
                 enablePageDrag={enablePageDrag}
-                libraryMoveEnabled={reorderEnabled && !searching}
-                showDragAffordance={showDragAffordance}
+                libraryMoveEnabled={libraryMoveEnabled && !searching}
                 subjectId={nb.id}
                 topicGroupId={null}
-                showPageDrop={reorderEnabled && !selectionMode}
+                showPageDrop={false}
                 pageIds={looseIds}
                 dropHint={dropHint}
                 startReorderDrag={startReorderDrag}
@@ -303,7 +270,7 @@ export function ExplorerCollectionBlock({
               />
             );
           })}
-          {reorderEnabled && !selectionMode && loose.length > 0 && (
+          {libraryMoveEnabled && !selectionMode && loose.length > 0 && (
             <>
               <ExplorerDropLine
                 active={
@@ -346,15 +313,8 @@ export function ExplorerCollectionBlock({
             const topicKey = topicSelectionKey(nb.id, group.id);
             const toggleTopicSelect = () =>
               onSelectionChange(toggleSelectionKey(selected, topicKey));
-            const showTopicDrop =
-              reorderEnabled &&
-              !selectionMode &&
-              dropHint?.kind === "topic" &&
-              dropHint.subjectId === nb.id &&
-              dropHint.beforeId === group.id;
-
             const showTopicRowDrop =
-              reorderEnabled &&
+              libraryMoveEnabled &&
               !selectionMode &&
               dropHint?.kind === "topic-row" &&
               dropHint.subjectId === nb.id &&
@@ -363,7 +323,6 @@ export function ExplorerCollectionBlock({
 
             return (
               <div key={group.id}>
-                <ExplorerDropLine active={showTopicDrop} />
                 <div
                   role="button"
                   tabIndex={0}
@@ -381,7 +340,7 @@ export function ExplorerCollectionBlock({
                     }
                   }}
                   onDragOver={
-                    reorderEnabled && !selectionMode
+                    libraryMoveEnabled && !selectionMode
                       ? (e) => {
                           if (activeDrag?.kind === "page") {
                             allowReorderDrop(
@@ -392,22 +351,13 @@ export function ExplorerCollectionBlock({
                               },
                               e
                             );
-                            return;
                           }
-                          allowReorderDrop(
-                            {
-                              kind: "topic",
-                              beforeId: group.id,
-                              subjectId: nb.id,
-                            },
-                            e
-                          );
                         }
                       : undefined
                   }
                   onDragLeave={clearDropHint}
                   onDrop={
-                    reorderEnabled && !selectionMode
+                    libraryMoveEnabled && !selectionMode
                       ? (e) => {
                           if (activeDrag?.kind === "page") {
                             void finishReorderDrop(
@@ -419,17 +369,7 @@ export function ExplorerCollectionBlock({
                               e,
                               {}
                             );
-                            return;
                           }
-                          void finishReorderDrop(
-                            {
-                              kind: "topic",
-                              beforeId: group.id,
-                              subjectId: nb.id,
-                            },
-                            e,
-                            { topicIds: groupIds }
-                          );
                         }
                       : undefined
                   }
@@ -446,9 +386,8 @@ export function ExplorerCollectionBlock({
                     />
                   ) : (
                     <ExplorerDragGrip
-                      active={reorderEnabled}
-                      showHint={showDragAffordance && !reorderEnabled}
-                      label="Drag to reorder folder"
+                      active={libraryMoveEnabled}
+                      label="Drag to move folder"
                       onDragStart={(e) =>
                         startReorderDrag(
                           { kind: "topic", id: group.id, subjectId: nb.id },
@@ -534,11 +473,10 @@ export function ExplorerCollectionBlock({
                           selected={selected}
                           onSelectionChange={onSelectionChange}
                           enablePageDrag={enablePageDrag}
-                          libraryMoveEnabled={reorderEnabled}
-                          showDragAffordance={showDragAffordance}
+                          libraryMoveEnabled={libraryMoveEnabled}
                           subjectId={nb.id}
                           topicGroupId={group.id}
-                          showPageDrop={reorderEnabled && !selectionMode}
+                          showPageDrop={false}
                           pageIds={topicPageIds}
                           dropHint={dropHint}
                           startReorderDrag={startReorderDrag}
@@ -553,7 +491,7 @@ export function ExplorerCollectionBlock({
                         />
                       );
                     })}
-                    {reorderEnabled && !selectionMode && group.pages.length > 0 && (
+                    {libraryMoveEnabled && !selectionMode && group.pages.length > 0 && (
                       <>
                         <ExplorerDropLine
                           active={
@@ -597,42 +535,8 @@ export function ExplorerCollectionBlock({
               </div>
             );
           })}
-          {reorderEnabled && !selectionMode && groups.length > 0 && (
-            <>
-              <ExplorerDropLine
-                active={
-                  dropHint?.kind === "topic" &&
-                  dropHint.subjectId === nb.id &&
-                  dropHint.beforeId === null
-                }
-              />
-              <div
-                className="h-2"
-                onDragOver={(e) =>
-                  allowReorderDrop(
-                    { kind: "topic", beforeId: null, subjectId: nb.id },
-                    e
-                  )
-                }
-                onDragLeave={clearDropHint}
-                onDrop={(e) =>
-                  void finishReorderDrop(
-                    { kind: "topic", beforeId: null, subjectId: nb.id },
-                    e,
-                    { topicIds: groupIds }
-                  )
-                }
-              />
-            </>
-          )}
         </div>
       )}
-      {reorderEnabled &&
-        !selectionMode &&
-        !searching &&
-        nbIndex === treeSubjectCount - 1 &&
-        dropHint?.kind === "subject" &&
-        dropHint.beforeId === null && <ExplorerDropLine active />}
     </div>
   );
 }

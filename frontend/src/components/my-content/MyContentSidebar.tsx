@@ -33,9 +33,6 @@ import {
 } from "@/lib/explorerSelection";
 import { applyBulkDeleteToTree, mergeExplorerTreeWithPendingDeletes } from "@/lib/explorerBulkDeleteTree";
 import {
-  patchSubjectsOrder,
-} from "@/lib/libraryReorder";
-import {
   findTopicLocation,
   movePageInTree,
   moveTopicInTree,
@@ -68,32 +65,26 @@ import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import { shelfSelectSidebarClass } from "@/lib/ui/fieldClasses";
 
 const SIDEBAR_NOTEBOOK_PAGE_SIZE = 15;
-const SIDEBAR_MANUAL_ORDER_PAGE_SIZE = 200;
 const PINNED_KEY = "shelf:explorer-pinned";
 const SORT_KEY = "shelf:explorer-sort";
 const MAX_PINNED = 5;
 
-type SortCriterion = "activity" | "name" | "manual";
+type SortCriterion = "activity" | "name";
 
 const SORT_CRITERIA: { id: SortCriterion; label: string }[] = [
   { id: "activity", label: "Last activity" },
   { id: "name", label: "Name" },
-  { id: "manual", label: "Manual order" },
 ];
 
 function notebookSortFor(
   criterion: SortCriterion,
   ascending: boolean
 ): NotebookSort {
-  if (criterion === "manual") return "order";
   if (criterion === "name") return ascending ? "name" : "nameDesc";
   return ascending ? "oldest" : "recent";
 }
 
 function directionTitle(criterion: SortCriterion, ascending: boolean): string {
-  if (criterion === "manual") {
-    return "Drag folders to reorder";
-  }
   if (criterion === "name") {
     return ascending ? "Ascending — A to Z" : "Descending — Z to A";
   }
@@ -106,7 +97,8 @@ function readSortCriterion(): SortCriterion {
   if (typeof window === "undefined") return "activity";
   try {
     const raw = localStorage.getItem(SORT_KEY);
-    if (raw === "activity" || raw === "name" || raw === "manual") return raw;
+    if (raw === "activity" || raw === "name") return raw;
+    if (raw === "manual") return "activity";
   } catch {
     /* ignore */
   }
@@ -201,9 +193,7 @@ export function MyContentSidebar({
   const pendingDeletesRef = useRef<ReturnType<typeof buildBulkDeletePayload>[]>([]);
 
   const searching = debouncedQ.length > 0;
-  const manualOrder = sortCriterion === "manual";
-  const reorderEnabled = manualOrder && !searching;
-  const showDragAffordance = !searching && !selectionMode;
+  const libraryMoveEnabled = !searching && !selectionMode;
   const scheduledHrefs = useScheduledPageHrefs(true);
 
   useEffect(() => {
@@ -220,13 +210,6 @@ export function MyContentSidebar({
   }, [sortCriterion]);
 
   useEffect(() => {
-    if (sortCriterion === "manual" && selectionMode) {
-      setSelectionMode(false);
-      setSelected(new Set());
-    }
-  }, [sortCriterion, selectionMode]);
-
-  useEffect(() => {
     setNotebookPage(1);
   }, [sort, debouncedQ]);
 
@@ -238,9 +221,7 @@ export function MyContentSidebar({
 
   const load = useCallback((opts?: { silent?: boolean }) => {
     if (!opts?.silent) setLoading(true);
-    const pageSize = manualOrder
-      ? SIDEBAR_MANUAL_ORDER_PAGE_SIZE
-      : SIDEBAR_NOTEBOOK_PAGE_SIZE;
+    const pageSize = SIDEBAR_NOTEBOOK_PAGE_SIZE;
     listSubjects({
         page: searching ? 1 : notebookPage,
         pageSize,
@@ -267,7 +248,7 @@ export function MyContentSidebar({
         }
       })
       .finally(() => setLoading(false));
-  }, [notebookPage, sort, searching, debouncedQ, manualOrder]);
+  }, [notebookPage, sort, searching, debouncedQ]);
 
   useEffect(() => {
     load();
@@ -602,21 +583,12 @@ export function MyContentSidebar({
       .finally(() => setBulkDeleting(false));
   };
 
-  const handleReorderSubjects = (orderedIds: string[]) => {
-    void api.myContent
-      .reorderSubjects(orderedIds)
-      .finally(() => load({ silent: true }));
+  const handleReorderSubjects = (_orderedIds: string[]) => {
+    /* Top-level folder order is controlled by Sort by only — no manual reorder. */
   };
 
-  const handleReorderTopics = (subjectId: string, orderedIds: string[]) => {
-    const prevSubjects = subjects;
-    const prevPinned = pinnedExtra;
-    setSubjects((s) => patchSubjectsOrder(s, subjectId, orderedIds));
-    setPinnedExtra((s) => patchSubjectsOrder(s, subjectId, orderedIds));
-    void api.myContent.reorderTopicGroups(subjectId, orderedIds).catch(() => {
-      setSubjects(prevSubjects);
-      setPinnedExtra(prevPinned);
-    });
+  const handleReorderTopics = (_subjectId: string, _orderedIds: string[]) => {
+    /* Nested folder order within a parent is not user-sorted — use move between folders. */
   };
 
   const findPageSummary = (pageId: string): UserPageSummary | null => {
@@ -689,12 +661,18 @@ export function MyContentSidebar({
         topicGroupId: payload.topicGroupId,
         beforePageId: payload.beforePageId,
       })
-      .catch(() => {
+      .then(() => {
+        /* Optimistic tree already reflects the move — skip refetch to avoid flicker. */
+      })
+      .catch(async () => {
         setSubjects(prevSubjects);
         setPinnedExtra(prevPinned);
         setRootPages(prevRoot);
-      })
-      .then(() => emitContentChanged());
+        await alert({
+          title: "Move failed",
+          message: `Could not move "${page.title}". It was put back where it was.`,
+        });
+      });
   };
 
   const handleMoveTopic = (payload: {
@@ -733,11 +711,17 @@ export function MyContentSidebar({
         targetSubjectId: payload.targetSubjectId,
         beforeGroupId: payload.beforeGroupId,
       })
-      .catch(() => {
+      .then(() => {
+        /* Optimistic tree already reflects the move — skip refetch to avoid flicker. */
+      })
+      .catch(async () => {
         setSubjects(prevSubjects);
         setPinnedExtra(prevPinned);
-      })
-      .then(() => emitContentChanged());
+        await alert({
+          title: "Move failed",
+          message: `Could not move folder "${loc.group.title}". It was put back where it was.`,
+        });
+      });
   };
 
   const isEmpty =
@@ -849,9 +833,8 @@ export function MyContentSidebar({
               type="button"
               title={sortDirTitle}
               aria-label={sortDirTitle}
-              disabled={manualOrder}
               onClick={() => setSortAscending((v) => !v)}
-              className="w-[34px] h-[34px] shrink-0 grid place-items-center rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:border-[var(--accent)]/40 hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)] transition-colors disabled:opacity-40 disabled:pointer-events-none"
+              className="w-[34px] h-[34px] shrink-0 grid place-items-center rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:border-[var(--accent)]/40 hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)] transition-colors"
             >
               <ArrowDownWideNarrow
                 className={clsx(
@@ -861,30 +844,13 @@ export function MyContentSidebar({
               />
             </button>
           </div>
-          {manualOrder && !searching && (
+          {libraryMoveEnabled && (
             <p className="text-[10px] text-[var(--text-muted)] px-1 mt-1.5 leading-snug">
               Drag the{" "}
               <span className="inline-flex align-middle text-[var(--text-secondary)]">
                 ⋮⋮
               </span>{" "}
-              handle (hover a row) to reorder, or drop files and folders into another folder.
-            </p>
-          )}
-          {!manualOrder && !searching && (
-            <p className="text-[10px] text-[var(--text-muted)] px-1 mt-1.5 leading-snug">
-              Set Sort by to{" "}
-              <button
-                type="button"
-                onClick={() => setSortCriterion("manual")}
-                className="text-[var(--accent)] hover:underline font-medium"
-              >
-                Manual order
-              </button>{" "}
-              to show drag handles (
-              <span className="inline-flex align-middle text-[var(--text-muted)]/70">
-                ⋮⋮
-              </span>
-              ) on each row when you hover it.
+              handle (hover a row) to move files and folders into another folder.
             </p>
           )}
         </div>
@@ -918,8 +884,7 @@ export function MyContentSidebar({
           selectionMode={selectionMode}
           selected={selected}
           onSelectionChange={setSelected}
-          reorderEnabled={reorderEnabled}
-          showDragAffordance={showDragAffordance}
+          libraryMoveEnabled={libraryMoveEnabled}
           onReorderSubjects={handleReorderSubjects}
           onReorderTopics={handleReorderTopics}
           onMovePage={handleMovePage}
@@ -964,7 +929,7 @@ export function MyContentSidebar({
         </div>
       )}
 
-      {!searching && !manualOrder && totalNotebookPages > 1 && (
+      {!searching && totalNotebookPages > 1 && (
         <div className="px-2 py-1.5 border-t border-[var(--border)] flex items-center justify-between gap-1 shrink-0">
           <button
             type="button"

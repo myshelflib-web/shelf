@@ -45,8 +45,7 @@ interface MyContentExplorerTreeProps {
   selectionMode: boolean;
   selected: Set<ExplorerSelectionKey>;
   onSelectionChange: (next: Set<ExplorerSelectionKey>) => void;
-  reorderEnabled: boolean;
-  showDragAffordance: boolean;
+  libraryMoveEnabled: boolean;
   onReorderSubjects: (orderedIds: string[]) => void | Promise<void>;
   onReorderTopics: (
     subjectId: string,
@@ -111,8 +110,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
     selectionMode,
     selected,
     onSelectionChange,
-    reorderEnabled,
-    showDragAffordance,
+    libraryMoveEnabled,
     onReorderSubjects,
     onReorderTopics,
     onMovePage,
@@ -158,7 +156,6 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
     (rootPage - 1) * SIDEBAR_ROOT_PAGE_SIZE,
     rootPage * SIDEBAR_ROOT_PAGE_SIZE
   );
-  const subjectIds = treeSubjects.map((s) => s.id);
 
   if (loading && treeSubjects.length === 0 && pinnedExtra.length === 0) {
     return <ExplorerSidebarSkeleton />;
@@ -225,11 +222,10 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
                 selected={selected}
                 onSelectionChange={onSelectionChange}
                 enablePageDrag={enablePageDrag}
-                libraryMoveEnabled={reorderEnabled && !searching}
-                showDragAffordance={showDragAffordance}
+                libraryMoveEnabled={libraryMoveEnabled && !searching}
                 subjectId={null}
                 topicGroupId={null}
-                showPageDrop={reorderEnabled && !selectionMode}
+                showPageDrop={false}
                 pageIds={rootPageIds}
                 dropHint={dropHint}
                 startReorderDrag={startReorderDrag}
@@ -244,7 +240,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               />
             );
           })}
-          {reorderEnabled && !selectionMode && !searching && filteredRootPages.length > 0 && (
+          {libraryMoveEnabled && !selectionMode && !searching && filteredRootPages.length > 0 && (
             <>
               <ExplorerDropLine
                 active={
@@ -305,13 +301,10 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               {searching ? treeSubjects.length : totalNotebooks}
             </span>
           </div>
-          {treeSubjects.map((nb, nbIndex) => (
+          {treeSubjects.map((nb) => (
             <ExplorerCollectionBlock
               key={nb.id}
               nb={nb}
-              nbIndex={nbIndex}
-              treeSubjectCount={treeSubjects.length}
-              subjectIds={subjectIds}
               open={expandedNotebooks[nb.slug] ?? false}
               isPinned={
                 notebook?.id === nb.id || pinnedExtra.some((p) => p.id === nb.id)
@@ -325,8 +318,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               selectionMode={selectionMode}
               selected={selected}
               onSelectionChange={onSelectionChange}
-              reorderEnabled={reorderEnabled}
-              showDragAffordance={showDragAffordance}
+              libraryMoveEnabled={libraryMoveEnabled}
               searching={searching}
               dropHint={dropHint}
               activeDrag={activeDrag}
@@ -349,29 +341,6 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               onDeletePage={onDeletePage}
             />
           ))}
-          {reorderEnabled && !selectionMode && !searching && (
-            <>
-              <ExplorerDropLine
-                active={
-                  dropHint?.kind === "subject" && dropHint.beforeId === null
-                }
-              />
-              <div
-                className="h-2"
-                onDragOver={(e) =>
-                  allowReorderDrop({ kind: "subject", beforeId: null }, e)
-                }
-                onDragLeave={clearDropHint}
-                onDrop={(e) =>
-                  void finishReorderDrop(
-                    { kind: "subject", beforeId: null },
-                    e,
-                    { subjectIds }
-                  )
-                }
-              />
-            </>
-          )}
         </div>
       )}
     </>
