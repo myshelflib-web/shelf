@@ -8,8 +8,7 @@ import { publishIngestMessage } from "./sqsPublisher.js";
 import { createIngestJob } from "./ingestJobs.js";
 import { parsePublicHttpUrl } from "../../utils/publicUrl.js";
 import { fetchWithRetry } from "../../utils/fetchRetry.js";
-
-const UA = "ShelfIngest/1.0 (+https://shelf.study; copyright-safe-ingest)";
+import { ingestFetchHeaders } from "./ingestHttp.js";
 
 function configTags(source: IngestSource): string[] {
   const cfg = source.config as { tags?: string[] } | null;
@@ -43,7 +42,8 @@ async function pollOfficialPage(source: IngestSource): Promise<number> {
 
   const res = await fetchWithRetry(safe, {
     timeoutMs: 25_000,
-    headers: { "User-Agent": UA, Accept: "text/html, */*" },
+    redirect: "follow",
+    headers: ingestFetchHeaders(),
   });
   if (!res.ok) throw new Error(`Page fetch failed (${res.status}).`);
 

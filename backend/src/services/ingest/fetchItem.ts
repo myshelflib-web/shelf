@@ -8,8 +8,8 @@ import { fetchWithRetry } from "../../utils/fetchRetry.js";
 import { compressAndUploadToS3 } from "../../utils/s3ObjectCompress.js";
 import { adminDocPrefix, sourcePdfKey } from "../../utils/docPaths.js";
 import { slugify } from "../../utils/slugify.js";
+import { ingestFetchHeaders } from "./ingestHttp.js";
 
-const UA = "ShelfIngest/1.0 (+https://shelf.study; copyright-safe-ingest)";
 const MAX_PDF_BYTES = 50 * 1024 * 1024;
 
 export async function fetchIngestItem(itemId: string): Promise<{ ok: true }> {
@@ -39,7 +39,8 @@ export async function fetchIngestItem(itemId: string): Promise<{ ok: true }> {
 
   const res = await fetchWithRetry(safe, {
     timeoutMs: 120_000,
-    headers: { "User-Agent": UA, Accept: "application/pdf, */*" },
+    redirect: "follow",
+    headers: ingestFetchHeaders({ Accept: "application/pdf, */*" }),
   });
   if (!res.ok) throw new Error(`PDF download failed (${res.status}).`);
 

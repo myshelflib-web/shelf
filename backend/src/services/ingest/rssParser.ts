@@ -1,7 +1,6 @@
 import { parsePublicHttpUrl } from "../../utils/publicUrl.js";
 import { fetchWithRetry } from "../../utils/fetchRetry.js";
-
-const UA = "ShelfIngest/1.0 (+https://shelf.study; copyright-safe-ingest)";
+import { ingestFetchHeaders } from "./ingestHttp.js";
 
 export type RssEntry = {
   externalId: string;
@@ -71,10 +70,18 @@ export async function fetchRssFeed(feedUrl: string): Promise<RssEntry[]> {
 
   const res = await fetchWithRetry(safe, {
     timeoutMs: 20_000,
-    headers: { "User-Agent": UA, Accept: "application/rss+xml, application/xml, text/xml, */*" },
+    redirect: "follow",
+    headers: ingestFetchHeaders(),
   });
-  if (!res.ok) throw new Error(`RSS fetch failed (${res.status}).`);
+  if (!res.ok) {
+    throw new Error(
+      `RSS fetch failed (${res.status}). Try re-seeding sources if the feed URL changed.`
+    );
+  }
 
   const xml = await res.text();
+  if (!xml.includes("<rss") && !xml.includes("<feed") && !xml.includes("<item")) {
+    throw new Error("RSS fetch returned HTML instead of a feed — URL may be outdated.");
+  }
   return parseRssXml(xml);
 }
