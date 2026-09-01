@@ -18,7 +18,7 @@ export function sarvamModel(): string {
 
 export function sarvamMaxOutputTokens(): number {
   const raw = Number(process.env.SARVAM_MAX_OUTPUT_TOKENS);
-  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 4096;
+  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 16_000;
 }
 
 export function sarvamConfigured(): boolean {

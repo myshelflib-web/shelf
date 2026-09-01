@@ -1,4 +1,5 @@
 import { logger } from "../../utils/logger.js";
+import { contentGenConcurrency } from "./contentGenConcurrency.js";
 import {
   createRunningItem,
   markItemRunning,
@@ -43,14 +44,19 @@ async function ensureItemId<T>(
   return createRunningItem(jobId, describe(row.spec));
 }
 
+type SlotResult =
+  | { kind: "done"; index: number }
+  | { kind: "fatal"; index: number; message: string }
+  | { kind: "outage"; index: number; message: string };
+
 /**
- * Walks the pending items for a job. Specs without an `itemId` get a row only
- * when work starts, so a 600-page run does not insert 600 QUEUED rows up front.
+ * Walks pending items in small parallel batches (default 2) so a paid Sarvam
+ * key is not stuck on one page at a time. Still one job per process — two
+ * jobs plus pdf.js OOMs a 512MB box.
  *
- * A provider outage does not consume the item: the job is parked as PAUSED, a
- * watcher backs off until the API answers again, and the same item is retried.
- * If the watcher gives up the job stays PAUSED with its remaining items QUEUED,
- * so a manual resume or the next backend start can pick it up where it stopped.
+ * A provider outage does not consume the item: in-flight siblings finish,
+ * the job is parked as PAUSED, and the failed slot is retried after the
+ * watcher recovers.
  */
 export async function runJobLoop<T>(opts: {
   jobId: string;
@@ -61,23 +67,21 @@ export async function runJobLoop<T>(opts: {
   process: (spec: T) => Promise<ItemOutcome>;
 }): Promise<LoopResult> {
   const { jobId, label, items } = opts;
+  const concurrency = contentGenConcurrency();
   let pauses = opts.startPauseCount ?? 0;
   let index = 0;
 
-  while (index < items.length) {
-    const row = items[index];
+  async function runSlot(i: number): Promise<SlotResult> {
+    const row = items[i];
     let itemId: string | null = null;
-
     try {
       itemId = await ensureItemId(jobId, row, opts.describe);
       const outcome = await opts.process(row.spec);
       await recordItemOutcome(jobId, itemId, outcome);
-      items[index] = undefined as unknown as LoopItem<T>;
-      index += 1;
-      continue;
+      items[i] = undefined as unknown as LoopItem<T>;
+      return { kind: "done", index: i };
     } catch (err) {
       const message = errorMessage(err);
-
       if (isFatalProviderError(err)) {
         if (itemId) {
           await recordItemOutcome(jobId, itemId, {
@@ -85,40 +89,11 @@ export async function runJobLoop<T>(opts: {
             error: message,
           });
         }
-        logger.error("contentGen.loop.fatal", { jobId, label, err: message });
-        return { status: "FAILED", error: message };
+        return { kind: "fatal", index: i, message };
       }
-
       if (isProviderOutage(err)) {
-        if (pauses >= MAX_PAUSES_PER_RUN) {
-          await pauseJob(jobId, `Provider unstable: ${message}`);
-          return { status: "PAUSED", error: message };
-        }
-        pauses += 1;
-
-        logger.warn("contentGen.loop.paused", { jobId, label, err: message });
-        await pauseJob(jobId, message);
-
-        const outcome = await waitForProviderRecovery({
-          label,
-          onAttempt: (attempt, delayMs) => {
-            logger.info("contentGen.loop.waiting", {
-              jobId,
-              label,
-              attempt,
-              delayMs,
-            });
-          },
-        });
-
-        if (outcome === "recovered") {
-          await markJobRunning(jobId);
-          continue;
-        }
-        if (outcome === "fatal") return { status: "FAILED", error: message };
-        return { status: "PAUSED", error: message };
+        return { kind: "outage", index: i, message };
       }
-
       logger.warn("contentGen.loop.item_failed", { jobId, label, err: message });
       if (itemId) {
         await recordItemOutcome(jobId, itemId, {
@@ -126,9 +101,61 @@ export async function runJobLoop<T>(opts: {
           error: message,
         });
       }
-      items[index] = undefined as unknown as LoopItem<T>;
-      index += 1;
+      items[i] = undefined as unknown as LoopItem<T>;
+      return { kind: "done", index: i };
     }
+  }
+
+  while (index < items.length) {
+    const batch: number[] = [];
+    for (let k = 0; k < concurrency && index + k < items.length; k++) {
+      const i = index + k;
+      if (items[i]) batch.push(i);
+    }
+    if (batch.length === 0) {
+      index += 1;
+      continue;
+    }
+
+    const results = await Promise.all(batch.map((i) => runSlot(i)));
+    const fatal = results.find((r) => r.kind === "fatal");
+    if (fatal && fatal.kind === "fatal") {
+      logger.error("contentGen.loop.fatal", { jobId, label, err: fatal.message });
+      return { status: "FAILED", error: fatal.message };
+    }
+
+    const outage = results.find((r) => r.kind === "outage");
+    if (outage && outage.kind === "outage") {
+      if (pauses >= MAX_PAUSES_PER_RUN) {
+        await pauseJob(jobId, `Provider unstable: ${outage.message}`);
+        return { status: "PAUSED", error: outage.message };
+      }
+      pauses += 1;
+      logger.warn("contentGen.loop.paused", { jobId, label, err: outage.message });
+      await pauseJob(jobId, outage.message);
+
+      const outcome = await waitForProviderRecovery({
+        label,
+        onAttempt: (attempt, delayMs) => {
+          logger.info("contentGen.loop.waiting", {
+            jobId,
+            label,
+            attempt,
+            delayMs,
+          });
+        },
+      });
+
+      if (outcome === "recovered") {
+        await markJobRunning(jobId);
+        index = outage.index;
+        continue;
+      }
+      if (outcome === "fatal") return { status: "FAILED", error: outage.message };
+      return { status: "PAUSED", error: outage.message };
+    }
+
+    index = Math.max(...batch) + 1;
   }
 
   return { status: "COMPLETED" };

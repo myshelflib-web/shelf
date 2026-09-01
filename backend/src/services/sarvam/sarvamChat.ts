@@ -76,7 +76,7 @@ async function requestOnce(
       ),
       signal: opts.signal,
       timeoutMs: 180_000,
-      retry: { label: "sarvam_chat", attempts: 3 },
+      retry: { label: "sarvam_chat", attempts: 2 },
     });
   } catch (err) {
     if (err instanceof HttpResponseError) {
