@@ -168,8 +168,51 @@ type PageParent = {
 function fileParentFields(parent: PageParent) {
   return {
     folderId: parent.folderId,
-    userSubjectId: parent.userSubjectId,
-    userTopicGroupId: parent.userTopicGroupId,
+    userSubjectId: null,
+    userTopicGroupId: null,
+  };
+}
+
+async function pageParentFromFolderId(
+  userId: string,
+  folderId: string | null
+): Promise<PageParent> {
+  if (!folderId) return rootPageParent(userId);
+
+  const chain = await folderAncestors(folderId);
+  if (chain.length === 0) {
+    return rootPageParent(userId);
+  }
+
+  const root = chain[0];
+  const owned = await prisma.userFolder.findFirst({
+    where: { id: root.id, userId, parentId: null },
+  });
+  if (!owned) {
+    return rootPageParent(userId);
+  }
+
+  if (chain.length === 1) {
+    return {
+      userId,
+      scope: { kind: "notebook", userSubjectId: root.id },
+      folderId: root.id,
+      userSubjectId: null,
+      userTopicGroupId: null,
+      subjectSlug: root.slug,
+      groupSlug: null,
+    };
+  }
+
+  const nested = chain[chain.length - 1];
+  return {
+    userId,
+    scope: { kind: "topic", userTopicGroupId: nested.id },
+    folderId: nested.id,
+    userSubjectId: null,
+    userTopicGroupId: null,
+    subjectSlug: root.slug,
+    groupSlug: nested.slug,
   };
 }
 
@@ -216,7 +259,7 @@ async function notebookPageParent(
     userId,
     scope: { kind: "notebook", userSubjectId: folder.id },
     folderId: folder.id,
-    userSubjectId: folder.id,
+    userSubjectId: null,
     userTopicGroupId: null,
     subjectSlug: folder.slug,
     groupSlug: null,
@@ -241,8 +284,8 @@ async function topicPageParent(
     userId,
     scope: { kind: "topic", userTopicGroupId: nested.id },
     folderId: nested.id,
-    userSubjectId: root.id,
-    userTopicGroupId: nested.id,
+    userSubjectId: null,
+    userTopicGroupId: null,
     subjectSlug: root.slug,
     groupSlug: nested.slug,
   };
@@ -521,22 +564,22 @@ async function loadPageBySlugs(
   topicSlug: string,
   pageSlug: string
 ) {
-  const subject = await prisma.userSubject.findUnique({
-    where: { userId_slug: { userId, slug: notebookSlug } },
+  const root = await prisma.userFolder.findFirst({
+    where: { userId, parentId: null, slug: notebookSlug },
   });
-  if (!subject) return null;
+  if (!root) return null;
 
-  const group = await prisma.userTopicGroup.findFirst({
-    where: { userSubjectId: subject.id, slug: topicSlug },
+  const nested = await prisma.userFolder.findFirst({
+    where: { userId, parentId: root.id, slug: topicSlug },
   });
-  if (!group) return null;
+  if (!nested) return null;
 
   return loadPageInScope(
     userId,
-    { kind: "topic", userTopicGroupId: group.id },
+    { kind: "topic", userTopicGroupId: nested.id },
     pageSlug,
-    subject.slug,
-    group.slug
+    root.slug,
+    nested.slug
   );
 }
 
@@ -722,21 +765,21 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
     return;
   }
 
+  const folderId =
+    claims.folderId ?? claims.userTopicGroupId ?? claims.userSubjectId ?? null;
+  const resolvedParent = await pageParentFromFolderId(claims.userId, folderId);
+
   const parent: PageParent = {
+    ...resolvedParent,
     userId: claims.userId,
-    folderId: claims.userTopicGroupId ?? claims.userSubjectId ?? null,
-    userSubjectId: claims.userSubjectId,
-    userTopicGroupId: claims.userTopicGroupId,
-    subjectSlug: null,
-    groupSlug: null,
-    scope: claims.userTopicGroupId
-      ? { kind: "topic", userTopicGroupId: claims.userTopicGroupId }
-      : claims.userSubjectId
-        ? { kind: "notebook", userSubjectId: claims.userSubjectId }
-        : { kind: "root", userId: claims.userId },
   };
 
-  if (parent.userSubjectId || parent.folderId) {
+  if (folderId && !resolvedParent.folderId && resolvedParent.scope.kind === "root") {
+    res.status(404).json({ error: "Folder not found" });
+    return;
+  }
+
+  if (parent.folderId) {
     const resolved = await resolveParentSlugsFromFolder(
       parent.userId,
       parent.folderId
@@ -1465,20 +1508,22 @@ router.get(
   "/subjects/:notebookSlug/file/:pageSlug",
   async (req: Request, res: Response) => {
     const userId = req.user!.userId;
-    const subject = await prisma.userSubject.findUnique({
+    const folder = await prisma.userFolder.findFirst({
       where: {
-        userId_slug: { userId, slug: param(req, "notebookSlug") },
+        userId,
+        parentId: null,
+        slug: param(req, "notebookSlug"),
       },
     });
-    if (!subject) {
+    if (!folder) {
       res.status(404).json({ error: "File not found" });
       return;
     }
     const loaded = await loadPageInScope(
       userId,
-      { kind: "notebook", userSubjectId: subject.id },
+      { kind: "notebook", userSubjectId: folder.id },
       param(req, "pageSlug"),
-      subject.slug,
+      folder.slug,
       null
     );
     if (!loaded) {
@@ -1510,29 +1555,29 @@ router.get(
   "/subjects/:subjectSlug/pages/:pageSlug",
   async (req: Request, res: Response) => {
     const userId = req.user!.userId;
-    const subject = await prisma.userSubject.findUnique({
-      where: { userId_slug: { userId, slug: param(req, "subjectSlug") } },
+    const folder = await prisma.userFolder.findFirst({
+      where: { userId, parentId: null, slug: param(req, "subjectSlug") },
     });
-    if (!subject) {
+    if (!folder) {
       res.status(404).json({ error: "File not found" });
       return;
     }
 
     const page = await prisma.userTopic.findFirst({
-      where: { userSubjectId: subject.id, slug: param(req, "pageSlug") },
-      include: { userTopicGroup: { select: { slug: true } } },
+      where: { folderId: folder.id, slug: param(req, "pageSlug") },
+      include: { folder: { select: { slug: true, parentId: true } } },
     });
     if (!page) {
       res.status(404).json({ error: "File not found" });
       return;
     }
 
-    if (!page.userTopicGroupId || !page.userTopicGroup) {
+    if (!page.folder?.parentId) {
       const loaded = await loadPageInScope(
         userId,
-        { kind: "notebook", userSubjectId: subject.id },
+        { kind: "notebook", userSubjectId: folder.id },
         page.slug,
-        subject.slug,
+        folder.slug,
         null
       );
       if (!loaded) {
@@ -1543,10 +1588,19 @@ router.get(
       return;
     }
 
+    const nested = await prisma.userFolder.findFirst({
+      where: { id: page.folderId!, userId },
+      select: { slug: true },
+    });
+    if (!nested) {
+      res.status(404).json({ error: "File not found" });
+      return;
+    }
+
     const loaded = await loadPageBySlugs(
       userId,
-      subject.slug,
-      page.userTopicGroup.slug,
+      folder.slug,
+      nested.slug,
       page.slug
     );
     if (!loaded) {

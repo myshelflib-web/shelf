@@ -3,11 +3,11 @@ import {
   findPageBySlug,
   nextPageOrder,
   pageOrderWhere,
+  scopeFromFolderId,
   uniquePageSlug,
   type PageSlugScope,
 } from "./pageScope.js";
 import { reorderBefore } from "./libraryReorder.js";
-import { folderAncestors } from "./folderPath.js";
 import { uniqueFolderSlug } from "./fileScope.js";
 
 export type MovePageTarget = {
@@ -21,31 +21,6 @@ export type MoveTopicTarget = {
   beforeGroupId: string | null;
 };
 
-function pageScopeFor(
-  userId: string,
-  subjectId: string | null,
-  topicGroupId: string | null
-): PageSlugScope {
-  if (topicGroupId) return { kind: "topic", userTopicGroupId: topicGroupId };
-  if (subjectId) return { kind: "notebook", userSubjectId: subjectId };
-  return { kind: "root", userId };
-}
-
-function legacyFileParentIds(
-  chain: { id: string; parentId: string | null }[]
-): { userSubjectId: string | null; userTopicGroupId: string | null } {
-  if (chain.length === 0) {
-    return { userSubjectId: null, userTopicGroupId: null };
-  }
-  const rootId = chain[0].id;
-  if (chain.length === 1) {
-    return { userSubjectId: rootId, userTopicGroupId: null };
-  }
-  return {
-    userSubjectId: rootId,
-    userTopicGroupId: chain[chain.length - 1].id,
-  };
-}
 
 async function resolveTargetFolder(
   userId: string,
@@ -53,32 +28,25 @@ async function resolveTargetFolder(
   topicGroupId: string | null
 ) {
   if (topicGroupId) {
-    const chain = await folderAncestors(topicGroupId);
-    if (chain.length < 2) return null;
-    const root = chain[0];
-    const nested = chain[chain.length - 1];
-    const owned = await prisma.userFolder.findFirst({
-      where: { id: root.id, userId, parentId: null },
+    const chain = await prisma.userFolder.findFirst({
+      where: { id: topicGroupId, userId },
+      select: { id: true, parentId: true },
     });
-    if (!owned || (subjectId && subjectId !== root.id)) return null;
-    return { folderId: nested.id, ...legacyFileParentIds(chain) };
+    if (!chain?.parentId) return null;
+    const root = await prisma.userFolder.findFirst({
+      where: { id: chain.parentId, userId, parentId: null },
+    });
+    if (!root || (subjectId && subjectId !== root.id)) return null;
+    return { folderId: topicGroupId };
   }
   if (subjectId) {
     const root = await prisma.userFolder.findFirst({
       where: { id: subjectId, userId, parentId: null },
     });
     if (!root) return null;
-    return {
-      folderId: root.id,
-      userSubjectId: root.id,
-      userTopicGroupId: null,
-    };
+    return { folderId: root.id };
   }
-  return {
-    folderId: null,
-    userSubjectId: null,
-    userTopicGroupId: null,
-  };
+  return { folderId: null };
 }
 
 async function listPageIdsInScope(scope: PageSlugScope): Promise<string[]> {
@@ -139,18 +107,9 @@ export async function moveLibraryPage(
     if (subjectId) throw new Error("Collection not found");
   }
 
-  const destScope = pageScopeFor(
-    userId,
-    dest?.userSubjectId ?? null,
-    dest?.userTopicGroupId ?? null
-  );
+  const destScope = await scopeFromFolderId(userId, dest?.folderId ?? null);
   const slug = await resolvePageSlug(destScope, page.slug, page.title);
-
-  const sourceScope = pageScopeFor(
-    userId,
-    page.userSubjectId,
-    page.userTopicGroupId
-  );
+  const sourceScope = await scopeFromFolderId(userId, page.folderId);
 
   const destIds = (await listPageIdsInScope(destScope)).filter(
     (id) => id !== pageId
@@ -161,8 +120,8 @@ export async function moveLibraryPage(
     where: { id: pageId },
     data: {
       folderId: dest?.folderId ?? null,
-      userSubjectId: dest?.userSubjectId ?? null,
-      userTopicGroupId: dest?.userTopicGroupId ?? null,
+      userSubjectId: null,
+      userTopicGroupId: null,
       slug,
       order: orderedDest.indexOf(pageId) + 1,
     },
@@ -180,11 +139,7 @@ export async function moveLibraryPage(
 
   await persistPageOrders(orderedDest);
 
-  const sameContainer =
-    page.folderId === (dest?.folderId ?? null) &&
-    page.userSubjectId === (dest?.userSubjectId ?? null) &&
-    page.userTopicGroupId === (dest?.userTopicGroupId ?? null);
-  if (!sameContainer) {
+  if (page.folderId !== (dest?.folderId ?? null)) {
     const sourceIds = (await listPageIdsInScope(sourceScope)).filter(
       (id) => id !== pageId
     );
@@ -193,8 +148,14 @@ export async function moveLibraryPage(
 
   return {
     page: updated,
-    subjectId: dest?.userSubjectId ?? null,
-    topicGroupId: dest?.userTopicGroupId ?? null,
+    subjectId:
+      destScope.kind === "notebook"
+        ? destScope.userSubjectId
+        : destScope.kind === "topic"
+          ? null
+          : null,
+    topicGroupId:
+      destScope.kind === "topic" ? destScope.userTopicGroupId : null,
     slug,
   };
 }
@@ -251,11 +212,6 @@ export async function moveLibraryTopicGroup(
     if (sourceIds.length > 0 && group.parentId) {
       await persistFolderOrders(group.parentId, sourceIds);
     }
-
-    await prisma.userTopic.updateMany({
-      where: { folderId: groupId },
-      data: { userSubjectId: targetRoot.id },
-    });
   }
 
   const files = await prisma.userTopic.findMany({

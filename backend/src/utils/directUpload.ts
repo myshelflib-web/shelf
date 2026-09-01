@@ -17,6 +17,7 @@ export type DirectUploadClaims = {
   contentType: string;
   userSubjectId: string | null;
   userTopicGroupId: string | null;
+  folderId: string | null;
 };
 
 export function contentTypeForKind(kind: DetectedFileKind): string {

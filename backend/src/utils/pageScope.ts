@@ -24,8 +24,7 @@ export async function findPageBySlug(scope: PageSlugScope, slug: string) {
     return prisma.userTopic.findFirst({
       where: {
         userId: scope.userId,
-        userSubjectId: null,
-        userTopicGroupId: null,
+        folderId: null,
         slug,
       },
     });
@@ -33,14 +32,13 @@ export async function findPageBySlug(scope: PageSlugScope, slug: string) {
   if (scope.kind === "notebook") {
     return prisma.userTopic.findFirst({
       where: {
-        userSubjectId: scope.userSubjectId,
-        userTopicGroupId: null,
+        folderId: scope.userSubjectId,
         slug,
       },
     });
   }
   return prisma.userTopic.findFirst({
-    where: { userTopicGroupId: scope.userTopicGroupId, slug },
+    where: { folderId: scope.userTopicGroupId, slug },
   });
 }
 
@@ -58,19 +56,34 @@ export function pageOrderWhere(scope: PageSlugScope) {
   if (scope.kind === "root") {
     return {
       userId: scope.userId,
-      userSubjectId: null,
-      userTopicGroupId: null,
+      folderId: null,
     };
   }
   if (scope.kind === "notebook") {
     return {
-      userSubjectId: scope.userSubjectId,
-      userTopicGroupId: null,
+      folderId: scope.userSubjectId,
     };
   }
-  return { userTopicGroupId: scope.userTopicGroupId };
+  return { folderId: scope.userTopicGroupId };
 }
 
 export async function nextPageOrder(scope: PageSlugScope) {
   return (await prisma.userTopic.count({ where: pageOrderWhere(scope) })) + 1;
+}
+
+/** Map a stored folderId to the slug scope used for file order/uniqueness. */
+export async function scopeFromFolderId(
+  userId: string,
+  folderId: string | null
+): Promise<PageSlugScope> {
+  if (!folderId) return { kind: "root", userId };
+  const folder = await prisma.userFolder.findFirst({
+    where: { id: folderId, userId },
+    select: { id: true, parentId: true },
+  });
+  if (!folder) return { kind: "root", userId };
+  if (!folder.parentId) {
+    return { kind: "notebook", userSubjectId: folder.id };
+  }
+  return { kind: "topic", userTopicGroupId: folder.id };
 }
