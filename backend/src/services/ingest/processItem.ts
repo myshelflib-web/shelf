@@ -82,3 +82,42 @@ export async function rejectIngestItem(itemId: string): Promise<void> {
     data: { status: "REJECTED", reviewedAt: new Date() },
   });
 }
+
+export async function bulkApproveIngestItems(opts: {
+  ids?: string[];
+  status?: "PENDING_REVIEW" | "FETCHED";
+  limit?: number;
+}): Promise<{ approved: number; failed: number; errors: string[] }> {
+  const limit = Math.min(100, Math.max(1, opts.limit ?? 50));
+  let ids = opts.ids?.filter(Boolean) ?? [];
+
+  if (ids.length === 0) {
+    const status = opts.status ?? "PENDING_REVIEW";
+    const pending = await prisma.ingestItem.findMany({
+      where: { status },
+      orderBy: { fetchedAt: "asc" },
+      take: limit,
+      select: { id: true },
+    });
+    ids = pending.map((row) => row.id);
+  }
+
+  let approved = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  for (const id of ids) {
+    try {
+      await approveIngestItem(id);
+      approved += 1;
+    } catch (err) {
+      failed += 1;
+      errors.push(
+        `${id}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  logger.info("ingest.bulk_approve.ok", { approved, failed, requested: ids.length });
+  return { approved, failed, errors };
+}

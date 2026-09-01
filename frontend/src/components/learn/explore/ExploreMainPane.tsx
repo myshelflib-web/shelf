@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ChevronRight, Lock } from "lucide-react";
 import { ExploreWorkspaceShell } from "@/components/learn/explore/ExploreWorkspaceShell";
 import { ExploreAreaIcon } from "@/components/learn/explore/ExploreAreaIcon";
-import { ExploreResourceCard } from "@/components/learn/explore/ExploreAreaPane";
+import { ExploreResourceCard } from "@/components/learn/explore/ExploreResourceCard";
 import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
 import {
   LearnCatalogSkeleton,
@@ -296,6 +296,9 @@ function ExploreAreaContent({
     <>
       <header className="explore-scoped-head !items-start mb-2">
         <div className="min-w-0 flex-1">
+          <Link href="/learn" className="explore-back-library mb-2 inline-flex w-auto">
+            ← Explore
+          </Link>
           <nav className="explore-breadcrumb" aria-label="Breadcrumb">
             <Link href="/learn" className="hover:text-[var(--accent)]">
               Explore
@@ -306,9 +309,6 @@ function ExploreAreaContent({
           <h1 className="page-title mt-2">{area.title}</h1>
           <p className="page-subtitle mt-2 max-w-2xl">{area.description}</p>
         </div>
-        <Link href="/learn" className="explore-back-all shrink-0">
-          ← Explore
-        </Link>
       </header>
 
       <section className="explore-section !mt-4">
@@ -361,6 +361,12 @@ function ExploreCollectionContent({
     <>
       <header className="explore-scoped-head !items-start mb-2">
         <div className="min-w-0 flex-1">
+          <Link
+            href={backHref}
+            className="explore-back-library mb-2 inline-flex w-auto"
+          >
+            ← {backLabel}
+          </Link>
           <nav className="explore-breadcrumb" aria-label="Breadcrumb">
             <Link href="/learn" className="hover:text-[var(--accent)]">
               Explore
@@ -395,9 +401,6 @@ function ExploreCollectionContent({
               "Browse public material in this collection. Open any file to read it, then save a copy to your Library."}
           </p>
         </div>
-        <Link href={backHref} className="explore-back-all shrink-0">
-          ← {backLabel}
-        </Link>
       </header>
 
       {!topic && subject.topics.length > 0 ? (

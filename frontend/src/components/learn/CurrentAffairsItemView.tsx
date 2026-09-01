@@ -3,15 +3,15 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
+  ChevronRight,
   Copy,
   ExternalLink,
-  Link2,
-  Newspaper,
   Share2,
 } from "lucide-react";
 import type { CurrentAffairsPublicItem } from "@/lib/seo/currentAffairsFetch";
 import { getSiteUrl } from "@/lib/siteUrl";
+import { CurrentAffairsWorkspace } from "@/components/learn/CurrentAffairsWorkspace";
+import { EmbedViewer } from "@/components/my-content/EmbedViewer";
 
 function formatWhen(item: CurrentAffairsPublicItem): string {
   const raw = item.publishedAtShelf ?? item.publishedAt;
@@ -33,6 +33,7 @@ export function CurrentAffairsItemView({
     () => `${getSiteUrl()}${item.sharePath}`,
     [item.sharePath]
   );
+  const returnTo = item.sharePath;
 
   const citation = useMemo(() => {
     const when = formatWhen(item);
@@ -47,7 +48,7 @@ export function CurrentAffairsItemView({
     return parts.join(". ");
   }, [item, shareUrl]);
 
-  const showIframe =
+  const showEmbed =
     item.embeddable !== false &&
     item.linkStatus !== "BROKEN" &&
     !/\.pdf($|\?)/i.test(item.canonicalUrl);
@@ -63,113 +64,131 @@ export function CurrentAffairsItemView({
   }, []);
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      <div className="shrink-0 px-6 md:px-8 pt-6 pb-4 border-b border-[var(--border)]">
-        <Link
-          href="/learn/current-affairs"
-          className="inline-flex items-center gap-1 text-xs text-[var(--text-muted)] hover:text-[var(--accent)] mb-3"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          All current affairs
-        </Link>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 max-w-3xl">
-            <h1 className="page-title">{item.title}</h1>
-            <p className="text-sm text-[var(--text-muted)] mt-1">
-              {item.source.name}
-              {item.edition ? ` · ${item.edition}` : ""}
-              {formatWhen(item) ? ` · ${formatWhen(item)}` : ""}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => void copyText(shareUrl, "link")}
-              className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--border)] px-3 py-2 text-xs hover:bg-[var(--bg-secondary)]"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-              {copied === "link" ? "Copied!" : "Copy link"}
-            </button>
-            <button
-              type="button"
-              onClick={() => void copyText(citation, "cite")}
-              className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--border)] px-3 py-2 text-xs hover:bg-[var(--bg-secondary)]"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              {copied === "cite" ? "Copied!" : "Copy citation"}
-            </button>
-            <a
-              href={item.canonicalUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-[10px] bg-[var(--accent)] text-white px-3 py-2 text-xs"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              Official source
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6">
-        <div className="max-w-3xl space-y-4">
-          {item.shelfSummary && (
-            <section className="rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] p-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2 flex items-center gap-1.5">
-                <Newspaper className="w-3.5 h-3.5" />
-                Shelf summary
-              </h2>
-              <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                {item.shelfSummary}
-              </p>
-            </section>
-          )}
-
-          {item.factualExcerpt && (
-            <p className="text-sm text-[var(--text-muted)] italic border-l-2 border-[var(--border)] pl-3">
-              {item.factualExcerpt}
-            </p>
-          )}
-
-          {showIframe ? (
-            <section className="rounded-[10px] border border-[var(--border)] overflow-hidden bg-[var(--bg-secondary)]">
-              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-[var(--border)] text-xs text-[var(--text-muted)]">
-                <span className="inline-flex items-center gap-1">
-                  <Link2 className="w-3.5 h-3.5" />
-                  Embedded source preview
-                </span>
-                {item.linkStatus === "BLOCKED_EMBED" ? (
-                  <span className="text-amber-400">May not embed — use source link</span>
-                ) : null}
+    <CurrentAffairsWorkspace currentHref={returnTo}>
+      <div className="explore-workspace relative h-full flex flex-col overflow-hidden">
+        <div className="explore-workspace-scroll flex-1 min-h-0">
+          <div className="explore-page-inner explore-page-body pb-10">
+            <header className="explore-scoped-head !items-start mb-4">
+              <div className="min-w-0 flex-1">
+                <nav className="explore-breadcrumb" aria-label="Breadcrumb">
+                  <Link href="/learn" className="hover:text-[var(--accent)]">
+                    Explore
+                  </Link>
+                  <ChevronRight className="w-3 h-3" aria-hidden />
+                  <Link
+                    href="/learn/current-affairs"
+                    className="hover:text-[var(--accent)]"
+                  >
+                    Current affairs
+                  </Link>
+                  <ChevronRight className="w-3 h-3" aria-hidden />
+                  <span className="text-[var(--text-secondary)] truncate max-w-[12rem]">
+                    {item.title}
+                  </span>
+                </nav>
+                <p className="learn-kicker mt-2">{item.source.name}</p>
+                <h1 className="page-title mt-1">{item.title}</h1>
+                <p className="page-subtitle mt-2 max-w-2xl">
+                  {formatWhen(item) ? `${formatWhen(item)} · ` : ""}
+                  Official source embed — cite and share from Shelf; read full text at
+                  the publisher.
+                </p>
               </div>
-              <iframe
-                title={item.title}
-                src={item.canonicalUrl}
-                className="w-full min-h-[480px] h-[60vh] bg-white"
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            </section>
-          ) : (
-            <div className="rounded-[10px] border border-dashed border-[var(--border)] p-6 text-center text-sm text-[var(--text-muted)]">
-              {item.linkStatus === "BROKEN"
-                ? "The source link appears unavailable. Shelf summary is still available above."
-                : "This source does not allow embedding. Open the official source to read the full text."}
+              <Link
+                href="/learn/current-affairs"
+                className="explore-back-all shrink-0"
+              >
+                ← All news
+              </Link>
+            </header>
+
+            <div className="flex flex-wrap gap-2 mb-6">
+              <button
+                type="button"
+                onClick={() => void copyText(shareUrl, "link")}
+                className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--border)] px-3 py-2 text-xs hover:bg-[var(--bg-secondary)]"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                {copied === "link" ? "Copied!" : "Copy link"}
+              </button>
+              <button
+                type="button"
+                onClick={() => void copyText(citation, "cite")}
+                className="inline-flex items-center gap-1.5 rounded-[10px] border border-[var(--border)] px-3 py-2 text-xs hover:bg-[var(--bg-secondary)]"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                {copied === "cite" ? "Copied!" : "Copy citation"}
+              </button>
+              <a
+                href={item.canonicalUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-[10px] bg-[var(--accent)] text-white px-3 py-2 text-xs"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Official source
+              </a>
             </div>
-          )}
 
-          <p className="text-[11px] text-[var(--text-muted)] italic">{item.disclaimer}</p>
+            {item.shelfSummary ? (
+              <section className="explore-section !mt-0">
+                <div className="explore-section-head">
+                  <h2 className="explore-section-title">Shelf summary</h2>
+                </div>
+                <p className="text-sm text-[var(--text-secondary)] leading-relaxed max-w-3xl">
+                  {item.shelfSummary}
+                </p>
+              </section>
+            ) : null}
 
-          {item.learnPath && (
-            <Link
-              href={item.learnPath}
-              className="inline-block text-xs text-[var(--accent)] hover:underline"
-            >
-              Also in Learn catalog →
-            </Link>
-          )}
+            {item.factualExcerpt ? (
+              <p className="text-sm text-[var(--text-muted)] italic border-l-2 border-[var(--border)] pl-3 my-4 max-w-3xl">
+                {item.factualExcerpt}
+              </p>
+            ) : null}
+
+            <section className="explore-section">
+              <div className="explore-section-head">
+                <h2 className="explore-section-title">Source preview</h2>
+                <p className="explore-section-copy">
+                  {showEmbed
+                    ? "Embedded from the official publisher."
+                    : "This source does not allow embedding — use the official link above."}
+                </p>
+              </div>
+              {showEmbed ? (
+                <div className="rounded-[10px] border border-[var(--border)] overflow-hidden bg-[var(--bg-secondary)] min-h-[480px]">
+                  <EmbedViewer
+                    pageId={`ca-${item.slug}`}
+                    title={item.title}
+                    url={item.canonicalUrl}
+                    embeddableHint={item.embeddable}
+                  />
+                </div>
+              ) : (
+                <div className="learn-empty">
+                  {item.linkStatus === "BROKEN"
+                    ? "The source link appears unavailable. The Shelf summary above is still citeable."
+                    : "Open the official source to read the full article."}
+                </div>
+              )}
+            </section>
+
+            <p className="text-[11px] text-[var(--text-muted)] italic mt-4 max-w-3xl">
+              {item.disclaimer}
+            </p>
+
+            {item.learnPath ? (
+              <Link
+                href={item.learnPath}
+                className="inline-block mt-4 text-sm text-[var(--accent)] hover:underline"
+              >
+                Also in Learn catalog →
+              </Link>
+            ) : null}
+          </div>
         </div>
       </div>
-    </div>
+    </CurrentAffairsWorkspace>
   );
 }

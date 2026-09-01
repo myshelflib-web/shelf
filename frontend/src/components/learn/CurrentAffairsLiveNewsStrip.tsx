@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { ExploreResourceCard, ExploreResourceCardSkeleton } from "@/components/learn/explore/ExploreResourceCard";
 import { ChevronRight, Newspaper } from "lucide-react";
 import { api } from "@/lib/api";
 import type { CurrentAffairsItem } from "@/types";
@@ -36,7 +37,7 @@ export function CurrentAffairsLiveNewsStrip() {
             Live current affairs
           </h2>
           <p className="explore-section-copy">
-            AI summaries from PIB, PRS, and official sources — citeable on Shelf.
+            Summaries from PIB, PRS, and official sources — citeable on Shelf.
           </p>
         </div>
         <Link
@@ -48,29 +49,26 @@ export function CurrentAffairsLiveNewsStrip() {
         </Link>
       </div>
 
-      <ul className="space-y-2 mt-4 max-w-3xl">
+      <ul className="explore-resource-grid mt-4">
         {loading
           ? Array.from({ length: 3 }, (_, i) => (
-              <li key={i}>
-                <div className="h-14 rounded-[10px] bg-[var(--bg-secondary)] animate-pulse" />
+              <li key={i} className="list-none">
+                <ExploreResourceCardSkeleton />
               </li>
             ))
           : items.map((item) => (
-              <li key={item.id}>
-                <Link
+              <li key={item.id} className="list-none">
+                <ExploreResourceCard
                   href={item.sharePath ?? `/learn/current-affairs/${item.slug}`}
-                  className="block rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] px-4 py-3 hover:border-[var(--accent)]/40 transition"
-                >
-                  <p className="text-sm font-medium text-[var(--text-primary)] line-clamp-2">
-                    {item.title}
-                  </p>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">
-                    {item.source.name}
-                    {item.shelfSummary
-                      ? ` · ${item.shelfSummary.slice(0, 80)}${item.shelfSummary.length > 80 ? "…" : ""}`
-                      : ""}
-                  </p>
-                </Link>
+                  typeLabel="Current affairs"
+                  title={item.title}
+                  meta={item.source.name}
+                  copy={
+                    item.shelfSummary ??
+                    "Official source summary — open to read and cite."
+                  }
+                  openLabel="Read article"
+                />
               </li>
             ))}
       </ul>

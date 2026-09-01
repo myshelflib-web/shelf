@@ -207,6 +207,23 @@ export function featuredExploreCollections(subjects: Subject[]): Subject[] {
   const picked: Subject[] = [];
   const seen = new Set<string>();
 
+  const preferredSlugs = [
+    "ncert",
+    "official-portals",
+    "gate-official",
+    "law-official",
+    "medicine-official",
+    "open-textbooks",
+  ];
+  for (const slug of preferredSlugs) {
+    const match = withArticles.find((s) => s.slug === slug && !seen.has(s.id));
+    if (match) {
+      picked.push(match);
+      seen.add(match.id);
+    }
+    if (picked.length >= 4) break;
+  }
+
   for (const goal of preferredGoals) {
     const match = withArticles.find(
       (s) => subjectGoal(s) === goal && !seen.has(s.id)
@@ -242,6 +259,7 @@ export function collectionMeta(subject: Subject): string {
   if (goal === "JUDICIARY") return "Statutes · official reports";
   if (goal === "NEET_PG") return "Curriculum · medical references";
   if (goal === "CA") return "Accounting · statutes";
+  if (goal === "GENERAL") return "Open textbooks · public courses";
   if (topics > 0 && articles > 0) {
     return `${topics} topic${topics === 1 ? "" : "s"} · ${articles} article${articles === 1 ? "" : "s"}`;
   }

@@ -753,6 +753,18 @@ export const api = {
       request<{ ok: boolean }>(`/api/admin/ingest/items/${id}/approve`, {
         method: "POST",
       }),
+    ingestBulkApproveItems: (opts?: {
+      ids?: string[];
+      status?: "PENDING_REVIEW" | "FETCHED";
+      limit?: number;
+    }) =>
+      request<{ approved: number; failed: number; errors: string[] }>(
+        "/api/admin/ingest/items/bulk-approve",
+        {
+          method: "POST",
+          body: JSON.stringify(opts ?? {}),
+        }
+      ),
     ingestRejectItem: (id: string) =>
       request<{ ok: boolean }>(`/api/admin/ingest/items/${id}/reject`, {
         method: "POST",

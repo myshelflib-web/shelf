@@ -449,15 +449,25 @@
   align-items: center;
   gap: 0.625rem;
   border: 1px solid var(--border);
-  border-radius: 11px;
-  background: var(--bg-elevated);
-  padding: 0.75rem;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  border-radius: 12px;
+  background: linear-gradient(
+    165deg,
+    var(--bg-elevated) 0%,
+    color-mix(in srgb, var(--bg-secondary) 24%, var(--bg-elevated)) 100%
+  );
+  padding: 0.8125rem;
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
 }
 
 .explore-collection-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
   background: var(--bg-secondary);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px rgba(var(--shadow-color), 0.08);
 }
 
 .explore-collection-mark {
@@ -527,74 +537,209 @@
 .explore-resource-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0.625rem;
+  gap: 0.75rem;
 }
 
 @media (min-width: 768px) {
   .explore-resource-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.875rem;
+  }
+}
+
+@media (min-width: 1100px) {
+  .explore-resource-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 .explore-resource-card {
+  position: relative;
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: var(--bg-elevated);
-  padding: 0.8125rem;
-  transition: border-color 0.15s ease, background 0.15s ease;
+  background: linear-gradient(
+    165deg,
+    var(--bg-elevated) 0%,
+    color-mix(in srgb, var(--bg-secondary) 28%, var(--bg-elevated)) 100%
+  );
+  padding: 0.9375rem;
+  min-height: 11.5rem;
+  overflow: hidden;
+  transition:
+    border-color 0.18s ease,
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
 }
 
-.explore-resource-card:hover {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+a.explore-resource-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+a.explore-resource-card:hover,
+a.explore-resource-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
   background: var(--bg-secondary);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--accent) 18%, transparent),
+    0 10px 28px rgba(var(--shadow-color), 0.1);
+  outline: none;
+}
+
+a.explore-resource-card:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--bg-primary),
+    0 0 0 4px var(--ring),
+    0 10px 28px rgba(var(--shadow-color), 0.1);
+}
+
+.explore-resource-card-skeleton {
+  pointer-events: none;
+  animation: explore-resource-pulse 1.4s ease-in-out infinite;
+  background: var(--bg-secondary);
+}
+
+@keyframes explore-resource-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.explore-resource-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+
+.explore-resource-mark {
+  width: 2.125rem;
+  height: 2.125rem;
+  border-radius: 9px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border));
+}
+
+.explore-resource-card-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.explore-resource-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.explore-resource-card-arrow {
+  width: 0.875rem;
+  height: 0.875rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  opacity: 0;
+  transform: translate(-3px, 3px);
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    color 0.16s ease;
+}
+
+a.explore-resource-card:hover .explore-resource-card-arrow,
+a.explore-resource-card:focus-visible .explore-resource-card-arrow {
+  opacity: 1;
+  transform: translate(0, 0);
+  color: var(--accent);
 }
 
 .explore-resource-type {
   display: inline-flex;
+  align-items: center;
   font-size: 0.625rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
   color: var(--accent);
   background: var(--accent-subtle);
-  padding: 0.1875rem 0.375rem;
+  padding: 0.1875rem 0.4375rem;
   border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
 .explore-resource-title {
-  margin-top: 0.5rem;
-  font-size: 0.8125rem;
+  margin-top: 0.4375rem;
+  font-size: 0.875rem;
   font-weight: 700;
+  line-height: 1.35;
   color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .explore-resource-meta {
-  margin-top: 0.1875rem;
+  margin-top: 0.25rem;
   font-size: 0.6875rem;
+  line-height: 1.4;
   color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .explore-resource-copy {
-  margin-top: 0.5rem;
+  margin-top: 0.625rem;
   font-size: 0.6875rem;
-  line-height: 1.45;
-  color: var(--text-muted);
+  line-height: 1.5;
+  color: var(--text-secondary);
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .explore-resource-open {
-  margin-top: 0.625rem;
+  margin-top: 0.75rem;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
   height: 1.875rem;
-  padding: 0 0.5625rem;
-  border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg-elevated);
+  padding: 0 0.6875rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  background: var(--accent-subtle);
   font-size: 0.6875rem;
   font-weight: 650;
-  color: var(--text-secondary);
-  transition: border-color 0.15s ease, color 0.15s ease;
+  color: var(--accent);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
-.explore-resource-open:hover {
-  color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+a.explore-resource-card:hover .explore-resource-open,
+a.explore-resource-card:focus-visible .explore-resource-open {
+  background: var(--accent-light);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  color: var(--accent-hover);
 }
 
 .explore-back-library {

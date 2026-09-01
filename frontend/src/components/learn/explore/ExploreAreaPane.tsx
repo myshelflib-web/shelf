@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { ExploreHeroSearch } from "@/components/learn/explore/ExploreHeroSearch";
-import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
+import { ExploreResourceCard } from "@/components/learn/explore/ExploreResourceCard";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import {
   ExploreAreaId,
@@ -16,40 +16,7 @@ import {
 import { searchLearnCatalog } from "@/lib/learnCatalog";
 import { useEffect, useMemo, useState } from "react";
 
-export function ExploreResourceCard({
-  title,
-  typeLabel,
-  meta,
-  copy,
-  href,
-}: {
-  title: string;
-  typeLabel: string;
-  meta: string;
-  copy: string;
-  href: string;
-}) {
-  const router = useRouter();
-  const { startReaderOpen } = useLearnNavigation();
-  return (
-    <article className="explore-resource-card">
-      <span className="explore-resource-type">{typeLabel}</span>
-      <h3 className="explore-resource-title">{title}</h3>
-      <p className="explore-resource-meta">{meta}</p>
-      <p className="explore-resource-copy">{copy}</p>
-      <button
-        type="button"
-        onClick={() => {
-          startReaderOpen(href);
-          router.push(href);
-        }}
-        className="explore-resource-open"
-      >
-        Open
-      </button>
-    </article>
-  );
-}
+export { ExploreResourceCard } from "@/components/learn/explore/ExploreResourceCard";
 
 export function ExploreAreaPane({
   areaId,
@@ -107,6 +74,12 @@ export function ExploreAreaPane({
       <div className="explore-page-inner">
         <header className="explore-scoped-head">
           <div className="min-w-0 flex-1">
+            <Link
+              href={activeSubject ? learnAreaHref(areaId) : "/learn"}
+              className="explore-back-library mb-2 inline-flex w-auto"
+            >
+              ← {activeSubject ? area.title : "Explore"}
+            </Link>
             <nav className="explore-breadcrumb" aria-label="Breadcrumb">
               <Link href="/learn" className="hover:text-[var(--accent)]">
                 Explore
@@ -136,9 +109,6 @@ export function ExploreAreaPane({
               {activeSubject?.description?.trim() || area.description}
             </p>
           </div>
-          <Link href="/learn" className="explore-back-all shrink-0">
-            ← All collections
-          </Link>
         </header>
 
         <div className="mt-5">

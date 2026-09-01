@@ -1,258 +1,240 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { api } from "@/lib/api";
-import type { IngestItemRow, IngestJobRow, IngestSourceRow } from "@/types";
-import { RefreshCw, Check, X, Upload, Database } from "lucide-react";
-import { ShelfSelect } from "@/components/ui/ShelfSelect";
+import type { IngestItemRow, IngestSourceRow } from "@/types";
+import { IngestReviewQueue } from "@/components/admin/IngestReviewQueue";
+import { IngestSourcesSection } from "@/components/admin/IngestSourcesSection";
 
 export function IngestReviewPanel() {
   const [sources, setSources] = useState<IngestSourceRow[]>([]);
   const [items, setItems] = useState<IngestItemRow[]>([]);
-  const [jobs, setJobs] = useState<IngestJobRow[]>([]);
   const [statusFilter, setStatusFilter] = useState("PENDING_REVIEW");
-  const [busy, setBusy] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [sourcesLoading, setSourcesLoading] = useState(true);
+  const [itemsLoading, setItemsLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [pollBusyId, setPollBusyId] = useState<string | null>(null);
+  const [seedBusy, setSeedBusy] = useState(false);
+  const [sourcesRefreshBusy, setSourcesRefreshBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    const [src, it, jb] = await Promise.all([
-      api.admin.ingestSources(),
-      api.admin.ingestItems({ status: statusFilter, limit: 50 }),
-      api.admin.ingestJobs(20),
-    ]);
-    setSources(src.sources);
-    setItems(it.items);
-    setJobs(jb.jobs);
+  const loadSources = useCallback(async () => {
+    const { sources: next } = await api.admin.ingestSources();
+    setSources(next);
+  }, []);
+
+  const loadItems = useCallback(async () => {
+    const { items: next } = await api.admin.ingestItems({
+      status: statusFilter,
+      limit: 50,
+    });
+    setItems(next);
   }, [statusFilter]);
 
   useEffect(() => {
-    void refresh().catch(() => setMessage("Failed to load ingest data"));
-  }, [refresh]);
+    let cancelled = false;
+    setSourcesLoading(true);
+    void loadSources()
+      .catch(() => {
+        if (!cancelled) setMessage("Failed to load sources");
+      })
+      .finally(() => {
+        if (!cancelled) setSourcesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadSources]);
 
-  async function run(action: () => Promise<unknown>, id: string) {
-    setBusy(id);
+  useEffect(() => {
+    let cancelled = false;
+    setItemsLoading(true);
+    void loadItems()
+      .catch(() => {
+        if (!cancelled) setMessage("Failed to load review queue");
+      })
+      .finally(() => {
+        if (!cancelled) setItemsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadItems]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [statusFilter]);
+
+  const pendingItems = items.filter((item) => item.status === "PENDING_REVIEW");
+  const allPendingSelected =
+    pendingItems.length > 0 &&
+    pendingItems.every((item) => selectedIds.has(item.id));
+
+  function toggleSelected(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllPending() {
+    if (allPendingSelected) {
+      setSelectedIds(new Set());
+      return;
+    }
+    setSelectedIds(new Set(pendingItems.map((item) => item.id)));
+  }
+
+  async function runAction(
+    id: string,
+    action: () => Promise<unknown>,
+    opts?: { reloadItems?: boolean; reloadSources?: boolean; success?: string }
+  ) {
+    setBusyId(id);
     setMessage(null);
+    setSuccessMessage(null);
     try {
       await action();
-      await refresh();
+      if (opts?.success) setSuccessMessage(opts.success);
+      await Promise.all([
+        opts?.reloadSources ? loadSources() : Promise.resolve(),
+        opts?.reloadItems !== false ? loadItems() : Promise.resolve(),
+      ]);
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Action failed");
     } finally {
-      setBusy(null);
+      setBusyId(null);
+    }
+  }
+
+  async function runPoll(sourceId: string) {
+    setPollBusyId(sourceId);
+    setMessage(null);
+    setSuccessMessage(null);
+    try {
+      await api.admin.ingestPollSource(sourceId);
+      setSuccessMessage("Poll queued.");
+      await loadSources();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Poll failed");
+    } finally {
+      setPollBusyId(null);
+    }
+  }
+  async function runSeed() {
+    setSeedBusy(true);
+    setMessage(null);
+    setSuccessMessage(null);
+    try {
+      const result = await api.admin.ingestSeedSources();
+      setSuccessMessage(
+        `Sources updated (${result.created} new, ${result.updated} refreshed).`
+      );
+      await loadSources();
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Failed to seed sources");
+    } finally {
+      setSeedBusy(false);
+    }
+  }
+
+  async function refreshSources() {
+    setSourcesRefreshBusy(true);
+    setMessage(null);
+    try {
+      await loadSources();
+    } catch {
+      setMessage("Failed to refresh sources");
+    } finally {
+      setSourcesRefreshBusy(false);
     }
   }
 
   return (
-    <div className="space-y-8 max-w-5xl">
+    <div className="space-y-6 max-w-5xl">
       <div>
-        <h1 className="text-2xl font-semibold">Content ingestion</h1>
+        <h1 className="text-2xl font-bold">Content ingestion</h1>
         <p className="text-sm text-[var(--text-muted)] mt-1">
-          Copyright-safe pipeline: gov RSS, official PDF watchers, admin review, SQS workers.
+          Poll official sources, review summaries, and publish to Learn current affairs.
         </p>
       </div>
 
-      {message && (
-        <p className="text-sm text-red-400 rounded-[10px] border border-red-500/30 px-3 py-2">
+      {message ? (
+        <p className="text-sm text-red-400 rounded-xl border border-red-500/30 bg-red-500/5 px-3 py-2">
           {message}
         </p>
-      )}
+      ) : null}
 
-      <section className="rounded-[10px] border border-[var(--border)] p-4">
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() => void run(() => api.admin.preloadedSeedCatalog(), "preloaded-seed")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
-          >
-            <Database className="w-4 h-4" />
-            Seed preloaded catalog
-          </button>
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() =>
-              void run(() => api.admin.preloadedMigrateLinks(), "preloaded-migrate")
-            }
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
-          >
-            Clear S3 pointers
-          </button>
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() =>
-              void run(() => api.admin.preloadedCheckLinks(20), "preloaded-check")
-            }
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
-          >
-            Check preloaded links
-          </button>
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() => void run(() => api.admin.ingestSeedSources(), "seed")}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)] text-white px-3 py-2 text-sm"
-          >
-            <Database className="w-4 h-4" />
-            Seed default sources
-          </button>
-          <button
-            type="button"
-            disabled={busy !== null}
-            onClick={() => void refresh()}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </button>
-        </div>
+      {successMessage ? (
+        <p className="text-sm text-emerald-400 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-3 py-2">
+          {successMessage}
+        </p>
+      ) : null}
 
-        <h2 className="text-sm font-semibold mb-2">Sources</h2>
-        <ul className="space-y-2">
-          {sources.map((s) => (
-            <li
-              key={s.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-sm"
-            >
-              <div>
-                <span className="font-medium">{s.name}</span>
-                <span className="text-[var(--text-muted)] ml-2">
-                  {s.cadence} · {s.license} · {s._count.items} items
-                </span>
-                {s.lastError && (
-                  <p className="text-xs text-red-400 mt-0.5">{s.lastError}</p>
-                )}
-              </div>
-              <button
-                type="button"
-                disabled={busy !== null}
-                onClick={() => void run(() => api.admin.ingestPollSource(s.id), s.id)}
-                className="text-xs text-[var(--accent)] hover:underline"
-              >
-                Poll now → SQS
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <IngestSourcesSection
+        sources={sources}
+        loading={sourcesLoading}
+        seedBusy={seedBusy}
+        refreshBusy={sourcesRefreshBusy}
+        pollBusyId={pollBusyId}
+        onSeed={() => void runSeed()}
+        onRefresh={() => void refreshSources()}
+        onPoll={(sourceId) => void runPoll(sourceId)}
+      />
 
-      <section className="rounded-[10px] border border-[var(--border)] p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-sm font-semibold">Review queue</h2>
-          <ShelfSelect
-            value={statusFilter}
-            onChange={setStatusFilter}
-            options={[
-              { value: "PENDING_REVIEW", label: "Pending review" },
-              { value: "FETCHED", label: "Fetched" },
-              { value: "APPROVED", label: "Approved" },
-              { value: "PUBLISHED", label: "Published" },
-              { value: "REJECTED", label: "Rejected" },
-            ]}
-            aria-label="Queue filter"
-          />
-        </div>
-
-        <ul className="space-y-3">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="rounded-lg border border-[var(--border)] p-3 text-sm"
-            >
-              <p className="font-medium">{item.title}</p>
-              <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                {item.source.name} · {item.status} · {item.license}
-                {item.linkStatus && item.linkStatus !== "UNKNOWN"
-                  ? ` · link ${item.linkStatus.toLowerCase()}`
-                  : ""}
-              </p>
-              {item.shelfSummary && (
-                <p className="text-[var(--text-secondary)] mt-2 text-xs leading-relaxed">
-                  {item.shelfSummary}
-                </p>
-              )}
-              <div className="flex flex-wrap gap-2 mt-3">
-                {item.status === "PENDING_REVIEW" && (
-                  <>
-                    <button
-                      type="button"
-                      disabled={busy !== null}
-                      onClick={() =>
-                        void run(() => api.admin.ingestApproveItem(item.id), item.id)
-                      }
-                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-600/90 text-white px-2.5 py-1 text-xs"
-                    >
-                      <Check className="w-3 h-3" /> Approve
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy !== null}
-                      onClick={() =>
-                        void run(() => api.admin.ingestRejectItem(item.id), item.id)
-                      }
-                      className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs"
-                    >
-                      <X className="w-3 h-3" /> Reject
-                    </button>
-                  </>
-                )}
-                <button
-                  type="button"
-                  disabled={busy !== null}
-                  onClick={() =>
-                    void run(() => api.admin.ingestPromoteItem(item.id), `promote-${item.id}`)
-                  }
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs"
-                >
-                  <Upload className="w-3 h-3" /> Promote to Learn
-                </button>
-                <button
-                  type="button"
-                  disabled={busy !== null}
-                  onClick={() =>
-                    void run(() => api.admin.ingestCheckLink(item.id), `link-${item.id}`)
-                  }
-                  className="inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs"
-                >
-                  Check link
-                </button>
-                <Link
-                  href={`/learn/current-affairs/${item.slug}`}
-                  className="text-xs text-[var(--accent)] hover:underline self-center"
-                >
-                  Public page
-                </Link>
-                <a
-                  href={item.canonicalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-[var(--accent)] hover:underline self-center"
-                >
-                  Source link
-                </a>
-              </div>
-            </li>
-          ))}
-          {items.length === 0 && (
-            <p className="text-sm text-[var(--text-muted)]">No items in this queue.</p>
-          )}
-        </ul>
-      </section>
-
-      <section className="rounded-[10px] border border-[var(--border)] p-4">
-        <h2 className="text-sm font-semibold mb-2">Recent jobs</h2>
-        <ul className="text-xs space-y-1 font-mono text-[var(--text-muted)]">
-          {jobs.map((j) => (
-            <li key={j.id}>
-              {j.phase} · {j.status}
-              {j.source ? ` · ${j.source.slug}` : ""}
-              {j.error ? ` · ${j.error}` : ""}
-            </li>
-          ))}
-        </ul>
-      </section>
+      <IngestReviewQueue
+        items={items}
+        loading={itemsLoading}
+        statusFilter={statusFilter}
+        selectedIds={selectedIds}
+        allPendingSelected={allPendingSelected}
+        busyId={busyId}
+        onStatusFilterChange={setStatusFilter}
+        onToggleSelected={toggleSelected}
+        onToggleSelectAllPending={toggleSelectAllPending}
+        onApprove={(id) =>
+          void runAction(id, () => api.admin.ingestApproveItem(id), {
+            success: "Approved and queued for publish.",
+          })
+        }
+        onReject={(id) =>
+          void runAction(id, () => api.admin.ingestRejectItem(id), {
+            success: "Item rejected.",
+          })
+        }
+        onRetryPublish={(id) =>
+          void runAction(
+            `promote-${id}`,
+            () => api.admin.ingestPromoteItem(id),
+            { success: "Publish retry queued." }
+          )
+        }
+        onBulkApproveSelected={() =>
+          void runAction(
+            "bulk-approve-selected",
+            () =>
+              api.admin.ingestBulkApproveItems({
+                ids: [...selectedIds],
+              }),
+            { success: "Selected items approved." }
+          )
+        }
+        onBulkApproveAll={() =>
+          void runAction(
+            "bulk-approve-all",
+            () =>
+              api.admin.ingestBulkApproveItems({
+                status: "PENDING_REVIEW",
+                limit: 50,
+              }),
+            { success: "Pending items approved." }
+          )
+        }
+      />
     </div>
   );
 }

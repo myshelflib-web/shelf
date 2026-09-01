@@ -101,20 +101,6 @@ export const PRELOADED_CATALOG_UPSC: PreloadedCatalogEntry[] = [
     order: 7,
   },
   {
-    subjectSlug: "ncert",
-    subjectName: "NCERT",
-    topicSlug: "textbooks",
-    topicTitle: "Textbooks",
-    studyGoal: "UPSC",
-    title: "NCERT textbook portal",
-    slug: "ncert-textbook-portal",
-    sourceUrl: "https://ncert.nic.in/textbook.php",
-    license: "OFFICIAL_DOCUMENT",
-    summary:
-      "Official NCERT textbook PDFs for school foundations — polity, history, geography, and science basics.",
-    order: 1,
-  },
-  {
     subjectSlug: "indian-economy",
     subjectName: "Indian Economy",
     topicSlug: "budget-survey",

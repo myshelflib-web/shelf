@@ -7,6 +7,7 @@ import { seedDefaultIngestSources } from "../services/ingest/seedSources.js";
 import { enqueueSourcePoll } from "../services/ingest/ingestScheduler.js";
 import {
   approveIngestItem,
+  bulkApproveIngestItems,
   processIngestItem,
   rejectIngestItem,
 } from "../services/ingest/processItem.js";
@@ -91,6 +92,25 @@ router.patch(
       },
     });
     res.json({ item });
+  }
+);
+
+router.post(
+  "/ingest/items/bulk-approve",
+  authMiddleware,
+  adminMiddleware,
+  async (req: Request, res: Response) => {
+    const body = req.body as {
+      ids?: string[];
+      status?: "PENDING_REVIEW" | "FETCHED";
+      limit?: number;
+    };
+    const result = await bulkApproveIngestItems({
+      ids: Array.isArray(body.ids) ? body.ids : undefined,
+      status: body.status,
+      limit: typeof body.limit === "number" ? body.limit : undefined,
+    });
+    res.json(result);
   }
 );
 
