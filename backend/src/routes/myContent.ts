@@ -80,6 +80,7 @@ import {
   loadLegacySubjectsForUser,
   slimRootFolders,
 } from "../services/libraryStore.js";
+import { folderAncestors, folderSlugPathById } from "../utils/folderPath.js";
 
 const router = Router();
 
@@ -172,6 +173,25 @@ function fileParentFields(parent: PageParent) {
   };
 }
 
+/** Resolve S3/URL slugs from UserFolder (not legacy UserSubject/UserTopicGroup). */
+async function resolveParentSlugsFromFolder(
+  userId: string,
+  folderId: string | null
+): Promise<{ subjectSlug: string | null; groupSlug: string | null } | null> {
+  if (!folderId) return { subjectSlug: null, groupSlug: null };
+  const chain = await folderAncestors(folderId);
+  if (chain.length === 0) return null;
+  const root = await prisma.userFolder.findFirst({
+    where: { id: chain[0].id, userId },
+  });
+  if (!root) return null;
+  const slugs = await folderSlugPathById(folderId);
+  return {
+    subjectSlug: slugs[0] ?? null,
+    groupSlug: slugs.length > 1 ? slugs[1] : null,
+  };
+}
+
 function rootPageParent(userId: string): PageParent {
   return {
     userId,
@@ -208,13 +228,15 @@ async function topicPageParent(
   subjectId: string,
   groupId: string
 ): Promise<PageParent | null> {
-  const root = await prisma.userFolder.findFirst({
-    where: { id: subjectId, userId, parentId: null },
+  const chain = await folderAncestors(groupId);
+  if (chain.length < 2) return null;
+  const root = chain[0];
+  const nested = chain[chain.length - 1];
+  const owned = await prisma.userFolder.findFirst({
+    where: { id: root.id, userId, parentId: null },
   });
-  const nested = await prisma.userFolder.findFirst({
-    where: { id: groupId, userId, parentId: root?.id ?? "" },
-  });
-  if (!root || !nested) return null;
+  if (!owned || root.id !== subjectId) return null;
+
   return {
     userId,
     scope: { kind: "topic", userTopicGroupId: nested.id },
@@ -714,29 +736,18 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
         : { kind: "root", userId: claims.userId },
   };
 
-  if (parent.userSubjectId) {
-    const subject = await prisma.userSubject.findFirst({
-      where: { id: parent.userSubjectId, userId: parent.userId },
-      select: { slug: true },
-    });
-    if (!subject) {
+  if (parent.userSubjectId || parent.folderId) {
+    const resolved = await resolveParentSlugsFromFolder(
+      parent.userId,
+      parent.folderId
+    );
+    if (parent.folderId && !resolved) {
       res.status(404).json({ error: "Folder not found" });
       return;
     }
-    parent.subjectSlug = subject.slug;
-    if (parent.userTopicGroupId) {
-      const group = await prisma.userTopicGroup.findFirst({
-        where: {
-          id: parent.userTopicGroupId,
-          userSubjectId: parent.userSubjectId,
-        },
-        select: { slug: true },
-      });
-      if (!group) {
-        res.status(404).json({ error: "Folder not found" });
-        return;
-      }
-      parent.groupSlug = group.slug;
+    if (resolved) {
+      parent.subjectSlug = resolved.subjectSlug;
+      parent.groupSlug = resolved.groupSlug;
     }
   }
 

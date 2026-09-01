@@ -9,7 +9,6 @@ import {
 import {
   ChevronDown,
   ChevronRight,
-  BookOpen,
   Trash2,
   FilePlus,
   FolderPlus,
@@ -17,7 +16,6 @@ import {
 } from "lucide-react";
 import { ExplorerDragGrip } from "@/components/my-content/ExplorerDragGrip";
 import { FolderMark } from "@/components/FolderMark";
-import { folderTone } from "@/lib/folderTone";
 import { ExplorerPageRow } from "@/components/my-content/ExplorerPageRow";
 import { ExplorerSelectionToggle } from "@/components/my-content/ExplorerSelectionToggle";
 import { ExplorerDropLine } from "@/components/my-content/ExplorerDropLine";
@@ -80,6 +78,7 @@ interface ExplorerCollectionBlockProps {
     }
   ) => void | Promise<void>;
   clearDropHint: () => void;
+  clearActiveDrag: () => void;
   enablePageDrag: boolean;
   scheduledHrefs: Set<string>;
   onOpenPage: (page: UserPageSummary, href: string) => void;
@@ -116,6 +115,7 @@ export function ExplorerCollectionBlock({
   allowReorderDrop,
   finishReorderDrop,
   clearDropHint,
+  clearActiveDrag,
   enablePageDrag,
   scheduledHrefs,
   onOpenPage,
@@ -262,6 +262,7 @@ export function ExplorerCollectionBlock({
                 allowReorderDrop={allowReorderDrop}
                 finishReorderDrop={finishReorderDrop}
                 clearDropHint={clearDropHint}
+                clearActiveDrag={clearActiveDrag}
                 scheduledHrefs={scheduledHrefs}
                 onOpenPage={onOpenPage}
                 onSharePage={onSharePage}
@@ -309,7 +310,6 @@ export function ExplorerCollectionBlock({
           {groups.map((group) => {
             const tKey = `${nb.slug}:${group.slug}`;
             const tOpen = expandedTopics[tKey] ?? false;
-            const tone = folderTone(group.id);
             const topicKey = topicSelectionKey(nb.id, group.id);
             const toggleTopicSelect = () =>
               onSelectionChange(toggleSelectionKey(selected, topicKey));
@@ -342,7 +342,10 @@ export function ExplorerCollectionBlock({
                   onDragOver={
                     libraryMoveEnabled && !selectionMode
                       ? (e) => {
-                          if (activeDrag?.kind === "page") {
+                          if (
+                            activeDrag?.kind === "page" ||
+                            activeDrag?.kind === "topic"
+                          ) {
                             allowReorderDrop(
                               {
                                 kind: "topic-row",
@@ -359,17 +362,15 @@ export function ExplorerCollectionBlock({
                   onDrop={
                     libraryMoveEnabled && !selectionMode
                       ? (e) => {
-                          if (activeDrag?.kind === "page") {
-                            void finishReorderDrop(
-                              {
-                                kind: "topic-row",
-                                subjectId: nb.id,
-                                topicGroupId: group.id,
-                              },
-                              e,
-                              {}
-                            );
-                          }
+                          void finishReorderDrop(
+                            {
+                              kind: "topic-row",
+                              subjectId: nb.id,
+                              topicGroupId: group.id,
+                            },
+                            e,
+                            {}
+                          );
                         }
                       : undefined
                   }
@@ -394,7 +395,7 @@ export function ExplorerCollectionBlock({
                           e
                         )
                       }
-                      onDragEnd={clearDropHint}
+                      onDragEnd={clearActiveDrag}
                     />
                   )}
                   <span className="p-0.5 text-[var(--text-muted)] shrink-0">
@@ -404,10 +405,7 @@ export function ExplorerCollectionBlock({
                       <ChevronRight className="w-3.5 h-3.5" />
                     )}
                   </span>
-                  <BookOpen
-                    className="w-3.5 h-3.5 shrink-0"
-                    style={{ color: tone.fg }}
-                  />
+                  <FolderMark seed={group.id} size={14} />
                   <span className="flex-1 min-w-0 truncate text-[13px] font-medium">
                     {group.title}
                   </span>
@@ -483,6 +481,7 @@ export function ExplorerCollectionBlock({
                           allowReorderDrop={allowReorderDrop}
                           finishReorderDrop={finishReorderDrop}
                           clearDropHint={clearDropHint}
+                clearActiveDrag={clearActiveDrag}
                           scheduledHrefs={scheduledHrefs}
                           onOpenPage={onOpenPage}
                           onSharePage={onSharePage}

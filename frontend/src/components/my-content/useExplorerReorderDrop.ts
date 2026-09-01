@@ -117,6 +117,17 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
         return;
       }
 
+      if (hint.kind === "topic-row" && drag.kind === "topic") {
+        if (drag.id === hint.topicGroupId) return;
+        await handlers.onMoveTopic({
+          groupId: drag.id,
+          sourceSubjectId: drag.subjectId!,
+          targetSubjectId: hint.subjectId,
+          beforeGroupId: hint.topicGroupId,
+        });
+        return;
+      }
+
       if (hint.kind === "topic-row" && drag.kind === "page") {
         await handlers.onMovePage({
           pageId: drag.id,
@@ -161,6 +172,10 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
 
   const clearDropHint = useCallback(() => {
     setDropHint(null);
+  }, []);
+
+  const clearActiveDrag = useCallback(() => {
+    setDropHint(null);
     setActiveDrag(null);
   }, []);
 
@@ -171,6 +186,7 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
     allowReorderDrop,
     finishReorderDrop,
     clearDropHint,
+    clearActiveDrag,
   };
 }
 

@@ -144,6 +144,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
     allowReorderDrop,
     finishReorderDrop,
     clearDropHint,
+    clearActiveDrag,
   } = useExplorerLibraryDrag(dragHandlers);
 
   const rootPageIds = filteredRootPages.map((p) => p.id);
@@ -232,6 +233,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
                 allowReorderDrop={allowReorderDrop}
                 finishReorderDrop={finishReorderDrop}
                 clearDropHint={clearDropHint}
+                clearActiveDrag={clearActiveDrag}
                 scheduledHrefs={scheduledHrefs}
                 onOpenPage={onOpenPage}
                 onSharePage={onSharePage}
@@ -333,6 +335,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               allowReorderDrop={allowReorderDrop}
               finishReorderDrop={finishReorderDrop}
               clearDropHint={clearDropHint}
+              clearActiveDrag={clearActiveDrag}
               enablePageDrag={enablePageDrag}
               scheduledHrefs={scheduledHrefs}
               onOpenPage={onOpenPage}

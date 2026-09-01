@@ -53,6 +53,7 @@ interface ExplorerPageRowProps {
     context: { pageIds?: string[] }
   ) => void | Promise<void>;
   clearDropHint?: () => void;
+  clearActiveDrag?: () => void;
   scheduledHrefs: Set<string>;
   onOpenPage: (page: UserPageSummary, href: string) => void;
   onSharePage: (pageId: string, title: string) => void;
@@ -78,6 +79,7 @@ export function ExplorerPageRow({
   allowReorderDrop,
   finishReorderDrop,
   clearDropHint,
+  clearActiveDrag,
   scheduledHrefs,
   onOpenPage,
   onSharePage,
@@ -206,7 +208,7 @@ export function ExplorerPageRow({
                   e
                 )
               }
-              onDragEnd={clearDropHint}
+              onDragEnd={clearActiveDrag}
             />
             {page.completed ? (
               <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
