@@ -41,28 +41,27 @@ router.post("/pages/:id/save-copy", async (req: Request, res: Response) => {
   let scope: PageSlugScope = { kind: "root", userId };
   let subjectSlug: string | null = null;
   let topicSlug: string | null = null;
-  let userSubjectId: string | null = null;
-  let userTopicGroupId: string | null = null;
+  let folderId: string | null = null;
 
   if (subjectId) {
-    const subject = await prisma.userSubject.findFirst({
-      where: { id: subjectId, userId },
+    const subject = await prisma.userFolder.findFirst({
+      where: { id: subjectId, userId, parentId: null },
     });
     if (!subject) {
       res.status(400).json({ error: "Collection not found" });
       return;
     }
-    userSubjectId = subject.id;
+    folderId = subject.id;
     subjectSlug = subject.slug;
     if (topicGroupId) {
-      const group = await prisma.userTopicGroup.findFirst({
-        where: { id: topicGroupId, userSubjectId: subject.id },
+      const group = await prisma.userFolder.findFirst({
+        where: { id: topicGroupId, userId, parentId: subject.id },
       });
       if (!group) {
         res.status(400).json({ error: "Topic not found" });
         return;
       }
-      userTopicGroupId = group.id;
+      folderId = group.id;
       topicSlug = group.slug;
       scope = { kind: "topic", userTopicGroupId: group.id };
     } else {
@@ -120,8 +119,9 @@ router.post("/pages/:id/save-copy", async (req: Request, res: Response) => {
   const created = await prisma.userTopic.create({
     data: {
       userId,
-      userSubjectId,
-      userTopicGroupId,
+      folderId,
+      userSubjectId: null,
+      userTopicGroupId: null,
       title: src.title,
       slug,
       contentType: src.contentType,

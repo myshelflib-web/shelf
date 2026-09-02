@@ -1,11 +1,13 @@
 import prisma from "../utils/prisma.js";
 import { uploadToS3 } from "./s3.js";
 import { scheduleIndexPage } from "./libraryIndex.js";
+import {
+  createNestedFolder,
+  createRootFolder,
+} from "./libraryStore.js";
 import { userDocPrefix, contentHtmlKey, pageHref } from "../utils/docPaths.js";
 import {
-  isReservedSlug,
   nextPageOrder,
-  slugify,
   uniquePageSlug,
   type PageSlugScope,
 } from "../utils/pageScope.js";
@@ -77,36 +79,6 @@ async function chargeStorage(userId: string, extraBytes: number) {
   });
 }
 
-async function uniqueSubjectSlug(userId: string, title: string) {
-  const base = slugify(title) || "playlist";
-  const start = isReservedSlug(base) ? `${base}-list` : base;
-  let slug = start;
-  let n = 2;
-  while (
-    await prisma.userSubject.findUnique({
-      where: { userId_slug: { userId, slug } },
-    })
-  ) {
-    slug = `${start}-${n++}`;
-  }
-  return slug;
-}
-
-async function uniqueTopicSlug(subjectId: string, title: string) {
-  const base = slugify(title) || "playlist";
-  const start = isReservedSlug(base) ? `${base}-list` : base;
-  let slug = start;
-  let n = 2;
-  while (
-    await prisma.userTopicGroup.findUnique({
-      where: { userSubjectId_slug: { userSubjectId: subjectId, slug } },
-    })
-  ) {
-    slug = `${start}-${n++}`;
-  }
-  return slug;
-}
-
 export async function createVideoPage(input: {
   parent: YoutubePageParent;
   title: string;
@@ -134,8 +106,10 @@ export async function createVideoPage(input: {
   const page = await prisma.userTopic.create({
     data: {
       userId: input.parent.userId,
-      userSubjectId: input.parent.userSubjectId,
-      userTopicGroupId: input.parent.userTopicGroupId,
+      folderId:
+        input.parent.userTopicGroupId ?? input.parent.userSubjectId ?? null,
+      userSubjectId: null,
+      userTopicGroupId: null,
       title,
       slug,
       sourceUrl: canonicalWatchUrl(input.videoId, input.playlistId),
@@ -230,41 +204,26 @@ export async function importYoutube(input: {
     : null;
 
   if (!parent.userSubjectId) {
-    const slug = await uniqueSubjectSlug(parent.userId, folderTitle);
-    const count = await prisma.userSubject.count({ where: { userId: parent.userId } });
-    const subject = await prisma.userSubject.create({
-      data: {
-        userId: parent.userId,
-        name: folderTitle.slice(0, 120),
-        slug,
-        icon: "📁",
-        order: count + 1,
-      },
+    const folder = await createRootFolder(parent.userId, {
+      name: folderTitle.slice(0, 120),
     });
     dest = {
       userId: parent.userId,
-      scope: { kind: "notebook", userSubjectId: subject.id },
-      userSubjectId: subject.id,
+      scope: { kind: "notebook", userSubjectId: folder.id },
+      userSubjectId: folder.id,
       userTopicGroupId: null,
-      subjectSlug: subject.slug,
+      subjectSlug: folder.slug,
       groupSlug: null,
     };
-    notebook = { id: subject.id, name: subject.name, slug: subject.slug };
+    notebook = { id: folder.id, name: folder.name, slug: folder.slug };
     topic = null;
   } else if (!parent.userTopicGroupId) {
-    const slug = await uniqueTopicSlug(parent.userSubjectId, folderTitle);
-    const order =
-      (await prisma.userTopicGroup.count({
-        where: { userSubjectId: parent.userSubjectId },
-      })) + 1;
-    const group = await prisma.userTopicGroup.create({
-      data: {
-        userSubjectId: parent.userSubjectId,
-        title: folderTitle.slice(0, 120),
-        slug,
-        order,
-      },
+    const group = await createNestedFolder(parent.userId, parent.userSubjectId, {
+      name: folderTitle.slice(0, 120),
     });
+    if (!group) {
+      throw new Error("Collection not found");
+    }
     dest = {
       userId: parent.userId,
       scope: { kind: "topic", userTopicGroupId: group.id },
@@ -273,7 +232,7 @@ export async function importYoutube(input: {
       subjectSlug: parent.subjectSlug,
       groupSlug: group.slug,
     };
-    topic = { id: group.id, title: group.title, slug: group.slug };
+    topic = { id: group.id, title: group.name, slug: group.slug };
   }
 
   const pages = await importVideosIntoParent(dest, videos, target.playlistId);

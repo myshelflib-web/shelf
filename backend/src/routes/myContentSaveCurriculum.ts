@@ -3,6 +3,10 @@ import { authMiddleware } from "../middleware/auth.js";
 import { finishCurriculumLibraryCopy } from "../services/curriculumLibraryCopy.js";
 import { resolveCurriculumSavePolicy } from "../services/curriculumSavePolicy.js";
 import { scheduleIndexPage } from "../services/libraryIndex.js";
+import {
+  createRootFolder,
+  findFolderBySlug,
+} from "../services/libraryStore.js";
 import { pageHref, userDocPrefix } from "../utils/docPaths.js";
 import { errorFields } from "../utils/logger.js";
 import { isPremiumUser } from "../utils/paywall.js";
@@ -26,36 +30,13 @@ async function findOrCreateCollection(
   description?: string | null
 ) {
   const slug = slugify(name) || "collection";
-  if (isReservedSlug(slug)) {
-    const fallback = `${slug}-library`;
-    const existing = await prisma.userSubject.findUnique({
-      where: { userId_slug: { userId, slug: fallback } },
-    });
-    if (existing) return existing;
-    const count = await prisma.userSubject.count({ where: { userId } });
-    return prisma.userSubject.create({
-      data: {
-        userId,
-        name: name.trim(),
-        slug: fallback,
-        description: description ?? undefined,
-        order: count + 1,
-      },
-    });
-  }
-  const existing = await prisma.userSubject.findUnique({
-    where: { userId_slug: { userId, slug } },
-  });
+  const safeName = isReservedSlug(slug) ? `${name.trim()} library` : name.trim();
+  const resolvedSlug = isReservedSlug(slug) ? `${slug}-library` : slug;
+  const existing = await findFolderBySlug(userId, null, resolvedSlug);
   if (existing) return existing;
-  const count = await prisma.userSubject.count({ where: { userId } });
-  return prisma.userSubject.create({
-    data: {
-      userId,
-      name: name.trim(),
-      slug,
-      description: description ?? undefined,
-      order: count + 1,
-    },
+  return createRootFolder(userId, {
+    name: safeName,
+    description: description ?? null,
   });
 }
 
@@ -120,18 +101,35 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
   const marker = curriculumSourceUrl(article.id);
   const already = await findExistingCurriculumSave(userId, marker);
   if (already) {
-    const notebook = already.userSubjectId
-      ? await prisma.userSubject.findFirst({
-          where: { id: already.userSubjectId, userId },
-          select: { slug: true },
+    const folder = already.folderId
+      ? await prisma.userFolder.findFirst({
+          where: { id: already.folderId, userId },
+          select: { slug: true, parentId: true },
         })
       : null;
-    const topic = already.userTopicGroupId
-      ? await prisma.userTopicGroup.findFirst({
+    let notebookSlug: string | null = folder?.slug ?? null;
+    let topicSlug: string | null = null;
+    if (folder?.parentId) {
+      topicSlug = folder.slug;
+      const root = await prisma.userFolder.findFirst({
+        where: { id: folder.parentId, userId },
+        select: { slug: true },
+      });
+      notebookSlug = root?.slug ?? null;
+    } else if (!folder && already.userSubjectId) {
+      const notebook = await prisma.userSubject.findFirst({
+        where: { id: already.userSubjectId, userId },
+        select: { slug: true },
+      });
+      notebookSlug = notebook?.slug ?? null;
+      if (already.userTopicGroupId) {
+        const topic = await prisma.userTopicGroup.findFirst({
           where: { id: already.userTopicGroupId },
           select: { slug: true },
-        })
-      : null;
+        });
+        topicSlug = topic?.slug ?? null;
+      }
+    }
     res.json({
       page: {
         id: already.id,
@@ -139,7 +137,7 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
         slug: already.slug,
         contentType: already.contentType,
       },
-      href: pageHref(notebook?.slug, topic?.slug, already.slug),
+      href: pageHref(notebookSlug, topicSlug, already.slug),
       alreadySaved: true,
       status: already.status,
     });
@@ -170,7 +168,8 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
     const created = await prisma.userTopic.create({
       data: {
         userId,
-        userSubjectId: collection.id,
+        folderId: collection.id,
+        userSubjectId: null,
         userTopicGroupId: null,
         title: article.title,
         slug,
@@ -204,7 +203,8 @@ router.post("/from-curriculum", async (req: Request, res: Response) => {
   const created = await prisma.userTopic.create({
     data: {
       userId,
-      userSubjectId: collection.id,
+      folderId: collection.id,
+      userSubjectId: null,
       userTopicGroupId: null,
       title: article.title,
       slug,

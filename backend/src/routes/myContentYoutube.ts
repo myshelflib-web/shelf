@@ -29,8 +29,8 @@ async function notebookParent(
   userId: string,
   subjectId: string
 ): Promise<YoutubePageParent | null> {
-  const subject = await prisma.userSubject.findFirst({
-    where: { id: subjectId, userId },
+  const subject = await prisma.userFolder.findFirst({
+    where: { id: subjectId, userId, parentId: null },
   });
   if (!subject) return null;
   return {
@@ -48,11 +48,11 @@ async function topicParent(
   subjectId: string,
   groupId: string
 ): Promise<YoutubePageParent | null> {
-  const subject = await prisma.userSubject.findFirst({
-    where: { id: subjectId, userId },
+  const subject = await prisma.userFolder.findFirst({
+    where: { id: subjectId, userId, parentId: null },
   });
-  const group = await prisma.userTopicGroup.findFirst({
-    where: { id: groupId, userSubjectId: subject?.id },
+  const group = await prisma.userFolder.findFirst({
+    where: { id: groupId, userId, parentId: subject?.id },
   });
   if (!subject || !group) return null;
   return {

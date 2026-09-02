@@ -4,11 +4,15 @@ import {
   fileSelect,
   type LegacySubject,
 } from "./legacyLibraryTree.js";
+import { ensureLegacyLibraryMapped } from "./legacyLibraryMap.js";
+import { foldersForLegacySubjectIds } from "./legacyLibraryMapHelpers.js";
 import { uniqueFolderSlug } from "../utils/fileScope.js";
 
 import type { SlimNotebook } from "../utils/notebookBrowse.js";
 
 export async function slimRootFolders(userId: string): Promise<SlimNotebook[]> {
+  await ensureLegacyLibraryMapped(userId);
+
   const roots = await prisma.userFolder.findMany({
     where: { userId, parentId: null },
     select: {
@@ -84,13 +88,10 @@ export async function loadLegacySubjectsForUser(
   userId: string,
   ids?: string[]
 ): Promise<LegacySubject[]> {
-  const folderWhere =
-    ids && ids.length > 0
-      ? { userId, id: { in: ids } }
-      : { userId };
+  await ensureLegacyLibraryMapped(userId);
 
-  const folders = await prisma.userFolder.findMany({
-    where: folderWhere,
+  const allFolders = await prisma.userFolder.findMany({
+    where: { userId },
     select: {
       id: true,
       name: true,
@@ -103,39 +104,31 @@ export async function loadLegacySubjectsForUser(
     orderBy: { order: "asc" },
   });
 
-  const folderIds = new Set(folders.map((f) => f.id));
-  const rootIds = folders.filter((f) => !f.parentId).map((f) => f.id);
-  const childIds = folders.filter((f) => f.parentId).map((f) => f.id);
-  const allFolderIds = [...rootIds, ...childIds];
+  const scopedFolders = foldersForLegacySubjectIds(allFolders, ids);
+  const allFolderIds = scopedFolders.map((f) => f.id);
 
-  const files = await prisma.userTopic.findMany({
-    where: {
-      userId,
-      OR: [
-        { folderId: null },
-        ...(allFolderIds.length > 0
-          ? [{ folderId: { in: allFolderIds } }]
-          : []),
-      ],
-    },
-    select: { ...fileSelect, folderId: true },
-    orderBy: { order: "asc" },
-  });
-
-  const scopedFolders =
-    ids && ids.length > 0
-      ? folders.filter(
-          (f) =>
-            folderIds.has(f.id) ||
-            (f.parentId && folderIds.has(f.parentId)) ||
-            !f.parentId
-        )
-      : folders;
+  const files =
+    allFolderIds.length === 0 && ids && ids.length > 0
+      ? []
+      : await prisma.userTopic.findMany({
+          where: {
+            userId,
+            OR: [
+              ...(ids && ids.length > 0 ? [] : [{ folderId: null }]),
+              ...(allFolderIds.length > 0
+                ? [{ folderId: { in: allFolderIds } }]
+                : []),
+            ],
+          },
+          select: { ...fileSelect, folderId: true },
+          orderBy: { order: "asc" },
+        });
 
   return buildLegacySubjectTree(scopedFolders, files);
 }
 
 export async function loadRootFiles(userId: string) {
+  await ensureLegacyLibraryMapped(userId);
   return prisma.userTopic.findMany({
     where: { userId, folderId: null },
     select: fileSelect,
@@ -206,6 +199,8 @@ export async function findFolderBySlug(
 
 /** Full folder tree for new clients (arbitrary depth). */
 export async function loadFolderTree(userId: string) {
+  await ensureLegacyLibraryMapped(userId);
+
   const folders = await prisma.userFolder.findMany({
     where: { userId },
     select: {

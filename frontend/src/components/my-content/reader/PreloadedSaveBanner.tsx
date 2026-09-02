@@ -203,7 +203,6 @@ export function PreloadedSaveBanner({
           <button
             type="button"
             className={savePrimaryButtonClass}
-            disabled={phase === "saving"}
             onClick={save}
           >
             Save to My Library

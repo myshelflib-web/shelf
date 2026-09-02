@@ -1148,25 +1148,33 @@ router.patch(
       res.status(400).json({ error: "Title is required" });
       return;
     }
-    const subject = await prisma.userSubject.findFirst({
-      where: { id: param(req, "subjectId"), userId },
+    const parentId = param(req, "subjectId");
+    const parent = await prisma.userFolder.findFirst({
+      where: { id: parentId, userId, parentId: null },
     });
-    if (!subject) {
+    if (!parent) {
       res.status(404).json({ error: "Folder not found" });
       return;
     }
-    const group = await prisma.userTopicGroup.findFirst({
-      where: { id: param(req, "groupId"), userSubjectId: subject.id },
+    const group = await prisma.userFolder.findFirst({
+      where: { id: param(req, "groupId"), userId, parentId: parent.id },
     });
     if (!group) {
       res.status(404).json({ error: "Folder not found" });
       return;
     }
-    const updated = await prisma.userTopicGroup.update({
+    const updated = await prisma.userFolder.update({
       where: { id: group.id },
-      data: { title: title.trim() },
+      data: { name: title.trim() },
     });
-    res.json({ topicGroup: updated });
+    res.json({
+      topicGroup: {
+        id: updated.id,
+        title: updated.name,
+        slug: updated.slug,
+        order: updated.order,
+      },
+    });
   }
 );
 
@@ -1174,52 +1182,70 @@ router.patch("/subjects/:id", async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const { name, description, icon } = req.body;
 
-  const subject = await prisma.userSubject.findFirst({
-    where: { id: param(req, "id"), userId },
+  const folder = await prisma.userFolder.findFirst({
+    where: { id: param(req, "id"), userId, parentId: null },
   });
-  if (!subject) {
+  if (!folder) {
     res.status(404).json({ error: "Folder not found" });
     return;
   }
 
-  const updated = await prisma.userSubject.update({
-    where: { id: subject.id },
+  const updated = await prisma.userFolder.update({
+    where: { id: folder.id },
     data: {
-      name: name?.trim() ?? subject.name,
-      description: description ?? subject.description,
-      icon: icon ?? subject.icon,
+      name: name?.trim() ?? folder.name,
+      description: description ?? folder.description,
+      icon: icon ?? folder.icon,
     },
   });
 
-  res.json({ subject: updated });
+  res.json({
+    subject: {
+      id: updated.id,
+      name: updated.name,
+      slug: updated.slug,
+      description: updated.description,
+      icon: updated.icon,
+      order: updated.order,
+    },
+  });
 });
 
 router.delete("/subjects/:id", async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const subject = await prisma.userSubject.findFirst({
-    where: { id: param(req, "id"), userId },
-    include: {
-      topics: true,
-      topicGroups: { include: { pages: true } },
-    },
+  const folder = await prisma.userFolder.findFirst({
+    where: { id: param(req, "id"), userId, parentId: null },
   });
-  if (!subject) {
+  if (!folder) {
     res.status(404).json({ error: "Folder not found" });
     return;
   }
 
-  for (const page of subject.topics) {
-    await deletePageAssets(userId, page);
-    scheduleDeletePageVectors(page.id);
-  }
-  for (const group of subject.topicGroups) {
-    for (const page of group.pages) {
-      await deletePageAssets(userId, page);
-      scheduleDeletePageVectors(page.id);
+  const descendants = await prisma.userFolder.findMany({
+    where: { userId },
+    select: { id: true, parentId: true },
+  });
+  const folderIds = new Set<string>([folder.id]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const d of descendants) {
+      if (d.parentId && folderIds.has(d.parentId) && !folderIds.has(d.id)) {
+        folderIds.add(d.id);
+        grew = true;
+      }
     }
   }
 
-  await prisma.userSubject.delete({ where: { id: subject.id } });
+  const pages = await prisma.userTopic.findMany({
+    where: { userId, folderId: { in: [...folderIds] } },
+  });
+  for (const page of pages) {
+    await deletePageAssets(userId, page);
+    scheduleDeletePageVectors(page.id);
+  }
+
+  await prisma.userFolder.delete({ where: { id: folder.id } });
   res.json({ success: true });
 });
 
@@ -1232,8 +1258,8 @@ router.patch("/subjects/reorder", async (req: Request, res: Response) => {
       return;
     }
 
-    const all = await prisma.userSubject.findMany({
-      where: { userId },
+    const all = await prisma.userFolder.findMany({
+      where: { userId, parentId: null },
       orderBy: { order: "asc" },
       select: { id: true },
     });
@@ -1250,7 +1276,7 @@ router.patch("/subjects/reorder", async (req: Request, res: Response) => {
     void prisma
       .$transaction(
         merged.map((id, index) =>
-          prisma.userSubject.update({
+          prisma.userFolder.update({
             where: { id },
             data: { order: index + 1 },
           })
@@ -1270,8 +1296,8 @@ router.patch(
   async (req: Request, res: Response) => {
     try {
       const userId = req.user!.userId;
-      const subject = await prisma.userSubject.findFirst({
-        where: { id: param(req, "subjectId"), userId },
+      const subject = await prisma.userFolder.findFirst({
+        where: { id: param(req, "subjectId"), userId, parentId: null },
       });
       if (!subject) {
         res.status(404).json({ error: "Folder not found" });
@@ -1284,8 +1310,8 @@ router.patch(
         return;
       }
 
-      const all = await prisma.userTopicGroup.findMany({
-        where: { userSubjectId: subject.id },
+      const all = await prisma.userFolder.findMany({
+        where: { userId, parentId: subject.id },
         orderBy: { order: "asc" },
         select: { id: true },
       });
@@ -1302,7 +1328,7 @@ router.patch(
       void prisma
         .$transaction(
           merged.map((id, index) =>
-            prisma.userTopicGroup.update({
+            prisma.userFolder.update({
               where: { id },
               data: { order: index + 1 },
             })
@@ -1348,17 +1374,11 @@ router.post("/bulk-delete", async (req: Request, res: Response) => {
     }
 
     for (const subject of subjects) {
-      for (const page of subject.topics) {
+      for (const page of subject.pages) {
         await deletePageAssets(userId, page);
         scheduleDeletePageVectors(page.id);
       }
-      for (const group of subject.topicGroups) {
-        for (const page of group.pages) {
-          await deletePageAssets(userId, page);
-          scheduleDeletePageVectors(page.id);
-        }
-      }
-      await prisma.userSubject.delete({ where: { id: subject.id } });
+      await prisma.userFolder.delete({ where: { id: subject.id } });
     }
 
     for (const group of groups) {
@@ -1366,12 +1386,25 @@ router.post("/bulk-delete", async (req: Request, res: Response) => {
         await deletePageAssets(userId, page);
         scheduleDeletePageVectors(page.id);
       }
-      await prisma.userTopicGroup.delete({ where: { id: group.id } });
+      await prisma.userFolder.delete({ where: { id: group.id } });
     }
 
     const subjectIdSet = new Set(subjectIds);
+    const coveredFolderIds = new Set<string>([
+      ...subjectIds,
+      ...topicGroups.map((tg) => tg.groupId),
+    ]);
     for (const page of pages) {
-      if (pageCoveredByBulkDelete(page, subjectIdSet, topicGroupKeys)) continue;
+      if (
+        pageCoveredByBulkDelete(
+          page,
+          subjectIdSet,
+          topicGroupKeys,
+          coveredFolderIds
+        )
+      ) {
+        continue;
+      }
       await deletePageAssets(userId, page);
       scheduleDeletePageVectors(page.id);
       await prisma.userTopic.delete({ where: { id: page.id } });
@@ -1389,25 +1422,45 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       const userId = req.user!.userId;
-      const subject = await prisma.userSubject.findFirst({
-        where: { id: param(req, "subjectId"), userId },
+      const subject = await prisma.userFolder.findFirst({
+        where: { id: param(req, "subjectId"), userId, parentId: null },
       });
       if (!subject) {
         res.status(404).json({ error: "Folder not found" });
         return;
       }
-      const group = await prisma.userTopicGroup.findFirst({
-        where: { id: param(req, "groupId"), userSubjectId: subject.id },
-        include: { pages: true },
+      const group = await prisma.userFolder.findFirst({
+        where: { id: param(req, "groupId"), userId, parentId: subject.id },
       });
       if (!group) {
         res.status(404).json({ error: "Folder not found" });
         return;
       }
-      for (const page of group.pages) {
-        await deletePageAssets(userId, page);
+
+      const descendants = await prisma.userFolder.findMany({
+        where: { userId },
+        select: { id: true, parentId: true },
+      });
+      const folderIds = new Set<string>([group.id]);
+      let grew = true;
+      while (grew) {
+        grew = false;
+        for (const d of descendants) {
+          if (d.parentId && folderIds.has(d.parentId) && !folderIds.has(d.id)) {
+            folderIds.add(d.id);
+            grew = true;
+          }
+        }
       }
-      await prisma.userTopicGroup.delete({ where: { id: group.id } });
+
+      const pages = await prisma.userTopic.findMany({
+        where: { userId, folderId: { in: [...folderIds] } },
+      });
+      for (const page of pages) {
+        await deletePageAssets(userId, page);
+        scheduleDeletePageVectors(page.id);
+      }
+      await prisma.userFolder.delete({ where: { id: group.id } });
       res.json({ success: true });
     } catch (err) {
       req.log?.error("my_content.topic_delete_failed", errorFields(err));
