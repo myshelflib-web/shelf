@@ -157,7 +157,10 @@ describe("exploreCatalog", () => {
     ]);
     expect(
       visibleExploreAreasForGoal(sampleSubjects, "UPSC").map((a) => a.id)
-    ).toEqual(["upsc", "law", "engineering", "books"]);
+    ).toEqual(["upsc"]);
+    expect(
+      visibleExploreAreasForGoal(sampleSubjects, "GATE").map((a) => a.id)
+    ).toEqual(["engineering"]);
   });
 
   it("limits General track featured collections to study skills", () => {

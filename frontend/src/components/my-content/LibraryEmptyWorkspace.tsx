@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FilePlus, FolderPlus, Plus, Search, BookOpen } from "lucide-react";
+import { FilePlus, FolderPlus, Search, BookOpen, ChevronDown } from "lucide-react";
 import { ShelfLogo } from "@/components/ShelfLogo";
 import { GreetingBlock } from "@/components/GreetingBlock";
 import { LivelyLine } from "@/components/LivelyLine";
+import { LibrarySuggestChips } from "@/components/LibrarySuggestChips";
 import {
   LibraryResumeSkeleton,
   LibrarySearchHitsSkeleton,
@@ -131,7 +132,7 @@ export function LibraryEmptyWorkspace() {
 
   return (
     <div className="h-full flex flex-col items-center justify-center px-6 py-10 overflow-y-auto">
-      <div className="w-full max-w-lg flex flex-col items-center">
+      <div className="relative z-[1] w-full max-w-lg flex flex-col items-center">
         <ShelfLogo size={40} />
         {user?.name ? (
           <div className="mt-5 w-full flex justify-center">
@@ -183,7 +184,15 @@ export function LibraryEmptyWorkspace() {
           </div>
         )}
 
-        <label className="relative w-full mt-8">
+        {!query.trim() ? (
+          <LibrarySuggestChips
+            surface="library"
+            className="mt-8"
+            onPick={(item) => setQuery(item.query)}
+          />
+        ) : null}
+
+        <label className={`relative w-full ${query.trim() ? "mt-8" : "mt-3"}`}>
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
           <input
             value={query}
@@ -202,7 +211,6 @@ export function LibraryEmptyWorkspace() {
             }}
             placeholder="Search across all folders…"
             className="w-full pl-10 pr-4 py-3 rounded-[10px] bg-[var(--bg-elevated)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-            autoFocus
           />
         </label>
 
@@ -240,21 +248,40 @@ export function LibraryEmptyWorkspace() {
           </ul>
         )}
 
-        <div ref={addRef} className="relative mt-8 w-full flex flex-col items-center">
+        <div ref={addRef} className="relative mt-8 w-full">
           <button
             type="button"
             onClick={() => setAddOpen((open) => !open)}
             aria-expanded={addOpen}
             aria-haspopup="menu"
-            className="flex items-center justify-center gap-2 px-5 py-3 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-elevated)] text-sm font-medium text-[var(--text-primary)] transition"
+            className="library-empty-add-btn group w-full flex items-center gap-3 px-4 py-3 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)]/45 hover:bg-[var(--bg-elevated)] text-left transition"
           >
-            <Plus className="w-4 h-4 text-[var(--accent)] shrink-0" />
-            Add file / folder
+            <span className="flex items-center shrink-0 -space-x-1.5">
+              <span className="library-empty-add-icon">
+                <FilePlus className="w-4 h-4 text-[var(--accent)]" />
+              </span>
+              <span className="library-empty-add-icon">
+                <FolderPlus className="w-4 h-4 text-[var(--accent)]" />
+              </span>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium text-[var(--text-primary)]">
+                Add file / folder
+              </span>
+              <span className="block text-xs text-[var(--text-muted)]">
+                PDF, notes, link, or new folder
+              </span>
+            </span>
+            <ChevronDown
+              className={`w-4 h-4 shrink-0 text-[var(--text-muted)] transition-transform ${
+                addOpen ? "rotate-180" : ""
+              }`}
+            />
           </button>
           {addOpen ? (
             <div
               role="menu"
-              className="absolute top-full z-10 mt-1.5 w-full max-w-xs rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] p-1 shadow-[0_8px_28px_rgba(0,0,0,0.14)]"
+              className="absolute top-full z-10 mt-1.5 w-full rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] p-1 shadow-[0_8px_28px_rgba(0,0,0,0.14)] animate-fade-in"
             >
               <button
                 type="button"
@@ -299,10 +326,6 @@ export function LibraryEmptyWorkspace() {
             </div>
           ) : null}
         </div>
-
-        <p className="mt-6 text-[11px] text-[var(--text-muted)] text-center">
-          Drop a PDF onto this page to upload, or use the sidebar to browse.
-        </p>
       </div>
     </div>
   );

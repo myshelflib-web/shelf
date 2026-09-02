@@ -6,6 +6,8 @@ import {
   parseLearnPath,
   searchLearnCatalog,
   subjectGoal,
+  subjectMatchesCatalogGoal,
+  subjectsForCatalogGoal,
 } from "./learnCatalog";
 import { Subject } from "@/types";
 
@@ -67,6 +69,26 @@ describe("learnCatalog", () => {
 
   it("defaults a missing studyGoal to GENERAL", () => {
     expect(subjectGoal(subject("misc", undefined))).toBe("GENERAL");
+  });
+
+  it("filters catalog subjects by study track", () => {
+    const catalog = [
+      subject("skills", "GENERAL"),
+      subject("gate-info", "GATE"),
+      subject("upsc-polity", "UPSC"),
+    ];
+    expect(subjectsForCatalogGoal(catalog, "GENERAL").map((s) => s.slug)).toEqual([
+      "skills",
+    ]);
+    expect(subjectsForCatalogGoal(catalog, "GATE").map((s) => s.slug)).toEqual([
+      "gate-info",
+    ]);
+    expect(subjectMatchesCatalogGoal(subject("gate-info", "GATE"), "GATE")).toBe(
+      true
+    );
+    expect(subjectMatchesCatalogGoal(subject("gate-info", "GATE"), "UPSC")).toBe(
+      false
+    );
   });
 
   it("searches collections, topics, and articles", () => {

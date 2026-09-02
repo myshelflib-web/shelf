@@ -12,8 +12,8 @@ import { STUDY_GOAL_LABELS } from "@/lib/studyGoal";
 import {
   matchesSearch,
   parseLearnPath,
-  subjectGoal,
   subjectHref,
+  subjectsForCatalogGoal,
   topicHref,
 } from "@/lib/learnCatalog";
 import { GuestStudyGoalSelect } from "@/components/learn/GuestStudyGoalSelect";
@@ -111,21 +111,18 @@ export function PreloadedLibrarySidebar({
   }, [activeSubject, activeTopic, isScopedCollection, workspaceMode]);
 
   const filtered = useMemo(() => {
-    const byQuery = subjects.filter((s) => matchesSearch(s, query));
+    const goalScoped = subjectsForCatalogGoal(subjects, studyGoal);
+    const byQuery = goalScoped.filter((s) => matchesSearch(s, query));
     if (isScopedCollection && activeSubjectData) {
       return matchesSearch(activeSubjectData, query)
         ? [activeSubjectData]
         : [];
     }
-    if (studyGoal === "GENERAL") {
-      return byQuery.filter((s) => subjectGoal(s) === "GENERAL");
+    const active = goalScoped.find((s) => s.slug === activeSubject);
+    if (active && !byQuery.some((s) => s.id === active.id)) {
+      return [active, ...byQuery];
     }
-    const forGoal = byQuery.filter((s) => subjectGoal(s) === studyGoal);
-    const active = subjects.find((s) => s.slug === activeSubject);
-    if (active && !forGoal.some((s) => s.id === active.id)) {
-      return [active, ...forGoal];
-    }
-    return forGoal;
+    return byQuery;
   }, [
     subjects,
     query,

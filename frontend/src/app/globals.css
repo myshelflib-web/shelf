@@ -891,6 +891,100 @@
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
 }
 
+.library-center-pane {
+  isolation: isolate;
+}
+
+.library-empty-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(
+      ellipse 70% 50% at 50% 12%,
+      color-mix(in srgb, var(--accent) 10%, transparent),
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 45% 35% at 82% 78%,
+      color-mix(in srgb, var(--accent) 5%, transparent),
+      transparent 70%
+    );
+}
+
+.library-center-pane-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transition:
+    opacity 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.library-center-pane-layer-active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.library-center-pane-layer-idle {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.library-empty-add-btn {
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--text-primary) 4%, transparent);
+}
+
+.library-empty-add-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  background: var(--accent-subtle);
+}
+
+.library-empty-quick-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.library-empty-quick-link:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library-center-pane-layer {
+    transition: opacity 0.15s ease;
+    transform: none !important;
+  }
+
+  .library-center-pane-layer-idle {
+    transform: none;
+  }
+}
+
 .chip-btn {
   display: inline-flex;
   align-items: center;

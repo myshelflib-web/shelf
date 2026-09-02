@@ -25,10 +25,13 @@ import {
   subjectExploreHref,
   subjectsForArea,
   visibleExploreAreasForGoal,
+  catalogGoalAllowsArea,
 } from "@/lib/exploreCatalog";
 import {
   searchLearnCatalog,
   subjectGoal,
+  subjectMatchesCatalogGoal,
+  subjectsForCatalogGoal,
 } from "@/lib/learnCatalog";
 import { learnHref } from "@/lib/learnContent";
 import { Subject, StudyGoal, Topic } from "@/types";
@@ -101,11 +104,14 @@ export function ExploreMainPane({
   const searchSubjects = useMemo(() => {
     if (subject) return [subject];
     if (areaId) {
-      const goals = new Set(getExploreArea(areaId).goals);
-      return subjects.filter((s) => goals.has(subjectGoal(s)));
+      return subjectsForArea(subjects, areaId);
     }
-    return subjects;
-  }, [subjects, subject, areaId]);
+    return subjectsForCatalogGoal(subjects, catalogGoal);
+  }, [subjects, subject, areaId, catalogGoal]);
+
+  const subjectAllowed =
+    !subject || subjectMatchesCatalogGoal(subject, catalogGoal);
+  const areaAllowed = !areaId || catalogGoalAllowsArea(areaId, catalogGoal);
 
   const hits = useMemo(() => {
     const q = query.trim();
@@ -181,6 +187,14 @@ export function ExploreMainPane({
           featured={featured}
           catalogGoal={catalogGoal}
         />
+      ) : !areaAllowed || (subject && !subjectAllowed) ? (
+        <div className="learn-empty">
+          This material is outside your study track.{" "}
+          <Link href={returnTo} className="text-[var(--accent)]">
+            Back to Explore
+          </Link>
+          .
+        </div>
       ) : areaId && !subjectSlug ? (
         <ExploreAreaContent
           areaId={areaId}

@@ -179,8 +179,19 @@ export function visibleExploreAreasForGoal(
   goal: StudyGoal
 ): ExploreAreaDef[] {
   const areas = visibleExploreAreas(subjects);
-  if (goal !== "GENERAL") return areas;
+  if (goal !== "GENERAL") {
+    return areas.filter((area) => area.goals.includes(goal));
+  }
   return areas.filter((area) => area.goals.includes("GENERAL"));
+}
+
+export function catalogGoalAllowsArea(
+  areaId: ExploreAreaId,
+  goal: StudyGoal
+): boolean {
+  const area = getExploreArea(areaId);
+  if (goal === "GENERAL") return area.goals.includes("GENERAL");
+  return area.goals.includes(goal);
 }
 
 export type ExploreResource = {

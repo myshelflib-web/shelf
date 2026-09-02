@@ -4,7 +4,7 @@ import { useEffect, Suspense, useState, useLayoutEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { LibrarySidePanel } from "@/components/my-content/LibrarySidePanel";
-import { LibraryEmptyWorkspace } from "@/components/my-content/LibraryEmptyWorkspace";
+import { LibraryCenterPane } from "@/components/my-content/LibraryCenterPane";
 import { useAddContent } from "@/components/my-content/MyContentAddProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
@@ -103,7 +103,7 @@ function MyContentDashboard() {
           {compactPortrait && !explorerOpen ? (
             <ShelfExplorerFab onClick={() => setExplorerOpen(true)} />
           ) : null}
-          <LibraryEmptyWorkspace />
+          <LibraryCenterPane />
         </main>
       </div>
 

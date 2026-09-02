@@ -21,6 +21,24 @@ export function subjectGoal(subject: Subject): StudyGoal {
   return subject.studyGoal ?? "GENERAL";
 }
 
+/** Catalog subjects visible for a study track (General = non-exam only). */
+export function subjectsForCatalogGoal(
+  subjects: Subject[],
+  goal: StudyGoal
+): Subject[] {
+  if (goal === "GENERAL") {
+    return subjects.filter((s) => subjectGoal(s) === "GENERAL");
+  }
+  return subjects.filter((s) => subjectGoal(s) === goal);
+}
+
+export function subjectMatchesCatalogGoal(
+  subject: Subject,
+  goal: StudyGoal
+): boolean {
+  return subjectsForCatalogGoal([subject], goal).length > 0;
+}
+
 export function matchesSearch(subject: Subject, q: string): boolean {
   const needle = q.trim().toLowerCase();
   if (!needle) return true;
