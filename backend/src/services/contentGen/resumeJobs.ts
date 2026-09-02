@@ -8,6 +8,7 @@ import {
 import { isJobInFlight } from "./jobRegistry.js";
 import { runNewsPackJob } from "./news/runNewsPack.js";
 import { runStarterPackJob } from "./runStarterPack.js";
+import { runVisualEnrichJob } from "./visualEnrich/runVisualEnrich.js";
 
 /** Continues a paused job from its remaining plan cursor (or leftover rows). */
 export async function resumeContentGenJob(jobId: string): Promise<void> {
@@ -26,13 +27,20 @@ export async function resumeContentGenJob(jobId: string): Promise<void> {
   const run =
     job.kind === "NEWS_BRIEF"
       ? runNewsPackJob(jobId, job.studyGoal, job.dryRun, job.resumeAttempts)
-      : runStarterPackJob(
-          jobId,
-          job.studyGoal,
-          job.dryRun,
-          job.resumeAttempts,
-          job.withIllustrations
-        );
+      : job.kind === "VISUAL_ENRICH"
+        ? runVisualEnrichJob(
+            jobId,
+            job.studyGoal,
+            job.dryRun,
+            job.resumeAttempts
+          )
+        : runStarterPackJob(
+            jobId,
+            job.studyGoal,
+            job.dryRun,
+            job.resumeAttempts,
+            job.withIllustrations
+          );
 
   void run.catch((err) => {
     logger.error("contentgen.resume.crashed", { jobId, ...errorFields(err) });

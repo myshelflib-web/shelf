@@ -486,6 +486,8 @@ enum IngestJobStatus {
 enum ContentGenKind {
   STARTER_PACK
   NEWS_BRIEF
+  /// Re-process published pages to add CC photos / figures (separate from text generation).
+  VISUAL_ENRICH
   /// Expands official syllabus units into candidate page topics.
   TOPIC_EXPANSION
   /// Writes the generation blueprint for each approved topic.

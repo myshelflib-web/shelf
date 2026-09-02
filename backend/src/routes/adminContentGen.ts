@@ -20,6 +20,7 @@ import { retryFailedContentGenJob } from "../services/contentGen/retryFailed.js"
 import { resumeContentGenJob } from "../services/contentGen/resumeJobs.js";
 import { stopContentGenJob } from "../services/contentGen/stopJob.js";
 import { startStarterPackJob } from "../services/contentGen/runStarterPack.js";
+import { startVisualEnrichJob } from "../services/contentGen/visualEnrich/runVisualEnrich.js";
 import { catalogHasSubject, catalogPacks } from "../services/contentGen/syllabus/index.js";
 import {
   planNewsPack,
@@ -232,6 +233,37 @@ router.post("/content-gen/news", async (req: Request, res: Response) => {
   } catch (err) {
     res.status(400).json({
       error: err instanceof Error ? err.message : "Could not start generation",
+    });
+  }
+});
+
+router.post("/content-gen/visual-enrich", async (req: Request, res: Response) => {
+  const goal = readGoal(req, res);
+  if (!goal) return;
+
+  if (await hasRunningJob()) {
+    res.status(409).json({ error: "A generation job is already running" });
+    return;
+  }
+
+  const subjectSlug = readSubjectSlug(req.body?.subjectSlug, goal);
+  if (typeof req.body?.subjectSlug === "string" && req.body.subjectSlug.trim() && !subjectSlug) {
+    res.status(400).json({ error: "Unknown subjectSlug for this study goal" });
+    return;
+  }
+
+  try {
+    const result = await startVisualEnrichJob({
+      studyGoal: goal,
+      subjectSlug,
+      limit: readLimit(req.body?.limit, 500),
+      dryRun: req.body?.dryRun === true,
+      requestedById: req.user?.userId ?? null,
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({
+      error: err instanceof Error ? err.message : "Could not start visual enrich",
     });
   }
 });

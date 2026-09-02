@@ -478,7 +478,7 @@ export interface ContentGenOverview {
 
 export interface ContentGenJobRow {
   id: string;
-  kind: "STARTER_PACK" | "NEWS_BRIEF";
+  kind: "STARTER_PACK" | "NEWS_BRIEF" | "VISUAL_ENRICH";
   status: ContentGenStatus;
   studyGoal: StudyGoal;
   model: string;

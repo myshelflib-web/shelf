@@ -16,6 +16,10 @@ import {
   StarterPackSection,
   type StarterPackRunOptions,
 } from "./StarterPackSection";
+import {
+  VisualEnrichSection,
+  type VisualEnrichRunOptions,
+} from "./VisualEnrichSection";
 import { ProviderSummary } from "./ProviderSummary";
 
 const POLL_MS = 4000;
@@ -37,6 +41,7 @@ export function ContentGenPanel() {
   const [busyGoal, setBusyGoal] = useState<StudyGoal | null>(null);
   const [planning, setPlanning] = useState(false);
   const [newsRunning, setNewsRunning] = useState(false);
+  const [visualRunning, setVisualRunning] = useState(false);
   const [resumingId, setResumingId] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [stoppingId, setStoppingId] = useState<string | null>(null);
@@ -99,7 +104,13 @@ export function ContentGenPanel() {
     (job) => job.status === "QUEUED" || job.status === "RUNNING"
   );
   const lockReason = activeJob
-    ? `A ${activeJob.kind === "NEWS_BRIEF" ? "news" : "syllabus"} run for ${activeJob.studyGoal} is ${activeJob.status.toLowerCase()}. Only one job at a time — wait for it to finish, or check Runs below.`
+    ? `A ${
+        activeJob.kind === "NEWS_BRIEF"
+          ? "news"
+          : activeJob.kind === "VISUAL_ENRICH"
+            ? "visual enrich"
+            : "syllabus"
+      } run for ${activeJob.studyGoal} is ${activeJob.status.toLowerCase()}. Only one job at a time — wait for it to finish, or check Runs below.`
     : null;
   const shouldPoll =
     hasActiveJob || jobs.some((job) => job.status === "PAUSED");
@@ -224,6 +235,28 @@ export function ContentGenPanel() {
     }
   }
 
+  async function runVisualEnrich(opts: VisualEnrichRunOptions) {
+    setVisualRunning(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const { jobId, plannedCount } = await api.admin.contentGenVisualEnrich(opts);
+      setNotice(
+        `Visual enrich queued for ${plannedCount} page${plannedCount === 1 ? "" : "s"} (${opts.studyGoal}${
+          opts.subjectSlug ? ` / ${opts.subjectSlug}` : ""
+        })${opts.dryRun ? " — dry run, no S3 writes" : ""}.`
+      );
+      setExpandedId(jobId);
+      setPagedBeyondFirst(false);
+      await loadJobs();
+      await loadItems(jobId, "reset");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start visual enrich");
+    } finally {
+      setVisualRunning(false);
+    }
+  }
+
   async function planNews(opts: NewsRunOptions) {
     setPlanning(true);
     setError(null);
@@ -291,6 +324,15 @@ export function ContentGenPanel() {
         disabled={hasActiveJob}
         lockReason={lockReason}
         onRun={runStarterPack}
+      />
+
+      <VisualEnrichSection
+        packs={overview?.packs ?? []}
+        loading={overviewLoading}
+        running={visualRunning}
+        disabled={hasActiveJob}
+        lockReason={lockReason}
+        onRun={runVisualEnrich}
       />
 
       <NewsGenSection

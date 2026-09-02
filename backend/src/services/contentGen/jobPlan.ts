@@ -25,7 +25,22 @@ export type NewsJobPlan = {
   clusters: NewsCluster[];
 };
 
-export type ContentGenPlan = StarterJobPlan | NewsJobPlan;
+export type VisualEnrichPlanEntry = {
+  articleId: string;
+  subjectSlug: string;
+  topicSlug: string;
+  slug: string;
+  title: string;
+  contentUrl: string;
+};
+
+export type VisualEnrichJobPlan = {
+  v: 1;
+  kind: "VISUAL_ENRICH";
+  entries: VisualEnrichPlanEntry[];
+};
+
+export type ContentGenPlan = StarterJobPlan | NewsJobPlan | VisualEnrichJobPlan;
 
 export function asStarterPlan(value: unknown): StarterJobPlan | null {
   if (!value || typeof value !== "object") return null;
@@ -49,6 +64,34 @@ export function asNewsPlan(value: unknown): NewsJobPlan | null {
   const raw = value as NewsJobPlan;
   if (raw.kind !== "NEWS_BRIEF" || !Array.isArray(raw.clusters)) return null;
   return raw;
+}
+
+export function asVisualEnrichPlan(value: unknown): VisualEnrichJobPlan | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as VisualEnrichJobPlan;
+  if (raw.kind !== "VISUAL_ENRICH" || !Array.isArray(raw.entries)) return null;
+  return {
+    v: 1,
+    kind: "VISUAL_ENRICH",
+    entries: raw.entries
+      .filter(
+        (e) =>
+          e.subjectSlug &&
+          e.topicSlug &&
+          e.slug &&
+          e.title &&
+          e.contentUrl &&
+          e.articleId
+      )
+      .map((e) => ({
+        articleId: e.articleId,
+        subjectSlug: e.subjectSlug,
+        topicSlug: e.topicSlug,
+        slug: e.slug,
+        title: e.title,
+        contentUrl: e.contentUrl,
+      })),
+  };
 }
 
 export function planJson(plan: ContentGenPlan): Prisma.InputJsonValue {

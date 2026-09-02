@@ -847,6 +847,16 @@ export const api = {
         "/api/admin/content-gen/starter-pack",
         { method: "POST", body: JSON.stringify(body) }
       ),
+    contentGenVisualEnrich: (body: {
+      studyGoal: import("@/types").StudyGoal;
+      subjectSlug?: string;
+      limit?: number;
+      dryRun?: boolean;
+    }) =>
+      request<{ jobId: string; plannedCount: number }>(
+        "/api/admin/content-gen/visual-enrich",
+        { method: "POST", body: JSON.stringify(body) }
+      ),
     contentGenNewsPlan: (body: {
       studyGoal: import("@/types").StudyGoal;
       limit?: number;

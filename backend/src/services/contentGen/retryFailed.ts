@@ -45,6 +45,11 @@ export async function retryFailedContentGenJob(
   if (job.kind === "NEWS_BRIEF") {
     return retryFailedNews(job, failed, requestedById);
   }
+  if (job.kind === "VISUAL_ENRICH") {
+    throw new Error(
+      "Re-run Visual enrich from the Add photos panel — failed rows are not retried separately yet"
+    );
+  }
 
   const entries = uniqueStarterEntries(failed);
   const illustrations =

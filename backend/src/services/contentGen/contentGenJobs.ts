@@ -2,7 +2,7 @@ import type { ContentGenKind, ContentGenStatus, StudyGoal } from "@prisma/client
 import { Prisma } from "@prisma/client";
 import prisma from "../../utils/prisma.js";
 import { estimateCostPaise } from "../sarvam/sarvamPricing.js";
-import { asNewsPlan, asStarterPlan, planJson, type ContentGenPlan } from "./jobPlan.js";
+import { asNewsPlan, asStarterPlan, asVisualEnrichPlan, planJson, type ContentGenPlan } from "./jobPlan.js";
 import { isAnyContentGenInFlight } from "./jobRegistry.js";
 import { hasStarterDraft } from "./starterDraft.js";
 
@@ -151,6 +151,19 @@ export async function remainingWorkCount(jobId: string): Promise<number> {
     const doneSlugs = new Set(done.map((r) => r.slug));
     return todo.filter((c) => !doneSlugs.has(c.key)).length;
   }
+
+  const visual = asVisualEnrichPlan(job.plan);
+  if (visual) {
+    const todo = visual.entries.slice(job.cursor);
+    if (todo.length === 0) return 0;
+    const done = await prisma.contentGenItem.findMany({
+      where: { jobId, status: { in: ["COMPLETED", "FAILED", "SKIPPED"] } },
+      select: { subjectSlug: true, slug: true },
+    });
+    const doneKeys = new Set(done.map((r) => `${r.subjectSlug}/${r.slug}`));
+    return todo.filter((e) => !doneKeys.has(`${e.subjectSlug}/${e.slug}`)).length;
+  }
+
   return 0;
 }
 

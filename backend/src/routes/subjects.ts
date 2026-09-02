@@ -8,6 +8,7 @@ import { isPremiumUser, truncateHtmlPreview } from "../utils/paywall.js";
 import { param } from "../utils/param.js";
 import { isStudyGoal } from "../studyGoal.js";
 import { registerSubjectArticlePdfRoutes } from "./subjectsArticlePdf.js";
+import { registerSubjectArticleMediaRoutes } from "./subjectsArticleMedia.js";
 import { buildPreloadedSummaryHtml } from "../services/preloaded/buildSummaryHtml.js";
 import {
   applyLinkEmbedPolicy,
@@ -391,5 +392,6 @@ router.get(
 );
 
 registerSubjectArticlePdfRoutes(router, apiBase);
+registerSubjectArticleMediaRoutes(router);
 
 export default router;

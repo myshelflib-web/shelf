@@ -350,7 +350,9 @@ export function ContentGenJobsSection({
                         <p className="text-xs font-medium truncate">
                           {job.kind === "STARTER_PACK"
                             ? "Starter pack"
-                            : "News briefs"}{" "}
+                            : job.kind === "VISUAL_ENRICH"
+                              ? "Visual enrich"
+                              : "News briefs"}{" "}
                           · {job.studyGoal}
                           {job.dryRun ? " · dry run" : ""}
                           {job.withIllustrations === false ? " · text only" : " · figures"}

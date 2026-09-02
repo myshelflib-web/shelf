@@ -447,3 +447,39 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Phase 2 — CC photos injected after publish (Openverse). */
+.prose-content .shelf-photo {
+  margin: 1.25rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--bg-secondary);
+}
+
+.prose-content .shelf-photo img {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: 0.5rem;
+  background: var(--bg-elevated);
+}
+
+.prose-content .shelf-photo__caption {
+  margin: 0.65rem 0 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.prose-content .shelf-photo__credit {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.prose-content .shelf-photo__credit a {
+  color: var(--accent);
+  text-decoration: underline;
+}
