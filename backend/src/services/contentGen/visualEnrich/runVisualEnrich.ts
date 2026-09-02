@@ -14,7 +14,7 @@ import {
 import { asVisualEnrichPlan } from "../jobPlan.js";
 import { generationModelLabel } from "../generationChat.js";
 import { runJobLoop, type LoopItem } from "../jobLoop.js";
-import { claimJob, isJobAborted, jobAbortSignal, releaseJob } from "../jobRegistry.js";
+import { claimJob, isJobAborted, releaseJob } from "../jobRegistry.js";
 import { STOPPED_BY_ADMIN } from "../stopJob.js";
 import { enrichOnePageVisuals } from "./enrichOnePage.js";
 import {
