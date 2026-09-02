@@ -895,6 +895,21 @@
   isolation: isolate;
 }
 
+.library-center-pane-swap {
+  animation: library-center-pane-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes library-center-pane-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .library-empty-glow {
   position: absolute;
   inset: 0;
@@ -910,45 +925,6 @@
       color-mix(in srgb, var(--accent) 5%, transparent),
       transparent 70%
     );
-}
-
-.library-center-pane-layer {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  transition:
-    opacity 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: opacity, transform;
-}
-
-.library-center-pane-layer-active {
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-  z-index: 1;
-}
-
-.library-center-pane-layer-idle {
-  opacity: 0;
-  transform: translateY(8px);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.library-empty-add-btn {
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--text-primary) 4%, transparent);
-}
-
-.library-empty-add-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
-  background: var(--accent-subtle);
 }
 
 .library-empty-quick-link {
@@ -975,13 +951,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .library-center-pane-layer {
-    transition: opacity 0.15s ease;
-    transform: none !important;
-  }
-
-  .library-center-pane-layer-idle {
-    transform: none;
+  .library-center-pane-swap {
+    animation: none;
   }
 }
 

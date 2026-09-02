@@ -29,9 +29,16 @@ import {
   buildBulkDeletePayload,
   buildSelectionLabels,
   pageSelectionKey,
+  topicSelectionKey,
   type ExplorerSelectionKey,
 } from "@/lib/explorerSelection";
-import { applyBulkDeleteToTree, mergeExplorerTreeWithPendingDeletes } from "@/lib/explorerBulkDeleteTree";
+import { applyBulkDeleteToTree } from "@/lib/explorerBulkDeleteTree";
+import {
+  mergeExplorerTreeWithPending,
+  pushPendingExplorerDelete,
+  removePendingExplorerDelete,
+  applyPendingDeletesToSubjects,
+} from "@/lib/pendingExplorerDeletes";
 import {
   findTopicLocation,
   movePageInTree,
@@ -46,7 +53,7 @@ import { useScheduledPageHrefs } from "@/hooks/useScheduledPageHrefs";
 import clsx from "clsx";
 import { withShortcut } from "@/lib/hotkeys";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useAppDialog } from "@/hooks/useAppDialog";
 import {
   PersonalPageReaderScope,
@@ -190,7 +197,6 @@ export function MyContentSidebar({
   const [selected, setSelected] = useState<Set<ExplorerSelectionKey>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
-  const pendingDeletesRef = useRef<ReturnType<typeof buildBulkDeletePayload>[]>([]);
 
   const searching = debouncedQ.length > 0;
   const libraryMoveEnabled = !searching && !selectionMode;
@@ -229,10 +235,9 @@ export function MyContentSidebar({
         q: searching ? debouncedQ : undefined,
       })
       .then((res) => {
-        const merged = mergeExplorerTreeWithPendingDeletes(
+        const merged = mergeExplorerTreeWithPending(
           res.subjects,
-          res.rootPages ?? [],
-          pendingDeletesRef.current
+          res.rootPages ?? []
         );
         setSubjects(merged.subjects);
         setRootPages(merged.rootPages);
@@ -371,7 +376,11 @@ export function MyContentSidebar({
       )
     ).then((rows) => {
       if (cancelled) return;
-      setPinnedExtra(rows.filter((r): r is UserSubject => r != null));
+      setPinnedExtra(
+        applyPendingDeletesToSubjects(
+          rows.filter((r): r is UserSubject => r != null)
+        )
+      );
     });
     return () => {
       cancelled = true;
@@ -384,12 +393,12 @@ export function MyContentSidebar({
 
   const treeSubjects = useMemo(() => {
     const byId = new Map<string, UserSubject>();
-    // Open notebook first, then other pinned, then current page results
-    if (notebook) byId.set(notebook.id, notebook);
-    for (const nb of pinnedExtra) {
-      if (!byId.has(nb.id)) byId.set(nb.id, nb);
-    }
-    for (const nb of subjects) {
+    const pendingMerged = applyPendingDeletesToSubjects([
+      ...(notebook ? [notebook] : []),
+      ...pinnedExtra,
+      ...subjects,
+    ]);
+    for (const nb of pendingMerged) {
       if (!byId.has(nb.id)) byId.set(nb.id, nb);
     }
     return [...byId.values()];
@@ -476,8 +485,28 @@ export function MyContentSidebar({
       danger: true,
     });
     if (!ok) return;
-    await api.myContent.deleteTopicGroup(nb.id, groupId);
-    emitContentChanged();
+    const payload = buildBulkDeletePayload(
+      new Set([topicSelectionKey(nb.id, groupId)])
+    );
+    const prevSubjects = subjects;
+    const prevPinned = pinnedExtra;
+    const prevRootPages = rootPages;
+    pushPendingExplorerDelete(payload);
+    setSubjects((s) => applyBulkDeleteToTree(payload, s, rootPages).subjects);
+    setPinnedExtra((p) => applyBulkDeleteToTree(payload, p, rootPages).subjects);
+    setRootPages((r) => applyBulkDeleteToTree(payload, subjects, r).rootPages);
+    try {
+      await api.myContent.deleteTopicGroup(nb.id, groupId);
+    } catch {
+      removePendingExplorerDelete(payload);
+      setSubjects(prevSubjects);
+      setPinnedExtra(prevPinned);
+      setRootPages(prevRootPages);
+      await alert({
+        title: "Delete failed",
+        message: `Could not delete folder "${title}". Refresh the library and try again.`,
+      });
+    }
   };
 
   const deletePage = async (pageId: string, title: string) => {
@@ -492,7 +521,6 @@ export function MyContentSidebar({
     const prevPinned = pinnedExtra;
     const prevRootPages = rootPages;
     const payload = buildBulkDeletePayload(new Set([pageSelectionKey(pageId)]));
-    pendingDeletesRef.current.push(payload);
     setSubjects((s) => applyBulkDeleteToTree(payload, s, rootPages).subjects);
     setPinnedExtra((p) => applyBulkDeleteToTree(payload, p, rootPages).subjects);
     setRootPages((r) => applyBulkDeleteToTree(payload, subjects, r).rootPages);
@@ -501,15 +529,8 @@ export function MyContentSidebar({
     void removeCachedPdf(pageId);
     void api.myContent
       .deletePage(pageId)
-      .then(() => {
-        pendingDeletesRef.current = pendingDeletesRef.current.filter(
-          (entry) => entry !== payload
-        );
-      })
       .catch(async () => {
-        pendingDeletesRef.current = pendingDeletesRef.current.filter(
-          (entry) => entry !== payload
-        );
+        removePendingExplorerDelete(payload);
         setSubjects(prevSubjects);
         setPinnedExtra(prevPinned);
         setRootPages(prevRootPages);
@@ -552,7 +573,7 @@ export function MyContentSidebar({
     const prevPinned = pinnedExtra;
     const prevRootPages = rootPages;
 
-    pendingDeletesRef.current.push(payload);
+    pushPendingExplorerDelete(payload);
     setBulkDeleting(true);
     setSubjects((s) => applyBulkDeleteToTree(payload, s, rootPages).subjects);
     setPinnedExtra((p) => applyBulkDeleteToTree(payload, p, rootPages).subjects);
@@ -561,15 +582,8 @@ export function MyContentSidebar({
 
     void api.myContent
       .bulkDelete(payload)
-      .then(() => {
-        pendingDeletesRef.current = pendingDeletesRef.current.filter(
-          (entry) => entry !== payload
-        );
-      })
       .catch(async () => {
-        pendingDeletesRef.current = pendingDeletesRef.current.filter(
-          (entry) => entry !== payload
-        );
+        removePendingExplorerDelete(payload);
         setSubjects(prevSubjects);
         setPinnedExtra(prevPinned);
         setRootPages(prevRootPages);

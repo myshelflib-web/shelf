@@ -5,6 +5,7 @@ import { goalHasPreloadedLibrary, normalizeStudyGoal } from "@/lib/studyGoal";
 export type LibraryMode = "personal" | "preloaded";
 
 export const LIBRARY_MODE_KEY = "shelf:library-mode";
+export const SHELF_LIBRARY_MODE_CHANGED = "shelf:library-mode-changed";
 
 export function readLibraryMode(): LibraryMode | null {
   if (typeof window === "undefined") return null;
@@ -20,6 +21,11 @@ export function readLibraryMode(): LibraryMode | null {
 export function writeLibraryMode(mode: LibraryMode) {
   try {
     localStorage.setItem(LIBRARY_MODE_KEY, mode);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent(SHELF_LIBRARY_MODE_CHANGED, { detail: { mode } })
+      );
+    }
   } catch {
     /* ignore */
   }

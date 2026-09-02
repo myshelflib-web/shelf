@@ -2,6 +2,7 @@
 
 import { ReactNode, useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import clsx from "clsx";
 import { MyContentSidebar } from "@/components/my-content/MyContentSidebar";
 import { PreloadedLibrarySidebar } from "@/components/my-content/PreloadedLibrarySidebar";
 import { LibraryModeTabs } from "@/components/my-content/LibraryModeTabs";
@@ -85,47 +86,50 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
     />
   ) : null;
 
-  if (mode === "preloaded" && showPreloaded) {
-    return (
-      <>
-        <PreloadedLibrarySidebar
-          mode={mode}
-          onModeChange={handleModeChange}
-          showPreloaded={showPreloaded}
-          studyGoal={goal}
-          currentHref={currentHref}
-          workspaceMode={sidebarProps.workspaceMode}
-          showGoalPicker={Boolean(showGoalPicker) && isGuest}
-          onStudyGoalChange={onStudyGoalChange}
-          onOpenPage={sidebarProps.onOpenPage}
-          onGuestLibraryClick={
-            onGuestPersonalClick ?? (() => setSignInFeature("Your personal library"))
-          }
-          exploreArea={exploreArea}
-          className={sidebarProps.className}
-        />
-        {signInFeature && !onGuestPersonalClick && (
-          <SignInPromptModal
-            feature={signInFeature}
-            returnTo={returnToProp ?? pathname ?? "/learn"}
-            onClose={() => setSignInFeature(null)}
-          />
-        )}
-      </>
-    );
-  }
+  const preloadedActive = showPreloaded && mode === "preloaded";
 
   return (
     <>
-      <MyContentSidebar
-        {...sidebarProps}
-        currentHref={currentHref}
-        libraryModeTabs={tabs}
-      />
+      <div
+        className={clsx("h-full", preloadedActive && "hidden")}
+        aria-hidden={preloadedActive || undefined}
+      >
+        <MyContentSidebar
+          {...sidebarProps}
+          currentHref={currentHref}
+          libraryModeTabs={tabs}
+          className={sidebarProps.className}
+        />
+      </div>
+      {showPreloaded ? (
+        <div
+          className={clsx("h-full", !preloadedActive && "hidden")}
+          aria-hidden={!preloadedActive || undefined}
+        >
+          <PreloadedLibrarySidebar
+            mode={mode}
+            onModeChange={handleModeChange}
+            showPreloaded={showPreloaded}
+            studyGoal={goal}
+            currentHref={currentHref}
+            workspaceMode={sidebarProps.workspaceMode}
+            showGoalPicker={Boolean(showGoalPicker) && isGuest}
+            onStudyGoalChange={onStudyGoalChange}
+            onOpenPage={sidebarProps.onOpenPage}
+            onGuestLibraryClick={
+              onGuestPersonalClick ?? (() => setSignInFeature("Your personal library"))
+            }
+            exploreArea={exploreArea}
+            className={sidebarProps.className}
+          />
+        </div>
+      ) : null}
       {signInFeature && !onGuestPersonalClick && (
         <SignInPromptModal
           feature={signInFeature}
-          returnTo={returnToProp ?? pathname ?? "/my-content"}
+          returnTo={
+            returnToProp ?? pathname ?? (preloadedActive ? "/learn" : "/my-content")
+          }
           onClose={() => setSignInFeature(null)}
         />
       )}

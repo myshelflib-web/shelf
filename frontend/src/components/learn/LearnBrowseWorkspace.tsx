@@ -6,7 +6,7 @@ import clsx from "clsx";
 import { Header } from "@/components/Header";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { LibrarySidePanel } from "@/components/my-content/LibrarySidePanel";
-import { ExploreMainPane } from "@/components/learn/explore/ExploreMainPane";
+import { LibraryCenterPane } from "@/components/my-content/LibraryCenterPane";
 import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
 import { LearnReaderPaneSkeleton } from "@/components/learn/LearnReaderSkeleton";
 import { SignInPromptModal } from "@/components/learn/SignInPromptModal";
@@ -114,14 +114,18 @@ function LearnBrowseWorkspaceInner({
             <ShelfExplorerFab onClick={() => setExplorerOpen(true)} />
           ) : null}
           {openingReader ? (
-            <LearnReaderPaneSkeleton />
+            <LibraryCenterPane
+              readerOverlay={<LearnReaderPaneSkeleton />}
+            />
           ) : (
-            <ExploreMainPane
-              subjectSlug={subjectSlug}
-              topicSlug={topicSlug}
-              areaId={mainPaneAreaId}
-              sidebarAreaId={sidebarExploreArea}
-              returnTo={currentHref}
+            <LibraryCenterPane
+              explore={{
+                subjectSlug,
+                topicSlug,
+                areaId: mainPaneAreaId,
+                sidebarAreaId: sidebarExploreArea,
+                returnTo: currentHref,
+              }}
             />
           )}
         </main>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FilePlus, FolderPlus, Search, BookOpen, ChevronDown } from "lucide-react";
+import { FilePlus, FolderPlus, Plus, Search, BookOpen } from "lucide-react";
 import { ShelfLogo } from "@/components/ShelfLogo";
 import { GreetingBlock } from "@/components/GreetingBlock";
 import { LivelyLine } from "@/components/LivelyLine";
@@ -248,40 +248,21 @@ export function LibraryEmptyWorkspace() {
           </ul>
         )}
 
-        <div ref={addRef} className="relative mt-8 w-full">
+        <div ref={addRef} className="relative mt-8 w-full flex flex-col items-center">
           <button
             type="button"
             onClick={() => setAddOpen((open) => !open)}
             aria-expanded={addOpen}
             aria-haspopup="menu"
-            className="library-empty-add-btn group w-full flex items-center gap-3 px-4 py-3 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)]/45 hover:bg-[var(--bg-elevated)] text-left transition"
+            className="flex items-center justify-center gap-2 px-5 py-3 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-elevated)] text-sm font-medium text-[var(--text-primary)] transition"
           >
-            <span className="flex items-center shrink-0 -space-x-1.5">
-              <span className="library-empty-add-icon">
-                <FilePlus className="w-4 h-4 text-[var(--accent)]" />
-              </span>
-              <span className="library-empty-add-icon">
-                <FolderPlus className="w-4 h-4 text-[var(--accent)]" />
-              </span>
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-medium text-[var(--text-primary)]">
-                Add file / folder
-              </span>
-              <span className="block text-xs text-[var(--text-muted)]">
-                PDF, notes, link, or new folder
-              </span>
-            </span>
-            <ChevronDown
-              className={`w-4 h-4 shrink-0 text-[var(--text-muted)] transition-transform ${
-                addOpen ? "rotate-180" : ""
-              }`}
-            />
+            <Plus className="w-4 h-4 text-[var(--accent)] shrink-0" />
+            Add file / folder
           </button>
           {addOpen ? (
             <div
               role="menu"
-              className="absolute top-full z-10 mt-1.5 w-full rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] p-1 shadow-[0_8px_28px_rgba(0,0,0,0.14)] animate-fade-in"
+              className="absolute top-full z-10 mt-1.5 w-full min-w-[16rem] rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] p-1 shadow-[0_8px_28px_rgba(0,0,0,0.14)] animate-fade-in"
             >
               <button
                 type="button"

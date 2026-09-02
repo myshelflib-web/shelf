@@ -24,6 +24,11 @@ import { updatePageProgress } from "@/lib/offline/progress";
 import { requireOnline } from "@/lib/offline/notice";
 import { syncPageInTree } from "@/lib/myContentTree";
 import { emitContentChanged, emitPageRenamed, emitPageDeleted } from "@/lib/contentEvents";
+import {
+  buildBulkDeletePayload,
+  pageSelectionKey,
+} from "@/lib/explorerSelection";
+import { removePendingExplorerDelete } from "@/lib/pendingExplorerDeletes";
 import { removeCachedPdf } from "@/lib/pdfByteCache";
 import {
   UserSubject,
@@ -798,6 +803,9 @@ export function DocumentPane({
     emitPageDeleted(pageId);
     void removeCachedPdf(pageId);
     void api.myContent.deletePage(pageId).catch(async () => {
+      removePendingExplorerDelete(
+        buildBulkDeletePayload(new Set([pageSelectionKey(pageId)]))
+      );
       emitContentChanged();
       await alert({
         title: "Delete failed",

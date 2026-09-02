@@ -1,5 +1,10 @@
 import { UserPageSummary, UserSubject, UserTopicGroup } from "@/types";
 import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
+import {
+  buildBulkDeletePayload,
+  pageSelectionKey,
+} from "@/lib/explorerSelection";
+import { pushPendingExplorerDelete } from "@/lib/pendingExplorerDeletes";
 
 export const SHELF_CONTENT_CHANGED = "shelf:content-changed";
 export const SHELF_OPEN_PAGE = "shelf:open-page";
@@ -50,6 +55,9 @@ export function emitPageRenamed(pageId: string, title: string) {
 }
 
 export function emitPageDeleted(pageId: string) {
+  pushPendingExplorerDelete(
+    buildBulkDeletePayload(new Set([pageSelectionKey(pageId)]))
+  );
   emitContentChanged({ type: "page-deleted", pageId });
 }
 
