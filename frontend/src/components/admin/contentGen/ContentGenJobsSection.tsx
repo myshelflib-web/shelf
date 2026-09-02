@@ -353,6 +353,7 @@ export function ContentGenJobsSection({
                             : "News briefs"}{" "}
                           · {job.studyGoal}
                           {job.dryRun ? " · dry run" : ""}
+                          {job.withIllustrations === false ? " · text only" : " · figures"}
                         </p>
                         <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
                           {done}/{job.plannedCount} done · {job.model} ·{" "}

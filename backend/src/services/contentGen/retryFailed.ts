@@ -19,7 +19,8 @@ import { runStarterPackJob } from "./runStarterPack.js";
  */
 export async function retryFailedContentGenJob(
   jobId: string,
-  requestedById?: string | null
+  requestedById?: string | null,
+  withIllustrations?: boolean
 ): Promise<{ jobId: string; plannedCount: number }> {
   if (await hasRunningJob()) {
     throw new Error("A generation job is already running");
@@ -46,17 +47,26 @@ export async function retryFailedContentGenJob(
   }
 
   const entries = uniqueStarterEntries(failed);
+  const illustrations =
+    withIllustrations !== undefined ? withIllustrations : job.withIllustrations;
   const newJobId = await createContentGenJob({
     kind: "STARTER_PACK",
     studyGoal: job.studyGoal,
     model: generationModelLabel(),
     dryRun: job.dryRun,
+    withIllustrations: illustrations,
     plannedCount: entries.length,
     requestedById: requestedById ?? null,
     plan: { v: 1, kind: "STARTER_PACK", entries },
   });
 
-  void runStarterPackJob(newJobId, job.studyGoal, job.dryRun).catch((err) => {
+  void runStarterPackJob(
+    newJobId,
+    job.studyGoal,
+    job.dryRun,
+    0,
+    illustrations
+  ).catch((err) => {
     logger.error("contentgen.retry.crashed", { jobId: newJobId, ...errorFields(err) });
   });
 

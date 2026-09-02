@@ -155,7 +155,9 @@ export function ContentGenPanel() {
       setNotice(
         `Started ${plannedCount} page${plannedCount === 1 ? "" : "s"} for ${opts.studyGoal}${
           opts.subjectSlug ? ` / ${opts.subjectSlug}` : ""
-        }${opts.dryRun ? " (dry run — nothing will be published)" : ""}.`
+        }${opts.dryRun ? " (dry run — nothing will be published)" : ""}${
+          opts.withIllustrations ? "" : " (text only — no figures)"
+        }.`
       );
       setExpandedId(jobId);
       setPagedBeyondFirst(false);

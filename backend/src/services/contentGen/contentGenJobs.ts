@@ -11,6 +11,7 @@ export type CreateJobInput = {
   studyGoal: StudyGoal;
   model: string;
   dryRun: boolean;
+  withIllustrations?: boolean;
   plannedCount: number;
   requestedById?: string | null;
   plan: ContentGenPlan;
@@ -23,6 +24,7 @@ export async function createContentGenJob(input: CreateJobInput): Promise<string
       studyGoal: input.studyGoal,
       model: input.model,
       dryRun: input.dryRun,
+      withIllustrations: input.withIllustrations !== false,
       plannedCount: input.plannedCount,
       requestedById: input.requestedById ?? null,
       plan: planJson(input.plan),
@@ -92,6 +94,7 @@ export async function getJobRunState(jobId: string) {
       plan: true,
       plannedCount: true,
       dryRun: true,
+      withIllustrations: true,
       kind: true,
       studyGoal: true,
       status: true,
@@ -300,6 +303,7 @@ const JOB_HEADER_SELECT = {
   studyGoal: true,
   model: true,
   dryRun: true,
+  withIllustrations: true,
   plannedCount: true,
   completedCount: true,
   failedCount: true,

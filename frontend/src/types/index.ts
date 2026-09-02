@@ -483,6 +483,7 @@ export interface ContentGenJobRow {
   studyGoal: StudyGoal;
   model: string;
   dryRun: boolean;
+  withIllustrations: boolean;
   plannedCount: number;
   completedCount: number;
   failedCount: number;

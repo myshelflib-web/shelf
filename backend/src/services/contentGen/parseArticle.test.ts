@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { extractJsonObject } from "./jsonExtract.js";
-import { parseGeneratedArticle, parseRelevanceReview } from "./parseArticle.js";
+import { parseGeneratedArticle, parseIllustrationSupplement, parseRelevanceReview } from "./parseArticle.js";
 import { renderDiagramHtml } from "./renderDiagram.js";
 
 const VALID_ARTICLE = {
@@ -75,6 +75,25 @@ describe("parseGeneratedArticle", () => {
       diagram: { kind: "timeline", title: "x", steps: [{ label: "only one" }] },
     };
     expect(parseGeneratedArticle(JSON.stringify(bad))?.diagram).toBeNull();
+  });
+
+  it("parses an illustration-only supplement", () => {
+    const patch = parseIllustrationSupplement(
+      JSON.stringify({
+        diagram: VALID_ARTICLE.diagram,
+        glance: {
+          title: "At a glance",
+          cards: [
+            { label: "A", detail: "one" },
+            { label: "B", detail: "two" },
+            { label: "C", detail: "three" },
+            { label: "D", detail: "four" },
+          ],
+        },
+      })
+    );
+    expect(patch?.diagram?.kind).toBe("timeline");
+    expect(patch?.glance?.cards).toHaveLength(4);
   });
 
   it("keeps a well-formed table and pads short rows", () => {

@@ -9,6 +9,7 @@ export type StarterPackRunOptions = {
   subjectSlug?: string;
   limit?: number;
   dryRun: boolean;
+  withIllustrations: boolean;
   skipExisting: boolean;
 };
 
@@ -28,6 +29,7 @@ export function StarterPackSection({
   onRun: (opts: StarterPackRunOptions) => void;
 }) {
   const [dryRun, setDryRun] = useState(true);
+  const [withIllustrations, setWithIllustrations] = useState(true);
   const [skipExisting, setSkipExisting] = useState(true);
   const [limit, setLimit] = useState("");
 
@@ -42,7 +44,8 @@ export function StarterPackSection({
             Organised exam → paper → subject → topic → page. Generate a whole
             goal or one subject. Each page is drafted against a checklist, then
             audited for coverage, factual risk and filler. Dry-run first to see
-            scores without publishing.
+            scores without publishing. Turn off Skip published to regenerate
+            live pages — use Include figures to add or omit diagrams.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -54,6 +57,15 @@ export function StarterPackSection({
               className="accent-[var(--accent)]"
             />
             Dry run
+          </label>
+          <label className="inline-flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={withIllustrations}
+              onChange={(e) => setWithIllustrations(e.target.checked)}
+              className="accent-[var(--accent)]"
+            />
+            Include figures
           </label>
           <label className="inline-flex items-center gap-1.5 cursor-pointer">
             <input
@@ -122,6 +134,7 @@ export function StarterPackSection({
                             subjectSlug: subject.slug,
                             limit: parsedLimit,
                             dryRun,
+                            withIllustrations,
                             skipExisting,
                           })
                         }
@@ -143,6 +156,7 @@ export function StarterPackSection({
                       studyGoal: pack.studyGoal,
                       limit: parsedLimit,
                       dryRun,
+                      withIllustrations,
                       skipExisting,
                     })
                   }

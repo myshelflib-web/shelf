@@ -1,6 +1,13 @@
 import type { ChatMessage } from "../../llmTypes.js";
 import type { GeneratedArticle, ResolvedArticleSpec } from "../types.js";
 
+export type StarterPromptOpts = {
+  /** When false, diagram and glance are omitted from prompts and output. */
+  withIllustrations: boolean;
+};
+
+const DEFAULT_PROMPT_OPTS: StarterPromptOpts = { withIllustrations: true };
+
 const HOUSE_STYLE = [
   "Write in clear Indian English for a serious aspirant who has already decided to study this topic — they need substance, not persuasion.",
   "Teach, do not summarise. A sentence that only names a concept without explaining it is wasted. If you mention a doctrine, provision, mechanism or case, say what it actually does and why it matters here.",
@@ -16,8 +23,11 @@ const BANNED = [
   "Never write a sentence whose only content is that a topic is important or frequently asked. Show the substance instead.",
 ].join(" ");
 
-function diagramInstruction(spec: ResolvedArticleSpec): string {
-  if (spec.diagram === "none") return '"diagram": null';
+function diagramInstruction(
+  spec: ResolvedArticleSpec,
+  opts: StarterPromptOpts
+): string {
+  if (!opts.withIllustrations || spec.diagram === "none") return '"diagram": null';
   const shapes: Record<string, string> = {
     flow: '{"kind":"flow","title":"...","caption":"one line on how to read it","steps":[{"label":"short step name","detail":"one specific line"}]}  // 4-6 steps in genuine causal order',
     timeline:
@@ -32,6 +42,31 @@ function diagramInstruction(spec: ResolvedArticleSpec): string {
       '{"kind":"cards","title":"...","caption":"one line","steps":[{"label":"card title","detail":"one specific line"}]}  // 4 cards',
   };
   return `"diagram": ${shapes[spec.diagram]}`;
+}
+
+function glanceInstruction(opts: StarterPromptOpts): string {
+  if (!opts.withIllustrations) return '"glance": null';
+  return `"glance": {
+    "title": "At a glance",
+    "cards": [
+      { "label": "short heading", "detail": "one specific teaching line, not a slogan" }
+    ]
+  }  // REQUIRED: exactly 4 cards, each a real mechanism from this page`;
+}
+
+function illustrationRequirements(
+  spec: ResolvedArticleSpec,
+  opts: StarterPromptOpts
+): string {
+  if (!opts.withIllustrations) {
+    return "- Set diagram and glance to null — this run is text-only.";
+  }
+  if (spec.diagram === "none") {
+    return `- Include glance with exactly 4 cards. Set "diagram": null — this topic does not need a flow figure.`;
+  }
+  return `- REQUIRED diagram: use kind "${spec.diagram}" with 4-6 substantive steps/rows drawn from this page's mechanism — not generic labels.
+- REQUIRED glance: exactly 4 cards, each a distinct fact or distinction taught on this page.
+- The diagram is a revision figure, not decoration — every step must name something specific from the prose.`;
 }
 
 function specBrief(spec: ResolvedArticleSpec): string {
@@ -76,7 +111,8 @@ function specBrief(spec: ResolvedArticleSpec): string {
   return parts.join("\n");
 }
 
-const SCHEMA = `{
+function jsonSchema(spec: ResolvedArticleSpec, opts: StarterPromptOpts): string {
+  return `{
   "title": "clear and specific, <= 70 characters, contains the primary keyword",
   "metaDescription": "140-158 characters describing what the reader will be able to do after reading, containing the primary keyword",
   "intro": "3-4 sentences that state what this topic is, why the exam tests it, and what the page will establish. No throat-clearing.",
@@ -96,19 +132,21 @@ const SCHEMA = `{
   "examPointers": ["4-6 lines on how this is actually asked — the angle, the format, what the examiner is testing"],
   "commonMistakes": ["4-6 errors candidates make, each phrased as the correction"],
   "linkages": ["3-4 other syllabus areas this connects to, each with one line on how"],
-  "glance": {
-    "title": "At a glance",
-    "cards": [
-      { "label": "short heading", "detail": "one specific teaching line, not a slogan" }
-    ]
-  },
-  "keywords": ["6-10 search phrases"]
+  ${glanceInstruction(opts)},
+  "keywords": ["6-10 search phrases"],
+  ${diagramInstruction(spec, opts)}
 }`;
+}
 
 export function draftMessages(
   blueprint: { label: string; examContext: string },
-  spec: ResolvedArticleSpec
+  spec: ResolvedArticleSpec,
+  opts: StarterPromptOpts = DEFAULT_PROMPT_OPTS
 ): ChatMessage[] {
+  const glanceLine = opts.withIllustrations
+    ? "- glance.cards must have exactly 4 cards. Each card is a real distinction or mechanism from this page, not a motivational label."
+    : "- Set glance to null.";
+
   return [
     {
       role: "system",
@@ -121,8 +159,7 @@ export function draftMessages(
 ${specBrief(spec)}
 
 Return exactly this JSON shape:
-${SCHEMA},
-  ${diagramInstruction(spec)}
+${jsonSchema(spec, opts)}
 
 Length and structure requirements — these are hard:
 - 8 to 10 sections. 1800-2400 words total across all paragraphs.
@@ -132,7 +169,10 @@ Length and structure requirements — these are hard:
 - Order the sections so the page builds: establish the concept, then the specifics, then the worked reasoning, then the analytical or critical angle.
 - Cover the MUST COVER list in the body. The checklist is not a section plan — group items into sections that read naturally.
 - Do not write a full treatment of a sibling skill that is not on this checklist. A one-line linkage is enough.
-- glance.cards must have exactly 4 cards. Each card is a real distinction or mechanism from this page, not a motivational label.
+${glanceLine}
+
+Figures:
+${illustrationRequirements(spec, opts)}
 
 Plain text only inside every string: no markdown, no HTML, no asterisks, no bracketed citations, no bold markers.`,
     },
@@ -161,10 +201,18 @@ function draftBody(draft: GeneratedArticle): string {
 export function recheckMessages(
   blueprint: { label: string },
   spec: ResolvedArticleSpec,
-  draft: GeneratedArticle
+  draft: GeneratedArticle,
+  opts: StarterPromptOpts = DEFAULT_PROMPT_OPTS
 ): ChatMessage[] {
   const worked = spec.worked?.length
     ? `\nMUST HAVE BEEN WORKED THROUGH:\n${spec.worked.map((w) => `- ${w}`).join("\n")}`
+    : "";
+
+  const figureAudit = opts.withIllustrations
+    ? `
+FIGURES (when illustrations are enabled):
+- If this page expects a diagram (not "none") but the draft JSON has diagram null or too thin, add "Missing revision diagram" to missing.
+- If glance is null or has fewer than 4 substantive cards, add "Missing at-a-glance figure" to missing.`
     : "";
 
   return [
@@ -198,6 +246,7 @@ Scoring:
 - Do not put sibling skills (other pages) in "missing". Those belong on their own pages; a linkage line is enough.
 - Do not fail a page for omitting a full treatment of testing, spacing, interleaving, dual coding, storage, or retrieval unless that item is on THIS checklist.
 - Factual nits that do not mislead a candidate are corrections, not a reason to collapse the score below 70 if coverage is complete.
+${figureAudit}
 
 Score 90+ when every checklist item is explained and there are no serious factual errors. Use "revise" when score is below 85, or when corrections or vague is non-empty.`,
     },
@@ -208,10 +257,15 @@ export function reviseMessages(
   blueprint: { label: string; examContext: string },
   spec: ResolvedArticleSpec,
   draft: GeneratedArticle,
-  review: { missing: string[]; corrections: string[]; vague: string[] }
+  review: { missing: string[]; corrections: string[]; vague: string[] },
+  opts: StarterPromptOpts = DEFAULT_PROMPT_OPTS
 ): ChatMessage[] {
   const bullets = (items: string[]) =>
     items.length ? items.map((i) => `- ${i}`).join("\n") : "- none";
+
+  const figureRule = opts.withIllustrations
+    ? `- Keep or improve the diagram and glance figure. ${illustrationRequirements(spec, opts)}`
+    : "- Set diagram and glance to null.";
 
   return [
     {
@@ -240,8 +294,44 @@ Rules for the revision:
 - Do not shorten the page. If you cut filler, spend the words on the missing items.
 - Do not add full chapters on sibling skills that are not on this page's missing list. A linkage line is enough.
 - Where you were unsure of a specific figure, remove the figure and explain the concept instead of guessing again.
+${figureRule}
 
 This page is only "${spec.title}". Syllabus line for context: ${spec.syllabusAnchor}`,
+    },
+  ];
+}
+
+/** Lightweight second pass when the main draft omitted figures. */
+export function illustrationTopUpMessages(
+  blueprint: { label: string },
+  spec: ResolvedArticleSpec,
+  draft: GeneratedArticle,
+  opts: StarterPromptOpts = DEFAULT_PROMPT_OPTS
+): ChatMessage[] {
+  if (!opts.withIllustrations) return [];
+
+  return [
+    {
+      role: "system",
+      content: `You add revision figures to ${blueprint.label} study pages. Reply with a single JSON object and nothing else.`,
+    },
+    {
+      role: "user",
+      content: `The page below is complete except for missing figures. Add only diagram and glance — do not rewrite sections.
+
+PAGE: ${spec.title}
+${specBrief(spec)}
+
+BODY SUMMARY:
+${draftBody(draft).slice(0, 12000)}
+
+Return:
+{
+  ${diagramInstruction(spec, opts)},
+  ${glanceInstruction(opts)}
+}
+
+${illustrationRequirements(spec, opts)}`,
     },
   ];
 }

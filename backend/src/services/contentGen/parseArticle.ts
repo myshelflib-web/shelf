@@ -105,6 +105,17 @@ function parseGlance(value: unknown): GlanceFigure | null {
   return { title: asString(raw.title, "At a glance"), cards };
 }
 
+export function parseIllustrationSupplement(
+  raw: string
+): Pick<GeneratedArticle, "diagram" | "glance"> | null {
+  const obj = parseJsonObject<Record<string, unknown>>(raw);
+  if (!obj) return null;
+  return {
+    diagram: parseDiagram(obj.diagram),
+    glance: parseGlance(obj.glance),
+  };
+}
+
 export function parseGeneratedArticle(raw: string): GeneratedArticle | null {
   const obj = parseJsonObject<Record<string, unknown>>(raw);
   if (!obj) return null;

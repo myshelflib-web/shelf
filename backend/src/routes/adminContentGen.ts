@@ -54,7 +54,7 @@ router.get("/content-gen/overview", async (_req: Request, res: Response) => {
     perPageBytes: rates.bytesPerPage,
     tokensPerPage: rates.tokensPerPage,
     pipeline:
-      "syllabus leaf → draft → coverage/fact/filler recheck → revise → publish; pauses on API outage",
+      "syllabus leaf → draft → coverage/fact/filler recheck → revise → figures → publish; pauses on API outage",
     busy: await hasRunningJob(),
   });
 });
@@ -108,7 +108,12 @@ router.post("/content-gen/jobs/:id/retry-failed", async (req: Request, res: Resp
   try {
     const result = await retryFailedContentGenJob(
       param(req, "id"),
-      req.user?.userId ?? null
+      req.user?.userId ?? null,
+      req.body?.withIllustrations === false
+        ? false
+        : req.body?.withIllustrations === true
+          ? true
+          : undefined
     );
     res.json(result);
   } catch (err) {
@@ -171,6 +176,7 @@ router.post("/content-gen/starter-pack", async (req: Request, res: Response) => 
       subjectSlug,
       limit: readLimit(req.body?.limit, 2000),
       dryRun: req.body?.dryRun === true,
+      withIllustrations: req.body?.withIllustrations !== false,
       skipExisting: req.body?.skipExisting !== false,
       requestedById: req.user?.userId ?? null,
     });

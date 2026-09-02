@@ -26,7 +26,13 @@ export async function resumeContentGenJob(jobId: string): Promise<void> {
   const run =
     job.kind === "NEWS_BRIEF"
       ? runNewsPackJob(jobId, job.studyGoal, job.dryRun, job.resumeAttempts)
-      : runStarterPackJob(jobId, job.studyGoal, job.dryRun, job.resumeAttempts);
+      : runStarterPackJob(
+          jobId,
+          job.studyGoal,
+          job.dryRun,
+          job.resumeAttempts,
+          job.withIllustrations
+        );
 
   void run.catch((err) => {
     logger.error("contentgen.resume.crashed", { jobId, ...errorFields(err) });

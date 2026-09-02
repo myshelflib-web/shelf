@@ -840,6 +840,7 @@ export const api = {
       subjectSlug?: string;
       limit?: number;
       dryRun?: boolean;
+      withIllustrations?: boolean;
       skipExisting?: boolean;
     }) =>
       request<{ jobId: string; plannedCount: number }>(

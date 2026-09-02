@@ -46,4 +46,11 @@ describe("recheckMessages", () => {
     expect(user).toContain("Do not put sibling skills");
     expect(user).toContain("A dedicated heading is not required");
   });
+
+  it("tells the auditor to check figures when illustrations are enabled", () => {
+    const user =
+      recheckMessages({ label: "Shelf" }, spec, draft, { withIllustrations: true })[1]
+        ?.content ?? "";
+    expect(user).toContain("Missing revision diagram");
+  });
 });

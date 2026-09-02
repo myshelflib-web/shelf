@@ -303,6 +303,8 @@ model ContentGenJob {
   model          String
   /// Dry runs generate + score content without writing Articles.
   dryRun         Boolean          @default(false)
+  /// When false, pages are text-only (no diagram or at-a-glance figure).
+  withIllustrations Boolean       @default(true)
   plannedCount   Int              @default(0)
   completedCount Int              @default(0)
   failedCount    Int              @default(0)

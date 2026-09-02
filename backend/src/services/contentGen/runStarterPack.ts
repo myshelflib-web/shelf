@@ -37,6 +37,8 @@ export type StartStarterPackInput = {
   limit?: number;
   /** Generate and score without writing Articles or S3 objects. */
   dryRun?: boolean;
+  /** When false, pages are text-only (no diagram or at-a-glance figure). */
+  withIllustrations?: boolean;
   /** Skip specs that already have a published Article. */
   skipExisting?: boolean;
   requestedById?: string | null;
@@ -103,6 +105,7 @@ export async function startStarterPackJob(
     studyGoal: input.studyGoal,
     model: generationModelLabel(),
     dryRun: Boolean(input.dryRun),
+    withIllustrations: input.withIllustrations !== false,
     plannedCount: specs.length,
     requestedById: input.requestedById,
     plan: {
@@ -117,7 +120,13 @@ export async function startStarterPackJob(
     },
   });
 
-  void runStarterPackJob(jobId, input.studyGoal, Boolean(input.dryRun)).catch(
+  void runStarterPackJob(
+    jobId,
+    input.studyGoal,
+    Boolean(input.dryRun),
+    0,
+    input.withIllustrations !== false
+  ).catch(
     (err) => {
       logger.error("contentgen.starter_pack.crashed", { jobId, ...errorFields(err) });
     }
@@ -130,17 +139,17 @@ async function generateOne(
   studyGoal: StudyGoal,
   spec: ResolvedArticleSpec,
   dryRun: boolean,
+  withIllustrations: boolean,
   signal?: AbortSignal,
   draft?: StarterDraft
 ): Promise<ItemOutcome> {
   const blueprint = blueprintForGoal(studyGoal);
   if (!blueprint) throw new Error(`No starter pack blueprint for ${studyGoal}`);
 
+  const genOpts = { signal, withIllustrations };
   const result = draft
-    ? await improveStarterArticle(blueprint, spec, draft.article, draft.review, {
-        signal,
-      })
-    : await generateStarterArticle(blueprint, spec, { signal });
+    ? await improveStarterArticle(blueprint, spec, draft.article, draft.review, genOpts)
+    : await generateStarterArticle(blueprint, spec, genOpts);
   if (signal?.aborted) {
     const err = new Error("This operation was aborted");
     err.name = "AbortError";
@@ -207,7 +216,8 @@ export async function runStarterPackJob(
   jobId: string,
   studyGoal: StudyGoal,
   dryRun: boolean,
-  startPauseCount = 0
+  startPauseCount = 0,
+  withIllustrations = true
 ): Promise<void> {
   if (!claimJob(jobId)) return;
 
@@ -295,6 +305,7 @@ export async function runStarterPackJob(
           studyGoal,
           spec,
           dryRun,
+          withIllustrations,
           jobAbortSignal(jobId),
           entry.draft
         );
