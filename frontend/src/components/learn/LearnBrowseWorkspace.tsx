@@ -15,9 +15,10 @@ import { ShelfExplorerFab } from "@/components/ShelfExplorerFab";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
 import { useIsPhone } from "@/hooks/useIsPhone";
 import { useLearnStudyGoal } from "@/hooks/useLearnStudyGoal";
-import { subjectHref, topicHref } from "@/lib/learnCatalog";
+import { subjectGoal, subjectHref, topicHref } from "@/lib/learnCatalog";
 import { areaForGoal } from "@/lib/exploreCatalog";
 import { parseExploreAreaFromSearch } from "@/components/learn/explore/ExploreSidebarBrowse";
+import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { StudyGoal } from "@/types";
 
 export function LearnBrowseWorkspace(props: {
@@ -63,19 +64,23 @@ function LearnBrowseWorkspaceInner({
     return () => window.clearTimeout(timeout);
   }, [returningToBrowse, completeBrowseReturn]);
 
+  const { subjects } = useLearnSubjects();
   const areaFromQuery = parseExploreAreaFromSearch(searchParams.get("area"));
-  const activeArea =
-    subjectSlug || topicSlug
-      ? null
-      : areaFromQuery ?? (initialGoal ? areaForGoal(initialGoal) : null);
+  const browseSubject = subjectSlug
+    ? subjects.find((s) => s.slug === subjectSlug)
+    : undefined;
+  const sidebarExploreArea =
+    areaFromQuery ??
+    (browseSubject ? areaForGoal(subjectGoal(browseSubject)) : null);
+  const mainPaneAreaId = areaFromQuery;
 
   const currentHref =
     topicSlug && subjectSlug
       ? topicHref(subjectSlug, topicSlug)
       : subjectSlug
         ? subjectHref(subjectSlug)
-        : activeArea
-          ? `/learn?area=${activeArea}`
+        : mainPaneAreaId
+          ? `/learn?area=${mainPaneAreaId}`
           : "/learn";
 
   const libraryExplorer = (
@@ -85,7 +90,7 @@ function LearnBrowseWorkspaceInner({
       showGoalPicker={showGoalPicker}
       onStudyGoalChange={setGuestGoal}
       onGuestPersonalClick={() => setSignInFeature("Your personal library")}
-      exploreArea={activeArea}
+      exploreArea={sidebarExploreArea}
       returnTo={currentHref}
       className={compactPortrait ? "w-full border-r-0" : undefined}
     />
@@ -114,7 +119,8 @@ function LearnBrowseWorkspaceInner({
             <ExploreMainPane
               subjectSlug={subjectSlug}
               topicSlug={topicSlug}
-              areaId={activeArea}
+              areaId={mainPaneAreaId}
+              sidebarAreaId={sidebarExploreArea}
               returnTo={currentHref}
             />
           )}

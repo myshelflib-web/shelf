@@ -830,6 +830,13 @@ a.explore-resource-card:focus-visible .explore-resource-card-arrow {
   overflow: hidden;
 }
 
+.explore-resource-date {
+  margin-top: 0.2rem;
+  font-size: 0.625rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
 .explore-resource-copy {
   margin-top: 0.625rem;
   font-size: 0.6875rem;

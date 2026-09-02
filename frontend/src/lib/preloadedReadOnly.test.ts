@@ -30,6 +30,6 @@ describe("lockedFeatureLabel", () => {
   it("uses save-to-library copy when gated", () => {
     expect(
       lockedFeatureLabel("save-to-library", "highlight with pen")
-    ).toBe("Save to library to highlight with pen");
+    ).toBe("Save to My Library to highlight with pen");
   });
 });

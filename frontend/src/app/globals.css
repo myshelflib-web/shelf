@@ -2308,10 +2308,10 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 
 .greeting-dots {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 0.28em;
   margin-left: 0.32em;
-  vertical-align: 0.12em;
+  vertical-align: baseline;
 }
 
 .greeting-dots span {

@@ -1,5 +1,6 @@
+import { parseLearnPath } from "@/lib/learnCatalog";
 import { StudyGoal } from "@/types";
-import { goalHasPreloadedLibrary } from "@/lib/studyGoal";
+import { goalHasPreloadedLibrary, normalizeStudyGoal } from "@/lib/studyGoal";
 
 export type LibraryMode = "personal" | "preloaded";
 
@@ -36,14 +37,34 @@ export function seedLibraryModeForNewUser(goal: StudyGoal | null | undefined) {
   }
 }
 
-/** Guests always see preloaded. Signed-in General stays personal.
- *  Exam goals default to preloaded until the user picks Personal. */
+/** Guests always see preloaded. Signed-in users honor preference;
+ *  General defaults to personal, exam goals default to preloaded. */
 export function resolveLibraryMode(
   goal: StudyGoal | null | undefined,
   preferred: LibraryMode | null,
   isGuest = false
 ): LibraryMode {
   if (isGuest) return "preloaded";
-  if (!goalHasPreloadedLibrary(goal)) return "personal";
-  return preferred ?? "preloaded";
+  if (preferred) return preferred;
+  if (normalizeStudyGoal(goal) === "GENERAL") return "personal";
+  return "preloaded";
+}
+
+/** When a reader tab is open, pick Personal vs Preloaded from the URL. */
+export function inferLibraryModeFromHref(
+  href?: string | null
+): LibraryMode | null {
+  if (!href) return null;
+  const path = (href.split("?")[0] ?? href).replace(/\/$/, "");
+  if (path.startsWith("/learn/")) {
+    if (path.startsWith("/learn/current-affairs/") && path !== "/learn/current-affairs") {
+      return "preloaded";
+    }
+    const { articleSlug } = parseLearnPath(path);
+    return articleSlug ? "preloaded" : null;
+  }
+  if (path.startsWith("/my-content/") && path !== "/my-content") {
+    return "personal";
+  }
+  return null;
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { FilePlus, FolderPlus, Search, BookOpen } from "lucide-react";
+import { FilePlus, FolderPlus, Plus, Search, BookOpen } from "lucide-react";
 import { ShelfLogo } from "@/components/ShelfLogo";
 import { GreetingBlock } from "@/components/GreetingBlock";
 import { LivelyLine } from "@/components/LivelyLine";
@@ -33,6 +33,25 @@ export function LibraryEmptyWorkspace() {
   const [libraryEmpty, setLibraryEmpty] = useState(false);
   const [resume, setResume] = useState<LastRead | null>(null);
   const [bootLoading, setBootLoading] = useState(true);
+  const [addOpen, setAddOpen] = useState(false);
+  const addRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!addOpen) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (addRef.current?.contains(e.target as Node)) return;
+      setAddOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setAddOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [addOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -221,39 +240,64 @@ export function LibraryEmptyWorkspace() {
           </ul>
         )}
 
-        <div className="mt-8 w-full grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div ref={addRef} className="relative mt-8 w-full flex flex-col items-center">
           <button
             type="button"
-            onClick={() => openAdd({ kind: "notebook" })}
-            title={withShortcut("Create a new folder", "c n")}
-            className="flex items-center gap-3 px-4 py-3 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-elevated)] text-left transition"
+            onClick={() => setAddOpen((open) => !open)}
+            aria-expanded={addOpen}
+            aria-haspopup="menu"
+            className="flex items-center justify-center gap-2 px-5 py-3 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-elevated)] text-sm font-medium text-[var(--text-primary)] transition"
           >
-            <FolderPlus className="w-5 h-5 text-[var(--accent)] shrink-0" />
-            <span>
-              <span className="block text-sm font-medium text-[var(--text-primary)]">
-                New folder
-              </span>
-              <span className="block text-xs text-[var(--text-muted)]">
-                Group folders and files
-              </span>
-            </span>
+            <Plus className="w-4 h-4 text-[var(--accent)] shrink-0" />
+            Add file / folder
           </button>
-          <button
-            type="button"
-            onClick={() => openAdd({ kind: "page" })}
-            title={withShortcut("Add a PDF, notes file, or link", "c p")}
-            className="flex items-center gap-3 px-4 py-3 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-elevated)] text-left transition"
-          >
-            <FilePlus className="w-5 h-5 text-[var(--accent)] shrink-0" />
-            <span>
-              <span className="block text-sm font-medium text-[var(--text-primary)]">
-                Add file
-              </span>
-              <span className="block text-xs text-[var(--text-muted)]">
-                PDF, notes, or link
-              </span>
-            </span>
-          </button>
+          {addOpen ? (
+            <div
+              role="menu"
+              className="absolute top-full z-10 mt-1.5 w-full max-w-xs rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] p-1 shadow-[0_8px_28px_rgba(0,0,0,0.14)]"
+            >
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setAddOpen(false);
+                  openAdd({ kind: "page" });
+                }}
+                title={withShortcut("Add a PDF, notes file, or link", "c p")}
+                className="flex w-full items-center gap-3 px-3 py-2.5 rounded-md text-left hover:bg-[var(--bg-secondary)] transition"
+              >
+                <FilePlus className="w-4 h-4 text-[var(--accent)] shrink-0" />
+                <span>
+                  <span className="block text-sm font-medium text-[var(--text-primary)]">
+                    Add file
+                  </span>
+                  <span className="block text-xs text-[var(--text-muted)]">
+                    PDF, notes, or link
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setAddOpen(false);
+                  openAdd({ kind: "notebook" });
+                }}
+                title={withShortcut("Create a new folder", "c n")}
+                className="flex w-full items-center gap-3 px-3 py-2.5 rounded-md text-left hover:bg-[var(--bg-secondary)] transition"
+              >
+                <FolderPlus className="w-4 h-4 text-[var(--accent)] shrink-0" />
+                <span>
+                  <span className="block text-sm font-medium text-[var(--text-primary)]">
+                    New folder
+                  </span>
+                  <span className="block text-xs text-[var(--text-muted)]">
+                    Group folders and files
+                  </span>
+                </span>
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <p className="mt-6 text-[11px] text-[var(--text-muted)] text-center">

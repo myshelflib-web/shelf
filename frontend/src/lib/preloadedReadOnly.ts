@@ -23,7 +23,7 @@ export function lockedFeatureLabel(
   gate: AnnotationGate | null | undefined,
   action: string
 ): string {
-  if (gate === "save-to-library") return `Save to library to ${action}`;
+  if (gate === "save-to-library") return `Save to My Library to ${action}`;
   if (gate === "sign-in") return `Sign in to ${action}`;
   return action;
 }

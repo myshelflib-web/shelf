@@ -73,10 +73,12 @@ export function GreetingBlock({
           >
             {shownSalutation},
           </span>{" "}
-          <span className="greeting-name">{firstName}</span>
-          {animatedDots && (
-            <GreetingDots className="text-[var(--text-muted)]" />
-          )}
+          <span className="greeting-name inline-flex items-baseline gap-0">
+            {firstName}
+            {animatedDots && (
+              <GreetingDots className="text-[var(--text-muted)]" />
+            )}
+          </span>
         </p>
         {showAccent && !animatedDots && (
           <GreetingAccent

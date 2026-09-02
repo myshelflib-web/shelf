@@ -56,8 +56,9 @@ export function normalizeStudyGoal(value: unknown): StudyGoal {
   return "GENERAL";
 }
 
+/** Preloaded catalog is available for every study goal, including General. */
 export function goalHasPreloadedLibrary(
-  goal: StudyGoal | null | undefined
+  _goal?: StudyGoal | null
 ): boolean {
-  return normalizeStudyGoal(goal) !== "GENERAL";
+  return true;
 }

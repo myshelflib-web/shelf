@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Lock } from "lucide-react";
 import { ExploreWorkspaceShell } from "@/components/learn/explore/ExploreWorkspaceShell";
 import { ExploreAreaIcon } from "@/components/learn/explore/ExploreAreaIcon";
-import { ExploreResourceCard } from "@/components/learn/explore/ExploreResourceCard";
+import { ExploreAreaContent } from "@/components/learn/explore/ExploreAreaContent";
+import { ExploreCollectionContent } from "@/components/learn/explore/ExploreCollectionContent";
 import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
 import {
-  LearnCatalogSkeleton,
   LearnCollectionSkeleton,
 } from "@/components/learn/LearnBrowseSkeletons";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
@@ -19,23 +18,22 @@ import {
   areaForGoal,
   collectionMeta,
   countAreaItems,
-  featuredExploreCollections,
+  featuredExploreCollectionsForGoal,
   getExploreArea,
   learnAreaHref,
   listAreaResources,
   subjectExploreHref,
-  visibleExploreAreas,
+  subjectsForArea,
+  visibleExploreAreasForGoal,
 } from "@/lib/exploreCatalog";
 import {
-  catalogGoalLabel,
   searchLearnCatalog,
   subjectGoal,
-  subjectHref,
-  topicHref,
 } from "@/lib/learnCatalog";
 import { learnHref } from "@/lib/learnContent";
-import { Subject, Topic } from "@/types";
+import { Subject, StudyGoal, Topic } from "@/types";
 import { useEffect, useMemo, useState } from "react";
+import { useLearnStudyGoal } from "@/hooks/useLearnStudyGoal";
 
 function scopedSearchPlaceholder(opts: {
   areaId?: ExploreAreaId | null;
@@ -61,16 +59,20 @@ export function ExploreMainPane({
   subjectSlug,
   topicSlug,
   areaId,
+  sidebarAreaId,
   returnTo,
 }: {
   subjectSlug?: string;
   topicSlug?: string;
   areaId?: ExploreAreaId | null;
+  sidebarAreaId?: ExploreAreaId | null;
   returnTo: string;
 }) {
   const router = useRouter();
   const { startReaderOpen } = useLearnNavigation();
   const { user } = useAuth();
+  const { goal: filterGoal, accountGoal } = useLearnStudyGoal();
+  const catalogGoal: StudyGoal = user ? (accountGoal ?? "GENERAL") : filterGoal;
   const isPremium = isPremiumUser(user);
   const { subjects, loading } = useLearnSubjects();
   const [query, setQuery] = useState("");
@@ -85,6 +87,11 @@ export function ExploreMainPane({
       : undefined;
 
   const isHome = !subjectSlug && !areaId;
+
+  const resolvedAreaId =
+    sidebarAreaId ??
+    areaId ??
+    (subject ? areaForGoal(subjectGoal(subject)) : null);
 
   const openHit = (href: string) => {
     startReaderOpen(href);
@@ -142,6 +149,7 @@ export function ExploreMainPane({
             copy: "Open this public resource inside Shelf, then save a copy to your own Library if it is useful.",
             subjectSlug: subject.slug,
             topicSlug: t.slug,
+            updatedAt: article.updatedAt ?? null,
           });
         }
       }
@@ -150,7 +158,7 @@ export function ExploreMainPane({
     return [];
   }, [subjects, areaId, subject, topic, query, subjectSlug]);
 
-  const featured = featuredExploreCollections(subjects);
+  const featured = featuredExploreCollectionsForGoal(subjects, catalogGoal);
   const searching = loading && query.trim().length > 0 && hits.length === 0;
 
   return (
@@ -167,9 +175,20 @@ export function ExploreMainPane({
         onOpenSearchHit={openHit}
       >
       {isHome ? (
-        <ExploreHomeContent subjects={subjects} loading={loading} featured={featured} />
+        <ExploreHomeContent
+          subjects={subjects}
+          loading={loading}
+          featured={featured}
+          catalogGoal={catalogGoal}
+        />
       ) : areaId && !subjectSlug ? (
-        <ExploreAreaContent areaId={areaId} resources={resources} loading={loading} />
+        <ExploreAreaContent
+          areaId={areaId}
+          subjects={subjects}
+          resources={resources}
+          loading={loading}
+          query={query}
+        />
       ) : subject ? (
         <ExploreCollectionContent
           subject={subject}
@@ -177,7 +196,8 @@ export function ExploreMainPane({
           resources={resources}
           loading={loading}
           isPremium={isPremium}
-          areaId={areaId}
+          areaId={resolvedAreaId}
+          query={query}
         />
       ) : loading ? (
         <LearnCollectionSkeleton />
@@ -198,13 +218,15 @@ function ExploreHomeContent({
   subjects,
   loading,
   featured,
+  catalogGoal,
 }: {
   subjects: Subject[];
   loading: boolean;
   featured: Subject[];
+  catalogGoal: StudyGoal;
 }) {
   const router = useRouter();
-  const areas = loading ? [] : visibleExploreAreas(subjects);
+  const areas = loading ? [] : visibleExploreAreasForGoal(subjects, catalogGoal);
 
   return (
     <>
@@ -223,7 +245,8 @@ function ExploreHomeContent({
           </div>
           <div className="explore-area-grid">
             {areas.map((area) => {
-              const count = countAreaItems(subjects, area.id);
+              const groups = subjectsForArea(subjects, area.id);
+              const articles = countAreaItems(subjects, area.id);
               return (
                 <button
                   key={area.id}
@@ -235,7 +258,8 @@ function ExploreHomeContent({
                   <p className="explore-area-title">{area.title}</p>
                   <p className="explore-area-copy">{area.description}</p>
                   <p className="explore-area-count">
-                    {count} article{count === 1 ? "" : "s"}
+                    {groups.length} group{groups.length === 1 ? "" : "s"} ·{" "}
+                    {articles} article{articles === 1 ? "" : "s"}
                   </p>
                 </button>
               );
@@ -273,201 +297,6 @@ function ExploreHomeContent({
           </div>
         </section>
       ) : null}
-    </>
-  );
-}
-
-function ExploreAreaContent({
-  areaId,
-  resources,
-  loading,
-}: {
-  areaId: ExploreAreaId;
-  resources: ReturnType<typeof listAreaResources>;
-  loading: boolean;
-}) {
-  const area = getExploreArea(areaId);
-
-  return (
-    <>
-      <header className="explore-scoped-head !items-start mb-2">
-        <div className="min-w-0 flex-1">
-          <Link href="/learn" className="explore-back-library mb-2 inline-flex w-auto">
-            ← Explore
-          </Link>
-          <nav className="explore-breadcrumb" aria-label="Breadcrumb">
-            <Link href="/learn" className="hover:text-[var(--accent)]">
-              Explore
-            </Link>
-            <ChevronRight className="w-3 h-3" aria-hidden />
-            <span className="text-[var(--text-secondary)]">{area.title}</span>
-          </nav>
-          <h1 className="page-title mt-2">{area.title}</h1>
-          <p className="page-subtitle mt-2 max-w-2xl">{area.description}</p>
-        </div>
-      </header>
-
-      <section className="explore-section !mt-4">
-        <div className="explore-section-head">
-          <h2 className="explore-section-title">Available material</h2>
-          <p className="explore-section-copy">
-            Open a resource to read it before saving.
-          </p>
-        </div>
-        {loading && resources.length === 0 ? (
-          <LearnCatalogSkeleton cards={4} />
-        ) : resources.length === 0 ? (
-          <div className="learn-empty">No public material in this area yet.</div>
-        ) : (
-          <div className="explore-resource-grid">
-            {resources.map((r) => (
-              <ExploreResourceCard key={r.id} {...r} />
-            ))}
-          </div>
-        )}
-      </section>
-    </>
-  );
-}
-
-function ExploreCollectionContent({
-  subject,
-  topic,
-  resources,
-  loading,
-  isPremium,
-  areaId,
-}: {
-  subject: Subject;
-  topic?: Topic;
-  resources: ReturnType<typeof listAreaResources>;
-  loading: boolean;
-  isPremium: boolean;
-  areaId?: ExploreAreaId | null;
-}) {
-  const goal = subjectGoal(subject);
-  const backHref = topic
-    ? subjectHref(subject.slug)
-    : areaId
-      ? learnAreaHref(areaId)
-      : "/learn";
-  const backLabel = topic ? subject.name : areaId ? getExploreArea(areaId).title : "Explore";
-
-  return (
-    <>
-      <header className="explore-scoped-head !items-start mb-2">
-        <div className="min-w-0 flex-1">
-          <Link
-            href={backHref}
-            className="explore-back-library mb-2 inline-flex w-auto"
-          >
-            ← {backLabel}
-          </Link>
-          <nav className="explore-breadcrumb" aria-label="Breadcrumb">
-            <Link href="/learn" className="hover:text-[var(--accent)]">
-              Explore
-            </Link>
-            <ChevronRight className="w-3 h-3" aria-hidden />
-            {topic ? (
-              <>
-                <Link
-                  href={subjectHref(subject.slug)}
-                  className="hover:text-[var(--accent)] truncate max-w-[10rem]"
-                >
-                  {subject.name}
-                </Link>
-                <ChevronRight className="w-3 h-3" aria-hidden />
-                <span className="text-[var(--text-secondary)] truncate">
-                  {topic.title}
-                </span>
-              </>
-            ) : (
-              <span className="text-[var(--text-secondary)] truncate">
-                {subject.name}
-              </span>
-            )}
-          </nav>
-          <p className="learn-kicker mt-2">{catalogGoalLabel(goal)}</p>
-          <h1 className="page-title mt-1">
-            {topic ? topic.title : subject.name}
-          </h1>
-          <p className="page-subtitle mt-2 max-w-2xl">
-            {topic?.description ||
-              subject.description ||
-              "Browse public material in this collection. Open any file to read it, then save a copy to your Library."}
-          </p>
-        </div>
-      </header>
-
-      {!topic && subject.topics.length > 0 ? (
-        <section className="explore-section !mt-4">
-          <div className="explore-section-head">
-            <h2 className="explore-section-title">Topics</h2>
-            <p className="explore-section-copy">
-              {subject.topics.length} topic
-              {subject.topics.length === 1 ? "" : "s"} in this collection
-            </p>
-          </div>
-          <div className="explore-collection-grid">
-            {subject.topics.map((t) => {
-              const count = t.articles?.length ?? 0;
-              return (
-                <Link
-                  key={t.id}
-                  href={topicHref(subject.slug, t.slug)}
-                  className="explore-collection-card"
-                >
-                  <span className="explore-collection-mark" aria-hidden>
-                    {String(t.title.charAt(0).toUpperCase())}
-                  </span>
-                  <span className="min-w-0">
-                    <span className="explore-collection-title">{t.title}</span>
-                    <span className="explore-collection-meta">
-                      {count} article{count === 1 ? "" : "s"}
-                    </span>
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="explore-section">
-        <div className="explore-section-head">
-          <h2 className="explore-section-title">
-            {topic ? "Articles" : "All material"}
-          </h2>
-          <p className="explore-section-copy">
-            Open a resource to read it before saving.
-          </p>
-        </div>
-        {loading && resources.length === 0 ? (
-          <LearnCatalogSkeleton cards={4} />
-        ) : resources.length === 0 ? (
-          <div className="learn-empty">No articles in this view yet.</div>
-        ) : (
-          <div className="explore-resource-grid">
-            {resources.map((r) => {
-              const article = subject.topics
-                .flatMap((t) => t.articles ?? [])
-                .find((a) => a.id === r.id);
-              const locked = article?.isPremium && !isPremium;
-              return (
-                <div key={r.id} className="relative">
-                  <ExploreResourceCard {...r} />
-                  {locked ? (
-                    <span className="absolute top-3 right-3 inline-flex items-center gap-1 text-[10px] text-amber-500">
-                      <Lock className="w-3 h-3" />
-                      Premium
-                    </span>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
     </>
   );
 }

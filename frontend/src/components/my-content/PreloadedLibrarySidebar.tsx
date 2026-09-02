@@ -117,7 +117,9 @@ export function PreloadedLibrarySidebar({
         ? [activeSubjectData]
         : [];
     }
-    if (studyGoal === "GENERAL") return byQuery;
+    if (studyGoal === "GENERAL") {
+      return byQuery.filter((s) => subjectGoal(s) === "GENERAL");
+    }
     const forGoal = byQuery.filter((s) => subjectGoal(s) === studyGoal);
     const active = subjects.find((s) => s.slug === activeSubject);
     if (active && !forGoal.some((s) => s.id === active.id)) {
@@ -261,6 +263,7 @@ export function PreloadedLibrarySidebar({
             activeTopic={activeTopic}
             activeArticle={activeArticle}
             searchQuery={query}
+            studyGoal={studyGoal}
             workspaceMode={workspaceMode}
             onOpenPage={onOpenPage}
           />

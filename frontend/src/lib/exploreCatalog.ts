@@ -9,6 +9,7 @@ import { learnHref } from "@/lib/learnContent";
 import { StudyGoal, Subject } from "@/types";
 
 export type ExploreAreaId =
+  | "upsc"
   | "exams"
   | "law"
   | "medicine"
@@ -34,11 +35,18 @@ export type ExploreAreaDef = {
 
 export const EXPLORE_AREAS: ExploreAreaDef[] = [
   {
+    id: "upsc",
+    title: "UPSC CSE",
+    description: "Generated GS papers for Prelims and Mains.",
+    tone: "policy",
+    goals: ["UPSC"],
+  },
+  {
     id: "exams",
     title: "Exams & certifications",
-    description: "Generated notes for UPSC, State PCS, and CA.",
+    description: "Generated notes for State PCS and CA.",
     tone: "exam",
-    goals: ["UPSC", "STATE_PCS", "CA"],
+    goals: ["STATE_PCS", "CA"],
   },
   {
     id: "law",
@@ -91,6 +99,7 @@ export function getExploreArea(id: ExploreAreaId): ExploreAreaDef {
 
 /** Map a study track to the best-matching browse area. */
 export function areaForGoal(goal: StudyGoal): ExploreAreaId {
+  if (goal === "UPSC") return "upsc";
   if (goal === "JUDICIARY") return "law";
   if (goal === "NEET_PG") return "medicine";
   if (goal === "GATE") return "engineering";
@@ -103,7 +112,56 @@ export function subjectsForArea(
   areaId: ExploreAreaId
 ): Subject[] {
   const goals = new Set(getExploreArea(areaId).goals);
-  return subjects.filter((s) => goals.has(subjectGoal(s)));
+  return subjects
+    .filter((s) => goals.has(subjectGoal(s)))
+    .sort(
+      (a, b) =>
+        (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name)
+    );
+}
+
+/** Goal-specific labels for the collection grid inside a browse area. */
+export function areaGroupsSection(areaId: ExploreAreaId): {
+  title: string;
+  copy: string;
+} {
+  switch (areaId) {
+    case "upsc":
+      return {
+        title: "Paper collections",
+        copy: "Each collection is one GS paper — open it to browse topics, then articles.",
+      };
+    case "medicine":
+      return {
+        title: "Curriculum groups",
+        copy: "Pre-clinical, clinical, and exam-strategy modules for NEET PG and INI-CET.",
+      };
+    case "exams":
+      return {
+        title: "Exam tracks",
+        copy: "State PCS and CA collections — open a track to see topics and articles.",
+      };
+    case "law":
+      return {
+        title: "Law collections",
+        copy: "Statutes and official reports grouped by subject.",
+      };
+    case "engineering":
+      return {
+        title: "GATE papers",
+        copy: "Discipline-wise GATE collections with syllabus and previous papers.",
+      };
+    case "books":
+      return {
+        title: "Skill modules",
+        copy: "Learning science and exam-craft chapters.",
+      };
+    default:
+      return {
+        title: "Collections",
+        copy: "Open a collection to browse topics, then articles.",
+      };
+  }
 }
 
 export function countAreaItems(subjects: Subject[], areaId: ExploreAreaId): number {
@@ -115,6 +173,16 @@ export function visibleExploreAreas(subjects: Subject[]): ExploreAreaDef[] {
   return EXPLORE_AREAS.filter((area) => countAreaItems(subjects, area.id) > 0);
 }
 
+/** General track users only see non-exam browse areas (e.g. study skills). */
+export function visibleExploreAreasForGoal(
+  subjects: Subject[],
+  goal: StudyGoal
+): ExploreAreaDef[] {
+  const areas = visibleExploreAreas(subjects);
+  if (goal !== "GENERAL") return areas;
+  return areas.filter((area) => area.goals.includes("GENERAL"));
+}
+
 export type ExploreResource = {
   id: string;
   title: string;
@@ -124,7 +192,20 @@ export type ExploreResource = {
   copy: string;
   subjectSlug: string;
   topicSlug: string;
+  updatedAt?: string | null;
 };
+
+/** Human-readable last-updated label for explore article cards. */
+export function formatArticleUpdatedAt(iso?: string | null): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 function articleTypeLabel(title: string): string {
   const lower = title.toLowerCase();
@@ -172,6 +253,7 @@ export function listAreaResources(
           copy: "Open this public resource inside Shelf, then save a copy to your own Library if it is useful.",
           subjectSlug: subject.slug,
           topicSlug: topic.slug,
+          updatedAt: article.updatedAt ?? null,
         });
       }
     }
@@ -242,24 +324,46 @@ export function featuredExploreCollections(subjects: Subject[]): Subject[] {
   return picked;
 }
 
+/** General track users only see non-exam public collections. */
+export function featuredExploreCollectionsForGoal(
+  subjects: Subject[],
+  goal: StudyGoal
+): Subject[] {
+  const featured = featuredExploreCollections(subjects);
+  if (goal !== "GENERAL") return featured;
+  return featured.filter((s) => subjectGoal(s) === "GENERAL");
+}
+
 export function collectionMeta(subject: Subject): string {
   const topics = subject.topics.length;
   const articles = subject.topics.reduce(
     (n, t) => n + (t.articles?.length ?? 0),
     0
   );
+  const counts =
+    topics > 0 && articles > 0
+      ? `${topics} topic${topics === 1 ? "" : "s"} · ${articles} article${articles === 1 ? "" : "s"}`
+      : null;
   const goal = subjectGoal(subject);
   if (goal === "UPSC" || goal === "STATE_PCS") {
-    return "Syllabus · PYQs · reference material";
+    return counts ? `${counts} · GS paper` : "GS paper collection";
   }
-  if (goal === "GATE") return "Syllabus · previous papers · references";
-  if (goal === "JUDICIARY") return "Statutes · official reports";
-  if (goal === "NEET_PG") return "Curriculum · medical references";
-  if (goal === "CA") return "Accounting · statutes";
-  if (goal === "GENERAL") return "Study skills · exam craft";
-  if (topics > 0 && articles > 0) {
-    return `${topics} topic${topics === 1 ? "" : "s"} · ${articles} article${articles === 1 ? "" : "s"}`;
+  if (goal === "GATE") {
+    return counts ? `${counts} · GATE paper` : "GATE paper collection";
   }
+  if (goal === "JUDICIARY") {
+    return counts ? `${counts} · statutes & reports` : "Statutes · official reports";
+  }
+  if (goal === "NEET_PG") {
+    return counts ? `${counts} · NEET PG module` : "NEET PG curriculum module";
+  }
+  if (goal === "CA") {
+    return counts ? `${counts} · CA track` : "Accounting · statutes";
+  }
+  if (goal === "GENERAL") {
+    return counts ? `${counts} · study skills` : "Study skills · exam craft";
+  }
+  if (counts) return counts;
   return subject.description?.trim() || "Generated collection";
 }
 

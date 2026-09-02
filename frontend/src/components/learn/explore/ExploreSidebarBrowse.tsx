@@ -14,16 +14,16 @@ import {
   ExploreAreaId,
   areaSidebarRows,
   countAreaItems,
-  featuredExploreCollections,
+  featuredExploreCollectionsForGoal,
   isExploreAreaId,
   learnAreaHref,
   subjectExploreHref,
-  visibleExploreAreas,
+  visibleExploreAreasForGoal,
 } from "@/lib/exploreCatalog";
-import { subjectHref, topicHref } from "@/lib/learnCatalog";
+import { subjectGoal, subjectHref, topicHref } from "@/lib/learnCatalog";
 import { learnHref, learnScope } from "@/lib/learnContent";
 import { isPremiumUser } from "@/lib/premium";
-import { ArticleSummary, Topic } from "@/types";
+import { ArticleSummary, StudyGoal, Topic } from "@/types";
 
 function topicMatchesQuery(topic: Topic, query: string): boolean {
   const needle = query.trim().toLowerCase();
@@ -47,6 +47,7 @@ export function ExploreSidebarBrowse({
   activeTopic,
   activeArticle,
   searchQuery = "",
+  studyGoal = "GENERAL",
   workspaceMode = false,
   onOpenPage,
 }: {
@@ -56,6 +57,7 @@ export function ExploreSidebarBrowse({
   activeTopic?: string | null;
   activeArticle?: string | null;
   searchQuery?: string;
+  studyGoal?: StudyGoal;
   workspaceMode?: boolean;
   onOpenPage?: (payload: {
     href: string;
@@ -69,7 +71,8 @@ export function ExploreSidebarBrowse({
   const { user } = useAuth();
   const isPremium = isPremiumUser(user);
   const { subjects } = useLearnSubjects();
-  const featured = featuredExploreCollections(subjects);
+  const featured = featuredExploreCollectionsForGoal(subjects, studyGoal);
+  const browseAreas = visibleExploreAreasForGoal(subjects, studyGoal);
   const scopedRows = activeArea ? areaSidebarRows(subjects, activeArea) : [];
   const collectionSubject = activeSubject
     ? subjects.find((s) => s.slug === activeSubject)
@@ -223,7 +226,7 @@ export function ExploreSidebarBrowse({
               <Newspaper className="w-4 h-4 text-[var(--accent)] shrink-0" />
               <span className="min-w-0 flex-1 truncate">Live current affairs</span>
             </Link>
-            {visibleExploreAreas(subjects).map((area) => {
+            {browseAreas.map((area) => {
               const count = countAreaItems(subjects, area.id);
               return (
                 <Link
@@ -278,7 +281,7 @@ export function ExploreSidebarBrowse({
               }
               size="sm"
             />
-            <span className="min-w-0 flex-1 truncate">All in area</span>
+            <span className="min-w-0 flex-1 truncate">Overview</span>
           </Link>
           {scopedRows.map((row) => (
             <Link

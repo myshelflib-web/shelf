@@ -38,6 +38,7 @@ export interface ArticleSummary {
   slug: string;
   order: number;
   isPremium?: boolean;
+  updatedAt?: string;
 }
 
 export interface Topic {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
+import { formatArticleUpdatedAt } from "@/lib/exploreCatalog";
 
 export function ExploreResourceCard({
   title,
@@ -11,6 +12,7 @@ export function ExploreResourceCard({
   copy,
   href,
   openLabel = "Open resource",
+  updatedAt,
 }: {
   title: string;
   typeLabel: string;
@@ -18,9 +20,11 @@ export function ExploreResourceCard({
   copy: string;
   href: string;
   openLabel?: string;
+  updatedAt?: string | null;
 }) {
   const { startReaderOpen } = useLearnNavigation();
   const mark = title.trim().charAt(0).toUpperCase() || "•";
+  const updatedLabel = formatArticleUpdatedAt(updatedAt);
 
   return (
     <Link
@@ -39,6 +43,12 @@ export function ExploreResourceCard({
           </div>
           <h3 className="explore-resource-title">{title}</h3>
           <p className="explore-resource-meta">{meta}</p>
+          {updatedLabel ? (
+            <p className="explore-resource-date">
+              Updated{" "}
+              <time dateTime={updatedAt ?? undefined}>{updatedLabel}</time>
+            </p>
+          ) : null}
         </div>
       </div>
       <p className="explore-resource-copy">{copy}</p>

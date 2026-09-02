@@ -18,6 +18,12 @@ const SAVE_STEPS: Record<string, string> = {
   none: "Saving…",
 };
 
+const savePrimaryButtonClass =
+  "shrink-0 inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 whitespace-nowrap";
+
+const saveSecondaryButtonClass =
+  "shrink-0 inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors whitespace-nowrap";
+
 function progressForPoll(poll: number, saveMode?: string): number {
   const base = saveMode === "download_remote" ? 15 : 20;
   return Math.min(92, base + poll * 7);
@@ -120,16 +126,13 @@ export function PreloadedSaveBanner({
       window.removeEventListener(PRELOADED_SAVE_PROMPT_EVENT, onPrompt);
   }, []);
 
-  const actionLink =
-    "shrink-0 text-[10px] font-semibold text-[var(--accent)] hover:underline disabled:opacity-50";
-
   if (!user) {
     return (
       <div
         ref={rootRef}
-        className="shrink-0 px-4 py-2 border-b border-[var(--border)] bg-[var(--accent-light)]/40 flex flex-col gap-2 text-xs text-[var(--accent)]"
+        className="shrink-0 px-4 py-3 border-b border-[var(--border)] bg-[var(--accent-light)]/40 flex flex-col gap-2 text-xs text-[var(--accent)]"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <BookmarkPlus className="w-3.5 h-3.5 shrink-0" />
           <span className="flex-1 min-w-0">
             <strong className="text-[var(--text-primary)]">Preloaded</strong>
@@ -141,7 +144,7 @@ export function PreloadedSaveBanner({
           {saveAllowed ? (
             <Link
               href={loginHref}
-              className={actionLink}
+              className={savePrimaryButtonClass}
               onClick={() =>
                 rememberGuestLearnArticle(
                   subjectSlug,
@@ -179,9 +182,9 @@ export function PreloadedSaveBanner({
   return (
     <div
       ref={rootRef}
-      className="shrink-0 px-4 py-2 border-b border-[var(--border)] bg-[var(--accent-light)]/40 flex flex-col gap-2 text-xs text-[var(--accent)]"
+      className="shrink-0 px-4 py-3 border-b border-[var(--border)] bg-[var(--accent-light)]/40 flex flex-col gap-2 text-xs text-[var(--accent)]"
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <BookmarkPlus className="w-3.5 h-3.5 shrink-0" />
         <span className="flex-1 min-w-0">
           <strong className="text-[var(--text-primary)]">Preloaded</strong>
@@ -191,14 +194,19 @@ export function PreloadedSaveBanner({
         {saveAllowed && phase === "ready" && savedHref ? (
           <button
             type="button"
-            className={actionLink}
+            className={saveSecondaryButtonClass}
             onClick={() => onOpen(savedHref)}
           >
             Open in library
           </button>
         ) : saveAllowed && (phase === "idle" || phase === "error") ? (
-          <button type="button" className={actionLink} onClick={save}>
-            Save to library
+          <button
+            type="button"
+            className={savePrimaryButtonClass}
+            disabled={phase === "saving"}
+            onClick={save}
+          >
+            Save to My Library
           </button>
         ) : null}
       </div>

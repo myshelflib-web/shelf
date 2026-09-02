@@ -8,10 +8,13 @@ import { ExploreResourceCard } from "@/components/learn/explore/ExploreResourceC
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import {
   ExploreAreaId,
+  areaGroupsSection,
   getExploreArea,
   learnAreaHref,
   listAreaResources,
   subjectExploreHref,
+  subjectsForArea,
+  collectionMeta,
 } from "@/lib/exploreCatalog";
 import { searchLearnCatalog } from "@/lib/learnCatalog";
 import { useEffect, useMemo, useState } from "react";
@@ -42,6 +45,13 @@ export function ExploreAreaPane({
       }),
     [subjects, areaId, subjectSlug, topicSlug, query]
   );
+
+  const areaGroups = useMemo(
+    () => subjectsForArea(subjects, areaId),
+    [subjects, areaId]
+  );
+  const groupsSection = areaGroupsSection(areaId);
+  const searching = Boolean(query.trim());
 
   const catalogHits = useMemo(() => {
     const scoped = subjects.filter((s) =>
@@ -126,67 +136,98 @@ export function ExploreAreaPane({
         </div>
 
         <section className="explore-section">
-          <div className="explore-section-head">
-            <h2 className="explore-section-title">Available material</h2>
-            <p className="explore-section-copy">
-              Open a resource to read it before saving.
-            </p>
-          </div>
-
-          {loading && resources.length === 0 ? (
-            <p className="text-sm text-[var(--text-muted)]">Loading catalog…</p>
-          ) : resources.length === 0 ? (
-            <div className="learn-empty">
-              {query.trim()
-                ? `No matches in ${area.title} for “${query.trim()}”.`
-                : `No public material in ${area.title} yet.`}{" "}
-              <Link href="/learn" className="text-[var(--accent)]">
-                Browse all areas
-              </Link>
-              .
-            </div>
+          {searching ? (
+            <>
+              <div className="explore-section-head">
+                <h2 className="explore-section-title">Search results</h2>
+                <p className="explore-section-copy">
+                  Matching articles in {area.title}.
+                </p>
+              </div>
+              {loading && resources.length === 0 ? (
+                <p className="text-sm text-[var(--text-muted)]">Loading catalog…</p>
+              ) : resources.length === 0 ? (
+                <div className="learn-empty">
+                  No matches in {area.title} for “{query.trim()}”.
+                </div>
+              ) : (
+                <div className="explore-resource-grid">
+                  {resources.map((resource) => (
+                    <ExploreResourceCard key={resource.id} {...resource} />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : !subjectSlug ? (
+            <>
+              <div className="explore-section-head">
+                <h2 className="explore-section-title">{groupsSection.title}</h2>
+                <p className="explore-section-copy">{groupsSection.copy}</p>
+              </div>
+              {loading && areaGroups.length === 0 ? (
+                <p className="text-sm text-[var(--text-muted)]">Loading catalog…</p>
+              ) : areaGroups.length === 0 ? (
+                <div className="learn-empty">
+                  No public material in {area.title} yet.{" "}
+                  <Link href="/learn" className="text-[var(--accent)]">
+                    Browse all areas
+                  </Link>
+                  .
+                </div>
+              ) : (
+                <div className="explore-collection-grid">
+                  {areaGroups.map((subject) => (
+                    <Link
+                      key={subject.id}
+                      href={subjectExploreHref(subject.slug)}
+                      className="explore-collection-card"
+                    >
+                      <span className="explore-collection-mark" aria-hidden>
+                        {subject.icon || subject.name.charAt(0).toUpperCase()}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="explore-collection-title">
+                          {subject.name}
+                        </span>
+                        <span className="explore-collection-meta">
+                          {collectionMeta(subject)}
+                        </span>
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
-            <div className="explore-resource-grid">
-              {resources.map((resource) => (
-                <ExploreResourceCard key={resource.id} {...resource} />
-              ))}
-            </div>
+            <>
+              <div className="explore-section-head">
+                <h2 className="explore-section-title">Available material</h2>
+                <p className="explore-section-copy">
+                  Open a resource to read it before saving.
+                </p>
+              </div>
+              {loading && resources.length === 0 ? (
+                <p className="text-sm text-[var(--text-muted)]">Loading catalog…</p>
+              ) : resources.length === 0 ? (
+                <div className="learn-empty">
+                  {query.trim()
+                    ? `No matches in ${area.title} for “${query.trim()}”.`
+                    : `No public material in ${area.title} yet.`}{" "}
+                  <Link href="/learn" className="text-[var(--accent)]">
+                    Browse all areas
+                  </Link>
+                  .
+                </div>
+              ) : (
+                <div className="explore-resource-grid">
+                  {resources.map((resource) => (
+                    <ExploreResourceCard key={resource.id} {...resource} />
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </section>
-
-        {!subjectSlug && !loading ? (
-          <section className="explore-section">
-            <div className="explore-section-head">
-              <h2 className="explore-section-title">Collections in this area</h2>
-            </div>
-            <div className="explore-collection-grid">
-              {subjects
-                .filter((s) =>
-                  getExploreArea(areaId).goals.includes(s.studyGoal ?? "GENERAL")
-                )
-                .map((subject) => (
-                  <Link
-                    key={subject.id}
-                    href={subjectExploreHref(subject.slug)}
-                    className="explore-collection-card"
-                  >
-                    <span className="explore-collection-mark" aria-hidden>
-                      {subject.icon || subject.name.charAt(0).toUpperCase()}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="explore-collection-title">
-                        {subject.name}
-                      </span>
-                      <span className="explore-collection-meta">
-                        {subject.topics.length} topic
-                        {subject.topics.length === 1 ? "" : "s"}
-                      </span>
-                    </span>
-                  </Link>
-                ))}
-            </div>
-          </section>
-        ) : null}
       </div>
     </div>
   );
