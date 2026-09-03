@@ -14,6 +14,7 @@ import {
   remapOutboxEntityId,
   removeOutbox,
 } from "./outbox";
+import { isOfflineMetaFresh, offlineMetaKey, touchOfflineMeta } from "./cacheMeta";
 import { isOnline, dispatchOfflineSync } from "./network";
 import { AnalyticsEvents, track } from "@/lib/analytics";
 import {
@@ -72,6 +73,29 @@ async function deleteLocalTask(taskId: string): Promise<void> {
   });
 }
 
+function isPendingLocalTask(task: LocalTask): boolean {
+  return (
+    task.localOnly ||
+    task.syncStatus === "pending" ||
+    task.syncStatus === "pending-delete"
+  );
+}
+
+/** Drop synced rows when the offline snapshot is past TTL; keep pending edits. */
+async function readLocalTasksForOffline(userId: string): Promise<LocalTask[]> {
+  const local = await readAllLocalTasks(userId);
+  const metaKey = offlineMetaKey("tasks", userId);
+  if (await isOfflineMetaFresh(metaKey)) return local;
+
+  const pendingOnly = local.filter(isPendingLocalTask);
+  await Promise.all(
+    local
+      .filter((task) => !isPendingLocalTask(task))
+      .map((task) => deleteLocalTask(task.id)),
+  );
+  return pendingOnly;
+}
+
 async function replaceLocalTaskId(userId: string, fromId: string, serverTask: StudyTask): Promise<void> {
   await deleteLocalTask(fromId);
   await putLocalTask(userId, toLocalTask(serverTask));
@@ -98,7 +122,7 @@ export async function peekLocalTasks(
 ): Promise<StudyTask[]> {
   const userId = getStoredUserId();
   if (!userId) return [];
-  const local = await readAllLocalTasks(userId);
+  const local = await readLocalTasksForOffline(userId);
   return mergeTaskLists([], local).filter((t) => taskInRange(t, from, to));
 }
 
@@ -106,12 +130,11 @@ export async function listTasks(from?: string, to?: string): Promise<StudyTask[]
   const userId = getStoredUserId();
   if (!userId) return [];
 
-  const local = await readAllLocalTasks(userId);
-
   if (isOnline()) {
     try {
       const { tasks } = await api.tasks.list(from, to);
       await upsertServerTasks(userId, tasks);
+      await touchOfflineMeta(offlineMetaKey("tasks", userId));
       const freshLocal = await readAllLocalTasks(userId);
       const merged = mergeTaskLists(tasks, freshLocal);
       return merged.filter((t) => taskInRange(t, from, to));
@@ -120,6 +143,7 @@ export async function listTasks(from?: string, to?: string): Promise<StudyTask[]
     }
   }
 
+  const local = await readLocalTasksForOffline(userId);
   const merged = mergeTaskLists([], local);
   return merged.filter((t) => taskInRange(t, from, to));
 }

@@ -1,7 +1,7 @@
 import type { StudyTask, UserContentHighlight } from "@/types";
 
 export const OFFLINE_DB_NAME = "shelf-offline";
-export const OFFLINE_DB_VERSION = 3;
+export const OFFLINE_DB_VERSION = 4;
 
 export const OFFLINE_STORES = {
   library: "library",
@@ -9,6 +9,7 @@ export const OFFLINE_STORES = {
   outbox: "outbox",
   highlights: "highlights",
   progressQueue: "progressQueue",
+  meta: "meta",
 } as const;
 
 export type LibraryCache = {
@@ -106,6 +107,9 @@ function openDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(OFFLINE_STORES.progressQueue)) {
         db.createObjectStore(OFFLINE_STORES.progressQueue, { keyPath: "key" });
+      }
+      if (!db.objectStoreNames.contains(OFFLINE_STORES.meta)) {
+        db.createObjectStore(OFFLINE_STORES.meta, { keyPath: "key" });
       }
     };
   });

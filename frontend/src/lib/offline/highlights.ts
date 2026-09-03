@@ -13,6 +13,7 @@ import {
   remapOutboxEntityId,
   removeOutbox,
 } from "./outbox";
+import { isOfflineMetaFresh, offlineMetaKey, touchOfflineMeta } from "./cacheMeta";
 import { isOnline, dispatchOfflineSync } from "./network";
 import { mergeHighlightLists, stripHighlightMeta, toLocalHighlight } from "./highlightMerge";
 import { AnalyticsEvents, track } from "@/lib/analytics";
@@ -75,6 +76,31 @@ async function deleteHighlightRow(id: string): Promise<void> {
   });
 }
 
+function isPendingLocalHighlight(row: LocalHighlight): boolean {
+  return (
+    row.localOnly ||
+    row.syncStatus === "pending" ||
+    row.syncStatus === "pending-delete"
+  );
+}
+
+async function readHighlightsForOfflinePage(
+  userId: string,
+  pageId: string,
+): Promise<LocalHighlight[]> {
+  const local = await readHighlightsForPage(userId, pageId);
+  const metaKey = offlineMetaKey("highlights", userId);
+  if (await isOfflineMetaFresh(metaKey)) return local;
+
+  const pendingOnly = local.filter(isPendingLocalHighlight);
+  await Promise.all(
+    local
+      .filter((row) => !isPendingLocalHighlight(row))
+      .map((row) => deleteHighlightRow(row.id)),
+  );
+  return pendingOnly;
+}
+
 async function upsertServerHighlights(
   userId: string,
   pageId: string,
@@ -108,6 +134,7 @@ export async function listHighlights(pageId: string): Promise<UserContentHighlig
       const { highlights } = await api.myContent.listHighlights(pageId);
       try {
         await upsertServerHighlights(userId, pageId, highlights);
+        await touchOfflineMeta(offlineMetaKey("highlights", userId));
         const fresh = await readHighlightsForPage(userId, pageId);
         return mergeHighlightLists(highlights, fresh, pageId);
       } catch {
@@ -120,7 +147,8 @@ export async function listHighlights(pageId: string): Promise<UserContentHighlig
     }
   }
 
-  return mergeHighlightLists([], local, pageId);
+  const offlineLocal = await readHighlightsForOfflinePage(userId, pageId);
+  return mergeHighlightLists([], offlineLocal, pageId);
 }
 
 export async function createHighlight(data: HighlightWriteInput): Promise<UserContentHighlight> {

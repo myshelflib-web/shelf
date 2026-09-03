@@ -1,5 +1,7 @@
 /** IndexedDB cache for whole PDF bytes — smooth reopen without re-download. */
 
+import { isCacheFresh } from "@/lib/cacheTtl";
+
 const DB_NAME = "shelf-pdf-cache";
 const DB_VERSION = 1;
 const STORE = "pdfs";
@@ -79,6 +81,10 @@ export async function peekCachedPdf(
       idbReq<PdfCacheRecord | undefined>(store.get(pageId))
     );
     if (!row?.data?.byteLength) return null;
+    if (!isCacheFresh(row.lastAccess)) {
+      void removeCachedPdf(pageId);
+      return null;
+    }
     void touchCachedPdf(pageId);
     return { version: row.version, data: row.data };
   } catch {
@@ -96,6 +102,10 @@ export async function getCachedPdf(
       idbReq<PdfCacheRecord | undefined>(store.get(pageId))
     );
     if (!row || row.version !== version) return null;
+    if (!isCacheFresh(row.lastAccess)) {
+      void removeCachedPdf(pageId);
+      return null;
+    }
     void touchCachedPdf(pageId);
     return row.data;
   } catch {

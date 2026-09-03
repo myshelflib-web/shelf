@@ -1,5 +1,6 @@
 import { api, isNetworkError } from "@/lib/api";
 import { getStoredUserId } from "@/lib/accountLocalState";
+import { isCacheFresh } from "@/lib/cacheTtl";
 import { applyBulkDeleteToTree } from "@/lib/explorerBulkDeleteTree";
 import type { buildBulkDeletePayload } from "@/lib/explorerSelection";
 import type { UserPageSummary, UserSubject } from "@/types";
@@ -17,19 +18,26 @@ export type ListSubjectsResult = {
 
 type DeletePayload = ReturnType<typeof buildBulkDeletePayload>;
 
-let memoryLibrary: ListSubjectsResult | null = null;
+type MemoryLibrary = ListSubjectsResult & { cachedAt: number };
+
+let memoryLibrary: MemoryLibrary | null = null;
 
 export function peekCachedLibrary(): ListSubjectsResult | null {
-  return memoryLibrary;
+  if (!memoryLibrary || !isCacheFresh(memoryLibrary.cachedAt)) {
+    memoryLibrary = null;
+    return null;
+  }
+  const { cachedAt: _cachedAt, ...rest } = memoryLibrary;
+  return rest;
 }
 
 export function findCachedSubject(slug: string): UserSubject | null {
   if (!slug) return null;
-  return memoryLibrary?.subjects.find((s) => s.slug === slug) ?? null;
+  return peekCachedLibrary()?.subjects.find((s) => s.slug === slug) ?? null;
 }
 
-function rememberLibrary(res: ListSubjectsResult) {
-  memoryLibrary = res;
+function rememberLibrary(res: ListSubjectsResult, cachedAt = Date.now()) {
+  memoryLibrary = { ...res, cachedAt };
 }
 
 async function getLibraryCache(userId: string): Promise<LibraryCache | null> {
@@ -43,6 +51,16 @@ async function getLibraryCache(userId: string): Promise<LibraryCache | null> {
   });
 }
 
+async function deleteLibraryCache(userId: string): Promise<void> {
+  await withStore(OFFLINE_STORES.library, "readwrite", async (store) => {
+    await new Promise<void>((resolve, reject) => {
+      const req = store.delete(userId);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error ?? new Error("IDB delete failed"));
+    });
+  });
+}
+
 async function putLibraryCache(cache: LibraryCache): Promise<void> {
   await withStore(OFFLINE_STORES.library, "readwrite", async (store) => {
     await new Promise<void>((resolve, reject) => {
@@ -51,6 +69,15 @@ async function putLibraryCache(cache: LibraryCache): Promise<void> {
       req.onerror = () => reject(req.error ?? new Error("IDB put failed"));
     });
   });
+}
+
+async function readFreshLibraryCache(userId: string): Promise<LibraryCache | null> {
+  const cache = await getLibraryCache(userId);
+  if (!cache) return null;
+  if (isCacheFresh(cache.cachedAt)) return cache;
+  await deleteLibraryCache(userId);
+  if (memoryLibrary) memoryLibrary = null;
+  return null;
 }
 
 function cacheAsListResult(cache: LibraryCache, opts?: {
@@ -84,13 +111,14 @@ export async function listSubjects(opts?: {
   if (isOnline()) {
     try {
       const res = await api.myContent.listSubjects(opts);
+      const cachedAt = Date.now();
       if (!opts?.q) {
-        if (res.subjects.length >= res.total) rememberLibrary(res);
+        if (res.subjects.length >= res.total) rememberLibrary(res, cachedAt);
         await putLibraryCache({
           userId,
           subjects: res.subjects,
           rootPages: res.rootPages ?? [],
-          cachedAt: Date.now(),
+          cachedAt,
         });
       }
       return res;
@@ -99,7 +127,7 @@ export async function listSubjects(opts?: {
     }
   }
 
-  const cache = await getLibraryCache(userId);
+  const cache = await readFreshLibraryCache(userId);
   if (!cache) {
     return { subjects: [], rootPages: [], page: 1, pageSize: 20, total: 0, totalPages: 1 };
   }
@@ -119,7 +147,9 @@ export async function listSubjects(opts?: {
     { ...cache, subjects },
     { page: opts?.page, pageSize: opts?.pageSize },
   );
-  if (!opts?.q && result.subjects.length >= result.total) rememberLibrary(result);
+  if (!opts?.q && result.subjects.length >= result.total) {
+    rememberLibrary(result, cache.cachedAt);
+  }
   return result;
 }
 
@@ -136,32 +166,36 @@ export async function patchLibraryCacheAfterDelete(
   let subjects = memoryLibrary?.subjects;
   let rootPages = memoryLibrary?.rootPages;
   if (!subjects || !rootPages) {
-    const cached = await getLibraryCache(userId);
+    const cached = await readFreshLibraryCache(userId);
     if (!cached) return;
     subjects = cached.subjects;
     rootPages = cached.rootPages;
   }
 
   const next = applyBulkDeleteToTree(payload, subjects, rootPages);
-  rememberLibrary({
-    subjects: next.subjects,
-    rootPages: next.rootPages,
-    page: 1,
-    pageSize: Math.max(next.subjects.length, 1),
-    total: next.subjects.length,
-    totalPages: 1,
-  });
+  const nextCachedAt = Date.now();
+  rememberLibrary(
+    {
+      subjects: next.subjects,
+      rootPages: next.rootPages,
+      page: 1,
+      pageSize: Math.max(next.subjects.length, 1),
+      total: next.subjects.length,
+      totalPages: 1,
+    },
+    nextCachedAt,
+  );
   await putLibraryCache({
     userId,
     subjects: next.subjects,
     rootPages: next.rootPages,
-    cachedAt: Date.now(),
+    cachedAt: nextCachedAt,
   });
 }
 
 export async function hasCachedLibrary(): Promise<boolean> {
   const userId = getStoredUserId();
   if (!userId) return false;
-  const cache = await getLibraryCache(userId);
+  const cache = await readFreshLibraryCache(userId);
   return Boolean(cache && cache.subjects.length > 0);
 }
