@@ -24,12 +24,8 @@ import { updatePageProgress } from "@/lib/offline/progress";
 import { requireOnline } from "@/lib/offline/notice";
 import { syncPageInTree } from "@/lib/myContentTree";
 import { emitContentChanged, emitPageRenamed, emitPageDeleted } from "@/lib/contentEvents";
-import {
-  buildBulkDeletePayload,
-  pageSelectionKey,
-} from "@/lib/explorerSelection";
-import { removePendingExplorerDelete } from "@/lib/pendingExplorerDeletes";
 import { removeCachedPdf } from "@/lib/pdfByteCache";
+import { runDeleteWithProgress } from "@/lib/deleteProgress";
 import {
   UserSubject,
   UserContentHighlight,
@@ -798,20 +794,20 @@ export function DocumentPane({
     if (!ok) return;
     const pageId = pageData.id;
     const title = pageData.title;
-    if (onPageDeleted) onPageDeleted();
-    else onNavigate(afterDeletePath(scope));
-    emitPageDeleted(pageId);
-    void removeCachedPdf(pageId);
-    void api.myContent.deletePage(pageId).catch(async () => {
-      removePendingExplorerDelete(
-        buildBulkDeletePayload(new Set([pageSelectionKey(pageId)]))
+    try {
+      await runDeleteWithProgress(`Deleting "${title}"…`, () =>
+        api.myContent.deletePage(pageId)
       );
-      emitContentChanged();
+      void removeCachedPdf(pageId);
+      emitPageDeleted(pageId);
+      if (onPageDeleted) onPageDeleted();
+      else onNavigate(afterDeletePath(scope));
+    } catch {
       await alert({
         title: "Delete failed",
         message: `Could not delete "${title}". Refresh the library and try again.`,
       });
-    });
+    }
   }, [pageData, scope, onNavigate, onPageDeleted, confirm, alert]);
 
   const startEditing = useCallback(() => {

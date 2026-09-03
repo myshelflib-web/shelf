@@ -66,6 +66,7 @@ import {
   deleteLibraryPdfPages,
   undoLibraryPdfPageDelete,
 } from "@/lib/deleteLibraryPdfPages";
+import { runDeleteWithProgress } from "@/lib/deleteProgress";
 import { clearPdfDeleteUndos, countPdfDeleteUndos } from "@/lib/pdfDeleteUndo";
 import { useInkSurface } from "@/hooks/useInkSurface";
 import { useAppDialog } from "@/hooks/useAppDialog";
@@ -881,14 +882,22 @@ export function PdfViewer({
     (pages: number[]) => {
       if (!canDeletePages || !numPages) return;
       void (async () => {
+        const label =
+          pages.length === 1
+            ? `Deleting page ${pages[0]}…`
+            : `Deleting ${pages.length} PDF pages…`;
         try {
-          const { highlights: next, undoCount: n } = await deleteLibraryPdfPages({
-            pageId: userTopicId,
-            deletedPages: pages,
-            numPagesBefore: numPages,
-            highlightsBefore: highlights,
-            viewPdfPage: currentPageRef.current,
-          });
+          const { highlights: next, undoCount: n } = await runDeleteWithProgress(
+            label,
+            () =>
+              deleteLibraryPdfPages({
+                pageId: userTopicId,
+                deletedPages: pages,
+                numPagesBefore: numPages,
+                highlightsBefore: highlights,
+                viewPdfPage: currentPageRef.current,
+              })
+          );
           onHighlightsChange(next);
           setUndoCount(n);
           const keepBefore = Math.min(

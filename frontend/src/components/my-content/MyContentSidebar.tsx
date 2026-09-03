@@ -29,14 +29,11 @@ import {
   buildBulkDeletePayload,
   buildSelectionLabels,
   pageSelectionKey,
-  topicSelectionKey,
   type ExplorerSelectionKey,
 } from "@/lib/explorerSelection";
 import { applyBulkDeleteToTree } from "@/lib/explorerBulkDeleteTree";
 import {
   mergeExplorerTreeWithPending,
-  pushPendingExplorerDelete,
-  removePendingExplorerDelete,
   applyPendingDeletesToSubjects,
 } from "@/lib/pendingExplorerDeletes";
 import {
@@ -45,9 +42,9 @@ import {
   moveTopicInTree,
 } from "@/lib/libraryMove";
 import { useAddContent } from "@/components/my-content/MyContentAddProvider";
+import { useExplorerDeletes } from "@/components/my-content/useExplorerDeletes";
 import { listSubjects } from "@/lib/offline/library";
 import { api } from "@/lib/api";
-import { removeCachedPdf } from "@/lib/pdfByteCache";
 import { listTasks } from "@/lib/offline/tasks";
 import { useScheduledPageHrefs } from "@/hooks/useScheduledPageHrefs";
 import clsx from "clsx";
@@ -66,7 +63,6 @@ import {
   contentChangeFromEvent,
   emitContentChanged,
   emitPageRenamed,
-  emitPageDeleted,
 } from "@/lib/contentEvents";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import { shelfSelectSidebarClass } from "@/lib/ui/fieldClasses";
@@ -172,7 +168,7 @@ export function MyContentSidebar({
   libraryModeTabs,
 }: MyContentSidebarProps) {
   const { openAdd } = useAddContent();
-  const { confirm, alert } = useAppDialog();
+  const { alert } = useAppDialog();
   const router = useRouter();
 
   const [sortCriterion, setSortCriterion] = useState<SortCriterion>(readSortCriterion);
@@ -196,7 +192,6 @@ export function MyContentSidebar({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<ExplorerSelectionKey>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
-  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const searching = debouncedQ.length > 0;
   const libraryMoveEnabled = !searching && !selectionMode;
@@ -473,75 +468,6 @@ export function MyContentSidebar({
     emitPageRenamed(pageId, title);
   };
 
-  const deleteTopic = async (
-    nb: UserSubject,
-    groupId: string,
-    title: string
-  ) => {
-    const ok = await confirm({
-      title: "Delete folder",
-      message: `Delete folder "${title}" and its files? This cannot be undone.`,
-      confirmLabel: "Delete",
-      danger: true,
-    });
-    if (!ok) return;
-    const payload = buildBulkDeletePayload(
-      new Set([topicSelectionKey(nb.id, groupId)])
-    );
-    const prevSubjects = subjects;
-    const prevPinned = pinnedExtra;
-    const prevRootPages = rootPages;
-    pushPendingExplorerDelete(payload);
-    setSubjects((s) => applyBulkDeleteToTree(payload, s, rootPages).subjects);
-    setPinnedExtra((p) => applyBulkDeleteToTree(payload, p, rootPages).subjects);
-    setRootPages((r) => applyBulkDeleteToTree(payload, subjects, r).rootPages);
-    try {
-      await api.myContent.deleteTopicGroup(nb.id, groupId);
-    } catch {
-      removePendingExplorerDelete(payload);
-      setSubjects(prevSubjects);
-      setPinnedExtra(prevPinned);
-      setRootPages(prevRootPages);
-      await alert({
-        title: "Delete failed",
-        message: `Could not delete folder "${title}". Refresh the library and try again.`,
-      });
-    }
-  };
-
-  const deletePage = async (pageId: string, title: string) => {
-    const ok = await confirm({
-      title: "Delete file",
-      message: `Delete file "${title}"? This cannot be undone.`,
-      confirmLabel: "Delete",
-      danger: true,
-    });
-    if (!ok) return;
-    const prevSubjects = subjects;
-    const prevPinned = pinnedExtra;
-    const prevRootPages = rootPages;
-    const payload = buildBulkDeletePayload(new Set([pageSelectionKey(pageId)]));
-    setSubjects((s) => applyBulkDeleteToTree(payload, s, rootPages).subjects);
-    setPinnedExtra((p) => applyBulkDeleteToTree(payload, p, rootPages).subjects);
-    setRootPages((r) => applyBulkDeleteToTree(payload, subjects, r).rootPages);
-    emitPageDeleted(pageId);
-    if (!workspaceMode) router.push("/my-content");
-    void removeCachedPdf(pageId);
-    void api.myContent
-      .deletePage(pageId)
-      .catch(async () => {
-        removePendingExplorerDelete(payload);
-        setSubjects(prevSubjects);
-        setPinnedExtra(prevPinned);
-        setRootPages(prevRootPages);
-        emitContentChanged();
-        await alert({
-          title: "Delete failed",
-          message: `Could not delete "${title}". Refresh the library and try again.`,
-        });
-      });
-  };
-
   const openPage = (page: UserPageSummary, href: string) => {
     const scope = scopeFromHref(href);
     if (workspaceMode && onOpenPage && scope) {
@@ -561,41 +487,21 @@ export function MyContentSidebar({
     [treeSubjects, filteredRootPages]
   );
 
-  const exitSelectionMode = () => {
+  const exitSelectionMode = useCallback(() => {
     setSelectionMode(false);
     setSelected(new Set());
     setBulkDeleteOpen(false);
-  };
+  }, []);
 
-  const handleBulkDelete = () => {
-    const payload = buildBulkDeletePayload(selected);
-    const prevSubjects = subjects;
-    const prevPinned = pinnedExtra;
-    const prevRootPages = rootPages;
-
-    pushPendingExplorerDelete(payload);
-    setBulkDeleting(true);
-    setSubjects((s) => applyBulkDeleteToTree(payload, s, rootPages).subjects);
-    setPinnedExtra((p) => applyBulkDeleteToTree(payload, p, rootPages).subjects);
-    setRootPages((r) => applyBulkDeleteToTree(payload, subjects, r).rootPages);
-    exitSelectionMode();
-
-    void api.myContent
-      .bulkDelete(payload)
-      .catch(async () => {
-        removePendingExplorerDelete(payload);
-        setSubjects(prevSubjects);
-        setPinnedExtra(prevPinned);
-        setRootPages(prevRootPages);
-        emitContentChanged();
-        await alert({
-          title: "Delete failed",
-          message:
-            "Could not delete the selected items. They have been restored — refresh the library and try again.",
-        });
-      })
-      .finally(() => setBulkDeleting(false));
-  };
+  const { deleteTopic, deletePage, handleBulkDelete } = useExplorerDeletes({
+    setSubjects,
+    setPinnedExtra,
+    setRootPages,
+    workspaceMode,
+    navigateHome: () => router.push("/my-content"),
+    selected,
+    exitSelectionMode,
+  });
 
   const handleReorderSubjects = (_orderedIds: string[]) => {
     /* Top-level folder order is controlled by Sort by only — no manual reorder. */
@@ -992,7 +898,7 @@ export function MyContentSidebar({
       open={bulkDeleteOpen}
       selected={selected}
       labels={selectionLabels}
-      deleting={bulkDeleting}
+      deleting={false}
       onClose={() => setBulkDeleteOpen(false)}
       onConfirm={handleBulkDelete}
     />
