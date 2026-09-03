@@ -66,7 +66,7 @@ import {
   deleteLibraryPdfPages,
   undoLibraryPdfPageDelete,
 } from "@/lib/deleteLibraryPdfPages";
-import { runDeleteWithProgress } from "@/lib/deleteProgress";
+import { runDeleteWithProgressUi, useDeleteProgress } from "@/components/DeleteProgressProvider";
 import { clearPdfDeleteUndos, countPdfDeleteUndos } from "@/lib/pdfDeleteUndo";
 import { useInkSurface } from "@/hooks/useInkSurface";
 import { useAppDialog } from "@/hooks/useAppDialog";
@@ -176,6 +176,7 @@ export function PdfViewer({
   officialSourceAttribution = null,
 }: PdfViewerProps) {
   const { alert } = useAppDialog();
+  const progress = useDeleteProgress();
   const isPhone = useIsPhone();
   const rootRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -887,7 +888,8 @@ export function PdfViewer({
             ? `Deleting page ${pages[0]}…`
             : `Deleting ${pages.length} PDF pages…`;
         try {
-          const { highlights: next, undoCount: n } = await runDeleteWithProgress(
+          const { highlights: next, undoCount: n } = await runDeleteWithProgressUi(
+            progress,
             label,
             () =>
               deleteLibraryPdfPages({
@@ -922,6 +924,7 @@ export function PdfViewer({
       highlights,
       numPages,
       onHighlightsChange,
+      progress,
       userTopicId,
     ]
   );

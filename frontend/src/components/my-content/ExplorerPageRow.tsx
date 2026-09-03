@@ -10,6 +10,7 @@ import {
   Pencil,
   Share2,
   Youtube,
+  Loader2,
 } from "lucide-react";
 import { UserPageSummary } from "@/types";
 import {
@@ -30,6 +31,7 @@ import type { DragEvent } from "react";
 import { useAppDialog } from "@/hooks/useAppDialog";
 import type { ExplorerDropHint } from "@/components/my-content/useExplorerReorderDrop";
 import type { ReorderDragPayload } from "@/lib/libraryReorder";
+import { useDeleteProgressOptional } from "@/components/DeleteProgressProvider";
 
 interface ExplorerPageRowProps {
   page: UserPageSummary;
@@ -88,6 +90,7 @@ export function ExplorerPageRow({
 }: ExplorerPageRowProps) {
   const { prompt } = useAppDialog();
   const key = pageSelectionKey(page.id);
+  const deleting = Boolean(useDeleteProgressOptional()?.deletingKeys.has(key));
   const isScheduled = scheduledHrefs.has(href);
   const scope = scopeFromHref(href);
 
@@ -174,10 +177,15 @@ export function ExplorerPageRow({
         {...tabDragProps}
         role="button"
         tabIndex={0}
-        onClick={() => (selectionMode ? toggle() : onOpenPage(page, href))}
+        aria-busy={deleting || undefined}
+        onClick={() => {
+          if (deleting) return;
+          selectionMode ? toggle() : onOpenPage(page, href);
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
+            if (deleting) return;
             selectionMode ? toggle() : onOpenPage(page, href);
           }
         }}
@@ -186,7 +194,8 @@ export function ExplorerPageRow({
           isActive
             ? "bg-[var(--bg-elevated)] text-[var(--text-primary)]"
             : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]",
-          enablePageDrag && !selectionMode && !libraryMoveEnabled && "active:cursor-grabbing"
+          enablePageDrag && !selectionMode && !libraryMoveEnabled && "active:cursor-grabbing",
+          deleting && "opacity-50 pointer-events-none"
         )}
       >
         {selectionMode ? (
@@ -260,14 +269,18 @@ export function ExplorerPageRow({
             {page.starred && (
               <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
             )}
-            <button
-              type="button"
-              className="p-1 rounded text-[var(--text-muted)] hover:text-red-500 opacity-0 group-hover:opacity-100"
-              title="Delete file"
-              onClick={() => onDeletePage(page.id, page.title)}
-            >
-              <Trash2 className="w-3 h-3" />
-            </button>
+            {deleting ? (
+              <Loader2 className="w-3 h-3 animate-spin text-[var(--accent)]" />
+            ) : (
+              <button
+                type="button"
+                className="p-1 rounded text-[var(--text-muted)] hover:text-red-500 opacity-0 group-hover:opacity-100"
+                title="Delete file"
+                onClick={() => onDeletePage(page.id, page.title)}
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            )}
           </span>
         )}
       </div>

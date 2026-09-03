@@ -1,5 +1,7 @@
 import { api, isNetworkError } from "@/lib/api";
 import { getStoredUserId } from "@/lib/accountLocalState";
+import { applyBulkDeleteToTree } from "@/lib/explorerBulkDeleteTree";
+import type { buildBulkDeletePayload } from "@/lib/explorerSelection";
 import type { UserPageSummary, UserSubject } from "@/types";
 import { type LibraryCache, OFFLINE_STORES, withStore } from "./db";
 import { isOnline } from "./network";
@@ -12,6 +14,8 @@ export type ListSubjectsResult = {
   total: number;
   totalPages: number;
 };
+
+type DeletePayload = ReturnType<typeof buildBulkDeletePayload>;
 
 let memoryLibrary: ListSubjectsResult | null = null;
 
@@ -117,6 +121,42 @@ export async function listSubjects(opts?: {
   );
   if (!opts?.q && result.subjects.length >= result.total) rememberLibrary(result);
   return result;
+}
+
+/**
+ * Drop deleted ids from memory + IndexedDB so offline/reload fallback
+ * cannot resurrect items the API already removed.
+ */
+export async function patchLibraryCacheAfterDelete(
+  payload: DeletePayload
+): Promise<void> {
+  const userId = getStoredUserId();
+  if (!userId) return;
+
+  let subjects = memoryLibrary?.subjects;
+  let rootPages = memoryLibrary?.rootPages;
+  if (!subjects || !rootPages) {
+    const cached = await getLibraryCache(userId);
+    if (!cached) return;
+    subjects = cached.subjects;
+    rootPages = cached.rootPages;
+  }
+
+  const next = applyBulkDeleteToTree(payload, subjects, rootPages);
+  rememberLibrary({
+    subjects: next.subjects,
+    rootPages: next.rootPages,
+    page: 1,
+    pageSize: Math.max(next.subjects.length, 1),
+    total: next.subjects.length,
+    totalPages: 1,
+  });
+  await putLibraryCache({
+    userId,
+    subjects: next.subjects,
+    rootPages: next.rootPages,
+    cachedAt: Date.now(),
+  });
 }
 
 export async function hasCachedLibrary(): Promise<boolean> {

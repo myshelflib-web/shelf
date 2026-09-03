@@ -16,7 +16,7 @@ import { AppDialogProvider } from "@/hooks/useAppDialog";
 import { AppHotkeys } from "@/components/AppHotkeys";
 import { PwaInstallHint } from "@/components/PwaInstallHint";
 import { PwaRegister } from "@/components/PwaRegister";
-import { DeleteProgressBar } from "@/components/DeleteProgressBar";
+import { DeleteProgressProvider } from "@/components/DeleteProgressProvider";
 import { OfflineSyncProvider } from "@/components/OfflineSyncProvider";
 import { OfflineNotice } from "@/components/OfflineNotice";
 import { CompactPortraitSync } from "@/components/CompactPortraitSync";
@@ -72,14 +72,15 @@ export default function RootLayout({
                 <HotkeysProvider>
                   <FocusMediaProvider>
                   <AppDialogProvider>
+                    <DeleteProgressProvider>
                     <PwaRegister />
                     <CompactPortraitSync />
                     <OfflineSyncProvider />
                     <OfflineNotice />
                     <AppHotkeys />
                     {children}
-                    <DeleteProgressBar />
                     <PwaInstallHint />
+                    </DeleteProgressProvider>
                   </AppDialogProvider>
                   </FocusMediaProvider>
                 </HotkeysProvider>

@@ -25,7 +25,12 @@ import { requireOnline } from "@/lib/offline/notice";
 import { syncPageInTree } from "@/lib/myContentTree";
 import { emitContentChanged, emitPageRenamed, emitPageDeleted } from "@/lib/contentEvents";
 import { removeCachedPdf } from "@/lib/pdfByteCache";
-import { runDeleteWithProgress } from "@/lib/deleteProgress";
+import { patchLibraryCacheAfterDelete } from "@/lib/offline/library";
+import { buildBulkDeletePayload, pageSelectionKey } from "@/lib/explorerSelection";
+import {
+  runDeleteWithProgressUi,
+  useDeleteProgress,
+} from "@/components/DeleteProgressProvider";
 import {
   UserSubject,
   UserContentHighlight,
@@ -354,6 +359,7 @@ export function DocumentPane({
   signInGate,
 }: DocumentPaneProps) {
   const { confirm, alert } = useAppDialog();
+  const progress = useDeleteProgress();
   const isPhone = useIsPhone();
   const scope = tab.scope;
   const [pageData, setPageData] = useState<LoadedPage | null>(null);
@@ -794,12 +800,19 @@ export function DocumentPane({
     if (!ok) return;
     const pageId = pageData.id;
     const title = pageData.title;
+    const payload = buildBulkDeletePayload(
+      new Set([pageSelectionKey(pageId)])
+    );
     try {
-      await runDeleteWithProgress(`Deleting "${title}"…`, () =>
-        api.myContent.deletePage(pageId)
+      await runDeleteWithProgressUi(
+        progress,
+        `Deleting "${title}"…`,
+        () => api.myContent.deletePage(pageId),
+        [pageSelectionKey(pageId)]
       );
       void removeCachedPdf(pageId);
       emitPageDeleted(pageId);
+      void patchLibraryCacheAfterDelete(payload);
       if (onPageDeleted) onPageDeleted();
       else onNavigate(afterDeletePath(scope));
     } catch {
@@ -808,7 +821,7 @@ export function DocumentPane({
         message: `Could not delete "${title}". Refresh the library and try again.`,
       });
     }
-  }, [pageData, scope, onNavigate, onPageDeleted, confirm, alert]);
+  }, [pageData, scope, onNavigate, onPageDeleted, confirm, alert, progress]);
 
   const startEditing = useCallback(() => {
     if (!pageData || pageData.isPreloaded) return;

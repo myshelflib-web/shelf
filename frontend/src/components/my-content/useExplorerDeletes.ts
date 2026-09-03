@@ -11,11 +11,13 @@ import {
   topicSelectionKey,
   type ExplorerSelectionKey,
 } from "@/lib/explorerSelection";
-import {
-  pushPendingExplorerDelete,
-} from "@/lib/pendingExplorerDeletes";
+import { pushPendingExplorerDelete } from "@/lib/pendingExplorerDeletes";
 import { emitContentChanged, emitPageDeleted } from "@/lib/contentEvents";
-import { runDeleteWithProgress } from "@/lib/deleteProgress";
+import { patchLibraryCacheAfterDelete } from "@/lib/offline/library";
+import {
+  runDeleteWithProgressUi,
+  useDeleteProgress,
+} from "@/components/DeleteProgressProvider";
 import { useAppDialog } from "@/hooks/useAppDialog";
 
 type UseExplorerDeletesArgs = {
@@ -39,6 +41,16 @@ function applyDeleteLocally(
   setRootPages((r) => applyBulkDeleteToTree(payload, [], r).rootPages);
 }
 
+function selectionKeysForPayload(
+  payload: ReturnType<typeof buildBulkDeletePayload>
+): string[] {
+  return [
+    ...payload.subjectIds.map((id) => `subject:${id}`),
+    ...payload.topicGroups.map((g) => `topic:${g.subjectId}:${g.groupId}`),
+    ...payload.pageIds.map((id) => pageSelectionKey(id)),
+  ];
+}
+
 /** Library explorer deletes: progress UI, remove from tree only after API success. */
 export function useExplorerDeletes({
   setSubjects,
@@ -50,6 +62,7 @@ export function useExplorerDeletes({
   exitSelectionMode,
 }: UseExplorerDeletesArgs) {
   const { confirm, alert } = useAppDialog();
+  const progress = useDeleteProgress();
 
   const deleteTopic = useCallback(
     async (nb: UserSubject, groupId: string, title: string) => {
@@ -63,9 +76,13 @@ export function useExplorerDeletes({
       const payload = buildBulkDeletePayload(
         new Set([topicSelectionKey(nb.id, groupId)])
       );
+      const keys = selectionKeysForPayload(payload);
       try {
-        await runDeleteWithProgress(`Deleting folder "${title}"…`, () =>
-          api.myContent.deleteTopicGroup(nb.id, groupId)
+        await runDeleteWithProgressUi(
+          progress,
+          `Deleting folder "${title}"…`,
+          () => api.myContent.deleteTopicGroup(nb.id, groupId),
+          keys
         );
         pushPendingExplorerDelete(payload);
         applyDeleteLocally(
@@ -74,6 +91,7 @@ export function useExplorerDeletes({
           setPinnedExtra,
           setRootPages
         );
+        void patchLibraryCacheAfterDelete(payload);
       } catch {
         await alert({
           title: "Delete failed",
@@ -81,7 +99,7 @@ export function useExplorerDeletes({
         });
       }
     },
-    [alert, confirm, setPinnedExtra, setRootPages, setSubjects]
+    [alert, confirm, progress, setPinnedExtra, setRootPages, setSubjects]
   );
 
   const deletePage = useCallback(
@@ -96,9 +114,13 @@ export function useExplorerDeletes({
       const payload = buildBulkDeletePayload(
         new Set([pageSelectionKey(pageId)])
       );
+      const keys = selectionKeysForPayload(payload);
       try {
-        await runDeleteWithProgress(`Deleting "${title}"…`, () =>
-          api.myContent.deletePage(pageId)
+        await runDeleteWithProgressUi(
+          progress,
+          `Deleting "${title}"…`,
+          () => api.myContent.deletePage(pageId),
+          keys
         );
         void removeCachedPdf(pageId);
         emitPageDeleted(pageId);
@@ -108,6 +130,7 @@ export function useExplorerDeletes({
           setPinnedExtra,
           setRootPages
         );
+        void patchLibraryCacheAfterDelete(payload);
         if (!workspaceMode) navigateHome();
       } catch {
         await alert({
@@ -120,6 +143,7 @@ export function useExplorerDeletes({
       alert,
       confirm,
       navigateHome,
+      progress,
       setPinnedExtra,
       setRootPages,
       setSubjects,
@@ -134,15 +158,17 @@ export function useExplorerDeletes({
       payload.topicGroups.length +
       payload.pageIds.length;
     const label =
-      count === 1
-        ? "Deleting 1 item…"
-        : `Deleting ${count} items…`;
+      count === 1 ? "Deleting 1 item…" : `Deleting ${count} items…`;
+    const keys = selectionKeysForPayload(payload);
     exitSelectionMode();
 
     void (async () => {
       try {
-        await runDeleteWithProgress(label, () =>
-          api.myContent.bulkDelete(payload)
+        await runDeleteWithProgressUi(
+          progress,
+          label,
+          () => api.myContent.bulkDelete(payload),
+          keys
         );
         pushPendingExplorerDelete(payload);
         applyDeleteLocally(
@@ -151,9 +177,9 @@ export function useExplorerDeletes({
           setPinnedExtra,
           setRootPages
         );
+        void patchLibraryCacheAfterDelete(payload);
         for (const pageId of payload.pageIds) {
           void removeCachedPdf(pageId);
-          // Close open reader tabs; pending already covers refetch races.
           emitContentChanged({ type: "page-deleted", pageId });
         }
       } catch {
@@ -167,6 +193,7 @@ export function useExplorerDeletes({
   }, [
     alert,
     exitSelectionMode,
+    progress,
     selected,
     setPinnedExtra,
     setRootPages,
