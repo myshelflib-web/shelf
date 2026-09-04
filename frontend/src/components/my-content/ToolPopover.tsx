@@ -60,17 +60,18 @@ export function ToolPopover({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    const onDown = (e: Event) => {
+    // pointerup: closing on pointerdown interrupts text-selection drags.
+    const onUp = (e: Event) => {
       const target = e.target as Node;
       if (panelRef.current?.contains(target)) return;
       if (anchorEl?.contains(target)) return;
       onClose();
     };
     document.addEventListener("keydown", onKey);
-    document.addEventListener("pointerdown", onDown, true);
+    document.addEventListener("pointerup", onUp, true);
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.removeEventListener("pointerdown", onDown, true);
+      document.removeEventListener("pointerup", onUp, true);
     };
   }, [open, onClose, anchorEl]);
 

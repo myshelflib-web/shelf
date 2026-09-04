@@ -250,6 +250,8 @@
   -webkit-text-fill-color: inherit;
   box-decoration-break: clone;
   -webkit-box-decoration-break: clone;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .prose-content mark.highlight-yellow {

@@ -124,6 +124,7 @@ export function HtmlAnnotatedReader({
         annotationGate={annotationGate}
         clipMode={!editing && mode === "clip"}
         eraseMode={!editing && mode === "erase"}
+        highlightMode={!editing && mode === "highlight"}
         preferredHighlightColorId={highlightColorId}
         readingWidth={readingWidth}
         contentScale={scale}

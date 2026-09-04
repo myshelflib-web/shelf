@@ -24,6 +24,7 @@ export function PersonalContentArea({
   onContentChange,
   clipMode = false,
   eraseMode = false,
+  highlightMode = false,
   preferredHighlightColorId = "yellow",
   readingWidth = "comfortable",
   contentScale = 1,
@@ -75,6 +76,14 @@ export function PersonalContentArea({
   const highlightsRef = useRef(highlights);
   highlightsRef.current = highlights;
   const droppedHighlightIds = useRef(new Set<string>());
+  const selectGenRef = useRef(0);
+  const highlightModeRef = useRef(highlightMode);
+  highlightModeRef.current = highlightMode;
+  const preferredColorRef = useRef(preferredHighlightColorId);
+  preferredColorRef.current = preferredHighlightColorId;
+  const saveHighlightRef = useRef<(color: string, note?: string) => void>(
+    () => undefined
+  );
 
   const commitHighlights = (next: UserContentHighlight[]) => {
     highlightsRef.current = next;
@@ -228,29 +237,36 @@ export function PersonalContentArea({
 
   const handleMouseUp = useCallback(() => {
     if (editing || readOnly || clipMode || eraseMode) return;
+    const gen = ++selectGenRef.current;
     // Selection is often finalized after pointerup handlers return (Safari /
     // trackpad). Read it on the next frame so the highlight menu can open.
     window.requestAnimationFrame(() => {
+      if (gen !== selectGenRef.current) return;
       if (editing || readOnly || clipMode || eraseMode) return;
       const sel = window.getSelection();
       const container = containerRef.current;
-      if (!sel || sel.isCollapsed || !container) {
-        setSelection(null);
+      const contentRoot =
+        (container?.querySelector(".personal-content") as HTMLElement | null) ??
+        container;
+      if (!sel || sel.isCollapsed || !contentRoot) {
+        // Do not clear an existing menu from a stale collapsed read — only
+        // clear when this gesture produced no range.
+        if (gen === selectGenRef.current) setSelection(null);
         return;
       }
       if (sel.rangeCount < 1) {
-        setSelection(null);
+        if (gen === selectGenRef.current) setSelection(null);
         return;
       }
       const range = sel.getRangeAt(0);
-      if (!container.contains(range.commonAncestorContainer)) {
-        setSelection(null);
+      if (!contentRoot.contains(range.commonAncestorContainer)) {
+        if (gen === selectGenRef.current) setSelection(null);
         return;
       }
 
       const text = sel.toString().trim();
       if (text.length < 3) {
-        setSelection(null);
+        if (gen === selectGenRef.current) setSelection(null);
         return;
       }
 
@@ -260,13 +276,15 @@ export function PersonalContentArea({
           (r) => r.width > 0 || r.height > 0
         );
         if (clientRects.length === 0) {
-          setSelection(null);
+          if (gen === selectGenRef.current) setSelection(null);
           return;
         }
         rect = clientRects[0]!;
       }
+      // Offsets must match applyHighlightsToHtml (plain text of the article
+      // root), not the scroll container.
       const preRange = document.createRange();
-      preRange.selectNodeContents(container);
+      preRange.selectNodeContents(contentRoot);
       preRange.setEnd(range.startContainer, range.startOffset);
       const startOffset = preRange.toString().length;
       const next = {
@@ -276,6 +294,14 @@ export function PersonalContentArea({
         endOffset: startOffset + text.length,
       };
       selectionRef.current = next;
+      setActiveHighlight(null);
+      if (highlightModeRef.current) {
+        // Highlighter tool: apply preferred color immediately (PDF pen-like).
+        setSelection(null);
+        window.getSelection()?.removeAllRanges();
+        saveHighlightRef.current?.(preferredColorRef.current);
+        return;
+      }
       setSelection(next);
     });
   }, [editing, readOnly, clipMode, eraseMode]);
@@ -283,6 +309,7 @@ export function PersonalContentArea({
   const removeHighlightNow = (id: string) => {
     commitHighlights(highlightsRef.current.filter((h) => h.id !== id));
     setActiveHighlight(null);
+    setSelection(null);
     if (id.startsWith("tmp-")) {
       droppedHighlightIds.current.add(id);
       return;
@@ -333,6 +360,7 @@ export function PersonalContentArea({
     };
     commitHighlights([...highlightsRef.current, optimistic]);
     setSelection(null);
+    setActiveHighlight(null);
     window.getSelection()?.removeAllRanges();
     void createHighlight({
       userTopicId,
@@ -357,6 +385,7 @@ export function PersonalContentArea({
       });
     return optimistic;
   };
+  saveHighlightRef.current = saveHighlight;
 
   if (editing) {
     return (

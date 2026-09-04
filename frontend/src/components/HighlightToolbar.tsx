@@ -46,13 +46,13 @@ export function HighlightToolbar({
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Defer outside-dismiss so the same gesture that opened the menu
-    // (pointerup → mount) cannot immediately close it via a trailing event.
+    // Close on pointerup (not pointerdown) so starting a new text selection
+    // is not cancelled by an immediate state update mid-gesture.
     let armed = false;
     const armTimer = window.setTimeout(() => {
       armed = true;
     }, 0);
-    const onDown = (e: Event) => {
+    const onUp = (e: Event) => {
       if (!armed) return;
       if (rootRef.current?.contains(e.target as Node)) return;
       onClose();
@@ -60,11 +60,11 @@ export function HighlightToolbar({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
-    document.addEventListener("pointerdown", onDown, true);
+    document.addEventListener("pointerup", onUp, true);
     document.addEventListener("keydown", onKey);
     return () => {
       window.clearTimeout(armTimer);
-      document.removeEventListener("pointerdown", onDown, true);
+      document.removeEventListener("pointerup", onUp, true);
       document.removeEventListener("keydown", onKey);
     };
   }, [onClose]);
@@ -99,7 +99,10 @@ export function HighlightToolbar({
             <button
               key={c.id}
               type="button"
-              onClick={() => guard(() => onHighlight(c.id), "Highlight and annotate")}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() =>
+                guard(() => onHighlight(c.id), "Highlight and annotate")
+              }
               className={`w-5 h-5 rounded-full shrink-0 transition-transform ${
                 locked ? "cursor-not-allowed opacity-70" : "hover:scale-110"
               }`}
@@ -129,6 +132,7 @@ export function HighlightToolbar({
       {onNote && (
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => onNote && guard(onNote, "Highlight and annotate")}
           className={`flex items-center gap-1.5 text-[13px] font-medium leading-none ${
             locked ? "cursor-not-allowed opacity-70" : "hover:opacity-90"
@@ -156,6 +160,7 @@ export function HighlightToolbar({
       {onAsk && (
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => onAsk && guard(onAsk, "Use Study AI")}
           className={`flex items-center gap-1.5 text-[13px] font-medium leading-none ${
             locked ? "cursor-not-allowed opacity-70" : "hover:opacity-90"
@@ -181,6 +186,7 @@ export function HighlightToolbar({
           />
           <button
             type="button"
+            onMouseDown={(e) => e.preventDefault()}
             onClick={onRemove}
             className="flex items-center justify-center w-7 h-7 -mr-0.5 rounded-lg text-[#f87171] hover:bg-red-500/15"
             title="Remove highlight"

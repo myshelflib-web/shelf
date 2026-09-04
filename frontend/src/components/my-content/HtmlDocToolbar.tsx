@@ -79,6 +79,10 @@ export function HtmlDocToolbar({
   const eraseBtnRef = useRef<HTMLButtonElement>(null);
   const [highlightOpen, setHighlightOpen] = useState(false);
   const [eraseOpen, setEraseOpen] = useState(false);
+  const [highlightAnchor, setHighlightAnchor] = useState<HTMLElement | null>(
+    null
+  );
+  const [eraseAnchor, setEraseAnchor] = useState<HTMLElement | null>(null);
 
   const lockedTool = guestLocked
     ? "opacity-45 cursor-not-allowed saturate-[0.85]"
@@ -121,19 +125,21 @@ export function HtmlDocToolbar({
           label={
             guestLocked
               ? lockedFeatureLabel(annotationGate, "highlight with pen")
-              : "Highlighter — select text, then pick a color"
+              : "Highlighter — select text to apply the chosen color"
           }
           active={mode === "highlight"}
           className={lockedTool}
           aria-disabled={guestLocked}
-          onClick={() => {
+          onClick={(e) => {
             if (blocked("Highlight and annotate")) return;
+            const anchor = e.currentTarget;
+            setHighlightAnchor(anchor);
+            setEraseOpen(false);
             if (mode === "highlight") {
               setHighlightOpen((v) => !v);
               return;
             }
             setMode("highlight");
-            setEraseOpen(false);
             setHighlightOpen(true);
           }}
         >
@@ -150,14 +156,15 @@ export function HtmlDocToolbar({
           active={mode === "erase"}
           className={lockedTool}
           aria-disabled={guestLocked}
-          onClick={() => {
+          onClick={(e) => {
             if (blocked("Highlight and annotate")) return;
+            setEraseAnchor(e.currentTarget);
+            setHighlightOpen(false);
             if (mode === "erase") {
               setEraseOpen((v) => !v);
               return;
             }
             setMode("erase");
-            setHighlightOpen(false);
             setEraseOpen(true);
           }}
         >
@@ -266,12 +273,12 @@ export function HtmlDocToolbar({
       <ToolPopover
         open={highlightOpen && mode === "highlight" && !guestLocked}
         onClose={() => setHighlightOpen(false)}
-        anchorEl={highlightBtnRef.current}
+        anchorEl={highlightAnchor ?? highlightBtnRef.current}
         title="Highlight color"
       >
         <p className="text-[11px] text-[var(--text-muted)] mb-2.5 leading-relaxed">
-          Select text on the page — a menu appears to highlight, add a note, or
-          ask Study AI. Preferred color:
+          Pick a color, then select text on the page — it highlights immediately.
+          Switch to the pointer tool for the full Note / Ask AI menu.
         </p>
         <ColorSwatchGrid>
           {HIGHLIGHT_COLORS.map((c) => (
@@ -292,7 +299,7 @@ export function HtmlDocToolbar({
       <ToolPopover
         open={eraseOpen && mode === "erase" && !guestLocked}
         onClose={() => setEraseOpen(false)}
-        anchorEl={eraseBtnRef.current}
+        anchorEl={eraseAnchor ?? eraseBtnRef.current}
         title="Eraser"
       >
         <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
