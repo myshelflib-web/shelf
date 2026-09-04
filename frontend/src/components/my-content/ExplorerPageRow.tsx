@@ -1,6 +1,7 @@
 "use client";
 
 import clsx from "clsx";
+import { useRef, useState, type DragEvent } from "react";
 import {
   CheckCircle2,
   Star,
@@ -25,13 +26,16 @@ import {
   type ExplorerSelectionKey,
 } from "@/lib/explorerSelection";
 import { ExplorerSelectionToggle } from "@/components/my-content/ExplorerSelectionToggle";
-import { ExplorerDropLine } from "@/components/my-content/ExplorerDropLine";
-import { ExplorerDragGrip } from "@/components/my-content/ExplorerDragGrip";
-import type { DragEvent } from "react";
 import { useAppDialog } from "@/hooks/useAppDialog";
 import type { ExplorerDropHint } from "@/components/my-content/useExplorerReorderDrop";
 import type { ReorderDragPayload } from "@/lib/libraryReorder";
 import { useDeleteProgressOptional } from "@/components/DeleteProgressProvider";
+import {
+  beforeIdForPlace,
+  dropPlaceFromY,
+  relatedStillInside,
+  type DropPlace,
+} from "@/components/my-content/explorerRowDrag";
 
 interface ExplorerPageRowProps {
   page: UserPageSummary;
@@ -44,9 +48,9 @@ interface ExplorerPageRowProps {
   libraryMoveEnabled?: boolean;
   subjectId?: string | null;
   topicGroupId?: string | null;
-  showPageDrop?: boolean;
   pageIds?: string[];
-  dropHint?: ExplorerDropHint | null;
+  activeDrag?: ReorderDragPayload | null;
+  getActiveDrag?: () => ReorderDragPayload | null;
   startReorderDrag?: (payload: ReorderDragPayload, e: DragEvent) => void;
   allowReorderDrop?: (hint: ExplorerDropHint, e: DragEvent) => void;
   finishReorderDrop?: (
@@ -74,9 +78,9 @@ export function ExplorerPageRow({
   libraryMoveEnabled = false,
   subjectId = null,
   topicGroupId = null,
-  showPageDrop = false,
   pageIds = [],
-  dropHint,
+  activeDrag = null,
+  getActiveDrag,
   startReorderDrag,
   allowReorderDrop,
   finishReorderDrop,
@@ -93,201 +97,212 @@ export function ExplorerPageRow({
   const deleting = Boolean(useDeleteProgressOptional()?.deletingKeys.has(key));
   const isScheduled = scheduledHrefs.has(href);
   const scope = scopeFromHref(href);
+  const suppressClickRef = useRef(false);
+  const [dropPlace, setDropPlace] = useState<DropPlace | null>(null);
 
-  const pageDropHint = (): ExplorerDropHint | null => {
+  const canMove = Boolean(
+    libraryMoveEnabled && !selectionMode && startReorderDrag
+  );
+  const canTabDrag = Boolean(
+    enablePageDrag && scope && !selectionMode && !canMove
+  );
+  const dragging = activeDrag?.kind === "page" && activeDrag.id === page.id;
+
+  const pageHint = (beforePageId: string | null): ExplorerDropHint => {
     if (topicGroupId && subjectId) {
       return {
         kind: "page-topic",
         subjectId,
         topicGroupId,
-        beforePageId: page.id,
+        beforePageId,
       };
     }
     if (subjectId) {
       return {
         kind: "page-notebook",
         subjectId,
-        beforePageId: page.id,
+        beforePageId,
       };
     }
-    return { kind: "page-root", beforePageId: page.id };
+    return { kind: "page-root", beforePageId };
   };
 
-  const dropActive = (() => {
-    const hint = pageDropHint();
-    if (!hint || !dropHint) return false;
-    if (hint.kind === "page-root" && dropHint.kind === "page-root") {
-      return dropHint.beforePageId === hint.beforePageId;
-    }
-    if (hint.kind === "page-notebook" && dropHint.kind === "page-notebook") {
-      return (
-        dropHint.subjectId === hint.subjectId &&
-        dropHint.beforePageId === hint.beforePageId
-      );
-    }
-    if (hint.kind === "page-topic" && dropHint.kind === "page-topic") {
-      return (
-        dropHint.subjectId === hint.subjectId &&
-        dropHint.topicGroupId === hint.topicGroupId &&
-        dropHint.beforePageId === hint.beforePageId
-      );
-    }
-    return false;
-  })();
+  const attachTabMime = (e: DragEvent) => {
+    if (!enablePageDrag || !scope) return;
+    const payload: ShelfPageDragPayload = {
+      href,
+      title: page.title,
+      pageId: page.id,
+      scope: scope as PersonalPageReaderScope,
+    };
+    e.dataTransfer.setData(SHELF_PAGE_MIME, JSON.stringify(payload));
+  };
 
-  const tabDragProps =
-    enablePageDrag && scope && !selectionMode && !libraryMoveEnabled
-      ? {
-          draggable: true as const,
-          onDragStart: (e: DragEvent) => {
-            const payload: ShelfPageDragPayload = {
-              href,
-              title: page.title,
-              pageId: page.id,
-              scope: scope as PersonalPageReaderScope,
-            };
-            e.dataTransfer.setData(SHELF_PAGE_MIME, JSON.stringify(payload));
-            e.dataTransfer.setData("text/plain", href);
-            e.dataTransfer.effectAllowed = "copy";
-          },
-        }
-      : {};
-
-  const toggle = () =>
-    onSelectionChange(toggleSelectionKey(selected, key));
-
-  const hint = pageDropHint();
+  const toggle = () => onSelectionChange(toggleSelectionKey(selected, key));
 
   return (
-    <div>
-      {libraryMoveEnabled && !selectionMode && hint && allowReorderDrop && (
-        <>
-          <ExplorerDropLine active={showPageDrop && dropActive} />
-          <div
-            className="h-0"
-            onDragOver={(e) => allowReorderDrop(hint, e)}
-            onDragLeave={clearDropHint}
-            onDrop={(e) =>
-              void finishReorderDrop?.(hint, e, { pageIds })
-            }
-          />
-        </>
-      )}
-      <div
-        {...tabDragProps}
-        role="button"
-        tabIndex={0}
-        aria-busy={deleting || undefined}
-        onClick={() => {
+    <div
+      draggable={canMove || canTabDrag}
+      role="button"
+      tabIndex={0}
+      aria-busy={deleting || undefined}
+      title={canMove ? `${page.title} — drag to move` : page.title}
+      onDragStart={(e) => {
+        if (deleting) {
+          e.preventDefault();
+          return;
+        }
+        suppressClickRef.current = false;
+        if (canMove) {
+          startReorderDrag?.(
+            {
+              kind: "page",
+              id: page.id,
+              subjectId,
+              topicGroupId,
+            },
+            e
+          );
+          attachTabMime(e);
+          return;
+        }
+        if (canTabDrag && scope) {
+          attachTabMime(e);
+          e.dataTransfer.setData("text/plain", href);
+          e.dataTransfer.effectAllowed = "copy";
+        }
+      }}
+      onDragEnd={() => {
+        if (canMove) suppressClickRef.current = true;
+        setDropPlace(null);
+        clearActiveDrag?.();
+      }}
+      onDragOver={(e) => {
+        const drag = getActiveDrag?.();
+        if (!canMove || drag?.kind !== "page" || drag.id === page.id) return;
+        const place = dropPlaceFromY(e);
+        const hint = pageHint(beforeIdForPlace(pageIds, page.id, place));
+        allowReorderDrop?.(hint, e);
+        setDropPlace((prev) => (prev === place ? prev : place));
+      }}
+      onDragLeave={(e) => {
+        if (relatedStillInside(e.currentTarget, e.relatedTarget)) return;
+        setDropPlace(null);
+        clearDropHint?.();
+      }}
+      onDrop={(e) => {
+        const drag = getActiveDrag?.();
+        setDropPlace(null);
+        if (!canMove || drag?.kind !== "page" || drag.id === page.id) return;
+        const place = dropPlaceFromY(e);
+        const hint = pageHint(beforeIdForPlace(pageIds, page.id, place));
+        void finishReorderDrop?.(hint, e, { pageIds });
+        suppressClickRef.current = true;
+      }}
+      onClick={() => {
+        if (suppressClickRef.current) {
+          suppressClickRef.current = false;
+          return;
+        }
+        if (deleting) return;
+        selectionMode ? toggle() : onOpenPage(page, href);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
           if (deleting) return;
           selectionMode ? toggle() : onOpenPage(page, href);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            if (deleting) return;
-            selectionMode ? toggle() : onOpenPage(page, href);
-          }
-        }}
-        className={clsx(
-          "library-row group flex items-center gap-0.5 rounded-md text-[13px] min-w-0 px-1 py-1 cursor-pointer",
-          isActive
-            ? "bg-[var(--bg-elevated)] text-[var(--text-primary)]"
-            : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]",
-          enablePageDrag && !selectionMode && !libraryMoveEnabled && "active:cursor-grabbing",
-          deleting && "opacity-50 pointer-events-none"
-        )}
-      >
-        {selectionMode ? (
-          <ExplorerSelectionToggle checked={selected.has(key)} onToggle={toggle} />
-        ) : (
-          <>
-            {/* Same width as folder twistie column so sibling file/folder icons align. */}
-            <span className="relative flex items-center justify-center shrink-0 w-[18px] h-[18px]">
-              <ExplorerDragGrip
-                active={Boolean(libraryMoveEnabled && startReorderDrag)}
-                label="Drag to move file"
-                className="!absolute inset-0 flex items-center justify-center m-0 p-0"
-                iconClassName="w-3.5 h-3.5"
-                onDragStart={(e) =>
-                  startReorderDrag?.(
-                    {
-                      kind: "page",
-                      id: page.id,
-                      subjectId,
-                      topicGroupId,
-                    },
-                    e
-                  )
-                }
-                onDragEnd={clearActiveDrag}
-              />
-            </span>
-            {page.completed ? (
-              <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
-            ) : page.contentType === "VIDEO" ? (
-              <Youtube className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
-            ) : (
-              <FileText className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
-            )}
-          </>
-        )}
-        <span className="flex-1 min-w-0 truncate text-[13px]" title={page.title}>
-          {page.title}
-        </span>
-        {!selectionMode && (
-          <span
-            className="flex items-center gap-0.5 shrink-0"
-            onClick={(e) => e.stopPropagation()}
+        }
+      }}
+      className={clsx(
+        "library-row group relative flex items-center gap-0.5 rounded-md text-[13px] min-w-0 px-1 py-1 select-none",
+        canMove
+          ? "cursor-grab active:cursor-grabbing"
+          : "cursor-pointer",
+        isActive
+          ? "bg-[var(--bg-elevated)] text-[var(--text-primary)]"
+          : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]",
+        dragging && "opacity-40",
+        deleting && "opacity-50 pointer-events-none",
+        dropPlace === "before" &&
+          "before:absolute before:left-1 before:right-1 before:top-0 before:h-0.5 before:rounded-full before:bg-[var(--accent)]",
+        dropPlace === "after" &&
+          "after:absolute after:left-1 after:right-1 after:bottom-0 after:h-0.5 after:rounded-full after:bg-[var(--accent)]"
+      )}
+    >
+      {selectionMode ? (
+        <ExplorerSelectionToggle checked={selected.has(key)} onToggle={toggle} />
+      ) : (
+        <>
+          <span className="relative flex items-center justify-center shrink-0 w-[18px] h-[18px]" />
+          {page.completed ? (
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)] pointer-events-none" />
+          ) : page.contentType === "VIDEO" ? (
+            <Youtube className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)] pointer-events-none" />
+          ) : (
+            <FileText className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)] pointer-events-none" />
+          )}
+        </>
+      )}
+      <span className="flex-1 min-w-0 truncate text-[13px] pointer-events-none">
+        {page.title}
+      </span>
+      {!selectionMode && (
+        <span
+          className="flex items-center gap-0.5 shrink-0"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            draggable={false}
+            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--accent)] opacity-0 group-hover:opacity-100"
+            title="Share file"
+            aria-label="Share file"
+            onClick={() => onSharePage(page.id, page.title)}
           >
+            <Share2 className="w-3 h-3" />
+          </button>
+          <button
+            type="button"
+            draggable={false}
+            className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] opacity-0 group-hover:opacity-100"
+            title="Rename file"
+            onClick={async () => {
+              const title = await prompt({
+                title: "Rename file",
+                defaultValue: page.title,
+                confirmLabel: "Rename",
+              });
+              if (!title || title === page.title) return;
+              await onRenamePage(page.id, title);
+            }}
+          >
+            <Pencil className="w-3 h-3" />
+          </button>
+          {isScheduled && (
+            <span title="Scheduled to read">
+              <CalendarDays className="w-3 h-3 text-[var(--accent)]" />
+            </span>
+          )}
+          {page.starred && (
+            <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+          )}
+          {deleting ? (
+            <Loader2 className="w-3 h-3 animate-spin text-[var(--accent)]" />
+          ) : (
             <button
               type="button"
-              className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--accent)] opacity-0 group-hover:opacity-100"
-              title="Share file"
-              aria-label="Share file"
-              onClick={() => onSharePage(page.id, page.title)}
+              draggable={false}
+              className="p-1 rounded text-[var(--text-muted)] hover:text-red-500 opacity-0 group-hover:opacity-100"
+              title="Delete file"
+              onClick={() => onDeletePage(page.id, page.title)}
             >
-              <Share2 className="w-3 h-3" />
+              <Trash2 className="w-3 h-3" />
             </button>
-            <button
-              type="button"
-              className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] opacity-0 group-hover:opacity-100"
-              title="Rename file"
-              onClick={async () => {
-                const title = await prompt({
-                  title: "Rename file",
-                  defaultValue: page.title,
-                  confirmLabel: "Rename",
-                });
-                if (!title || title === page.title) return;
-                await onRenamePage(page.id, title);
-              }}
-            >
-              <Pencil className="w-3 h-3" />
-            </button>
-            {isScheduled && (
-              <span title="Scheduled to read">
-                <CalendarDays className="w-3 h-3 text-[var(--accent)]" />
-              </span>
-            )}
-            {page.starred && (
-              <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
-            )}
-            {deleting ? (
-              <Loader2 className="w-3 h-3 animate-spin text-[var(--accent)]" />
-            ) : (
-              <button
-                type="button"
-                className="p-1 rounded text-[var(--text-muted)] hover:text-red-500 opacity-0 group-hover:opacity-100"
-                title="Delete file"
-                onClick={() => onDeletePage(page.id, page.title)}
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            )}
-          </span>
-        )}
-      </div>
+          )}
+        </span>
+      )}
     </div>
   );
 }

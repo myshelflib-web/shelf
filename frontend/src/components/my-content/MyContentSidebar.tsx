@@ -1,6 +1,6 @@
 "use client";
 
-import { NotebookSort, UserSubject, UserPageSummary, UserTopicGroup } from "@/types";
+import { NotebookSort, UserSubject, UserPageSummary } from "@/types";
 import {
   insertPageInTree,
   insertTopicInTree,
@@ -36,11 +36,7 @@ import {
   mergeExplorerTreeWithPending,
   applyPendingDeletesToSubjects,
 } from "@/lib/pendingExplorerDeletes";
-import {
-  findTopicLocation,
-  movePageInTree,
-  moveTopicInTree,
-} from "@/lib/libraryMove";
+import { useExplorerMoves } from "@/components/my-content/useExplorerMoves";
 import { useAddContent } from "@/components/my-content/MyContentAddProvider";
 import { useExplorerDeletes } from "@/components/my-content/useExplorerDeletes";
 import { listSubjects } from "@/lib/offline/library";
@@ -51,7 +47,6 @@ import clsx from "clsx";
 import { withShortcut } from "@/lib/hotkeys";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { useAppDialog } from "@/hooks/useAppDialog";
 import {
   PersonalPageReaderScope,
   scopeFromHref,
@@ -168,7 +163,6 @@ export function MyContentSidebar({
   libraryModeTabs,
 }: MyContentSidebarProps) {
   const { openAdd } = useAddContent();
-  const { alert } = useAppDialog();
   const router = useRouter();
 
   const [sortCriterion, setSortCriterion] = useState<SortCriterion>(readSortCriterion);
@@ -403,9 +397,9 @@ export function MyContentSidebar({
   const treeSubjects = useMemo(() => {
     const byId = new Map<string, UserSubject>();
     const pendingMerged = applyPendingDeletesToSubjects([
-      ...(notebook ? [notebook] : []),
       ...pinnedExtra,
       ...subjects,
+      ...(notebook ? [notebook] : []),
     ]);
     for (const nb of pendingMerged) {
       if (!byId.has(nb.id)) byId.set(nb.id, nb);
@@ -517,162 +511,24 @@ export function MyContentSidebar({
     exitSelectionMode,
   });
 
+  const { handleMovePage, handleMoveTopic } = useExplorerMoves({
+    subjects,
+    pinnedExtra,
+    rootPages,
+    treeSubjects,
+    setSubjects,
+    setPinnedExtra,
+    setRootPages,
+    setExpandedNotebooks,
+    setExpandedTopics,
+  });
+
   const handleReorderSubjects = (_orderedIds: string[]) => {
     /* Top-level folder order is controlled by Sort by only — no manual reorder. */
   };
 
   const handleReorderTopics = (_subjectId: string, _orderedIds: string[]) => {
     /* Nested folder order within a parent is not user-sorted — use move between folders. */
-  };
-
-  const findPageSummary = (pageId: string): UserPageSummary | null => {
-    for (const page of rootPages) {
-      if (page.id === pageId) return page;
-    }
-    const walk = (groups: UserTopicGroup[]): UserPageSummary | null => {
-      for (const group of groups) {
-        for (const page of group.pages) {
-          if (page.id === pageId) return page;
-        }
-        const nested = walk(group.children ?? []);
-        if (nested) return nested;
-      }
-      return null;
-    };
-    for (const subject of treeSubjects) {
-      for (const page of subject.pages ?? []) {
-        if (page.id === pageId) return page;
-      }
-      const found = walk(subject.topicGroups ?? []);
-      if (found) return found;
-    }
-    return null;
-  };
-
-  const handleMovePage = (payload: {
-    pageId: string;
-    subjectId: string | null;
-    topicGroupId: string | null;
-    beforePageId: string | null;
-  }) => {
-    const page = findPageSummary(payload.pageId);
-    if (!page) return;
-
-    const prevSubjects = subjects;
-    const prevPinned = pinnedExtra;
-    const prevRoot = rootPages;
-
-    const combined: UserSubject[] = [...subjects];
-    for (const extra of pinnedExtra) {
-      if (!combined.some((s) => s.id === extra.id)) combined.push(extra);
-    }
-
-    const next = movePageInTree(combined, rootPages, payload.pageId, {
-      ...payload,
-      page,
-    });
-
-    setRootPages(next.rootPages);
-    setSubjects((prev) =>
-      prev.map((s) => next.subjects.find((n) => n.id === s.id) ?? s)
-    );
-    setPinnedExtra((prev) =>
-      prev.map((s) => next.subjects.find((n) => n.id === s.id) ?? s)
-    );
-
-    if (payload.subjectId) {
-      const target = next.subjects.find((s) => s.id === payload.subjectId);
-      if (target) {
-        setExpandedNotebooks((prev) => ({ ...prev, [target.slug]: true }));
-        if (payload.topicGroupId) {
-          const findGroup = (
-            groups: UserTopicGroup[]
-          ): UserTopicGroup | undefined => {
-            for (const g of groups) {
-              if (g.id === payload.topicGroupId) return g;
-              const nested = findGroup(g.children ?? []);
-              if (nested) return nested;
-            }
-            return undefined;
-          };
-          const group = findGroup(target.topicGroups ?? []);
-          if (group) {
-            setExpandedTopics((prev) => ({
-              ...prev,
-              [`${target.slug}:${group.slug}`]: true,
-            }));
-          }
-        }
-      }
-    }
-
-    void api.myContent
-      .movePage(payload.pageId, {
-        subjectId: payload.subjectId,
-        topicGroupId: payload.topicGroupId,
-        beforePageId: payload.beforePageId,
-      })
-      .then(() => {
-        /* Optimistic tree already reflects the move — skip refetch to avoid flicker. */
-      })
-      .catch(async () => {
-        setSubjects(prevSubjects);
-        setPinnedExtra(prevPinned);
-        setRootPages(prevRoot);
-        await alert({
-          title: "Move failed",
-          message: `Could not move "${page.title}". It was put back where it was.`,
-        });
-      });
-  };
-
-  const handleMoveTopic = (payload: {
-    groupId: string;
-    sourceSubjectId: string;
-    targetSubjectId: string;
-    beforeGroupId: string | null;
-  }) => {
-    const loc =
-      findTopicLocation(treeSubjects, payload.groupId) ??
-      findTopicLocation(pinnedExtra, payload.groupId);
-    if (!loc) return;
-
-    const prevSubjects = subjects;
-    const prevPinned = pinnedExtra;
-
-    const applyMove = (list: UserSubject[]) =>
-      moveTopicInTree(
-        list,
-        payload.groupId,
-        payload.targetSubjectId,
-        loc.group,
-        payload.beforeGroupId
-      );
-
-    setSubjects(applyMove);
-    setPinnedExtra(applyMove);
-
-    const target = treeSubjects.find((s) => s.id === payload.targetSubjectId);
-    if (target) {
-      setExpandedNotebooks((prev) => ({ ...prev, [target.slug]: true }));
-    }
-
-    void api.myContent
-      .moveTopicGroup(payload.sourceSubjectId, payload.groupId, {
-        targetSubjectId: payload.targetSubjectId,
-        beforeGroupId: payload.beforeGroupId,
-      })
-      .then(() => {
-        /* Optimistic tree already reflects the move — skip refetch to avoid flicker. */
-      })
-      .catch(async () => {
-        setSubjects(prevSubjects);
-        setPinnedExtra(prevPinned);
-        await alert({
-          title: "Move failed",
-          message: `Could not move folder "${loc.group.title}". It was put back where it was.`,
-        });
-      });
   };
 
   const isEmpty =
@@ -797,11 +653,7 @@ export function MyContentSidebar({
           </div>
           {libraryMoveEnabled && (
             <p className="text-[10px] text-[var(--text-muted)] px-1 mt-1.5 leading-snug">
-              Drag the{" "}
-              <span className="inline-flex align-middle text-[var(--text-secondary)]">
-                ⋮⋮
-              </span>{" "}
-              handle (hover a row) to move files and folders into another folder.
+              Drag a file or folder to move it into another folder.
             </p>
           )}
         </div>

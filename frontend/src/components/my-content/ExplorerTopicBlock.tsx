@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { UserSubject, UserTopicGroup, UserPageSummary } from "@/types";
 import { getTopicChildren, pageHref } from "@/lib/myContentTree";
 import { MAX_FOLDER_DEPTH } from "@/lib/folderDepth";
@@ -12,11 +13,9 @@ import {
   Pencil,
   Loader2,
 } from "lucide-react";
-import { ExplorerDragGrip } from "@/components/my-content/ExplorerDragGrip";
 import { FolderMark } from "@/components/FolderMark";
 import { ExplorerPageRow } from "@/components/my-content/ExplorerPageRow";
 import { ExplorerSelectionToggle } from "@/components/my-content/ExplorerSelectionToggle";
-import { ExplorerDropLine } from "@/components/my-content/ExplorerDropLine";
 import type { ExplorerDropHint } from "@/components/my-content/useExplorerReorderDrop";
 import clsx from "clsx";
 import type { DragEvent } from "react";
@@ -28,10 +27,12 @@ import {
 import type { ReorderDragPayload } from "@/lib/libraryReorder";
 import { useAppDialog } from "@/hooks/useAppDialog";
 import { useDeleteProgressOptional } from "@/components/DeleteProgressProvider";
+import { relatedStillInside } from "@/components/my-content/explorerRowDrag";
 
 type ExplorerTopicBlockProps = {
   nb: UserSubject;
   group: UserTopicGroup;
+  parentId: string;
   /** Folder depth (collection root = 1, first nested = 2). */
   depth: number;
   tOpen: boolean;
@@ -40,6 +41,7 @@ type ExplorerTopicBlockProps = {
   onSelectionChange: (next: Set<ExplorerSelectionKey>) => void;
   libraryMoveEnabled: boolean;
   activeDrag: ReorderDragPayload | null;
+  getActiveDrag: () => ReorderDragPayload | null;
   dropHint: ExplorerDropHint | null;
   startReorderDrag: (payload: ReorderDragPayload, e: DragEvent) => void;
   allowReorderDrop: (hint: ExplorerDropHint, e: DragEvent) => void;
@@ -79,6 +81,7 @@ type ExplorerTopicBlockProps = {
 export function ExplorerTopicBlock({
   nb,
   group,
+  parentId,
   depth,
   tOpen,
   selectionMode,
@@ -86,6 +89,7 @@ export function ExplorerTopicBlock({
   onSelectionChange,
   libraryMoveEnabled,
   activeDrag,
+  getActiveDrag,
   dropHint,
   startReorderDrag,
   allowReorderDrop,
@@ -110,15 +114,17 @@ export function ExplorerTopicBlock({
   expandedTopics,
 }: ExplorerTopicBlockProps) {
   const { prompt } = useAppDialog();
+  const suppressClickRef = useRef(false);
   const topicKey = topicSelectionKey(nb.id, group.id);
   const topicDeleting = Boolean(
     useDeleteProgressOptional()?.deletingKeys.has(topicKey)
   );
   const toggleTopicSelect = () =>
     onSelectionChange(toggleSelectionKey(selected, topicKey));
+  const canMove = libraryMoveEnabled && !selectionMode;
+  const dragging = activeDrag?.kind === "topic" && activeDrag.id === group.id;
   const showTopicRowDrop =
-    libraryMoveEnabled &&
-    !selectionMode &&
+    canMove &&
     dropHint?.kind === "topic-row" &&
     dropHint.subjectId === nb.id &&
     dropHint.topicGroupId === group.id;
@@ -131,26 +137,53 @@ export function ExplorerTopicBlock({
       <div
         role="button"
         tabIndex={0}
-        onClick={() =>
+        draggable={canMove}
+        title={canMove ? `${group.title} — drag to move` : group.title}
+        onDragStart={(e) => {
+          if (!canMove || topicDeleting) {
+            e.preventDefault();
+            return;
+          }
+          suppressClickRef.current = false;
+          startReorderDrag(
+            {
+              kind: "topic",
+              id: group.id,
+              subjectId: nb.id,
+              topicGroupId: parentId,
+            },
+            e
+          );
+        }}
+        onDragEnd={() => {
+          if (canMove) suppressClickRef.current = true;
+          clearActiveDrag();
+        }}
+        onClick={() => {
+          if (suppressClickRef.current) {
+            suppressClickRef.current = false;
+            return;
+          }
+          if (topicDeleting) return;
           selectionMode
             ? toggleTopicSelect()
-            : onToggleTopic(nb.slug, group.slug)
-        }
+            : onToggleTopic(nb.slug, group.slug);
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
+            if (topicDeleting) return;
             selectionMode
               ? toggleTopicSelect()
               : onToggleTopic(nb.slug, group.slug);
           }
         }}
         onDragOver={
-          libraryMoveEnabled && !selectionMode
+          canMove
             ? (e) => {
-                if (
-                  activeDrag?.kind === "page" ||
-                  activeDrag?.kind === "topic"
-                ) {
+                const drag = getActiveDrag();
+                if (drag?.kind === "topic" && drag.id === group.id) return;
+                if (drag?.kind === "page" || drag?.kind === "topic") {
                   allowReorderDrop(
                     {
                       kind: "topic-row",
@@ -163,10 +196,16 @@ export function ExplorerTopicBlock({
               }
             : undefined
         }
-        onDragLeave={clearDropHint}
+        onDragLeave={(e) => {
+          if (!relatedStillInside(e.currentTarget, e.relatedTarget)) {
+            clearDropHint();
+          }
+        }}
         onDrop={
-          libraryMoveEnabled && !selectionMode
+          canMove
             ? (e) => {
+                const drag = getActiveDrag();
+                if (drag?.kind === "topic" && drag.id === group.id) return;
                 void finishReorderDrop(
                   {
                     kind: "topic-row",
@@ -176,13 +215,16 @@ export function ExplorerTopicBlock({
                   e,
                   {}
                 );
+                suppressClickRef.current = true;
               }
             : undefined
         }
         className={clsx(
-          "group flex items-center gap-0.5 px-1 py-1 rounded-md cursor-pointer hover:bg-[var(--bg-elevated)]",
+          "group flex items-center gap-0.5 px-1 py-1 rounded-md hover:bg-[var(--bg-elevated)] select-none",
+          canMove ? "cursor-grab active:cursor-grabbing" : "cursor-pointer",
           showTopicRowDrop &&
             "ring-1 ring-[var(--accent)]/50 bg-[var(--accent-subtle)]",
+          dragging && "opacity-40",
           topicDeleting && "opacity-50 pointer-events-none"
         )}
       >
@@ -192,49 +234,33 @@ export function ExplorerTopicBlock({
             onToggle={toggleTopicSelect}
           />
         ) : (
-          <span className="relative flex items-center justify-center shrink-0 w-[18px] h-[18px]">
-            <span
-              className={clsx(
-                "p-0.5 text-[var(--text-muted)]",
-                libraryMoveEnabled && "group-hover:opacity-0"
-              )}
-              aria-hidden
-            >
-              {tOpen ? (
-                <ChevronDown className="w-3.5 h-3.5" />
-              ) : (
-                <ChevronRight className="w-3.5 h-3.5" />
-              )}
-            </span>
-            <ExplorerDragGrip
-              active={libraryMoveEnabled}
-              label="Drag to move folder"
-              className="!absolute inset-0 flex items-center justify-center m-0 p-0"
-              iconClassName="w-3.5 h-3.5"
-              onDragStart={(e) =>
-                startReorderDrag(
-                  { kind: "topic", id: group.id, subjectId: nb.id },
-                  e
-                )
-              }
-              onDragEnd={clearActiveDrag}
-            />
+          <span
+            className="flex items-center justify-center shrink-0 w-[18px] h-[18px] p-0.5 text-[var(--text-muted)] pointer-events-none"
+            aria-hidden
+          >
+            {tOpen ? (
+              <ChevronDown className="w-3.5 h-3.5" />
+            ) : (
+              <ChevronRight className="w-3.5 h-3.5" />
+            )}
           </span>
         )}
         <FolderMark seed={group.id} size={14} />
-        <span className="flex-1 min-w-0 truncate text-[13px] font-medium">
+        <span className="flex-1 min-w-0 truncate text-[13px] font-medium pointer-events-none">
           {group.title}
         </span>
-        <span className="text-[10px] text-[var(--text-muted)] shrink-0">
+        <span className="text-[10px] text-[var(--text-muted)] shrink-0 pointer-events-none">
           {group.pages.length + children.length}
         </span>
         {!selectionMode && (
           <span
             className="flex items-center shrink-0 opacity-0 group-hover:opacity-100"
             onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             <button
               type="button"
+              draggable={false}
               className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
               title="Rename folder"
               onClick={async () => {
@@ -252,6 +278,7 @@ export function ExplorerTopicBlock({
             {canNest && (
               <button
                 type="button"
+                draggable={false}
                 title="New folder"
                 className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
                 onClick={() => onAddNestedFolder(nb, group)}
@@ -261,6 +288,7 @@ export function ExplorerTopicBlock({
             )}
             <button
               type="button"
+              draggable={false}
               title="Add file"
               className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
               onClick={() => onAddPage(nb, group)}
@@ -272,6 +300,7 @@ export function ExplorerTopicBlock({
             ) : (
               <button
                 type="button"
+                draggable={false}
                 className="p-0.5 rounded text-[var(--text-muted)] hover:text-red-500 hover:bg-[var(--bg-secondary)]"
                 title="Delete folder"
                 onClick={() => onDeleteTopic(nb, group.id, group.title)}
@@ -304,9 +333,9 @@ export function ExplorerTopicBlock({
                 libraryMoveEnabled={libraryMoveEnabled}
                 subjectId={nb.id}
                 topicGroupId={group.id}
-                showPageDrop={false}
                 pageIds={topicPageIds}
-                dropHint={dropHint}
+                activeDrag={activeDrag}
+                getActiveDrag={getActiveDrag}
                 startReorderDrag={startReorderDrag}
                 allowReorderDrop={allowReorderDrop}
                 finishReorderDrop={finishReorderDrop}
@@ -320,47 +349,6 @@ export function ExplorerTopicBlock({
               />
             );
           })}
-          {libraryMoveEnabled &&
-            !selectionMode &&
-            group.pages.length > 0 && (
-              <>
-                <ExplorerDropLine
-                  active={
-                    dropHint?.kind === "page-topic" &&
-                    dropHint.subjectId === nb.id &&
-                    dropHint.topicGroupId === group.id &&
-                    dropHint.beforePageId === null
-                  }
-                />
-                <div
-                  className="h-1"
-                  onDragOver={(e) =>
-                    allowReorderDrop(
-                      {
-                        kind: "page-topic",
-                        subjectId: nb.id,
-                        topicGroupId: group.id,
-                        beforePageId: null,
-                      },
-                      e
-                    )
-                  }
-                  onDragLeave={clearDropHint}
-                  onDrop={(e) =>
-                    void finishReorderDrop(
-                      {
-                        kind: "page-topic",
-                        subjectId: nb.id,
-                        topicGroupId: group.id,
-                        beforePageId: null,
-                      },
-                      e,
-                      { pageIds: topicPageIds }
-                    )
-                  }
-                />
-              </>
-            )}
           {children.map((child) => {
             const tKey = `${nb.slug}:${child.slug}`;
             const childOpen = expandedTopics[tKey] ?? false;
@@ -369,6 +357,7 @@ export function ExplorerTopicBlock({
                 key={child.id}
                 nb={nb}
                 group={child}
+                parentId={group.id}
                 depth={depth + 1}
                 tOpen={childOpen}
                 selectionMode={selectionMode}
@@ -376,6 +365,7 @@ export function ExplorerTopicBlock({
                 onSelectionChange={onSelectionChange}
                 libraryMoveEnabled={libraryMoveEnabled}
                 activeDrag={activeDrag}
+                getActiveDrag={getActiveDrag}
                 dropHint={dropHint}
                 startReorderDrag={startReorderDrag}
                 allowReorderDrop={allowReorderDrop}

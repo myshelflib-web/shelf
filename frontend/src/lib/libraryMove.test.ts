@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { movePageInTree } from "./libraryMove";
-import type { UserPageSummary, UserSubject } from "@/types";
+import { movePageInTree, moveTopicInTree } from "./libraryMove";
+import type { UserPageSummary, UserSubject, UserTopicGroup } from "@/types";
 
 const page = (id: string, title: string): UserPageSummary => ({
   id,
@@ -48,5 +48,47 @@ describe("movePageInTree", () => {
       "p2",
       "p1",
     ]);
+  });
+});
+
+describe("moveTopicInTree", () => {
+  const folder = (
+    id: string,
+    title: string,
+    children: UserTopicGroup[] = []
+  ): UserTopicGroup => ({
+    id,
+    title,
+    slug: id,
+    order: 1,
+    pages: [],
+    children,
+  });
+
+  it("nests a folder under another folder in the same collection", () => {
+    const moving = folder("g2", "Nested");
+    const subjects: UserSubject[] = [
+      {
+        id: "s1",
+        name: "Math",
+        slug: "math",
+        icon: "📁",
+        order: 1,
+        topicGroups: [folder("g1", "Algebra"), moving],
+        pages: [],
+      },
+    ];
+
+    const result = moveTopicInTree(
+      subjects,
+      "g2",
+      "s1",
+      moving,
+      null,
+      "g1"
+    );
+
+    expect(result[0].topicGroups.map((g) => g.id)).toEqual(["g1"]);
+    expect(result[0].topicGroups[0].children?.map((g) => g.id)).toEqual(["g2"]);
   });
 });

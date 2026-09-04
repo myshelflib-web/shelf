@@ -216,12 +216,68 @@ function stripTopicFromGroups(
   return { groups: next, moving };
 }
 
+export function topicContainsId(
+  group: UserTopicGroup,
+  id: string
+): boolean {
+  for (const child of getTopicChildren(group)) {
+    if (child.id === id || topicContainsId(child, id)) return true;
+  }
+  return false;
+}
+
+function insertTopicAmong(
+  groups: UserTopicGroup[],
+  group: UserTopicGroup,
+  beforeId: string | null
+): UserTopicGroup[] {
+  if (!beforeId) return [...groups, group];
+  const idx = groups.findIndex((g) => g.id === beforeId);
+  if (idx === -1) return [...groups, group];
+  return [...groups.slice(0, idx), group, ...groups.slice(idx)];
+}
+
+function placeTopicInGroups(
+  groups: UserTopicGroup[],
+  parentId: string,
+  group: UserTopicGroup,
+  beforeGroupId: string | null
+): { groups: UserTopicGroup[]; found: boolean } {
+  let found = false;
+  const next = groups.map((item) => {
+    if (item.id === parentId) {
+      found = true;
+      return {
+        ...item,
+        children: insertTopicAmong(
+          getTopicChildren(item),
+          group,
+          beforeGroupId
+        ),
+      };
+    }
+    const nested = placeTopicInGroups(
+      getTopicChildren(item),
+      parentId,
+      group,
+      beforeGroupId
+    );
+    if (nested.found) {
+      found = true;
+      return { ...item, children: nested.groups };
+    }
+    return item;
+  });
+  return { groups: next, found };
+}
+
 export function moveTopicInTree(
   subjects: UserSubject[],
   groupId: string,
   targetSubjectId: string,
   topicGroup: UserTopicGroup,
-  beforeGroupId: string | null
+  beforeGroupId: string | null,
+  targetParentId?: string | null
 ): UserSubject[] {
   let moving: UserTopicGroup | null = null;
 
@@ -232,22 +288,26 @@ export function moveTopicInTree(
   });
 
   const group = moving ?? topicGroup;
-
-  const insertGroups = (
-    groups: UserTopicGroup[],
-    beforeId: string | null
-  ): UserTopicGroup[] => {
-    if (!beforeId) return [...groups, group];
-    const idx = groups.findIndex((g) => g.id === beforeId);
-    if (idx === -1) return [...groups, group];
-    return [...groups.slice(0, idx), group, ...groups.slice(idx)];
-  };
+  const nestUnder =
+    targetParentId && targetParentId !== targetSubjectId
+      ? targetParentId
+      : null;
 
   return stripped.map((subject) => {
     if (subject.id !== targetSubjectId) return subject;
+    const top = getTopicGroups(subject);
+    if (!nestUnder) {
+      return {
+        ...subject,
+        topicGroups: insertTopicAmong(top, group, beforeGroupId),
+      };
+    }
+    const nested = placeTopicInGroups(top, nestUnder, group, beforeGroupId);
     return {
       ...subject,
-      topicGroups: insertGroups(getTopicGroups(subject), beforeGroupId),
+      topicGroups: nested.found
+        ? nested.groups
+        : insertTopicAmong(top, group, beforeGroupId),
     };
   });
 }

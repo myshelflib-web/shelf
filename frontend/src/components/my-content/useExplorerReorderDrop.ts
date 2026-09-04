@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useState, type DragEvent } from "react";
+import { useCallback, useRef, useState, type DragEvent } from "react";
 import {
   parseReorderDrag,
   SHELF_REORDER_MIME,
   type ReorderDragPayload,
 } from "@/lib/libraryReorder";
+import { isExplorerDragFromControl } from "@/components/my-content/explorerRowDrag";
 
 export type ExplorerDropHint =
   | { kind: "subject"; beforeId: string | null }
@@ -37,6 +38,7 @@ export type ExplorerDropHandlers = {
     groupId: string;
     sourceSubjectId: string;
     targetSubjectId: string;
+    targetParentId: string | null;
     beforeGroupId: string | null;
   }) => void | Promise<void>;
 };
@@ -51,29 +53,51 @@ function readDrag(e: DragEvent): ReorderDragPayload | null {
 export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
   const [dropHint, setDropHint] = useState<ExplorerDropHint | null>(null);
   const [activeDrag, setActiveDrag] = useState<ReorderDragPayload | null>(null);
+  const activeDragRef = useRef<ReorderDragPayload | null>(null);
+
+  const getActiveDrag = useCallback(
+    () => activeDragRef.current,
+    []
+  );
 
   const startReorderDrag = useCallback(
     (payload: ReorderDragPayload, e: DragEvent) => {
+      if (isExplorerDragFromControl(e.target)) {
+        e.preventDefault();
+        return;
+      }
       e.stopPropagation();
+      activeDragRef.current = payload;
       setActiveDrag(payload);
-      e.dataTransfer.setData(SHELF_REORDER_MIME, JSON.stringify(payload));
-      e.dataTransfer.effectAllowed = "move";
+      const raw = JSON.stringify(payload);
+      e.dataTransfer.setData(SHELF_REORDER_MIME, raw);
+      e.dataTransfer.setData("text/plain", raw);
+      e.dataTransfer.effectAllowed = "copyMove";
     },
     []
   );
 
   const allowReorderDrop = useCallback((hint: ExplorerDropHint, e: DragEvent) => {
+    if (!activeDragRef.current) return;
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = "move";
-    setDropHint(hint);
+    setDropHint((prev) => {
+      if (
+        prev?.kind === hint.kind &&
+        JSON.stringify(prev) === JSON.stringify(hint)
+      ) {
+        return prev;
+      }
+      return hint;
+    });
   }, []);
 
   const finishReorderDrop = useCallback(
     async (
       hint: ExplorerDropHint,
       e: DragEvent,
-      context: {
+      _context: {
         subjectIds?: string[];
         topicIds?: string[];
         pageIds?: string[];
@@ -81,20 +105,9 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
     ) => {
       e.preventDefault();
       e.stopPropagation();
+      const drag = activeDragRef.current ?? readDrag(e);
       setDropHint(null);
-      const drag = readDrag(e);
       if (!drag) return;
-
-      if (hint.kind === "topic" && drag.kind === "topic") {
-        if (drag.subjectId === hint.subjectId) return;
-        await handlers.onMoveTopic({
-          groupId: drag.id,
-          sourceSubjectId: drag.subjectId!,
-          targetSubjectId: hint.subjectId,
-          beforeGroupId: hint.beforeId,
-        });
-        return;
-      }
 
       if (hint.kind === "subject-row" && drag.kind === "page") {
         await handlers.onMovePage({
@@ -107,11 +120,12 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
       }
 
       if (hint.kind === "subject-row" && drag.kind === "topic") {
-        if (drag.subjectId === hint.subjectId) return;
+        if (drag.subjectId === hint.subjectId && !drag.topicGroupId) return;
         await handlers.onMoveTopic({
           groupId: drag.id,
           sourceSubjectId: drag.subjectId!,
           targetSubjectId: hint.subjectId,
+          targetParentId: hint.subjectId,
           beforeGroupId: null,
         });
         return;
@@ -123,7 +137,8 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
           groupId: drag.id,
           sourceSubjectId: drag.subjectId!,
           targetSubjectId: hint.subjectId,
-          beforeGroupId: hint.topicGroupId,
+          targetParentId: hint.topicGroupId,
+          beforeGroupId: null,
         });
         return;
       }
@@ -175,6 +190,7 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
   }, []);
 
   const clearActiveDrag = useCallback(() => {
+    activeDragRef.current = null;
     setDropHint(null);
     setActiveDrag(null);
   }, []);
@@ -182,6 +198,7 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
   return {
     dropHint,
     activeDrag,
+    getActiveDrag,
     startReorderDrag,
     allowReorderDrop,
     finishReorderDrop,

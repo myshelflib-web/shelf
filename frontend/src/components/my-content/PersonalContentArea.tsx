@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { UserContentHighlight } from "@/types";
-import {
-  applyHighlightsToElement,
-  highlightPaintKey,
-} from "@/lib/applyHighlights";
+import { highlightPaintKey } from "@/lib/applyHighlights";
 import { formatImportedHtml } from "@/lib/htmlFragment";
 import { blankCanvasScrollTarget } from "@/lib/blankCanvas";
 import { LiveEditorRouter } from "./LiveEditorRouter";
 import { usePersonalContentClip } from "./usePersonalContentClip";
 import { PersonalContentHighlightChrome } from "./PersonalContentHighlightChrome";
+import { HtmlHighlightLayer } from "./HtmlHighlightLayer";
+import type { OverlayBox } from "./htmlHighlightGeometry";
 import {
   createHighlight,
   deleteHighlight,
@@ -96,14 +95,18 @@ export function PersonalContentArea({
   const fragment = useMemo(() => formatImportedHtml(content), [content]);
   const paintKey = useMemo(() => highlightPaintKey(highlights), [highlights]);
   const contentRootRef = useRef<HTMLDivElement>(null);
-
-  // Keep the article HTML stable. Paint <mark>s onto the live DOM so React
-  // never replaces innerHTML (that remount is what blocked re-selection).
-  useLayoutEffect(() => {
-    const el = contentRootRef.current;
-    if (!el || editing) return;
-    applyHighlightsToElement(el, highlightsRef.current);
-  }, [paintKey, fragment, editing]);
+  const originRef = useRef<HTMLDivElement>(null);
+  const boxesRef = useRef<OverlayBox[]>([]);
+  const [contentEl, setContentEl] = useState<HTMLElement | null>(null);
+  const [originEl, setOriginEl] = useState<HTMLElement | null>(null);
+  const setContentRoot = useCallback((el: HTMLDivElement | null) => {
+    contentRootRef.current = el;
+    setContentEl(el);
+  }, []);
+  const setOrigin = useCallback((el: HTMLDivElement | null) => {
+    originRef.current = el;
+    setOriginEl(el);
+  }, []);
 
   useEffect(() => {
     if (editing || !fragment.includes("preloaded-official-fallback")) return;
@@ -300,7 +303,7 @@ export function PersonalContentArea({
   };
   saveHighlightRef.current = saveHighlight;
 
-  const { handleMouseUp, handleMouseDown, handleClick } =
+  const { handleClick } =
     usePersonalContentSelection({
       editing,
       readOnly,
@@ -309,6 +312,8 @@ export function PersonalContentArea({
       guestLocked,
       highlights,
       contentRootRef,
+      originRef,
+      boxesRef,
       selectionRef,
       highlightModeRef,
       preferredColorRef,
@@ -370,34 +375,39 @@ export function PersonalContentArea({
             ? " cursor-crosshair"
             : eraseMode
               ? " cursor-pointer"
-              : highlightMode
-                ? " cursor-text"
-                : ""
+              : " cursor-text"
         }`}
-        style={
-          contentScale !== 1
-            ? { zoom: contentScale }
-            : undefined
-        }
-        onMouseUp={clipMode ? undefined : handleMouseUp}
-        onMouseDown={clipMode ? undefined : handleMouseDown}
         onClick={clipMode ? undefined : handleClick}
         onPointerDown={clipMode ? onPointerDown : undefined}
         onPointerMove={clipMode ? onPointerMove : undefined}
-        onPointerUp={
-          clipMode
-            ? onPointerUp
-            : (e) => {
-                if (e.pointerType === "mouse") return;
-                handleMouseUp();
-              }
-        }
+        onPointerUp={clipMode ? onPointerUp : undefined}
       >
         <div
-          ref={contentRootRef}
-          className="prose-content personal-content select-text"
-          dangerouslySetInnerHTML={{ __html: fragment }}
-        />
+          ref={setOrigin}
+          className="relative"
+          style={
+            contentScale !== 1
+              ? { fontSize: `${Math.round(contentScale * 100)}%` }
+              : undefined
+          }
+        >
+          <div
+            ref={setContentRoot}
+            className="prose-content personal-content select-text"
+            dangerouslySetInnerHTML={{ __html: fragment }}
+          />
+          {!editing ? (
+            <HtmlHighlightLayer
+              contentEl={contentEl}
+              originEl={originEl}
+              highlights={highlights}
+              paintKey={paintKey}
+              onBoxes={(b) => {
+                boxesRef.current = b;
+              }}
+            />
+          ) : null}
+        </div>
         {clipBox && (
           <div
             className="clip-select-rect absolute border-2 border-[var(--accent)] bg-[var(--accent)]/10 pointer-events-none z-[3]"

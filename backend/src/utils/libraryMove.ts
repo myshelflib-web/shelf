@@ -10,6 +10,7 @@ import {
 import { reorderBefore } from "./libraryReorder.js";
 import { uniqueFolderSlug } from "./fileScope.js";
 import { folderAncestors } from "./folderPath.js";
+import { FolderDepthError, MAX_FOLDER_DEPTH } from "./folderDepth.js";
 
 export type MovePageTarget = {
   subjectId: string | null;
@@ -19,6 +20,8 @@ export type MovePageTarget = {
 
 export type MoveTopicTarget = {
   targetSubjectId: string;
+  /** Collection id or nested folder id. Defaults to the collection root. */
+  targetParentId?: string | null;
   beforeGroupId: string | null;
 };
 
@@ -163,6 +166,69 @@ export async function moveLibraryPage(
   };
 }
 
+async function folderSubtreeHeight(folderId: string): Promise<number> {
+  const children = await prisma.userFolder.findMany({
+    where: { parentId: folderId },
+    select: { id: true },
+  });
+  if (children.length === 0) return 1;
+  const depths = await Promise.all(
+    children.map((child) => folderSubtreeHeight(child.id))
+  );
+  return 1 + Math.max(...depths);
+}
+
+async function resolveTopicMoveParent(
+  userId: string,
+  groupId: string,
+  target: MoveTopicTarget
+) {
+  const targetRoot = await prisma.userFolder.findFirst({
+    where: { id: target.targetSubjectId, userId, parentId: null },
+  });
+  if (!targetRoot) throw new Error("Target collection not found");
+
+  const requested =
+    target.targetParentId && target.targetParentId !== targetRoot.id
+      ? target.targetParentId
+      : targetRoot.id;
+
+  if (requested === groupId) {
+    throw new Error("Cannot move a folder into itself");
+  }
+
+  if (requested !== targetRoot.id) {
+    const parent = await prisma.userFolder.findFirst({
+      where: { id: requested, userId },
+    });
+    if (!parent) throw new Error("Target folder not found");
+
+    const chain = await folderAncestors(parent.id);
+    if (chain[0]?.id !== targetRoot.id) {
+      throw new Error("Target folder not found");
+    }
+    if (chain.some((folder) => folder.id === groupId)) {
+      throw new Error("Cannot move a folder into its own subfolder");
+    }
+
+    const subtree = await folderSubtreeHeight(groupId);
+    if (chain.length + subtree > MAX_FOLDER_DEPTH) {
+      throw new FolderDepthError(
+        `Folders can be nested up to ${MAX_FOLDER_DEPTH} levels`
+      );
+    }
+    return parent.id;
+  }
+
+  const subtree = await folderSubtreeHeight(groupId);
+  if (1 + subtree > MAX_FOLDER_DEPTH) {
+    throw new FolderDepthError(
+      `Folders can be nested up to ${MAX_FOLDER_DEPTH} levels`
+    );
+  }
+  return targetRoot.id;
+}
+
 export async function moveLibraryTopicGroup(
   userId: string,
   _sourceSubjectId: string,
@@ -174,18 +240,15 @@ export async function moveLibraryTopicGroup(
   });
   if (!group || !group.parentId) throw new Error("Topic not found");
 
-  const targetRoot = await prisma.userFolder.findFirst({
-    where: { id: target.targetSubjectId, userId, parentId: null },
-  });
-  if (!targetRoot) throw new Error("Target collection not found");
+  const parentId = await resolveTopicMoveParent(userId, groupId, target);
 
   const slug =
-    group.parentId === targetRoot.id
+    group.parentId === parentId
       ? group.slug
-      : await uniqueFolderSlug(userId, targetRoot.id, group.name);
+      : await uniqueFolderSlug(userId, parentId, group.name);
 
   const destSiblings = await prisma.userFolder.findMany({
-    where: { parentId: targetRoot.id },
+    where: { parentId },
     orderBy: { order: "asc" },
     select: { id: true },
   });
@@ -195,15 +258,15 @@ export async function moveLibraryTopicGroup(
   await prisma.userFolder.update({
     where: { id: groupId },
     data: {
-      parentId: targetRoot.id,
+      parentId,
       slug,
       order: orderedDest.indexOf(groupId) + 1,
     },
   });
 
-  await persistFolderOrders(targetRoot.id, orderedDest);
+  await persistFolderOrders(parentId, orderedDest);
 
-  if (group.parentId !== targetRoot.id) {
+  if (group.parentId !== parentId) {
     const sourceSiblings = await prisma.userFolder.findMany({
       where: { parentId: group.parentId },
       orderBy: { order: "asc" },

@@ -1211,7 +1211,11 @@ export const api = {
     moveTopicGroup: (
       sourceSubjectId: string,
       groupId: string,
-      data: { targetSubjectId: string; beforeGroupId?: string | null }
+      data: {
+        targetSubjectId: string;
+        targetParentId?: string | null;
+        beforeGroupId?: string | null;
+      }
     ) =>
       request<{
         topicGroup: import("@/types").UserTopicGroup;

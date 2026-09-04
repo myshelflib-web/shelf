@@ -11,7 +11,6 @@ import {
 import { ExplorerSidebarSkeleton } from "@/components/dashboard/DashboardSkeletons";
 import { ExplorerPageRow } from "@/components/my-content/ExplorerPageRow";
 import { ExplorerCollectionBlock } from "@/components/my-content/ExplorerCollectionBlock";
-import { ExplorerDropLine } from "@/components/my-content/ExplorerDropLine";
 import { useExplorerLibraryDrag } from "@/components/my-content/useExplorerReorderDrop";
 import type { ExplorerSelectionKey } from "@/lib/explorerSelection";
 import { useMemo } from "react";
@@ -61,6 +60,7 @@ interface MyContentExplorerTreeProps {
     groupId: string;
     sourceSubjectId: string;
     targetSubjectId: string;
+    targetParentId: string | null;
     beforeGroupId: string | null;
   }) => void | Promise<void>;
   onEditNotebook: (nb: UserSubject) => void;
@@ -142,6 +142,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
   const {
     dropHint,
     activeDrag,
+    getActiveDrag,
     startReorderDrag,
     allowReorderDrop,
     finishReorderDrop,
@@ -228,9 +229,9 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
                 libraryMoveEnabled={libraryMoveEnabled && !searching}
                 subjectId={null}
                 topicGroupId={null}
-                showPageDrop={false}
                 pageIds={rootPageIds}
-                dropHint={dropHint}
+                activeDrag={activeDrag}
+                getActiveDrag={getActiveDrag}
                 startReorderDrag={startReorderDrag}
                 allowReorderDrop={allowReorderDrop}
                 finishReorderDrop={finishReorderDrop}
@@ -244,30 +245,6 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               />
             );
           })}
-          {libraryMoveEnabled && !selectionMode && !searching && filteredRootPages.length > 0 && (
-            <>
-              <ExplorerDropLine
-                active={
-                  dropHint?.kind === "page-root" &&
-                  dropHint.beforePageId === null
-                }
-              />
-              <div
-                className="h-1"
-                onDragOver={(e) =>
-                  allowReorderDrop({ kind: "page-root", beforePageId: null }, e)
-                }
-                onDragLeave={clearDropHint}
-                onDrop={(e) =>
-                  void finishReorderDrop(
-                    { kind: "page-root", beforePageId: null },
-                    e,
-                    { pageIds: rootPageIds }
-                  )
-                }
-              />
-            </>
-          )}
           {rootTotalPages > 1 && (
             <div className="flex items-center justify-center gap-1 px-1 pt-1">
               <button
@@ -326,6 +303,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               searching={searching}
               dropHint={dropHint}
               activeDrag={activeDrag}
+              getActiveDrag={getActiveDrag}
               onToggleNotebook={toggleNotebook}
               onToggleTopic={toggleTopic}
               onEditNotebook={onEditNotebook}

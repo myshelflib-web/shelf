@@ -73,6 +73,39 @@ export function textOffsetInRoot(
   return pos;
 }
 
+/** Inverse of textOffsetInRoot — used to paint overlay boxes without wrapping text. */
+export function rangeFromTextOffsets(
+  root: HTMLElement,
+  start: number,
+  end: number
+): Range | null {
+  if (end <= start) return null;
+  const segments = getTextSegments(root);
+  let startNode: Text | null = null;
+  let startOff = 0;
+  let endNode: Text | null = null;
+  let endOff = 0;
+  for (const seg of segments) {
+    if (!startNode && start >= seg.start && start <= seg.end) {
+      startNode = seg.node;
+      startOff = start - seg.start;
+    }
+    if (end >= seg.start && end <= seg.end) {
+      endNode = seg.node;
+      endOff = end - seg.start;
+    }
+  }
+  if (!startNode || !endNode) return null;
+  const range = document.createRange();
+  try {
+    range.setStart(startNode, startOff);
+    range.setEnd(endNode, endOff);
+  } catch {
+    return null;
+  }
+  return range;
+}
+
 function isInsideMark(node: Node): boolean {
   const el =
     node.nodeType === Node.ELEMENT_NODE

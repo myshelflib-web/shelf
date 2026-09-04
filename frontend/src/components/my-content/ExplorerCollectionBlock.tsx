@@ -13,17 +13,16 @@ import {
   FolderPlus,
   Pencil,
 } from "lucide-react";
-import { ExplorerDragGrip } from "@/components/my-content/ExplorerDragGrip";
 import { FolderMark } from "@/components/FolderMark";
 import { ExplorerPageRow } from "@/components/my-content/ExplorerPageRow";
 import { ExplorerTopicBlock } from "@/components/my-content/ExplorerTopicBlock";
 import { ExplorerSelectionToggle } from "@/components/my-content/ExplorerSelectionToggle";
-import { ExplorerDropLine } from "@/components/my-content/ExplorerDropLine";
 import {
   type ExplorerDropHint,
 } from "@/components/my-content/useExplorerReorderDrop";
 import clsx from "clsx";
 import type { DragEvent } from "react";
+import { relatedStillInside } from "@/components/my-content/explorerRowDrag";
 import {
   subjectSelectionKey,
   toggleSelectionKey,
@@ -50,6 +49,7 @@ interface ExplorerCollectionBlockProps {
   searching: boolean;
   dropHint: ExplorerDropHint | null;
   activeDrag: ReorderDragPayload | null;
+  getActiveDrag: () => ReorderDragPayload | null;
   onToggleNotebook: (slug: string) => void;
   onToggleTopic: (notebookSlug: string, topicSlug: string) => void;
   onEditNotebook: (nb: UserSubject) => void;
@@ -104,6 +104,7 @@ export function ExplorerCollectionBlock({
   searching,
   dropHint,
   activeDrag,
+  getActiveDrag,
   onToggleNotebook,
   onToggleTopic,
   onEditNotebook,
@@ -156,13 +157,18 @@ export function ExplorerCollectionBlock({
         onDragOver={
           libraryMoveEnabled && !selectionMode && !searching
             ? (e) => {
-                if (activeDrag?.kind === "page" || activeDrag?.kind === "topic") {
+                const drag = getActiveDrag();
+                if (drag?.kind === "page" || drag?.kind === "topic") {
                   allowReorderDrop({ kind: "subject-row", subjectId: nb.id }, e);
                 }
               }
             : undefined
         }
-        onDragLeave={clearDropHint}
+        onDragLeave={(e) => {
+          if (!relatedStillInside(e.currentTarget, e.relatedTarget)) {
+            clearDropHint();
+          }
+        }}
         onDrop={
           libraryMoveEnabled && !selectionMode && !searching
             ? (e) => {
@@ -207,9 +213,11 @@ export function ExplorerCollectionBlock({
               isCurrentNotebook ? "opacity-100" : "opacity-0 group-hover:opacity-100"
             )}
             onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             <button
               type="button"
+              draggable={false}
               className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
               title="Edit folder"
               onClick={() => onEditNotebook(nb)}
@@ -218,6 +226,7 @@ export function ExplorerCollectionBlock({
             </button>
             <button
               type="button"
+              draggable={false}
               title="New folder"
               className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
               onClick={() => onAddTopic(nb)}
@@ -226,6 +235,7 @@ export function ExplorerCollectionBlock({
             </button>
             <button
               type="button"
+              draggable={false}
               title="Add file"
               className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
               onClick={() => onAddPage(nb)}
@@ -258,9 +268,9 @@ export function ExplorerCollectionBlock({
                 libraryMoveEnabled={libraryMoveEnabled && !searching}
                 subjectId={nb.id}
                 topicGroupId={null}
-                showPageDrop={false}
                 pageIds={looseIds}
-                dropHint={dropHint}
+                activeDrag={activeDrag}
+                getActiveDrag={getActiveDrag}
                 startReorderDrag={startReorderDrag}
                 allowReorderDrop={allowReorderDrop}
                 finishReorderDrop={finishReorderDrop}
@@ -274,42 +284,6 @@ export function ExplorerCollectionBlock({
               />
             );
           })}
-          {libraryMoveEnabled && !selectionMode && loose.length > 0 && (
-            <>
-              <ExplorerDropLine
-                active={
-                  dropHint?.kind === "page-notebook" &&
-                  dropHint.subjectId === nb.id &&
-                  dropHint.beforePageId === null
-                }
-              />
-              <div
-                className="h-1"
-                onDragOver={(e) =>
-                  allowReorderDrop(
-                    {
-                      kind: "page-notebook",
-                      subjectId: nb.id,
-                      beforePageId: null,
-                    },
-                    e
-                  )
-                }
-                onDragLeave={clearDropHint}
-                onDrop={(e) =>
-                  void finishReorderDrop(
-                    {
-                      kind: "page-notebook",
-                      subjectId: nb.id,
-                      beforePageId: null,
-                    },
-                    e,
-                    { pageIds: looseIds }
-                  )
-                }
-              />
-            </>
-          )}
           {groups.map((group) => {
             const tKey = `${nb.slug}:${group.slug}`;
             const tOpen = expandedTopics[tKey] ?? false;
@@ -318,6 +292,7 @@ export function ExplorerCollectionBlock({
                 key={group.id}
                 nb={nb}
                 group={group}
+                parentId={nb.id}
                 depth={2}
                 tOpen={tOpen}
                 selectionMode={selectionMode}
@@ -325,6 +300,7 @@ export function ExplorerCollectionBlock({
                 onSelectionChange={onSelectionChange}
                 libraryMoveEnabled={libraryMoveEnabled}
                 activeDrag={activeDrag}
+                getActiveDrag={getActiveDrag}
                 dropHint={dropHint}
                 startReorderDrag={startReorderDrag}
                 allowReorderDrop={allowReorderDrop}

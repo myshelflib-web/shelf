@@ -1,3 +1,4 @@
+import { rangeFromTextOffsets } from "@/lib/applyHighlights";
 import type { UserContentHighlight } from "@/types";
 import { isGenericHighlightText } from "@/lib/pdfRegionText";
 
@@ -58,19 +59,15 @@ export function scrollHtmlHighlight(
   contentRoot: HTMLElement,
   highlight: Pick<UserContentHighlight, "id" | "startOffset" | "endOffset">
 ): boolean {
-  const rangeKey = `${highlight.startOffset}:${highlight.endOffset}`;
-  const mark =
-    contentRoot.querySelector(
-      `mark[data-highlight-range="${CSS.escape(rangeKey)}"]`
-    ) ??
-    contentRoot.querySelector(
-      `mark[data-highlight-id="${CSS.escape(highlight.id)}"]`
-    );
-  if (!mark) return false;
-  const markRect = mark.getBoundingClientRect();
+  const range = rangeFromTextOffsets(
+    contentRoot,
+    highlight.startOffset,
+    highlight.endOffset
+  );
+  if (!range) return false;
+  const markRect = range.getBoundingClientRect();
   const containerRect = container.getBoundingClientRect();
-  const top =
-    markRect.top - containerRect.top + container.scrollTop;
+  const top = markRect.top - containerRect.top + container.scrollTop;
   container.scrollTo({ top: Math.max(0, top - 48), behavior: "smooth" });
   return true;
 }

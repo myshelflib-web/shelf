@@ -6,6 +6,7 @@ import {
   moveLibraryPage,
   moveLibraryTopicGroup,
 } from "../utils/libraryMove.js";
+import { FolderDepthError } from "../utils/folderDepth.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -57,6 +58,7 @@ router.patch(
       const userId = req.user!.userId;
       const body = req.body as {
         targetSubjectId?: string;
+        targetParentId?: string | null;
         beforeGroupId?: string | null;
       };
 
@@ -71,6 +73,7 @@ router.patch(
         param(req, "groupId"),
         {
           targetSubjectId: body.targetSubjectId,
+          targetParentId: body.targetParentId ?? null,
           beforeGroupId: body.beforeGroupId ?? null,
         }
       );
@@ -80,7 +83,13 @@ router.patch(
       const message =
         err instanceof Error ? err.message : "Could not move topic";
       const status =
-        message.includes("not found") ? 404 : 500;
+        err instanceof FolderDepthError ||
+        message === "Cannot move a folder into itself" ||
+        message === "Cannot move a folder into its own subfolder"
+          ? 400
+          : message.includes("not found")
+            ? 404
+            : 500;
       if (status === 500) {
         req.log?.error("my_content.topic_move_failed", errorFields(err));
       }
