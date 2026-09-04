@@ -104,6 +104,7 @@ export function ReaderWorkspace({
     setStudyAICollapsed,
     focusPane,
     activateTab,
+    reorderTabs,
     updateTabMeta,
     updateTabsByPageId,
     openInPane,
@@ -800,6 +801,9 @@ export function ReaderWorkspace({
                         onDropPage={(tab) =>
                           handleOpenTab(panesToRender[0].id, tab)
                         }
+                        onReorderTabs={(fromKey, toKey, place) =>
+                          reorderTabs(panesToRender[0].id, fromKey, toKey, place)
+                        }
                       />
                     </div>
                   )
@@ -859,6 +863,9 @@ export function ReaderWorkspace({
                           onClose={(key) => handleCloseTab(pane.id, key)}
                           onFocusPane={() => focusPane(pane.id)}
                           onDropPage={(tab) => handleOpenTab(pane.id, tab)}
+                          onReorderTabs={(fromKey, toKey, place) =>
+                            reorderTabs(pane.id, fromKey, toKey, place)
+                          }
                         />
                       )}
                       <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">

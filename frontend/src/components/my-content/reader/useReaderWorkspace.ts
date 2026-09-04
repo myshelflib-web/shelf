@@ -16,6 +16,7 @@ import {
   PersonalPageReaderScope,
 } from "./types";
 import { AnalyticsEvents, track } from "@/lib/analytics";
+import { reorderOpenTabs } from "./reorderOpenTabs";
 
 function totalTabs(panes: ReaderPane[]): number {
   return panes.reduce((n, p) => n + p.tabs.length, 0);
@@ -261,6 +262,25 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
       ),
     }));
   }, []);
+
+  const reorderTabs = useCallback(
+    (
+      paneId: string,
+      fromKey: string,
+      toKey: string,
+      place: "before" | "after"
+    ) => {
+      setState((prev) => {
+        const panes = prev.panes.map((p) => {
+          if (p.id !== paneId) return p;
+          const tabs = reorderOpenTabs(p.tabs, fromKey, toKey, place);
+          return tabs ? { ...p, tabs } : p;
+        });
+        return { ...prev, panes };
+      });
+    },
+    []
+  );
 
   const updateTabMeta = useCallback(
     (
@@ -697,6 +717,7 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
     setTelegramCollapsed,
     focusPane,
     activateTab,
+    reorderTabs,
     updateTabMeta,
     updateTabsByPageId,
     openInPane,

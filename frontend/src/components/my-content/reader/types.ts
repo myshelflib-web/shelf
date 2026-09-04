@@ -41,6 +41,8 @@ export type ReaderWorkspaceState = {
 };
 
 export const SHELF_PAGE_MIME = "application/x-shelf-page";
+/** Drag payload for reordering open reader tabs within a pane. */
+export const SHELF_TAB_MIME = "application/x-shelf-reader-tab";
 
 export type ShelfPageDragPayload = {
   href: string;
