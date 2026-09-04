@@ -10,6 +10,7 @@ import { rememberGuestLearnArticle } from "@/lib/guestLearnResume";
 import { PRELOADED_SAVE_PROMPT_EVENT } from "@/lib/preloadedReadOnly";
 
 type SavePhase = "idle" | "saving" | "ready" | "error";
+type SaveMode = "copy_admin" | "download_remote" | "link" | "none";
 
 const SAVE_STEPS: Record<string, string> = {
   link: "Adding official link to your library…",
@@ -29,6 +30,16 @@ function progressForPoll(poll: number, saveMode?: string): number {
   return Math.min(92, base + poll * 7);
 }
 
+/** Personal PDF/HTML copies support highlights; link bookmarks do not. */
+function isAnnotatableLibraryCopy(opts: {
+  contentType?: string;
+  saveMode?: string;
+}): boolean {
+  if (opts.contentType === "PDF" || opts.contentType === "HTML") return true;
+  if (opts.contentType === "LINK") return false;
+  return opts.saveMode === "copy_admin" || opts.saveMode === "download_remote";
+}
+
 export function PreloadedSaveBanner({
   subjectSlug,
   topicSlug,
@@ -45,16 +56,27 @@ export function PreloadedSaveBanner({
   pageTitle: string;
   saveAllowed?: boolean;
   saveReason?: string | null;
-  saveMode?: "copy_admin" | "download_remote" | "link" | "none";
+  saveMode?: SaveMode;
   onOpen: (href: string) => void;
 }) {
   const { user } = useAuth();
   const rootRef = useRef<HTMLDivElement>(null);
   const [phase, setPhase] = useState<SavePhase>("idle");
   const [savedHref, setSavedHref] = useState<string | null>(null);
+  const [annotatableCopy, setAnnotatableCopy] = useState(
+    () => isAnnotatableLibraryCopy({ saveMode })
+  );
   const [error, setError] = useState("");
   const [progress, setProgress] = useState(0);
   const [stepLabel, setStepLabel] = useState("");
+
+  const savedHrefRef = useRef<string | null>(null);
+  const phaseRef = useRef<SavePhase>("idle");
+  const saveInFlightRef = useRef(false);
+  const onOpenRef = useRef(onOpen);
+  onOpenRef.current = onOpen;
+  savedHrefRef.current = savedHref;
+  phaseRef.current = phase;
 
   const loginHref = `/login?next=${encodeURIComponent(
     `/learn/${subjectSlug}/${topicSlug}/${articleSlug}`
@@ -63,16 +85,18 @@ export function PreloadedSaveBanner({
   const guestSaveHint =
     saveMode === "download_remote"
       ? "Sign in to download a personal copy to your library."
-      : "Sign in to save this official link to your library.";
+      : saveMode === "copy_admin"
+        ? "Sign in to save a personal copy you can highlight and annotate."
+        : "Sign in to save this official link to your library.";
 
   const waitForPublished = useCallback(
-    async (pageId: string, saveMode?: string) => {
+    async (pageId: string, mode?: string) => {
       for (let i = 0; i < 60; i += 1) {
-        setProgress(progressForPoll(i, saveMode));
+        setProgress(progressForPoll(i, mode));
         const { page } = await api.myContent.getPageById(pageId);
         if (page.status === "PUBLISHED") {
           setProgress(100);
-          return;
+          return page;
         }
         if (page.status === "FAILED") {
           throw new Error("Could not finish saving this file");
@@ -84,47 +108,98 @@ export function PreloadedSaveBanner({
     []
   );
 
-  const save = useCallback(() => {
-    if (phase === "saving" || !saveAllowed) return;
-    setPhase("saving");
-    setError("");
-    setProgress(8);
-    setStepLabel("Starting save…");
-    void (async () => {
-      try {
-        const res = await api.myContent.saveCurriculumArticle({
-          subjectSlug,
-          topicSlug,
-          articleSlug,
-        });
-        emitContentChanged();
-        setSavedHref(res.href);
-        const mode = res.saveMode ?? "copy_admin";
-        setStepLabel(SAVE_STEPS[mode] ?? res.saveReason ?? "Saving…");
-        setProgress(mode === "link" ? 100 : 25);
-        if (res.alreadySaved || res.status === "PUBLISHED") {
-          setPhase("ready");
-          setProgress(100);
-          return;
-        }
-        await waitForPublished(res.page.id, mode);
-        setPhase("ready");
-      } catch (err) {
-        setPhase("error");
-        setProgress(0);
-        setError(err instanceof Error ? err.message : "Could not save");
+  const openLibraryCopy = useCallback((href: string) => {
+    onOpenRef.current(href);
+  }, []);
+
+  const save = useCallback(
+    (opts?: { openWhenReady?: boolean }) => {
+      if (saveInFlightRef.current || phaseRef.current === "saving" || !saveAllowed) {
+        return;
       }
-    })();
-  }, [articleSlug, phase, saveAllowed, subjectSlug, topicSlug, waitForPublished]);
+      const openWhenReady = opts?.openWhenReady ?? true;
+      saveInFlightRef.current = true;
+      setPhase("saving");
+      setError("");
+      setProgress(8);
+      setStepLabel("Starting save…");
+      void (async () => {
+        try {
+          const res = await api.myContent.saveCurriculumArticle({
+            subjectSlug,
+            topicSlug,
+            articleSlug,
+          });
+          emitContentChanged();
+          setSavedHref(res.href);
+          savedHrefRef.current = res.href;
+
+          const mode = (res.saveMode ?? saveMode ?? "copy_admin") as SaveMode;
+          let publishedType = res.page.contentType as string | undefined;
+          setStepLabel(SAVE_STEPS[mode] ?? res.saveReason ?? "Saving…");
+          setProgress(mode === "link" ? 100 : 25);
+
+          if (res.alreadySaved || res.status === "PUBLISHED") {
+            setPhase("ready");
+            phaseRef.current = "ready";
+            setProgress(100);
+          } else {
+            const published = await waitForPublished(res.page.id, mode);
+            publishedType = published.contentType ?? publishedType;
+            setPhase("ready");
+            phaseRef.current = "ready";
+          }
+
+          const canAnnotate = isAnnotatableLibraryCopy({
+            contentType: publishedType,
+            saveMode: mode,
+          });
+          setAnnotatableCopy(canAnnotate);
+
+          if (openWhenReady && canAnnotate) {
+            openLibraryCopy(res.href);
+          }
+        } catch (err) {
+          setPhase("error");
+          phaseRef.current = "error";
+          setProgress(0);
+          setError(err instanceof Error ? err.message : "Could not save");
+        } finally {
+          saveInFlightRef.current = false;
+        }
+      })();
+    },
+    [
+      articleSlug,
+      openLibraryCopy,
+      saveAllowed,
+      saveMode,
+      subjectSlug,
+      topicSlug,
+      waitForPublished,
+    ]
+  );
+
+  const saveRef = useRef(save);
+  saveRef.current = save;
 
   useEffect(() => {
     const onPrompt = () => {
+      const href = savedHrefRef.current;
+      if (href) {
+        openLibraryCopy(href);
+        return;
+      }
+      if (saveAllowed && !saveInFlightRef.current) {
+        saveRef.current({ openWhenReady: true });
+        return;
+      }
       rootRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
     };
     window.addEventListener(PRELOADED_SAVE_PROMPT_EVENT, onPrompt);
     return () =>
       window.removeEventListener(PRELOADED_SAVE_PROMPT_EVENT, onPrompt);
-  }, []);
+  }, [openLibraryCopy, saveAllowed]);
 
   if (!user) {
     return (
@@ -164,17 +239,16 @@ export function PreloadedSaveBanner({
 
   let message = saveAllowed
     ? saveReason ??
-      (saveMode === "download_remote"
-        ? "Tap Save to download a personal copy to your library."
+      (saveMode === "download_remote" || saveMode === "copy_admin"
+        ? "Tap Save for a personal copy you can highlight, annotate, and edit."
         : "Tap Save to bookmark this official link in your library.")
     : saveReason ?? "Read-only official preview.";
   if (phase === "saving") {
     message = stepLabel || "Saving to your library… You can keep reading.";
   } else if (phase === "ready") {
-    message =
-      saveMode === "link"
-        ? "Saved to your library as an official link. Open it to highlight and add notes."
-        : "Saved to your library. Open your copy to highlight and edit.";
+    message = annotatableCopy
+      ? "Saved — opening your library copy with full PDF tools."
+      : "Saved to your library as an official link.";
   } else if (error) {
     message = error;
   }
@@ -195,15 +269,15 @@ export function PreloadedSaveBanner({
           <button
             type="button"
             className={saveSecondaryButtonClass}
-            onClick={() => onOpen(savedHref)}
+            onClick={() => openLibraryCopy(savedHref)}
           >
-            Open in library
+            {annotatableCopy ? "Open library copy" : "Open in library"}
           </button>
         ) : saveAllowed && (phase === "idle" || phase === "error") ? (
           <button
             type="button"
             className={savePrimaryButtonClass}
-            onClick={save}
+            onClick={() => save({ openWhenReady: true })}
           >
             Save to My Library
           </button>
@@ -217,7 +291,9 @@ export function PreloadedSaveBanner({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-[10px] text-[var(--text-muted)] mt-1">{Math.round(progress)}%</p>
+          <p className="text-[10px] text-[var(--text-muted)] mt-1">
+            {Math.round(progress)}%
+          </p>
         </div>
       ) : null}
     </div>

@@ -202,23 +202,27 @@ export function ExplorerPageRow({
           <ExplorerSelectionToggle checked={selected.has(key)} onToggle={toggle} />
         ) : (
           <>
-            <ExplorerDragGrip
-              active={Boolean(libraryMoveEnabled && startReorderDrag)}
-              label="Drag to move file"
-              iconClassName="w-3 h-3"
-              onDragStart={(e) =>
-                startReorderDrag?.(
-                  {
-                    kind: "page",
-                    id: page.id,
-                    subjectId,
-                    topicGroupId,
-                  },
-                  e
-                )
-              }
-              onDragEnd={clearActiveDrag}
-            />
+            {/* Same width as folder twistie column so sibling file/folder icons align. */}
+            <span className="relative flex items-center justify-center shrink-0 w-[18px] h-[18px]">
+              <ExplorerDragGrip
+                active={Boolean(libraryMoveEnabled && startReorderDrag)}
+                label="Drag to move file"
+                className="!absolute inset-0 flex items-center justify-center m-0 p-0"
+                iconClassName="w-3.5 h-3.5"
+                onDragStart={(e) =>
+                  startReorderDrag?.(
+                    {
+                      kind: "page",
+                      id: page.id,
+                      subjectId,
+                      topicGroupId,
+                    },
+                    e
+                  )
+                }
+                onDragEnd={clearActiveDrag}
+              />
+            </span>
             {page.completed ? (
               <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
             ) : page.contentType === "VIDEO" ? (

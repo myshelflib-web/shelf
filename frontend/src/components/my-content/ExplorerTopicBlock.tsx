@@ -192,25 +192,35 @@ export function ExplorerTopicBlock({
             onToggle={toggleTopicSelect}
           />
         ) : (
-          <ExplorerDragGrip
-            active={libraryMoveEnabled}
-            label="Drag to move folder"
-            onDragStart={(e) =>
-              startReorderDrag(
-                { kind: "topic", id: group.id, subjectId: nb.id },
-                e
-              )
-            }
-            onDragEnd={clearActiveDrag}
-          />
+          <span className="relative flex items-center justify-center shrink-0 w-[18px] h-[18px]">
+            <span
+              className={clsx(
+                "p-0.5 text-[var(--text-muted)]",
+                libraryMoveEnabled && "group-hover:opacity-0"
+              )}
+              aria-hidden
+            >
+              {tOpen ? (
+                <ChevronDown className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5" />
+              )}
+            </span>
+            <ExplorerDragGrip
+              active={libraryMoveEnabled}
+              label="Drag to move folder"
+              className="!absolute inset-0 flex items-center justify-center m-0 p-0"
+              iconClassName="w-3.5 h-3.5"
+              onDragStart={(e) =>
+                startReorderDrag(
+                  { kind: "topic", id: group.id, subjectId: nb.id },
+                  e
+                )
+              }
+              onDragEnd={clearActiveDrag}
+            />
+          </span>
         )}
-        <span className="p-0.5 text-[var(--text-muted)] shrink-0">
-          {tOpen ? (
-            <ChevronDown className="w-3.5 h-3.5" />
-          ) : (
-            <ChevronRight className="w-3.5 h-3.5" />
-          )}
-        </span>
         <FolderMark seed={group.id} size={14} />
         <span className="flex-1 min-w-0 truncate text-[13px] font-medium">
           {group.title}
