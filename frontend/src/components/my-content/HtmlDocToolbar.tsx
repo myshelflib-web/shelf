@@ -125,7 +125,7 @@ export function HtmlDocToolbar({
           label={
             guestLocked
               ? lockedFeatureLabel(annotationGate, "highlight with pen")
-              : "Highlighter — select text to apply the chosen color"
+              : "Highlighter — drag on the page like a PDF highlighter"
           }
           active={mode === "highlight"}
           className={lockedTool}
@@ -278,8 +278,8 @@ export function HtmlDocToolbar({
         title="Highlight color"
       >
         <p className="text-[11px] text-[var(--text-muted)] mb-2.5 leading-relaxed">
-          Pick a color, then select text on the page — it highlights immediately.
-          Switch to the pointer tool for the full Note / Ask AI menu.
+          Pick a color, then drag across the page like a PDF highlighter.
+          Use the pointer tool to select text for Note / Ask AI.
         </p>
         <ColorSwatchGrid>
           {HIGHLIGHT_COLORS.map((c) => (

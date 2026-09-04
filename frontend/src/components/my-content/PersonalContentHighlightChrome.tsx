@@ -9,13 +9,9 @@ import {
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { HighlightToolbar } from "../HighlightToolbar";
 import { HighlightNoteModal } from "../HighlightNoteModal";
+import type { HtmlTextPick } from "./htmlPageSelection";
 
-type SelectionState = {
-  text: string;
-  rect: DOMRect;
-  startOffset: number;
-  endOffset: number;
-};
+type SelectionState = HtmlTextPick;
 
 type NoteTarget = {
   quote: string;
@@ -30,11 +26,7 @@ type Props = {
   onHighlightsChange: (highlights: UserContentHighlight[]) => void;
   selection: SelectionState | null;
   setSelection: (v: SelectionState | null) => void;
-  selectionRef: MutableRefObject<{
-    text: string;
-    startOffset: number;
-    endOffset: number;
-  } | null>;
+  selectionRef: MutableRefObject<HtmlTextPick | null>;
   activeHighlight: { highlight: UserContentHighlight; rect: DOMRect } | null;
   setActiveHighlight: (
     v: { highlight: UserContentHighlight; rect: DOMRect } | null

@@ -1470,6 +1470,20 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   user-select: text;
 }
 
+.html-article-pen-mode {
+  touch-action: none;
+  cursor: crosshair;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.html-article-pen-mode .personal-content,
+.html-article-pen-mode .personal-content * {
+  pointer-events: none;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
 .html-hl-box {
   pointer-events: none;
   mix-blend-mode: multiply;

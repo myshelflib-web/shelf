@@ -2,20 +2,19 @@
 
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { UserContentHighlight } from "@/types";
-import { highlightPaintKey } from "@/lib/applyHighlights";
+import { DEFAULT_PEN_WIDTH } from "@/lib/straightenStroke";
 import { formatImportedHtml } from "@/lib/htmlFragment";
 import { blankCanvasScrollTarget } from "@/lib/blankCanvas";
 import { LiveEditorRouter } from "./LiveEditorRouter";
 import { usePersonalContentClip } from "./usePersonalContentClip";
 import { PersonalContentHighlightChrome } from "./PersonalContentHighlightChrome";
 import { HtmlHighlightLayer } from "./HtmlHighlightLayer";
-import type { OverlayBox } from "./htmlHighlightGeometry";
-import {
-  createHighlight,
-  deleteHighlight,
-} from "@/lib/offline/highlights";
+import { deleteHighlight } from "@/lib/offline/highlights";
 import type { PersonalContentAreaProps } from "./personalContentAreaTypes";
 import { usePersonalContentSelection } from "./usePersonalContentSelection";
+import { useHtmlHighlightStroke } from "./useHtmlHighlightStroke";
+import type { HtmlTextPick } from "./htmlPageSelection";
+import { persistHtmlHighlight } from "./persistHtmlHighlight";
 
 export function PersonalContentArea({
   content,
@@ -53,17 +52,8 @@ export function PersonalContentArea({
   onViewStateChangeRef.current = onViewStateChange;
   const [scrollRestored, setScrollRestored] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
-  const selectionRef = useRef<{
-    text: string;
-    startOffset: number;
-    endOffset: number;
-  } | null>(null);
-  const [selection, setSelection] = useState<{
-    text: string;
-    rect: DOMRect;
-    startOffset: number;
-    endOffset: number;
-  } | null>(null);
+  const selectionRef = useRef<HtmlTextPick | null>(null);
+  const [selection, setSelection] = useState<HtmlTextPick | null>(null);
   const [noteTarget, setNoteTarget] = useState<{
     quote: string;
     highlight?: UserContentHighlight;
@@ -79,13 +69,6 @@ export function PersonalContentArea({
   const highlightsRef = useRef(highlights);
   highlightsRef.current = highlights;
   const droppedHighlightIds = useRef(new Set<string>());
-  const highlightModeRef = useRef(highlightMode);
-  highlightModeRef.current = highlightMode;
-  const preferredColorRef = useRef(preferredHighlightColorId);
-  preferredColorRef.current = preferredHighlightColorId;
-  const saveHighlightRef = useRef<(color: string, note?: string) => void>(
-    () => undefined
-  );
 
   const commitHighlights = (next: UserContentHighlight[]) => {
     highlightsRef.current = next;
@@ -93,10 +76,8 @@ export function PersonalContentArea({
   };
 
   const fragment = useMemo(() => formatImportedHtml(content), [content]);
-  const paintKey = useMemo(() => highlightPaintKey(highlights), [highlights]);
   const contentRootRef = useRef<HTMLDivElement>(null);
   const originRef = useRef<HTMLDivElement>(null);
-  const boxesRef = useRef<OverlayBox[]>([]);
   const [contentEl, setContentEl] = useState<HTMLElement | null>(null);
   const [originEl, setOriginEl] = useState<HTMLElement | null>(null);
   const setContentRoot = useCallback((el: HTMLDivElement | null) => {
@@ -271,57 +252,106 @@ export function PersonalContentArea({
       color,
       note: note ?? null,
       kind: "TEXT",
+      position: sel.position ?? null,
     };
-    commitHighlights([...highlightsRef.current, optimistic]);
+    persistHtmlHighlight({
+      optimistic,
+      payload: {
+        userTopicId,
+        text: sel.text,
+        startOffset: sel.startOffset,
+        endOffset: sel.endOffset,
+        color,
+        note,
+        kind: "TEXT",
+        position: sel.position,
+      },
+      commit: commitHighlights,
+      current: () => highlightsRef.current,
+      dropped: droppedHighlightIds.current,
+    });
     selectionRef.current = null;
     setSelection(null);
     setActiveHighlight(null);
     window.getSelection()?.removeAllRanges();
-    void createHighlight({
-      userTopicId,
-      text: sel.text,
-      startOffset: sel.startOffset,
-      endOffset: sel.endOffset,
-      color,
-      note,
-    })
-      .then((highlight) => {
-        if (droppedHighlightIds.current.has(tempId)) {
-          droppedHighlightIds.current.delete(tempId);
-          void deleteHighlight(highlight.id, userTopicId).catch(() => undefined);
-          return;
-        }
-        commitHighlights(
-          highlightsRef.current.map((h) => (h.id === tempId ? highlight : h))
-        );
-      })
-      .catch(() => {
-        commitHighlights(highlightsRef.current.filter((h) => h.id !== tempId));
-      });
     return optimistic;
   };
-  saveHighlightRef.current = saveHighlight;
 
-  const { handleMouseDown, handleMouseUp, handleClick } =
-    usePersonalContentSelection({
-      editing,
-      readOnly,
-      clipMode,
-      eraseMode,
-      guestLocked,
-      highlights,
-      contentRootRef,
-      originRef,
-      boxesRef,
-      selectionRef,
-      highlightModeRef,
-      preferredColorRef,
-      saveHighlightRef,
-      setSelection,
-      setActiveHighlight,
-      onGuestLockedClick,
-      removeHighlightNow,
+  const saveStroke = (points: Array<{ x: number; y: number }>) => {
+    if (guestLocked) {
+      onGuestLockedClick?.("Highlight and annotate");
+      return;
+    }
+    if (points.length < 2) return;
+    const tempId = `tmp-${crypto.randomUUID()}`;
+    const optimistic: UserContentHighlight = {
+      id: tempId,
+      userTopicId,
+      text: "Highlighted region",
+      startOffset: 0,
+      endOffset: 0,
+      color: preferredHighlightColorId,
+      kind: "REGION",
+      position: {
+        type: "pen",
+        tool: "highlight",
+        points,
+        width: DEFAULT_PEN_WIDTH,
+        opacity: 0.72,
+      },
+    };
+    persistHtmlHighlight({
+      optimistic,
+      payload: {
+        userTopicId,
+        text: optimistic.text,
+        startOffset: 0,
+        endOffset: 0,
+        color: preferredHighlightColorId,
+        kind: "REGION",
+        position: optimistic.position,
+      },
+      commit: commitHighlights,
+      current: () => highlightsRef.current,
+      dropped: droppedHighlightIds.current,
     });
+  };
+
+  const { draft, onPointerDown: onStrokeDown, onPointerMove: onStrokeMove, onPointerUp: onStrokeUp } =
+    useHtmlHighlightStroke(originRef, highlightMode && !clipMode && !editing, saveStroke);
+
+  const { handleMouseUp } = usePersonalContentSelection({
+    editing,
+    readOnly,
+    clipMode,
+    eraseMode,
+    highlightMode,
+    contentRootRef,
+    originRef,
+    selectionRef,
+    setSelection,
+    setActiveHighlight,
+  });
+
+  const onMarkActivate = (
+    highlight: UserContentHighlight,
+    clientX: number,
+    clientY: number
+  ) => {
+    setSelection(null);
+    if (eraseMode) {
+      if (guestLocked) {
+        onGuestLockedClick?.("Highlight and annotate");
+        return;
+      }
+      removeHighlightNow(highlight.id);
+      return;
+    }
+    setActiveHighlight({
+      highlight,
+      rect: new DOMRect(clientX, clientY, 1, 1),
+    });
+  };
 
   if (editing) {
     return (
@@ -370,43 +400,44 @@ export function PersonalContentArea({
                 ? " px-6 py-6 max-w-none"
                 : " px-8 py-6 max-w-3xl mx-auto"
         }${
-          clipMode
+          clipMode || highlightMode
             ? " cursor-crosshair"
             : eraseMode
               ? " cursor-pointer"
               : " cursor-text"
         }`}
-        onMouseDown={clipMode ? undefined : handleMouseDown}
-        onMouseUp={clipMode ? undefined : handleMouseUp}
-        onClick={clipMode ? undefined : handleClick}
+        onMouseUp={
+          clipMode || highlightMode || eraseMode ? undefined : handleMouseUp
+        }
         onPointerDown={clipMode ? onPointerDown : undefined}
         onPointerMove={clipMode ? onPointerMove : undefined}
         onPointerUp={clipMode ? onPointerUp : undefined}
       >
         <div
           ref={setOrigin}
-          className="relative"
+          className={`relative${highlightMode ? " html-article-pen-mode" : ""}`}
           style={
             contentScale !== 1
               ? { fontSize: `${Math.round(contentScale * 100)}%` }
               : undefined
           }
+          onPointerDown={highlightMode ? onStrokeDown : undefined}
+          onPointerMove={highlightMode ? onStrokeMove : undefined}
+          onPointerUp={highlightMode ? onStrokeUp : undefined}
         >
-          {!editing ? (
-            <HtmlHighlightLayer
-              contentEl={contentEl}
-              originEl={originEl}
-              highlights={highlights}
-              paintKey={paintKey}
-              onBoxes={(b) => {
-                boxesRef.current = b;
-              }}
-            />
-          ) : null}
           <div
             ref={setContentRoot}
-            className="prose-content personal-content select-text relative z-[1] bg-transparent"
+            className="prose-content personal-content select-text"
             dangerouslySetInnerHTML={{ __html: fragment }}
+          />
+          <HtmlHighlightLayer
+            contentEl={contentEl}
+            originEl={originEl}
+            highlights={highlights}
+            drawLocked={highlightMode || clipMode}
+            draftPoints={draft}
+            draftColor={preferredHighlightColorId}
+            onActivate={onMarkActivate}
           />
         </div>
         {clipBox && (

@@ -57,8 +57,23 @@ export function highlightSnippetText(h: UserContentHighlight, max = 140): string
 export function scrollHtmlHighlight(
   container: HTMLElement,
   contentRoot: HTMLElement,
-  highlight: Pick<UserContentHighlight, "id" | "startOffset" | "endOffset">
+  highlight: Pick<
+    UserContentHighlight,
+    "id" | "startOffset" | "endOffset" | "position"
+  >
 ): boolean {
+  const stored = highlight.position?.rects?.[0];
+  if (stored) {
+    const top = stored.y * contentRoot.offsetHeight;
+    container.scrollTo({ top: Math.max(0, top - 48), behavior: "smooth" });
+    return true;
+  }
+  const pt = highlight.position?.points?.[0];
+  if (pt) {
+    const top = pt.y * contentRoot.offsetHeight;
+    container.scrollTo({ top: Math.max(0, top - 48), behavior: "smooth" });
+    return true;
+  }
   const range = rangeFromTextOffsets(
     contentRoot,
     highlight.startOffset,
