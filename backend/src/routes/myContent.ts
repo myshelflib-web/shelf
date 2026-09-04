@@ -927,6 +927,14 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
       res.status(err.status).json({ error: err.message });
       return;
     }
+    const code = (err as { code?: string })?.code;
+    if (code === "P2002") {
+      await deleteFromS3(claims.key).catch(() => undefined);
+      res.status(409).json({
+        error: "A file with this name already exists in this folder",
+      });
+      return;
+    }
     contentFlow.uploadFailed(reqLog(req), err, { kind: claims.kind, slug: claims.slug });
     req.log?.error("my_content.upload_complete_failed", errorFields(err));
     res.status(500).json({ error: "Could not finish upload" });
