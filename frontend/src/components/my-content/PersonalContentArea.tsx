@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useLayoutEffect } from "react";
 import { UserContentHighlight } from "@/types";
 import {
-  applyHighlightsToHtml,
+  applyHighlightsToElement,
   highlightPaintKey,
 } from "@/lib/applyHighlights";
 import { formatImportedHtml } from "@/lib/htmlFragment";
@@ -95,13 +95,15 @@ export function PersonalContentArea({
 
   const fragment = useMemo(() => formatImportedHtml(content), [content]);
   const paintKey = useMemo(() => highlightPaintKey(highlights), [highlights]);
-  // Remount only when visible paint changes — not when tmp ids become server ids
-  // (that remount was destroying in-progress text selections).
-  const rendered = useMemo(
-    () => applyHighlightsToHtml(fragment, highlights),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- paintKey stands in for highlights
-    [fragment, paintKey]
-  );
+  const contentRootRef = useRef<HTMLDivElement>(null);
+
+  // Keep the article HTML stable. Paint <mark>s onto the live DOM so React
+  // never replaces innerHTML (that remount is what blocked re-selection).
+  useLayoutEffect(() => {
+    const el = contentRootRef.current;
+    if (!el || editing) return;
+    applyHighlightsToElement(el, highlightsRef.current);
+  }, [paintKey, fragment, editing]);
 
   useEffect(() => {
     if (editing || !fragment.includes("preloaded-official-fallback")) return;
@@ -129,14 +131,11 @@ export function PersonalContentArea({
       if (w) el.style.width = `${w}px`;
       if (h) el.style.height = `${h}px`;
     });
-  }, [editing, rendered]);
+  }, [editing, fragment]);
 
   useEffect(() => {
     onScrollContainer?.(containerRef.current);
-    onContentRoot?.(
-      (containerRef.current?.querySelector(".personal-content") as HTMLElement) ??
-        rootRef.current
-    );
+    onContentRoot?.(contentRootRef.current ?? rootRef.current);
     return () => {
       onScrollContainer?.(null);
       onContentRoot?.(null);
@@ -309,7 +308,7 @@ export function PersonalContentArea({
       eraseMode,
       guestLocked,
       highlights,
-      containerRef,
+      contentRootRef,
       selectionRef,
       highlightModeRef,
       preferredColorRef,
@@ -395,8 +394,9 @@ export function PersonalContentArea({
         }
       >
         <div
+          ref={contentRootRef}
           className="prose-content personal-content select-text"
-          dangerouslySetInnerHTML={{ __html: rendered }}
+          dangerouslySetInnerHTML={{ __html: fragment }}
         />
         {clipBox && (
           <div

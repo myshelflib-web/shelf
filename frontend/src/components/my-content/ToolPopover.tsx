@@ -75,6 +75,13 @@ export function ToolPopover({
       const target = e.target as Node;
       if (panelRef.current?.contains(target)) return;
       if (anchorEl?.contains(target)) return;
+      // Closing here re-renders and kills an in-progress article selection.
+      if (
+        target instanceof Element &&
+        target.closest(".personal-content, .prose-content, .highlight-menu")
+      ) {
+        return;
+      }
       onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);

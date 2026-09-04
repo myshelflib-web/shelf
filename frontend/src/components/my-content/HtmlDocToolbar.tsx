@@ -140,7 +140,8 @@ export function HtmlDocToolbar({
               return;
             }
             setMode("highlight");
-            setHighlightOpen(true);
+            // Don't auto-open the color sheet — its pointerup listener
+            // used to re-render mid-selection. Open it on a second click.
           }}
         >
           <Highlighter className="w-[17px] h-[17px]" />

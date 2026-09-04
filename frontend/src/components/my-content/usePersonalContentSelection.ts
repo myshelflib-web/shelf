@@ -23,7 +23,10 @@ type ActiveHighlight = {
   rect: DOMRect;
 };
 
-/** Mouse selection + mark-click handlers for PersonalContentArea. */
+/**
+ * Native-selection first (same idea as ContentArea / typical web highlighters):
+ * never setState on mousedown — that re-render cancels the browser selection.
+ */
 export function usePersonalContentSelection(opts: {
   editing: boolean;
   readOnly: boolean;
@@ -31,7 +34,7 @@ export function usePersonalContentSelection(opts: {
   eraseMode: boolean;
   guestLocked: boolean;
   highlights: UserContentHighlight[];
-  containerRef: MutableRefObject<HTMLDivElement | null>;
+  contentRootRef: MutableRefObject<HTMLElement | null>;
   selectionRef: MutableRefObject<{
     text: string;
     startOffset: number;
@@ -52,7 +55,7 @@ export function usePersonalContentSelection(opts: {
     eraseMode,
     guestLocked,
     highlights,
-    containerRef,
+    contentRootRef,
     selectionRef,
     highlightModeRef,
     preferredColorRef,
@@ -63,73 +66,40 @@ export function usePersonalContentSelection(opts: {
     removeHighlightNow,
   } = opts;
 
-  const selectGenRef = useRef(0);
   const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (clipMode) return;
+      pointerDownRef.current = { x: e.clientX, y: e.clientY };
+    },
+    [clipMode]
+  );
 
   const handleMouseUp = useCallback(() => {
     if (editing || readOnly || clipMode || eraseMode) return;
-    const gen = ++selectGenRef.current;
-    const container = containerRef.current;
-    const contentRoot =
-      (container?.querySelector(".personal-content") as HTMLElement | null) ??
-      container;
-    const sel = window.getSelection();
-    let snapshot: Range | null = null;
-    if (
-      contentRoot &&
-      sel &&
-      !sel.isCollapsed &&
-      sel.rangeCount > 0 &&
-      contentRoot.contains(sel.getRangeAt(0).commonAncestorContainer)
-    ) {
-      try {
-        snapshot = sel.getRangeAt(0).cloneRange();
-      } catch {
-        snapshot = null;
-      }
+    const root = contentRootRef.current;
+    const next = root ? readArticleTextSelection(root) : null;
+    if (!next) {
+      setSelection(null);
+      selectionRef.current = null;
+      return;
     }
-
-    const finish = () => {
-      if (gen !== selectGenRef.current) return;
-      if (editing || readOnly || clipMode || eraseMode) return;
-      const root =
-        (containerRef.current?.querySelector(
-          ".personal-content"
-        ) as HTMLElement | null) ?? containerRef.current;
-      if (!root) {
-        if (gen === selectGenRef.current) {
-          setSelection(null);
-          selectionRef.current = null;
-        }
-        return;
-      }
-      const next = readArticleTextSelection(root, snapshot ?? undefined);
-      if (!next) {
-        if (gen === selectGenRef.current) {
-          setSelection(null);
-          selectionRef.current = null;
-        }
-        return;
-      }
-      selectionRef.current = next;
-      setActiveHighlight(null);
-      if (highlightModeRef.current) {
-        const color = preferredColorRef.current;
-        setSelection(null);
-        saveHighlightRef.current?.(color);
-        window.getSelection()?.removeAllRanges();
-        return;
-      }
-      setSelection(next);
-    };
-
-    window.requestAnimationFrame(finish);
+    selectionRef.current = next;
+    setActiveHighlight(null);
+    if (highlightModeRef.current) {
+      setSelection(null);
+      saveHighlightRef.current?.(preferredColorRef.current);
+      window.getSelection()?.removeAllRanges();
+      return;
+    }
+    setSelection(next);
   }, [
     editing,
     readOnly,
     clipMode,
     eraseMode,
-    containerRef,
+    contentRootRef,
     selectionRef,
     highlightModeRef,
     preferredColorRef,
@@ -137,17 +107,6 @@ export function usePersonalContentSelection(opts: {
     setSelection,
     setActiveHighlight,
   ]);
-
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (clipMode) return;
-      pointerDownRef.current = { x: e.clientX, y: e.clientY };
-      setActiveHighlight(null);
-      setSelection(null);
-      selectionRef.current = null;
-    },
-    [clipMode, selectionRef, setActiveHighlight, setSelection]
-  );
 
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -169,8 +128,7 @@ export function usePersonalContentSelection(opts: {
       const legacyId = mark.getAttribute("data-highlight-id");
       const highlight = rangeAttr
         ? highlights.find(
-            (h) =>
-              highlightRangeKey(h.startOffset, h.endOffset) === rangeAttr
+            (h) => highlightRangeKey(h.startOffset, h.endOffset) === rangeAttr
           )
         : highlights.find((h) => h.id === legacyId);
       if (!highlight) return;

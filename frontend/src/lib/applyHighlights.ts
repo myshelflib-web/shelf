@@ -78,7 +78,28 @@ function isInsideMark(node: Node): boolean {
     node.nodeType === Node.ELEMENT_NODE
       ? (node as Element)
       : node.parentElement;
-  return Boolean(el?.closest("mark[data-highlight-range]"));
+  return Boolean(
+    el?.closest("mark[data-highlight-range], mark[data-highlight-id]")
+  );
+}
+
+function isPaintedTextHighlight(h: TextHighlight): boolean {
+  const kind = (h as TextHighlight & { kind?: string }).kind;
+  if (kind && kind !== "TEXT") return false;
+  return h.endOffset > h.startOffset;
+}
+
+/** Strip highlight wrappers so the article is selectable plain text again. */
+export function unwrapHighlightMarks(root: HTMLElement) {
+  root
+    .querySelectorAll("mark[data-highlight-range], mark[data-highlight-id]")
+    .forEach((mark) => {
+      const parent = mark.parentNode;
+      if (!parent) return;
+      while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+      parent.removeChild(mark);
+    });
+  root.normalize();
 }
 
 function applyOneHighlight(
@@ -131,7 +152,7 @@ export function highlightPaintKey(
   highlights: ReadonlyArray<TextHighlight>
 ): string {
   return highlights
-    .filter((h) => h.endOffset > h.startOffset)
+    .filter(isPaintedTextHighlight)
     .map(
       (h) =>
         `${h.startOffset}:${h.endOffset}:${h.color}:${h.note?.trim() ? "1" : "0"}`
@@ -140,21 +161,15 @@ export function highlightPaintKey(
     .join("|");
 }
 
-/** Apply highlight marks inside HTML without stripping document structure. */
-export function applyHighlightsToHtml(
-  html: string,
+/** Paint marks onto a live article root (unwrap first so marks never nest). */
+export function applyHighlightsToElement(
+  root: HTMLElement,
   highlights: TextHighlight[]
-): string {
-  if (!highlights.length || !html) return html;
-  if (typeof document === "undefined") return html;
-
-  const root = document.createElement("div");
-  root.innerHTML = html;
-
+) {
+  unwrapHighlightMarks(root);
   const sorted = [...highlights]
-    .filter((h) => h.endOffset > h.startOffset)
+    .filter(isPaintedTextHighlight)
     .sort((a, b) => b.startOffset - a.startOffset);
-
   for (const h of sorted) {
     applyOneHighlight(
       root,
@@ -165,7 +180,20 @@ export function applyHighlightsToHtml(
       Boolean(h.note?.trim())
     );
   }
+}
 
+/** Apply highlight marks inside HTML without stripping document structure. */
+export function applyHighlightsToHtml(
+  html: string,
+  highlights: TextHighlight[]
+): string {
+  if (!html) return html;
+  if (typeof document === "undefined") return html;
+  if (!highlights.some(isPaintedTextHighlight)) return html;
+
+  const root = document.createElement("div");
+  root.innerHTML = html;
+  applyHighlightsToElement(root, highlights);
   return root.innerHTML;
 }
 

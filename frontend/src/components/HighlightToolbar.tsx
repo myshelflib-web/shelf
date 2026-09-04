@@ -49,37 +49,11 @@ export function HighlightToolbar({
   onCloseRef.current = onClose;
 
   useEffect(() => {
-    // Close on pointerup (not pointerdown) so starting a new text selection
-    // is not cancelled mid-gesture. Arm after open so the same gesture that
-    // created the selection cannot immediately dismiss the menu.
-    let armed = false;
-    const armTimer = window.setTimeout(() => {
-      armed = true;
-    }, 120);
-    const onUp = (e: Event) => {
-      if (!armed) return;
-      const target = e.target as Node;
-      if (rootRef.current?.contains(target)) return;
-      // Selection finished inside the article — PersonalContentArea will
-      // replace or clear the menu; do not race it with onClose.
-      if (
-        target instanceof Element &&
-        target.closest(".personal-content, .prose-content")
-      ) {
-        return;
-      }
-      onCloseRef.current();
-    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onCloseRef.current();
     };
-    document.addEventListener("pointerup", onUp, true);
     document.addEventListener("keydown", onKey);
-    return () => {
-      window.clearTimeout(armTimer);
-      document.removeEventListener("pointerup", onUp, true);
-      document.removeEventListener("keydown", onKey);
-    };
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
   const guard = (action: () => void, feature: string) => {
