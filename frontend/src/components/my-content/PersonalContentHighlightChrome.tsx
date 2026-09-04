@@ -6,6 +6,7 @@ import {
   createHighlight,
   updateHighlight,
 } from "@/lib/offline/highlights";
+import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { HighlightToolbar } from "../HighlightToolbar";
 import { HighlightNoteModal } from "../HighlightNoteModal";
 
@@ -43,7 +44,9 @@ type Props = {
   saveHighlight: (color: string, note?: string) => UserContentHighlight | void;
   removeHighlightNow: (id: string) => void;
   guestLocked?: boolean;
+  annotationGate?: AnnotationGate | null;
   onGuestLockedClick?: (feature: string) => void;
+  preferredHighlightColorId?: string;
   onAskSelection?: (
     text: string,
     imageBase64?: string,
@@ -66,7 +69,9 @@ export function PersonalContentHighlightChrome({
   saveHighlight,
   removeHighlightNow,
   guestLocked = false,
+  annotationGate = null,
   onGuestLockedClick,
+  preferredHighlightColorId = "yellow",
   onAskSelection,
 }: Props) {
   return (
@@ -75,6 +80,7 @@ export function PersonalContentHighlightChrome({
         <HighlightToolbar
           rect={selection.rect}
           locked={guestLocked}
+          lockedGate={annotationGate}
           onLockedClick={onGuestLockedClick}
           onHighlight={(color) => void saveHighlight(color)}
           onNote={() => {
@@ -91,7 +97,7 @@ export function PersonalContentHighlightChrome({
                   const draft = { ...selection };
                   selectionRef.current = draft;
                   onAskSelection(draft.text, undefined, async (note) => {
-                    await saveHighlight("yellow", note);
+                    await saveHighlight(preferredHighlightColorId, note);
                   });
                   setSelection(null);
                 }
@@ -105,6 +111,7 @@ export function PersonalContentHighlightChrome({
           rect={activeHighlight.rect}
           showColors
           locked={guestLocked}
+          lockedGate={annotationGate}
           onLockedClick={onGuestLockedClick}
           onHighlight={() => {
             removeHighlightNow(activeHighlight.highlight.id);

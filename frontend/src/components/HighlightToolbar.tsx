@@ -46,9 +46,14 @@ export function HighlightToolbar({
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // pointerdown, not mousedown: drawing modes call preventDefault() on
-    // pointerdown, which suppresses the compatibility mouse events.
+    // Defer outside-dismiss so the same gesture that opened the menu
+    // (pointerup → mount) cannot immediately close it via a trailing event.
+    let armed = false;
+    const armTimer = window.setTimeout(() => {
+      armed = true;
+    }, 0);
     const onDown = (e: Event) => {
+      if (!armed) return;
       if (rootRef.current?.contains(e.target as Node)) return;
       onClose();
     };
@@ -58,6 +63,7 @@ export function HighlightToolbar({
     document.addEventListener("pointerdown", onDown, true);
     document.addEventListener("keydown", onKey);
     return () => {
+      window.clearTimeout(armTimer);
       document.removeEventListener("pointerdown", onDown, true);
       document.removeEventListener("keydown", onKey);
     };

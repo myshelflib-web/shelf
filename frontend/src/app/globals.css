@@ -1355,6 +1355,23 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   mix-blend-mode: screen;
 }
 
+.html-reader-dark {
+  background: #121214;
+}
+
+.html-reader-dark > .relative {
+  background: #121214;
+}
+
+.html-reader-dark .prose-content {
+  filter: invert(0.92) hue-rotate(180deg) brightness(0.95) contrast(0.95);
+}
+
+.html-reader-dark .prose-content mark,
+.html-reader-dark .prose-content img {
+  filter: invert(1) hue-rotate(180deg);
+}
+
 /* Layout fullscreen when the native Fullscreen API is unavailable (e.g. some iOS). */
 .shelf-doc-fullscreen {
   position: fixed !important;
@@ -1439,6 +1456,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .blank-page-editor,
 .personal-content {
   position: relative;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* Sketch notebook — GoodNotes-style fixed pages */

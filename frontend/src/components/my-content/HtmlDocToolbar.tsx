@@ -2,11 +2,19 @@
 
 import { useRef, useState } from "react";
 import {
+  Columns2,
   Crop,
+  Download,
   Eraser,
+  File,
   Highlighter,
+  Moon,
   MousePointer2,
+  Sun,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
+import { withShortcut } from "@/lib/hotkeys";
 import { useIsPhone } from "@/hooks/useIsPhone";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { lockedFeatureLabel } from "@/lib/preloadedReadOnly";
@@ -16,12 +24,14 @@ import {
   EditorToolbarShell,
   ToolBtn,
   ToolGroup,
+  ToolMuted,
   ToolSep,
 } from "./EditorToolbarChrome";
 import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
 import { HighlightsToolbarPopover } from "./HighlightsToolbarPopover";
 
-export type HtmlDocToolMode = "text" | "erase" | "clip";
+export type HtmlDocToolMode = "text" | "highlight" | "erase" | "clip";
+export type HtmlReadingWidth = "comfortable" | "wide";
 
 type Props = {
   mode: HtmlDocToolMode;
@@ -33,9 +43,15 @@ type Props = {
   highlights?: UserContentHighlight[];
   highlightsHydrating?: boolean;
   onHighlightSelect?: (highlight: UserContentHighlight) => void;
-  /** Preferred color id for the next text highlight (e.g. "yellow"). */
   highlightColorId?: string;
   onHighlightColorIdChange?: (colorId: string) => void;
+  onDownload?: () => void;
+  readingWidth?: HtmlReadingWidth;
+  onReadingWidthChange?: (w: HtmlReadingWidth) => void;
+  scale?: number;
+  onZoomBy?: (delta: number) => void;
+  darkReading?: boolean;
+  onToggleDarkReading?: () => void;
 };
 
 export function HtmlDocToolbar({
@@ -50,6 +66,13 @@ export function HtmlDocToolbar({
   onHighlightSelect,
   highlightColorId = "yellow",
   onHighlightColorIdChange,
+  onDownload,
+  readingWidth = "comfortable",
+  onReadingWidthChange,
+  scale = 1,
+  onZoomBy,
+  darkReading = false,
+  onToggleDarkReading,
 }: Props) {
   const isPhone = useIsPhone();
   const highlightBtnRef = useRef<HTMLButtonElement>(null);
@@ -98,16 +121,20 @@ export function HtmlDocToolbar({
           label={
             guestLocked
               ? lockedFeatureLabel(annotationGate, "highlight with pen")
-              : "Highlight — select text, then pick a color"
+              : "Highlighter — select text, then pick a color"
           }
-          active={mode === "text" && highlightOpen}
+          active={mode === "highlight"}
           className={lockedTool}
           aria-disabled={guestLocked}
           onClick={() => {
             if (blocked("Highlight and annotate")) return;
-            setMode("text");
+            if (mode === "highlight") {
+              setHighlightOpen((v) => !v);
+              return;
+            }
+            setMode("highlight");
             setEraseOpen(false);
-            setHighlightOpen((v) => !v);
+            setHighlightOpen(true);
           }}
         >
           <Highlighter className="w-[17px] h-[17px]" />
@@ -165,19 +192,86 @@ export function HtmlDocToolbar({
             <Crop className="w-[17px] h-[17px]" />
           </ToolBtn>
         ) : null}
+        {onDownload ? (
+          <ToolBtn {...btn} label="Download page" onClick={onDownload}>
+            <Download className="w-[17px] h-[17px]" />
+          </ToolBtn>
+        ) : null}
       </ToolGroup>
 
       <ToolSep {...sep} />
 
+      {!isPhone && onReadingWidthChange ? (
+        <>
+          <ToolGroup>
+            <ToolBtn
+              {...btn}
+              label="Comfortable reading width"
+              active={readingWidth === "comfortable"}
+              onClick={() => onReadingWidthChange("comfortable")}
+            >
+              <File className="w-[17px] h-[17px]" />
+            </ToolBtn>
+            <ToolBtn
+              {...btn}
+              label="Wide reading width"
+              active={readingWidth === "wide"}
+              onClick={() => onReadingWidthChange("wide")}
+            >
+              <Columns2 className="w-[17px] h-[17px]" />
+            </ToolBtn>
+          </ToolGroup>
+          <ToolSep {...sep} />
+        </>
+      ) : null}
+
+      {onZoomBy ? (
+        <ToolGroup>
+          <ToolBtn
+            {...btn}
+            label={withShortcut("Zoom out", "-")}
+            onClick={() => onZoomBy(-0.1)}
+          >
+            <ZoomOut className="w-[17px] h-[17px]" />
+          </ToolBtn>
+          <ToolMuted>{Math.round(scale * 100)}%</ToolMuted>
+          <ToolBtn
+            {...btn}
+            label={withShortcut("Zoom in", "=")}
+            onClick={() => onZoomBy(0.1)}
+          >
+            <ZoomIn className="w-[17px] h-[17px]" />
+          </ToolBtn>
+          {onToggleDarkReading ? (
+            <ToolBtn
+              {...btn}
+              label={
+                darkReading
+                  ? "Switch to light reading"
+                  : "Switch to dark reading"
+              }
+              active={darkReading}
+              onClick={onToggleDarkReading}
+            >
+              {darkReading ? (
+                <Moon className="w-[17px] h-[17px]" />
+              ) : (
+                <Sun className="w-[17px] h-[17px]" />
+              )}
+            </ToolBtn>
+          ) : null}
+        </ToolGroup>
+      ) : null}
+
       <ToolPopover
-        open={highlightOpen && mode === "text" && !guestLocked}
+        open={highlightOpen && mode === "highlight" && !guestLocked}
         onClose={() => setHighlightOpen(false)}
         anchorEl={highlightBtnRef.current}
         title="Highlight color"
       >
         <p className="text-[11px] text-[var(--text-muted)] mb-2.5 leading-relaxed">
-          Select text on the page, then choose a color from the menu — or set a
-          preferred color here for the next highlight.
+          Select text on the page — a menu appears to highlight, add a note, or
+          ask Study AI. Preferred color:
         </p>
         <ColorSwatchGrid>
           {HIGHLIGHT_COLORS.map((c) => (
@@ -202,7 +296,8 @@ export function HtmlDocToolbar({
         title="Eraser"
       >
         <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
-          Click any highlighted passage on the page to remove it.
+          Click any highlighted passage on the page to remove it. You can also
+          select a highlight and use the × on the popup.
         </p>
       </ToolPopover>
     </EditorToolbarShell>

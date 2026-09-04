@@ -1,53 +1,18 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef, useEffect, type MutableRefObject } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { UserContentHighlight } from "@/types";
 import { applyHighlightsToHtml } from "@/lib/applyHighlights";
 import { formatImportedHtml } from "@/lib/htmlFragment";
 import { blankCanvasScrollTarget } from "@/lib/blankCanvas";
 import { LiveEditorRouter } from "./LiveEditorRouter";
-import type { SketchZoomCommands } from "./useSketchNotebookZoom";
 import { usePersonalContentClip } from "./usePersonalContentClip";
 import { PersonalContentHighlightChrome } from "./PersonalContentHighlightChrome";
 import {
   createHighlight,
   deleteHighlight,
 } from "@/lib/offline/highlights";
-
-interface PersonalContentAreaProps {
-  content: string;
-  userTopicId: string;
-  highlights: UserContentHighlight[];
-  onHighlightsChange: (highlights: UserContentHighlight[]) => void;
-  onAskSelection?: (
-    text: string,
-    imageBase64?: string,
-    attachNote?: (note: string) => Promise<void>
-  ) => void;
-  editing?: boolean;
-  onContentChange?: (html: string) => void;
-  clipMode?: boolean;
-  /** Click an existing highlight to remove it (HTML eraser tool). */
-  eraseMode?: boolean;
-  onClip?: (imageDataUrl: string) => void;
-  onReadProgress?: (percent: number) => void;
-  onScrollContainer?: (el: HTMLElement | null) => void;
-  onContentRoot?: (el: HTMLElement | null) => void;
-  initialScrollTop?: number;
-  initialScrollLeft?: number;
-  initialScale?: number;
-  zoomCommandsRef?: MutableRefObject<SketchZoomCommands | null>;
-  onViewStateChange?: (state: {
-    scrollTop: number;
-    scrollLeft?: number;
-    scale?: number;
-  }) => void;
-  readOnly?: boolean;
-  guestLocked?: boolean;
-  onGuestLockedClick?: (feature: string) => void;
-  /** Compact live editor (side-panel notes). */
-  compactEditor?: boolean;
-}
+import type { PersonalContentAreaProps } from "./personalContentAreaTypes";
 
 export function PersonalContentArea({
   content,
@@ -59,6 +24,10 @@ export function PersonalContentArea({
   onContentChange,
   clipMode = false,
   eraseMode = false,
+  preferredHighlightColorId = "yellow",
+  readingWidth = "comfortable",
+  contentScale = 1,
+  annotationGate = null,
   onClip,
   onReadProgress,
   onScrollContainer,
@@ -259,37 +228,56 @@ export function PersonalContentArea({
 
   const handleMouseUp = useCallback(() => {
     if (editing || readOnly || clipMode || eraseMode) return;
-    const sel = window.getSelection();
-    const container = containerRef.current;
-    if (!sel || sel.isCollapsed || !container?.contains(sel.anchorNode)) {
-      setSelection(null);
-      return;
-    }
+    // Selection is often finalized after pointerup handlers return (Safari /
+    // trackpad). Read it on the next frame so the highlight menu can open.
+    window.requestAnimationFrame(() => {
+      if (editing || readOnly || clipMode || eraseMode) return;
+      const sel = window.getSelection();
+      const container = containerRef.current;
+      if (!sel || sel.isCollapsed || !container) {
+        setSelection(null);
+        return;
+      }
+      if (sel.rangeCount < 1) {
+        setSelection(null);
+        return;
+      }
+      const range = sel.getRangeAt(0);
+      if (!container.contains(range.commonAncestorContainer)) {
+        setSelection(null);
+        return;
+      }
 
-    const text = sel.toString().trim();
-    if (text.length < 3) {
-      setSelection(null);
-      return;
-    }
+      const text = sel.toString().trim();
+      if (text.length < 3) {
+        setSelection(null);
+        return;
+      }
 
-    const range = sel.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    if (rect.width === 0 && rect.height === 0) {
-      setSelection(null);
-      return;
-    }
-    const preRange = document.createRange();
-    preRange.selectNodeContents(container);
-    preRange.setEnd(range.startContainer, range.startOffset);
-    const startOffset = preRange.toString().length;
-    const next = {
-      text,
-      rect,
-      startOffset,
-      endOffset: startOffset + text.length,
-    };
-    selectionRef.current = next;
-    setSelection(next);
+      let rect = range.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) {
+        const clientRects = Array.from(range.getClientRects()).filter(
+          (r) => r.width > 0 || r.height > 0
+        );
+        if (clientRects.length === 0) {
+          setSelection(null);
+          return;
+        }
+        rect = clientRects[0]!;
+      }
+      const preRange = document.createRange();
+      preRange.selectNodeContents(container);
+      preRange.setEnd(range.startContainer, range.startOffset);
+      const startOffset = preRange.toString().length;
+      const next = {
+        text,
+        rect,
+        startOffset,
+        endOffset: startOffset + text.length,
+      };
+      selectionRef.current = next;
+      setSelection(next);
+    });
   }, [editing, readOnly, clipMode, eraseMode]);
 
   const removeHighlightNow = (id: string) => {
@@ -413,13 +401,27 @@ export function PersonalContentArea({
             ? " blank-canvas-viewport"
             : fragment.includes("shelf-doc-editor")
               ? " doc-editor-viewport"
-              : " px-8 py-6 max-w-3xl mx-auto"
+              : readingWidth === "wide"
+                ? " px-6 py-6 max-w-none"
+                : " px-8 py-6 max-w-3xl mx-auto"
         }${clipMode ? " cursor-crosshair" : eraseMode ? " cursor-pointer" : ""}`}
+        style={
+          contentScale !== 1
+            ? { zoom: contentScale }
+            : undefined
+        }
         onMouseUp={clipMode ? undefined : handleMouseUp}
         onClick={clipMode ? undefined : handleClick}
         onPointerDown={clipMode ? onPointerDown : undefined}
         onPointerMove={clipMode ? onPointerMove : undefined}
-        onPointerUp={clipMode ? onPointerUp : handleMouseUp}
+        onPointerUp={
+          clipMode
+            ? onPointerUp
+            : (e) => {
+                if (e.pointerType === "mouse") return;
+                handleMouseUp();
+              }
+        }
       >
         <div
           className="prose-content personal-content"
@@ -451,8 +453,10 @@ export function PersonalContentArea({
         saveHighlight={saveHighlight}
         removeHighlightNow={removeHighlightNow}
         guestLocked={guestLocked}
+        annotationGate={annotationGate}
         onGuestLockedClick={onGuestLockedClick}
         onAskSelection={onAskSelection}
+        preferredHighlightColorId={preferredHighlightColorId}
       />
     </div>
   );

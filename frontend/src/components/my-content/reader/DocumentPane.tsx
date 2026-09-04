@@ -1651,6 +1651,7 @@ export function DocumentPane({
                   initialScale={savedView?.scale}
                   zoomCommandsRef={sketchZoomRef}
                   onViewStateChange={persistView}
+                  pageTitle={pageData.title}
                 />
                 {pageData.isLocked && (
                   <PaywallBanner previewPercent={30} />

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, type ComponentProps } from "react";
+import { useCallback, useEffect, useState, type ComponentProps } from "react";
 import { PersonalContentArea } from "./PersonalContentArea";
 import {
   HtmlDocToolbar,
   type HtmlDocToolMode,
+  type HtmlReadingWidth,
 } from "./HtmlDocToolbar";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import type { UserContentHighlight } from "@/types";
@@ -19,7 +20,20 @@ type Props = ContentProps & {
   onHighlightSelect?: (highlight: UserContentHighlight) => void;
   clipMode?: boolean;
   onClipModeChange?: (clip: boolean) => void;
+  pageTitle?: string;
 };
+
+function downloadHtmlPage(title: string, html: string) {
+  const safe = title.replace(/[^\w\s-]+/g, "").trim() || "page";
+  const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${title.replace(/</g, "")}</title></head><body>${html}</body></html>`;
+  const blob = new Blob([doc], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${safe}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 /** HTML library reader: PDF-style annotation toolbar + content (or live editor). */
 export function HtmlAnnotatedReader({
@@ -34,12 +48,18 @@ export function HtmlAnnotatedReader({
   editing = false,
   guestLocked = false,
   onGuestLockedClick,
+  pageTitle,
+  content,
   ...contentProps
 }: Props) {
   const [mode, setMode] = useState<HtmlDocToolMode>(
     clipModeProp ? "clip" : "text"
   );
   const [highlightColorId, setHighlightColorId] = useState("yellow");
+  const [readingWidth, setReadingWidth] =
+    useState<HtmlReadingWidth>("comfortable");
+  const [scale, setScale] = useState(1);
+  const [darkReading, setDarkReading] = useState(false);
 
   useEffect(() => {
     if (clipModeProp && mode !== "clip") setMode("clip");
@@ -58,10 +78,18 @@ export function HtmlAnnotatedReader({
     onClipModeChange?.(next === "clip");
   };
 
+  const zoomBy = useCallback((delta: number) => {
+    setScale((s) => Math.min(2, Math.max(0.7, Math.round((s + delta) * 100) / 100)));
+  }, []);
+
   const toolbarVisible = showToolbar && !editing;
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
+    <div
+      className={`flex-1 flex flex-col overflow-hidden min-h-0 min-w-0${
+        darkReading ? " html-reader-dark" : ""
+      }`}
+    >
       {toolbarVisible ? (
         <HtmlDocToolbar
           mode={mode}
@@ -75,16 +103,30 @@ export function HtmlAnnotatedReader({
           onHighlightSelect={onHighlightSelect}
           highlightColorId={highlightColorId}
           onHighlightColorIdChange={setHighlightColorId}
+          onDownload={() =>
+            downloadHtmlPage(pageTitle || "page", content || "")
+          }
+          readingWidth={readingWidth}
+          onReadingWidthChange={setReadingWidth}
+          scale={scale}
+          onZoomBy={zoomBy}
+          darkReading={darkReading}
+          onToggleDarkReading={() => setDarkReading((v) => !v)}
         />
       ) : null}
       <PersonalContentArea
         {...contentProps}
+        content={content}
         highlights={highlights}
         editing={editing}
         guestLocked={guestLocked}
         onGuestLockedClick={onGuestLockedClick}
+        annotationGate={annotationGate}
         clipMode={!editing && mode === "clip"}
         eraseMode={!editing && mode === "erase"}
+        preferredHighlightColorId={highlightColorId}
+        readingWidth={readingWidth}
+        contentScale={scale}
       />
     </div>
   );
