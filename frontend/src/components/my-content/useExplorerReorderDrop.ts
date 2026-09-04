@@ -54,11 +54,22 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
   const [dropHint, setDropHint] = useState<ExplorerDropHint | null>(null);
   const [activeDrag, setActiveDrag] = useState<ReorderDragPayload | null>(null);
   const activeDragRef = useRef<ReorderDragPayload | null>(null);
+  const dragEndListenerRef = useRef<(() => void) | null>(null);
 
   const getActiveDrag = useCallback(
     () => activeDragRef.current,
     []
   );
+
+  const clearActiveDrag = useCallback(() => {
+    if (dragEndListenerRef.current) {
+      window.removeEventListener("dragend", dragEndListenerRef.current);
+      dragEndListenerRef.current = null;
+    }
+    activeDragRef.current = null;
+    setDropHint(null);
+    setActiveDrag(null);
+  }, []);
 
   const startReorderDrag = useCallback(
     (payload: ReorderDragPayload, e: DragEvent) => {
@@ -67,12 +78,24 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
         return;
       }
       e.stopPropagation();
+      if (dragEndListenerRef.current) {
+        window.removeEventListener("dragend", dragEndListenerRef.current);
+      }
       activeDragRef.current = payload;
       setActiveDrag(payload);
       const raw = JSON.stringify(payload);
       e.dataTransfer.setData(SHELF_REORDER_MIME, raw);
       e.dataTransfer.setData("text/plain", raw);
       e.dataTransfer.effectAllowed = "copyMove";
+      const onEnd = () => {
+        window.removeEventListener("dragend", onEnd);
+        dragEndListenerRef.current = null;
+        activeDragRef.current = null;
+        setDropHint(null);
+        setActiveDrag(null);
+      };
+      dragEndListenerRef.current = onEnd;
+      window.addEventListener("dragend", onEnd);
     },
     []
   );
@@ -106,7 +129,8 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
       e.preventDefault();
       e.stopPropagation();
       const drag = activeDragRef.current ?? readDrag(e);
-      setDropHint(null);
+      // Source row unmounts on move before native dragend; clear now.
+      clearActiveDrag();
       if (!drag) return;
 
       if (hint.kind === "subject-row" && drag.kind === "page") {
@@ -182,17 +206,11 @@ export function useExplorerLibraryDrag(handlers: ExplorerDropHandlers) {
         }
       }
     },
-    [handlers]
+    [clearActiveDrag, handlers]
   );
 
   const clearDropHint = useCallback(() => {
     setDropHint(null);
-  }, []);
-
-  const clearActiveDrag = useCallback(() => {
-    activeDragRef.current = null;
-    setDropHint(null);
-    setActiveDrag(null);
   }, []);
 
   return {

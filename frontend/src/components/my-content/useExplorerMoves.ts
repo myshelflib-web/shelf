@@ -18,7 +18,6 @@ import {
   topicSelectionKey,
 } from "@/lib/explorerSelection";
 import {
-  runDeleteWithProgressUi,
   useDeleteProgress,
 } from "@/components/DeleteProgressProvider";
 import { useAppDialog } from "@/hooks/useAppDialog";
@@ -154,30 +153,25 @@ export function useExplorerMoves({
       expandTarget(payload.subjectId, payload.topicGroupId);
 
       const keys = [pageSelectionKey(payload.pageId)];
-      void runDeleteWithProgressUi(
-        progress,
-        `Moving "${page.title}"…`,
-        async () => {
-          try {
-            await api.myContent.movePage(payload.pageId, {
-              subjectId: payload.subjectId,
-              topicGroupId: payload.topicGroupId,
-              beforePageId: payload.beforePageId,
-            });
-          } catch (err) {
-            setSubjects(prevSubjects);
-            setPinnedExtra(prevPinned);
-            setRootPages(prevRoot);
-            throw err;
-          }
-        },
-        keys
-      ).catch(async () => {
-        await alert({
-          title: "Move failed",
-          message: `Could not move "${page.title}". It was put back where it was.`,
+      const jobId = progress.start(`Moving "${page.title}"…`, keys);
+      void api.myContent
+        .movePage(payload.pageId, {
+          subjectId: payload.subjectId,
+          topicGroupId: payload.topicGroupId,
+          beforePageId: payload.beforePageId,
+        })
+        .catch(async () => {
+          setSubjects(prevSubjects);
+          setPinnedExtra(prevPinned);
+          setRootPages(prevRoot);
+          await alert({
+            title: "Move failed",
+            message: `Could not move "${page.title}". It was put back where it was.`,
+          });
+        })
+        .finally(() => {
+          progress.finish(jobId, keys);
         });
-      });
     },
     [
       alert,
@@ -243,33 +237,27 @@ export function useExplorerMoves({
         topicSelectionKey(payload.sourceSubjectId, payload.groupId),
         topicSelectionKey(payload.targetSubjectId, payload.groupId),
       ];
-      void runDeleteWithProgressUi(
-        progress,
+      const jobId = progress.start(
         `Moving folder "${loc.group.title}"…`,
-        async () => {
-          try {
-            await api.myContent.moveTopicGroup(
-              payload.sourceSubjectId,
-              payload.groupId,
-              {
-                targetSubjectId: payload.targetSubjectId,
-                targetParentId: payload.targetParentId,
-                beforeGroupId: payload.beforeGroupId,
-              }
-            );
-          } catch (err) {
-            setSubjects(prevSubjects);
-            setPinnedExtra(prevPinned);
-            throw err;
-          }
-        },
         keys
-      ).catch(async () => {
-        await alert({
-          title: "Move failed",
-          message: `Could not move folder "${loc.group.title}". It was put back where it was.`,
+      );
+      void api.myContent
+        .moveTopicGroup(payload.sourceSubjectId, payload.groupId, {
+          targetSubjectId: payload.targetSubjectId,
+          targetParentId: payload.targetParentId,
+          beforeGroupId: payload.beforeGroupId,
+        })
+        .catch(async () => {
+          setSubjects(prevSubjects);
+          setPinnedExtra(prevPinned);
+          await alert({
+            title: "Move failed",
+            message: `Could not move folder "${loc.group.title}". It was put back where it was.`,
+          });
+        })
+        .finally(() => {
+          progress.finish(jobId, keys);
         });
-      });
     },
     [
       alert,
