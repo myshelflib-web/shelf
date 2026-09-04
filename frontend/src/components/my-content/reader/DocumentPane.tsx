@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { PersonalContentArea } from "@/components/my-content/PersonalContentArea";
+import { HtmlAnnotatedReader } from "@/components/my-content/HtmlAnnotatedReader";
 import { PdfViewer, type PdfViewerCommands } from "@/components/my-content/PdfViewer";
 import { EmbedViewer } from "@/components/my-content/EmbedViewer";
 import { VideoPageView } from "@/components/my-content/VideoPageView";
@@ -1436,7 +1436,13 @@ export function DocumentPane({
                 fsAiOpen={fsAiOpen}
                 onToggleFsAi={() => setFsAiOpen((open) => !open)}
                 onToggleFullscreen={() => void toggleFullscreen()}
-                showClip={!isPdf && !isPreloadedDoc && !liveBlank}
+                showClip={
+                  !isPdf &&
+                  !isPreloadedDoc &&
+                  !liveBlank &&
+                  // HTML uses HtmlDocToolbar clip control instead.
+                  pageData.contentType !== "HTML"
+                }
                 htmlClip={htmlClip}
                 onToggleClip={() => setHtmlClip((v) => !v)}
                 showShare={
@@ -1600,7 +1606,7 @@ export function DocumentPane({
                 />
               ) : (
                 <>
-                <PersonalContentArea
+                <HtmlAnnotatedReader
                   content={
                     editing && editorSeed
                       ? editorSeed
@@ -1611,8 +1617,15 @@ export function DocumentPane({
                   userTopicId={pageData.id}
                   highlights={highlights}
                   onHighlightsChange={setHighlights}
+                  highlightsHydrating={highlightsHydrating}
                   guestLocked={guestLocked}
+                  annotationGate={annotationGate}
                   onGuestLockedClick={onGuestLockedClick}
+                  showToolbar
+                  showClip={!isPreloadedDoc}
+                  onHighlightSelect={scrollToHighlight}
+                  clipMode={htmlClip}
+                  onClipModeChange={setHtmlClip}
                   onAskSelection={(text, _image, attach) =>
                     openStudyAI(text, undefined, attach)
                   }
@@ -1620,14 +1633,12 @@ export function DocumentPane({
                   onContentChange={(html) => {
                     draftContentRef.current = html;
                     if (editorSeed) {
-                      // Live sketch/doc: keep props stable so contentEditable keeps focus.
                       scheduleLiveAutosave();
                       return;
                     }
                     setDraftContent(html);
                     scheduleLiveAutosave();
                   }}
-                  clipMode={htmlClip}
                   onClip={(data) => {
                     onClipImage(data, pageData);
                     setHtmlClip(false);

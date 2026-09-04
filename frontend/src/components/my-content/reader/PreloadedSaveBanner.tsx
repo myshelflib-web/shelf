@@ -247,7 +247,7 @@ export function PreloadedSaveBanner({
     message = stepLabel || "Saving to your library… You can keep reading.";
   } else if (phase === "ready") {
     message = annotatableCopy
-      ? "Saved — opening your library copy with full PDF tools."
+      ? "Saved — opening your library copy so you can highlight and annotate."
       : "Saved to your library as an official link.";
   } else if (error) {
     message = error;

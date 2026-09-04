@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { FileText, Sparkles, X } from "lucide-react";
 import { withShortcut } from "@/lib/hotkeys";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
@@ -70,12 +71,12 @@ export function HighlightToolbar({
     action();
   };
 
-  return (
+  const menu = (
     <div
       ref={rootRef}
       role="toolbar"
       aria-label="Highlight"
-      className={`highlight-menu fixed z-[100] flex items-center gap-3 px-3.5 py-2.5 rounded-2xl shadow-2xl${
+      className={`highlight-menu fixed z-[200] flex items-center gap-3 px-3.5 py-2.5 rounded-2xl shadow-2xl${
         locked ? " opacity-60 saturate-[0.85]" : ""
       }`}
       style={{
@@ -185,4 +186,7 @@ export function HighlightToolbar({
       )}
     </div>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(menu, document.body);
 }

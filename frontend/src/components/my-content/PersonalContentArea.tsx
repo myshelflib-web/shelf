@@ -2,19 +2,17 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect, type MutableRefObject } from "react";
 import { UserContentHighlight } from "@/types";
-import {
-  createHighlight,
-  deleteHighlight,
-  updateHighlight,
-} from "@/lib/offline/highlights";
 import { applyHighlightsToHtml } from "@/lib/applyHighlights";
 import { formatImportedHtml } from "@/lib/htmlFragment";
-import { captureViewportRect } from "@/lib/captureTab";
-import { HighlightToolbar } from "../HighlightToolbar";
-import { HighlightNoteModal } from "../HighlightNoteModal";
 import { blankCanvasScrollTarget } from "@/lib/blankCanvas";
 import { LiveEditorRouter } from "./LiveEditorRouter";
 import type { SketchZoomCommands } from "./useSketchNotebookZoom";
+import { usePersonalContentClip } from "./usePersonalContentClip";
+import { PersonalContentHighlightChrome } from "./PersonalContentHighlightChrome";
+import {
+  createHighlight,
+  deleteHighlight,
+} from "@/lib/offline/highlights";
 
 interface PersonalContentAreaProps {
   content: string;
@@ -29,6 +27,8 @@ interface PersonalContentAreaProps {
   editing?: boolean;
   onContentChange?: (html: string) => void;
   clipMode?: boolean;
+  /** Click an existing highlight to remove it (HTML eraser tool). */
+  eraseMode?: boolean;
   onClip?: (imageDataUrl: string) => void;
   onReadProgress?: (percent: number) => void;
   onScrollContainer?: (el: HTMLElement | null) => void;
@@ -58,6 +58,7 @@ export function PersonalContentArea({
   editing = false,
   onContentChange,
   clipMode = false,
+  eraseMode = false,
   onClip,
   onReadProgress,
   onScrollContainer,
@@ -96,15 +97,8 @@ export function PersonalContentArea({
     startOffset?: number;
     endOffset?: number;
   } | null>(null);
-  const clipDrag = useRef<{ x0: number; y0: number; x1: number; y1: number } | null>(
-    null
-  );
-  const [clipBox, setClipBox] = useState<{
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-  } | null>(null);
+  const { clipBox, onPointerDown, onPointerMove, onPointerUp } =
+    usePersonalContentClip(clipMode, onClip);
   const [activeHighlight, setActiveHighlight] = useState<{
     highlight: UserContentHighlight;
     rect: DOMRect;
@@ -151,39 +145,6 @@ export function PersonalContentArea({
       if (h) el.style.height = `${h}px`;
     });
   }, [editing, rendered]);
-
-  useEffect(() => {
-    if (!clipMode || !onClip) return;
-    const onPaste = async (e: ClipboardEvent) => {
-      const item = [...(e.clipboardData?.items ?? [])].find((i) =>
-        i.type.startsWith("image/")
-      );
-      const file = item?.getAsFile();
-      if (!file) return;
-      e.preventDefault();
-      const reader = new FileReader();
-      reader.onload = () => onClip(String(reader.result));
-      reader.readAsDataURL(file);
-    };
-    window.addEventListener("paste", onPaste);
-    return () => window.removeEventListener("paste", onPaste);
-  }, [clipMode, onClip]);
-
-  useEffect(() => {
-    if (editing || !fragment.includes("preloaded-official-fallback")) return;
-    const root = containerRef.current;
-    if (!root) return;
-    const onClick = (event: MouseEvent) => {
-      const anchor = (event.target as HTMLElement).closest(
-        "a.preloaded-official-fallback__cta"
-      ) as HTMLAnchorElement | null;
-      if (!anchor?.href) return;
-      event.preventDefault();
-      window.open(anchor.href, "_blank", "noopener,noreferrer");
-    };
-    root.addEventListener("click", onClick);
-    return () => root.removeEventListener("click", onClick);
-  }, [editing, fragment]);
 
   useEffect(() => {
     onScrollContainer?.(containerRef.current);
@@ -297,7 +258,7 @@ export function PersonalContentArea({
   }, [onReadProgress, editing, content, scrollRestored]);
 
   const handleMouseUp = useCallback(() => {
-    if (editing || readOnly || clipMode) return;
+    if (editing || readOnly || clipMode || eraseMode) return;
     const sel = window.getSelection();
     const container = containerRef.current;
     if (!sel || sel.isCollapsed || !container?.contains(sel.anchorNode)) {
@@ -313,6 +274,10 @@ export function PersonalContentArea({
 
     const range = sel.getRangeAt(0);
     const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) {
+      setSelection(null);
+      return;
+    }
     const preRange = document.createRange();
     preRange.selectNodeContents(container);
     preRange.setEnd(range.startContainer, range.startOffset);
@@ -325,16 +290,34 @@ export function PersonalContentArea({
     };
     selectionRef.current = next;
     setSelection(next);
-  }, [editing, readOnly, clipMode]);
+  }, [editing, readOnly, clipMode, eraseMode]);
+
+  const removeHighlightNow = (id: string) => {
+    commitHighlights(highlightsRef.current.filter((h) => h.id !== id));
+    setActiveHighlight(null);
+    if (id.startsWith("tmp-")) {
+      droppedHighlightIds.current.add(id);
+      return;
+    }
+    void deleteHighlight(id, userTopicId).catch(() => undefined);
+  };
 
   const handleClick = (e: React.MouseEvent) => {
-    if (editing) return;
+    if (editing || clipMode) return;
     const mark = (e.target as HTMLElement).closest("mark[data-highlight-id]");
     if (!mark) return;
     const id = mark.getAttribute("data-highlight-id");
     const highlight = highlights.find((h) => h.id === id);
     if (!highlight) return;
     setSelection(null);
+    if (eraseMode) {
+      if (guestLocked) {
+        onGuestLockedClick?.("Highlight and annotate");
+        return;
+      }
+      removeHighlightNow(highlight.id);
+      return;
+    }
     const r = mark.getBoundingClientRect();
     setActiveHighlight({
       highlight,
@@ -387,16 +370,6 @@ export function PersonalContentArea({
     return optimistic;
   };
 
-  const removeHighlightNow = (id: string) => {
-    commitHighlights(highlightsRef.current.filter((h) => h.id !== id));
-    setActiveHighlight(null);
-    if (id.startsWith("tmp-")) {
-      droppedHighlightIds.current.add(id);
-      return;
-    }
-    void deleteHighlight(id, userTopicId).catch(() => undefined);
-  };
-
   if (editing) {
     return (
       <div
@@ -441,76 +414,12 @@ export function PersonalContentArea({
             : fragment.includes("shelf-doc-editor")
               ? " doc-editor-viewport"
               : " px-8 py-6 max-w-3xl mx-auto"
-        }${clipMode ? " cursor-crosshair" : ""}`}
+        }${clipMode ? " cursor-crosshair" : eraseMode ? " cursor-pointer" : ""}`}
         onMouseUp={clipMode ? undefined : handleMouseUp}
         onClick={clipMode ? undefined : handleClick}
-        onPointerDown={
-          clipMode
-            ? (e) => {
-                const el = e.currentTarget as HTMLElement;
-                const r = el.getBoundingClientRect();
-                const x = e.clientX - r.left + el.scrollLeft;
-                const y = e.clientY - r.top + el.scrollTop;
-                clipDrag.current = { x0: x, y0: y, x1: x, y1: y };
-                setClipBox({ x, y, w: 0, h: 0 });
-                el.setPointerCapture(e.pointerId);
-              }
-            : undefined
-        }
-        onPointerMove={
-          clipMode
-            ? (e) => {
-                if (!clipDrag.current) return;
-                const el = e.currentTarget as HTMLElement;
-                const r = el.getBoundingClientRect();
-                clipDrag.current.x1 = e.clientX - r.left + el.scrollLeft;
-                clipDrag.current.y1 = e.clientY - r.top + el.scrollTop;
-                const { x0, y0, x1, y1 } = clipDrag.current;
-                setClipBox({
-                  x: Math.min(x0, x1),
-                  y: Math.min(y0, y1),
-                  w: Math.abs(x1 - x0),
-                  h: Math.abs(y1 - y0),
-                });
-              }
-            : undefined
-        }
-        onPointerUp={
-          clipMode
-            ? async (e) => {
-                const drag = clipDrag.current;
-                clipDrag.current = null;
-                setClipBox(null);
-                const el = e.currentTarget as HTMLElement;
-                try {
-                  el.releasePointerCapture(e.pointerId);
-                } catch {
-                  /* ignore */
-                }
-                if (!drag || !onClip) return;
-                const w = Math.abs(drag.x1 - drag.x0);
-                const h = Math.abs(drag.y1 - drag.y0);
-                if (w < 12 || h < 12) return;
-                const r = el.getBoundingClientRect();
-                const left = r.left + Math.min(drag.x0, drag.x1) - el.scrollLeft;
-                const top = r.top + Math.min(drag.y0, drag.y1) - el.scrollTop;
-                await new Promise<void>((resolve) =>
-                  requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-                );
-                try {
-                  const data = await captureViewportRect({
-                    left,
-                    top,
-                    width: w,
-                    height: h,
-                  });
-                  if (data) onClip(data);
-                } catch {
-                  /* capture cancelled or unsupported */
-                }
-              }
-            : undefined
-        }
+        onPointerDown={clipMode ? onPointerDown : undefined}
+        onPointerMove={clipMode ? onPointerMove : undefined}
+        onPointerUp={clipMode ? onPointerUp : handleMouseUp}
       >
         <div
           className="prose-content personal-content"
@@ -528,125 +437,23 @@ export function PersonalContentArea({
           />
         )}
       </div>
-      {selection && (
-        <HighlightToolbar
-          rect={selection.rect}
-          locked={guestLocked}
-          onLockedClick={onGuestLockedClick}
-          onHighlight={(color) => void saveHighlight(color)}
-          onNote={() => {
-            setNoteTarget({
-              quote: selection.text,
-              startOffset: selection.startOffset,
-              endOffset: selection.endOffset,
-            });
-            setSelection(null);
-          }}
-          onAsk={
-            onAskSelection
-              ? () => {
-                  const draft = { ...selection };
-                  selectionRef.current = draft;
-                  onAskSelection(draft.text, undefined, async (note) => {
-                    await saveHighlight("yellow", note);
-                  });
-                  setSelection(null);
-                }
-              : undefined
-          }
-          onClose={() => setSelection(null)}
-        />
-      )}
-      {activeHighlight && (
-        <HighlightToolbar
-          rect={activeHighlight.rect}
-          showColors
-          locked={guestLocked}
-          onLockedClick={onGuestLockedClick}
-          onHighlight={() => {
-            removeHighlightNow(activeHighlight.highlight.id);
-          }}
-          onNote={() => {
-            setNoteTarget({
-              quote: activeHighlight.highlight.text,
-              highlight: activeHighlight.highlight,
-            });
-            setActiveHighlight(null);
-          }}
-          onAsk={
-            onAskSelection
-              ? () => {
-                  onAskSelection(activeHighlight.highlight.text);
-                  setActiveHighlight(null);
-                }
-              : undefined
-          }
-          onRemove={() => {
-            removeHighlightNow(activeHighlight.highlight.id);
-          }}
-          onClose={() => setActiveHighlight(null)}
-        />
-      )}
-      {noteTarget && (
-        <HighlightNoteModal
-          quote={noteTarget.quote}
-          initialNote={noteTarget.highlight?.note ?? ""}
-          onClose={() => setNoteTarget(null)}
-          onSave={async (note) => {
-            if (noteTarget.highlight) {
-              const highlight = await updateHighlight(
-                noteTarget.highlight.id,
-                { note },
-                userTopicId,
-              );
-              onHighlightsChange(
-                highlights.map((h) =>
-                  h.id === highlight.id ? { ...h, ...highlight } : h
-                )
-              );
-              return;
-            }
-            if (
-              noteTarget.startOffset == null ||
-              noteTarget.endOffset == null
-            ) {
-              return;
-            }
-            const highlight = await createHighlight({
-              userTopicId,
-              text: noteTarget.quote,
-              startOffset: noteTarget.startOffset,
-              endOffset: noteTarget.endOffset,
-              color: "yellow",
-              note,
-            });
-            onHighlightsChange([...highlights, highlight]);
-          }}
-          onDeleteNote={
-            noteTarget.highlight?.note
-              ? async () => {
-                  const highlight = await updateHighlight(
-                    noteTarget.highlight!.id,
-                    { note: null },
-                    userTopicId,
-                  );
-                  onHighlightsChange(
-                    highlights.map((h) =>
-                      h.id === highlight.id ? { ...h, note: null } : h
-                    )
-                  );
-                }
-              : undefined
-          }
-          onRemoveHighlight={
-            noteTarget.highlight
-              ? () => {
-                  removeHighlightNow(noteTarget.highlight!.id);
-                }
-              : undefined
-          }
-        />
-      )}
+      <PersonalContentHighlightChrome
+        userTopicId={userTopicId}
+        highlights={highlights}
+        onHighlightsChange={onHighlightsChange}
+        selection={selection}
+        setSelection={setSelection}
+        selectionRef={selectionRef}
+        activeHighlight={activeHighlight}
+        setActiveHighlight={setActiveHighlight}
+        noteTarget={noteTarget}
+        setNoteTarget={setNoteTarget}
+        saveHighlight={saveHighlight}
+        removeHighlightNow={removeHighlightNow}
+        guestLocked={guestLocked}
+        onGuestLockedClick={onGuestLockedClick}
+        onAskSelection={onAskSelection}
+      />
     </div>
   );
 }

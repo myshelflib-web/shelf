@@ -71,8 +71,9 @@ export function HighlightsPanel({
               No highlights yet
             </p>
             <p className="text-xs text-[var(--text-muted)] mt-1 max-w-[220px]">
-              Select text or highlight on the page — snippets show up in the
-              toolbar list so you can jump back anytime.
+              {isPdf
+                ? "Use the highlighter or select text on the page — snippets show up here so you can jump back anytime."
+                : "Select text on the page, then pick a color — snippets show up here so you can jump back anytime."}
             </p>
           </div>
         ) : (
