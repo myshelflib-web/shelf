@@ -2,7 +2,6 @@
 
 import {
   useCallback,
-  useEffect,
   useRef,
   type Dispatch,
   type MutableRefObject,
@@ -27,7 +26,7 @@ type ActiveHighlight = {
   rect: DOMRect;
 };
 
-/** Mouseup-only selection — same model as ContentArea. No mousedown setState. */
+/** ContentArea-style: read selection on mouseup only. */
 export function usePersonalContentSelection(opts: {
   editing: boolean;
   readOnly: boolean;
@@ -71,11 +70,13 @@ export function usePersonalContentSelection(opts: {
     removeHighlightNow,
   } = opts;
 
-  const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
-  const highlightsRef = useRef(highlights);
-  highlightsRef.current = highlights;
+  const downRef = useRef<{ x: number; y: number } | null>(null);
 
-  const readSelection = useCallback(() => {
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    downRef.current = { x: e.clientX, y: e.clientY };
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
     if (editing || readOnly || clipMode || eraseMode) return;
     const root = contentRootRef.current;
     const next = root ? readArticleTextSelection(root) : null;
@@ -107,33 +108,12 @@ export function usePersonalContentSelection(opts: {
     setActiveHighlight,
   ]);
 
-  useEffect(() => {
-    const root = contentRootRef.current;
-    if (!root || editing || clipMode) return;
-    const onUp = () => readSelection();
-    const onDown = (e: MouseEvent) => {
-      pointerDownRef.current = { x: e.clientX, y: e.clientY };
-    };
-    const onPointerUp = (e: PointerEvent) => {
-      if (e.pointerType === "mouse") return;
-      readSelection();
-    };
-    root.addEventListener("mousedown", onDown);
-    root.addEventListener("mouseup", onUp);
-    root.addEventListener("pointerup", onPointerUp);
-    return () => {
-      root.removeEventListener("mousedown", onDown);
-      root.removeEventListener("mouseup", onUp);
-      root.removeEventListener("pointerup", onPointerUp);
-    };
-  }, [contentRootRef, editing, clipMode, readSelection]);
-
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       if (editing || clipMode) return;
       const live = window.getSelection();
       if (live && !live.isCollapsed) return;
-      const down = pointerDownRef.current;
+      const down = downRef.current;
       if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4) {
         return;
       }
@@ -145,7 +125,7 @@ export function usePersonalContentSelection(opts: {
         e.clientY - origin.top
       );
       if (!id) return;
-      const highlight = highlightsRef.current.find((h) => h.id === id);
+      const highlight = highlights.find((h) => h.id === id);
       if (!highlight) return;
       setSelection(null);
       if (eraseMode) {
@@ -166,6 +146,7 @@ export function usePersonalContentSelection(opts: {
       clipMode,
       eraseMode,
       guestLocked,
+      highlights,
       originRef,
       boxesRef,
       onGuestLockedClick,
@@ -175,5 +156,5 @@ export function usePersonalContentSelection(opts: {
     ]
   );
 
-  return { handleClick };
+  return { handleMouseDown, handleMouseUp, handleClick };
 }

@@ -46,7 +46,7 @@ export function HtmlHighlightLayer({
         highlights
       );
       setBoxes(next);
-        onBoxesRef.current?.(next);
+      onBoxesRef.current?.(next);
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -59,14 +59,12 @@ export function HtmlHighlightLayer({
   }, [contentEl, originEl, highlights, paintKey]);
 
   return (
-    <div
-      className="html-hl-layer absolute inset-0 pointer-events-none z-[1]"
-      aria-hidden
-    >
+    <>
       {boxes.map((b, i) => (
         <div
           key={`${b.id}-${i}`}
-          className="html-hl-box absolute rounded-sm"
+          className="html-hl-box absolute z-0 rounded-sm"
+          aria-hidden
           style={{
             left: b.left,
             top: b.top,
@@ -76,6 +74,6 @@ export function HtmlHighlightLayer({
           }}
         />
       ))}
-    </div>
+    </>
   );
 }

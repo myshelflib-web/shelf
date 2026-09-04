@@ -107,7 +107,6 @@ export function PersonalContentArea({
     originRef.current = el;
     setOriginEl(el);
   }, []);
-
   useEffect(() => {
     if (editing || !fragment.includes("preloaded-official-fallback")) return;
     const root = containerRef.current;
@@ -303,7 +302,7 @@ export function PersonalContentArea({
   };
   saveHighlightRef.current = saveHighlight;
 
-  const { handleClick } =
+  const { handleMouseDown, handleMouseUp, handleClick } =
     usePersonalContentSelection({
       editing,
       readOnly,
@@ -377,6 +376,8 @@ export function PersonalContentArea({
               ? " cursor-pointer"
               : " cursor-text"
         }`}
+        onMouseDown={clipMode ? undefined : handleMouseDown}
+        onMouseUp={clipMode ? undefined : handleMouseUp}
         onClick={clipMode ? undefined : handleClick}
         onPointerDown={clipMode ? onPointerDown : undefined}
         onPointerMove={clipMode ? onPointerMove : undefined}
@@ -391,11 +392,6 @@ export function PersonalContentArea({
               : undefined
           }
         >
-          <div
-            ref={setContentRoot}
-            className="prose-content personal-content select-text"
-            dangerouslySetInnerHTML={{ __html: fragment }}
-          />
           {!editing ? (
             <HtmlHighlightLayer
               contentEl={contentEl}
@@ -407,6 +403,11 @@ export function PersonalContentArea({
               }}
             />
           ) : null}
+          <div
+            ref={setContentRoot}
+            className="prose-content personal-content select-text relative z-[1] bg-transparent"
+            dangerouslySetInnerHTML={{ __html: fragment }}
+          />
         </div>
         {clipBox && (
           <div
