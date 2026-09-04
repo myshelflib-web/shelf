@@ -239,23 +239,43 @@ export function PersonalContentArea({
   const handleMouseUp = useCallback(() => {
     if (editing || readOnly || clipMode || eraseMode) return;
     const gen = ++selectGenRef.current;
-    // Selection is often finalized after pointerup handlers return (Safari /
-    // trackpad). Read on the next two frames so the range is stable.
-    const readSelection = () => {
+    const container = containerRef.current;
+    const contentRoot =
+      (container?.querySelector(".personal-content") as HTMLElement | null) ??
+      container;
+    const sel = window.getSelection();
+    // Snapshot immediately — ToolPopover / focus changes often clear the
+    // live selection before a delayed read runs.
+    let snapshot: Range | null = null;
+    if (
+      contentRoot &&
+      sel &&
+      !sel.isCollapsed &&
+      sel.rangeCount > 0 &&
+      contentRoot.contains(sel.getRangeAt(0).commonAncestorContainer)
+    ) {
+      try {
+        snapshot = sel.getRangeAt(0).cloneRange();
+      } catch {
+        snapshot = null;
+      }
+    }
+
+    const finish = () => {
       if (gen !== selectGenRef.current) return;
       if (editing || readOnly || clipMode || eraseMode) return;
-      const container = containerRef.current;
-      const contentRoot =
-        (container?.querySelector(".personal-content") as HTMLElement | null) ??
-        container;
-      if (!contentRoot) {
+      const root =
+        (containerRef.current?.querySelector(
+          ".personal-content"
+        ) as HTMLElement | null) ?? containerRef.current;
+      if (!root) {
         if (gen === selectGenRef.current) {
           setSelection(null);
           selectionRef.current = null;
         }
         return;
       }
-      const next = readArticleTextSelection(contentRoot);
+      const next = readArticleTextSelection(root, snapshot ?? undefined);
       if (!next) {
         if (gen === selectGenRef.current) {
           setSelection(null);
@@ -274,9 +294,10 @@ export function PersonalContentArea({
       }
       setSelection(next);
     };
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(readSelection);
-    });
+
+    // One frame is enough when we already cloned the range; keep a frame so
+    // Safari finishes committing the selection geometry for the toolbar rect.
+    window.requestAnimationFrame(finish);
   }, [editing, readOnly, clipMode, eraseMode]);
 
   const removeHighlightNow = (id: string) => {

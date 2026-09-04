@@ -21,6 +21,53 @@ function getTextSegments(root: HTMLElement) {
   return segments;
 }
 
+/**
+ * Character offset of (container, offset) within root — same metric as
+ * applyHighlights (concatenated text-node data), not Range.toString().
+ */
+export function textOffsetInRoot(
+  root: HTMLElement,
+  container: Node,
+  offset: number
+): number {
+  if (!root.contains(container) && container !== root) return 0;
+
+  if (container.nodeType === Node.TEXT_NODE) {
+    let pos = 0;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let n: Node | null;
+    while ((n = walker.nextNode())) {
+      const text = n as Text;
+      if (text === container) {
+        return pos + Math.max(0, Math.min(offset, text.data.length));
+      }
+      pos += text.data.length;
+    }
+    return pos;
+  }
+
+  // Element boundary: offset is a child index. Count text fully before that child.
+  let pos = 0;
+  const parent = container as Element;
+  const limit = Math.max(0, Math.min(offset, parent.childNodes.length));
+  for (let i = 0; i < limit; i += 1) {
+    const child = parent.childNodes[i];
+    if (!child) continue;
+    if (child.nodeType === Node.TEXT_NODE) {
+      pos += (child as Text).data.length;
+      continue;
+    }
+    if (child.nodeType === Node.ELEMENT_NODE) {
+      const walker = document.createTreeWalker(child, NodeFilter.SHOW_TEXT);
+      let n: Node | null;
+      while ((n = walker.nextNode())) {
+        pos += (n as Text).data.length;
+      }
+    }
+  }
+  return pos;
+}
+
 function applyOneHighlight(
   root: HTMLElement,
   start: number,

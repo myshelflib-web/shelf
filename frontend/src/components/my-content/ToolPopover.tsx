@@ -25,6 +25,8 @@ export function ToolPopover({
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useLayoutEffect(() => {
     if (!open || !anchorEl) {
@@ -64,7 +66,7 @@ export function ToolPopover({
       armed = true;
     }, 100);
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onCloseRef.current();
     };
     // pointerup (not pointerdown): closing on pointerdown cancels an
     // in-progress text selection in the article.
@@ -73,7 +75,7 @@ export function ToolPopover({
       const target = e.target as Node;
       if (panelRef.current?.contains(target)) return;
       if (anchorEl?.contains(target)) return;
-      onClose();
+      onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerup", onUp, true);
@@ -82,7 +84,7 @@ export function ToolPopover({
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerup", onUp, true);
     };
-  }, [open, onClose, anchorEl]);
+  }, [open, anchorEl]);
 
   if (!open || !anchorEl) return null;
 
