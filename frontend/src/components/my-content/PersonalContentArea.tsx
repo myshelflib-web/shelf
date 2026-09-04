@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { UserContentHighlight } from "@/types";
-import { applyHighlightsToHtml } from "@/lib/applyHighlights";
+import {
+  applyHighlightsToHtml,
+  highlightPaintKey,
+} from "@/lib/applyHighlights";
 import { formatImportedHtml } from "@/lib/htmlFragment";
 import { blankCanvasScrollTarget } from "@/lib/blankCanvas";
 import { LiveEditorRouter } from "./LiveEditorRouter";
@@ -13,7 +16,7 @@ import {
   deleteHighlight,
 } from "@/lib/offline/highlights";
 import type { PersonalContentAreaProps } from "./personalContentAreaTypes";
-import { readArticleTextSelection } from "./readArticleTextSelection";
+import { usePersonalContentSelection } from "./usePersonalContentSelection";
 
 export function PersonalContentArea({
   content,
@@ -77,7 +80,6 @@ export function PersonalContentArea({
   const highlightsRef = useRef(highlights);
   highlightsRef.current = highlights;
   const droppedHighlightIds = useRef(new Set<string>());
-  const selectGenRef = useRef(0);
   const highlightModeRef = useRef(highlightMode);
   highlightModeRef.current = highlightMode;
   const preferredColorRef = useRef(preferredHighlightColorId);
@@ -92,9 +94,13 @@ export function PersonalContentArea({
   };
 
   const fragment = useMemo(() => formatImportedHtml(content), [content]);
+  const paintKey = useMemo(() => highlightPaintKey(highlights), [highlights]);
+  // Remount only when visible paint changes — not when tmp ids become server ids
+  // (that remount was destroying in-progress text selections).
   const rendered = useMemo(
     () => applyHighlightsToHtml(fragment, highlights),
-    [fragment, highlights]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- paintKey stands in for highlights
+    [fragment, paintKey]
   );
 
   useEffect(() => {
@@ -236,70 +242,6 @@ export function PersonalContentArea({
     };
   }, [onReadProgress, editing, content, scrollRestored]);
 
-  const handleMouseUp = useCallback(() => {
-    if (editing || readOnly || clipMode || eraseMode) return;
-    const gen = ++selectGenRef.current;
-    const container = containerRef.current;
-    const contentRoot =
-      (container?.querySelector(".personal-content") as HTMLElement | null) ??
-      container;
-    const sel = window.getSelection();
-    // Snapshot immediately — ToolPopover / focus changes often clear the
-    // live selection before a delayed read runs.
-    let snapshot: Range | null = null;
-    if (
-      contentRoot &&
-      sel &&
-      !sel.isCollapsed &&
-      sel.rangeCount > 0 &&
-      contentRoot.contains(sel.getRangeAt(0).commonAncestorContainer)
-    ) {
-      try {
-        snapshot = sel.getRangeAt(0).cloneRange();
-      } catch {
-        snapshot = null;
-      }
-    }
-
-    const finish = () => {
-      if (gen !== selectGenRef.current) return;
-      if (editing || readOnly || clipMode || eraseMode) return;
-      const root =
-        (containerRef.current?.querySelector(
-          ".personal-content"
-        ) as HTMLElement | null) ?? containerRef.current;
-      if (!root) {
-        if (gen === selectGenRef.current) {
-          setSelection(null);
-          selectionRef.current = null;
-        }
-        return;
-      }
-      const next = readArticleTextSelection(root, snapshot ?? undefined);
-      if (!next) {
-        if (gen === selectGenRef.current) {
-          setSelection(null);
-          selectionRef.current = null;
-        }
-        return;
-      }
-      selectionRef.current = next;
-      setActiveHighlight(null);
-      if (highlightModeRef.current) {
-        const color = preferredColorRef.current;
-        setSelection(null);
-        saveHighlightRef.current?.(color);
-        window.getSelection()?.removeAllRanges();
-        return;
-      }
-      setSelection(next);
-    };
-
-    // One frame is enough when we already cloned the range; keep a frame so
-    // Safari finishes committing the selection geometry for the toolbar rect.
-    window.requestAnimationFrame(finish);
-  }, [editing, readOnly, clipMode, eraseMode]);
-
   const removeHighlightNow = (id: string) => {
     commitHighlights(highlightsRef.current.filter((h) => h.id !== id));
     setActiveHighlight(null);
@@ -309,29 +251,6 @@ export function PersonalContentArea({
       return;
     }
     void deleteHighlight(id, userTopicId).catch(() => undefined);
-  };
-
-  const handleClick = (e: React.MouseEvent) => {
-    if (editing || clipMode) return;
-    const mark = (e.target as HTMLElement).closest("mark[data-highlight-id]");
-    if (!mark) return;
-    const id = mark.getAttribute("data-highlight-id");
-    const highlight = highlights.find((h) => h.id === id);
-    if (!highlight) return;
-    setSelection(null);
-    if (eraseMode) {
-      if (guestLocked) {
-        onGuestLockedClick?.("Highlight and annotate");
-        return;
-      }
-      removeHighlightNow(highlight.id);
-      return;
-    }
-    const r = mark.getBoundingClientRect();
-    setActiveHighlight({
-      highlight,
-      rect: new DOMRect(r.left, r.top, r.width, r.height),
-    });
   };
 
   const saveHighlight = (color: string, note?: string) => {
@@ -381,6 +300,25 @@ export function PersonalContentArea({
     return optimistic;
   };
   saveHighlightRef.current = saveHighlight;
+
+  const { handleMouseUp, handleMouseDown, handleClick } =
+    usePersonalContentSelection({
+      editing,
+      readOnly,
+      clipMode,
+      eraseMode,
+      guestLocked,
+      highlights,
+      containerRef,
+      selectionRef,
+      highlightModeRef,
+      preferredColorRef,
+      saveHighlightRef,
+      setSelection,
+      setActiveHighlight,
+      onGuestLockedClick,
+      removeHighlightNow,
+    });
 
   if (editing) {
     return (
@@ -443,6 +381,7 @@ export function PersonalContentArea({
             : undefined
         }
         onMouseUp={clipMode ? undefined : handleMouseUp}
+        onMouseDown={clipMode ? undefined : handleMouseDown}
         onClick={clipMode ? undefined : handleClick}
         onPointerDown={clipMode ? onPointerDown : undefined}
         onPointerMove={clipMode ? onPointerMove : undefined}

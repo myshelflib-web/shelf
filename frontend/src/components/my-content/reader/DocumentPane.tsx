@@ -774,7 +774,7 @@ export function DocumentPane({
         return;
       }
       if (scrollEl && contentRoot) {
-        scrollHtmlHighlight(scrollEl, contentRoot, highlight.id);
+        scrollHtmlHighlight(scrollEl, contentRoot, highlight);
       }
     },
     [pageData?.contentType, scrollEl, contentRoot]

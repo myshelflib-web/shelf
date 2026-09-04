@@ -274,7 +274,13 @@
   background-color: #e59866;
 }
 
+.prose-content mark[data-highlight-range],
 .prose-content mark[data-highlight-id] {
+  cursor: text;
+}
+
+.prose-content mark[data-highlight-range]:hover,
+.prose-content mark[data-highlight-id]:hover {
   cursor: pointer;
 }
 
@@ -324,6 +330,8 @@
   background: var(--accent);
   color: #fff;
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.15);
+  /* Pseudo chip must not own hit-testing or block re-selection. */
+  pointer-events: none;
 }
 
 /* Study AI rendered markdown */

@@ -56,11 +56,16 @@ export function highlightSnippetText(h: UserContentHighlight, max = 140): string
 export function scrollHtmlHighlight(
   container: HTMLElement,
   contentRoot: HTMLElement,
-  highlightId: string
+  highlight: Pick<UserContentHighlight, "id" | "startOffset" | "endOffset">
 ): boolean {
-  const mark = contentRoot.querySelector(
-    `mark[data-highlight-id="${CSS.escape(highlightId)}"]`
-  );
+  const rangeKey = `${highlight.startOffset}:${highlight.endOffset}`;
+  const mark =
+    contentRoot.querySelector(
+      `mark[data-highlight-range="${CSS.escape(rangeKey)}"]`
+    ) ??
+    contentRoot.querySelector(
+      `mark[data-highlight-id="${CSS.escape(highlight.id)}"]`
+    );
   if (!mark) return false;
   const markRect = mark.getBoundingClientRect();
   const containerRect = container.getBoundingClientRect();

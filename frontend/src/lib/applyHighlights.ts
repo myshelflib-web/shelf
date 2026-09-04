@@ -6,6 +6,11 @@ export interface TextHighlight {
   note?: string | null;
 }
 
+/** Stable DOM key for a highlight span — ignores tmp→server id swaps. */
+export function highlightRangeKey(start: number, end: number): string {
+  return `${start}:${end}`;
+}
+
 function getTextSegments(root: HTMLElement) {
   const segments: { node: Text; start: number; end: number }[] = [];
   let pos = 0;
@@ -68,17 +73,28 @@ export function textOffsetInRoot(
   return pos;
 }
 
+function isInsideMark(node: Node): boolean {
+  const el =
+    node.nodeType === Node.ELEMENT_NODE
+      ? (node as Element)
+      : node.parentElement;
+  return Boolean(el?.closest("mark[data-highlight-range]"));
+}
+
 function applyOneHighlight(
   root: HTMLElement,
   start: number,
   end: number,
   color: string,
-  id?: string,
+  rangeKey: string,
   hasNote?: boolean
 ) {
+  // Re-walk each time so earlier marks in this pass are visible and we never
+  // nest <mark> inside <mark> (nested marks break selection in Chromium).
   const segments = getTextSegments(root);
   for (const seg of segments) {
     if (seg.end <= start || seg.start >= end) continue;
+    if (isInsideMark(seg.node)) continue;
 
     const node = seg.node;
     const parent = node.parentNode;
@@ -94,7 +110,7 @@ function applyOneHighlight(
 
     const mark = document.createElement("mark");
     mark.className = `highlight-${color}${hasNote ? " has-note" : ""}`;
-    if (id) mark.dataset.highlightId = id;
+    mark.dataset.highlightRange = rangeKey;
     mark.title = hasNote
       ? "Open highlight · Alt-click to remove"
       : "Open highlight · Alt-click to remove";
@@ -108,6 +124,20 @@ function applyOneHighlight(
     parent.insertBefore(frag, node);
     parent.removeChild(node);
   }
+}
+
+/** Visual signature — same paint ⇒ same HTML (tmp id swaps must not remount). */
+export function highlightPaintKey(
+  highlights: ReadonlyArray<TextHighlight>
+): string {
+  return highlights
+    .filter((h) => h.endOffset > h.startOffset)
+    .map(
+      (h) =>
+        `${h.startOffset}:${h.endOffset}:${h.color}:${h.note?.trim() ? "1" : "0"}`
+    )
+    .sort()
+    .join("|");
 }
 
 /** Apply highlight marks inside HTML without stripping document structure. */
@@ -131,7 +161,7 @@ export function applyHighlightsToHtml(
       h.startOffset,
       h.endOffset,
       h.color,
-      h.id,
+      highlightRangeKey(h.startOffset, h.endOffset),
       Boolean(h.note?.trim())
     );
   }
