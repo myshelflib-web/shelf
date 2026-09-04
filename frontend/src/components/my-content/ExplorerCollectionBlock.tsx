@@ -55,6 +55,7 @@ interface ExplorerCollectionBlockProps {
   onEditNotebook: (nb: UserSubject) => void;
   onAddTopic: (nb: UserSubject) => void;
   onAddPage: (nb: UserSubject, topic?: UserTopicGroup) => void;
+  onAddNestedFolder: (nb: UserSubject, parent: UserTopicGroup) => void;
   onRenameTopic: (
     nb: UserSubject,
     groupId: string,
@@ -108,6 +109,7 @@ export function ExplorerCollectionBlock({
   onEditNotebook,
   onAddTopic,
   onAddPage,
+  onAddNestedFolder,
   onRenameTopic,
   onDeleteTopic,
   startReorderDrag,
@@ -235,7 +237,7 @@ export function ExplorerCollectionBlock({
       </div>
 
       {open && (
-        <div className="ml-3 pl-2 border-l border-[var(--border)] space-y-0.5 mt-0.5">
+        <div className="ml-6 pl-3 border-l border-[var(--border)] space-y-0.5 mt-0.5">
           {loose.map((page) => {
             const href = pageHref(nb.slug, null, page.slug);
             const isActive =
@@ -316,6 +318,7 @@ export function ExplorerCollectionBlock({
                 key={group.id}
                 nb={nb}
                 group={group}
+                depth={2}
                 tOpen={tOpen}
                 selectionMode={selectionMode}
                 selected={selected}
@@ -332,6 +335,7 @@ export function ExplorerCollectionBlock({
                 onRenameTopic={onRenameTopic}
                 onDeleteTopic={onDeleteTopic}
                 onAddPage={onAddPage}
+                onAddNestedFolder={onAddNestedFolder}
                 enablePageDrag={enablePageDrag}
                 scheduledHrefs={scheduledHrefs}
                 onOpenPage={onOpenPage}
@@ -342,6 +346,7 @@ export function ExplorerCollectionBlock({
                 currentTopicSlug={currentTopicSlug}
                 currentPageSlug={currentPageSlug}
                 currentHref={currentHref}
+                expandedTopics={expandedTopics}
               />
             );
           })}

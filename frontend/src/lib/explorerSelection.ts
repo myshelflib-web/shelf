@@ -68,13 +68,24 @@ export function buildSelectionLabels(
   rootPages: import("@/types").UserPageSummary[]
 ): Map<ExplorerSelectionKey, string> {
   const map = new Map<ExplorerSelectionKey, string>();
+
+  const walkGroup = (
+    subjectId: string,
+    group: import("@/types").UserTopicGroup
+  ) => {
+    map.set(topicSelectionKey(subjectId, group.id), group.title);
+    for (const page of group.pages) {
+      map.set(pageSelectionKey(page.id), page.title);
+    }
+    for (const child of group.children ?? []) {
+      walkGroup(subjectId, child);
+    }
+  };
+
   for (const subject of subjects) {
     map.set(subjectSelectionKey(subject.id), subject.name);
     for (const group of subject.topicGroups ?? []) {
-      map.set(topicSelectionKey(subject.id, group.id), group.title);
-      for (const page of group.pages) {
-        map.set(pageSelectionKey(page.id), page.title);
-      }
+      walkGroup(subject.id, group);
     }
     for (const page of subject.pages ?? []) {
       map.set(pageSelectionKey(page.id), page.title);

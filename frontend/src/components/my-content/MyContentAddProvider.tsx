@@ -274,16 +274,26 @@ export function MyContentAddProvider({
     if (!requireOnline("Add topics")) return;
     setSubmitting(true);
     try {
+      const parentTopic = target.topic;
       const { topicGroup } = await api.myContent.createTopicGroup(
         target.notebook.id,
-        { title: topicTitle }
+        {
+          title: topicTitle,
+          ...(parentTopic ? { parentId: parentTopic.id } : {}),
+        }
       );
       close();
       emitContentChanged({
         type: "topic-created",
         notebookId: target.notebook.id,
         notebookSlug: target.notebook.slug,
-        topicGroup: { ...topicGroup, pages: topicGroup.pages ?? [] },
+        topicGroup: {
+          ...topicGroup,
+          pages: topicGroup.pages ?? [],
+          children: topicGroup.children ?? [],
+        },
+        parentTopicId: parentTopic?.id,
+        parentTopicSlug: parentTopic?.slug,
       });
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Failed to create topic");

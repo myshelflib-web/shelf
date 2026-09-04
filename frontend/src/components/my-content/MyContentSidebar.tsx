@@ -1,6 +1,6 @@
 "use client";
 
-import { NotebookSort, UserSubject, UserPageSummary } from "@/types";
+import { NotebookSort, UserSubject, UserPageSummary, UserTopicGroup } from "@/types";
 import {
   insertPageInTree,
   insertTopicInTree,
@@ -267,15 +267,29 @@ export function MyContentSidebar({
         }));
       } else if (change?.type === "topic-created") {
         setSubjects((prev) =>
-          insertTopicInTree(prev, change.notebookId, change.topicGroup)
+          insertTopicInTree(
+            prev,
+            change.notebookId,
+            change.topicGroup,
+            change.parentTopicId
+          )
         );
         setPinnedExtra((prev) =>
-          insertTopicInTree(prev, change.notebookId, change.topicGroup)
+          insertTopicInTree(
+            prev,
+            change.notebookId,
+            change.topicGroup,
+            change.parentTopicId
+          )
         );
         setExpandedNotebooks((prev) => ({
           ...prev,
           [change.notebookSlug]: true,
         }));
+        if (change.parentTopicSlug) {
+          const tKey = `${change.notebookSlug}:${change.parentTopicSlug}`;
+          setExpandedTopics((prev) => ({ ...prev, [tKey]: true }));
+        }
       } else if (change?.type === "page-created") {
         if (change.notebookId) {
           setSubjects((prev) =>
@@ -515,15 +529,22 @@ export function MyContentSidebar({
     for (const page of rootPages) {
       if (page.id === pageId) return page;
     }
+    const walk = (groups: UserTopicGroup[]): UserPageSummary | null => {
+      for (const group of groups) {
+        for (const page of group.pages) {
+          if (page.id === pageId) return page;
+        }
+        const nested = walk(group.children ?? []);
+        if (nested) return nested;
+      }
+      return null;
+    };
     for (const subject of treeSubjects) {
       for (const page of subject.pages ?? []) {
         if (page.id === pageId) return page;
       }
-      for (const group of subject.topicGroups ?? []) {
-        for (const page of group.pages) {
-          if (page.id === pageId) return page;
-        }
-      }
+      const found = walk(subject.topicGroups ?? []);
+      if (found) return found;
     }
     return null;
   };
@@ -564,7 +585,17 @@ export function MyContentSidebar({
       if (target) {
         setExpandedNotebooks((prev) => ({ ...prev, [target.slug]: true }));
         if (payload.topicGroupId) {
-          const group = target.topicGroups?.find((g) => g.id === payload.topicGroupId);
+          const findGroup = (
+            groups: UserTopicGroup[]
+          ): UserTopicGroup | undefined => {
+            for (const g of groups) {
+              if (g.id === payload.topicGroupId) return g;
+              const nested = findGroup(g.children ?? []);
+              if (nested) return nested;
+            }
+            return undefined;
+          };
+          const group = findGroup(target.topicGroups ?? []);
           if (group) {
             setExpandedTopics((prev) => ({
               ...prev,
@@ -818,6 +849,9 @@ export function MyContentSidebar({
           onAddTopic={(nb) => openAdd({ kind: "topic", notebook: nb })}
           onAddPage={(nb, topic) =>
             openAdd({ kind: "page", notebook: nb, topic })
+          }
+          onAddNestedFolder={(nb, parentTopic) =>
+            openAdd({ kind: "topic", notebook: nb, topic: parentTopic })
           }
           openAddPage={() => openAdd({ kind: "page" })}
           openAddNotebook={() => openAdd({ kind: "notebook" })}

@@ -131,7 +131,7 @@ export function PreloadedSubjectBranch({
         </div>
 
         {tOpen && articles.length > 0 && (
-          <div className="ml-3 space-y-0.5 mt-0.5">
+          <div className="ml-6 pl-3 border-l border-[var(--border)] space-y-0.5 mt-0.5">
             {articles.map((article) => {
               const isActive =
                 activeSubject === subject.slug &&
@@ -198,7 +198,7 @@ export function PreloadedSubjectBranch({
       </div>
 
       {open && (
-        <div className="ml-3 pl-2 border-l border-[var(--border)] space-y-0.5 mt-0.5">
+        <div className="ml-6 pl-3 border-l border-[var(--border)] space-y-0.5 mt-0.5">
           {topics}
         </div>
       )}

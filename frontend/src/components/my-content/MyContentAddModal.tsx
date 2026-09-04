@@ -125,7 +125,7 @@ export function MyContentAddModal({
     kind === "notebook"
       ? "New folder"
       : kind === "topic"
-        ? `New folder in ${notebookName ?? "…"}`
+        ? `New folder in ${topicTitle ?? notebookName ?? "…"}`
         : !notebookName
           ? "Add to library"
           : topicTitle

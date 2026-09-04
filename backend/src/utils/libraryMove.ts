@@ -9,6 +9,7 @@ import {
 } from "./pageScope.js";
 import { reorderBefore } from "./libraryReorder.js";
 import { uniqueFolderSlug } from "./fileScope.js";
+import { folderAncestors } from "./folderPath.js";
 
 export type MovePageTarget = {
   subjectId: string | null;
@@ -21,22 +22,24 @@ export type MoveTopicTarget = {
   beforeGroupId: string | null;
 };
 
-
 async function resolveTargetFolder(
   userId: string,
   subjectId: string | null,
   topicGroupId: string | null
 ) {
   if (topicGroupId) {
-    const chain = await prisma.userFolder.findFirst({
+    const folder = await prisma.userFolder.findFirst({
       where: { id: topicGroupId, userId },
       select: { id: true, parentId: true },
     });
-    if (!chain?.parentId) return null;
-    const root = await prisma.userFolder.findFirst({
-      where: { id: chain.parentId, userId, parentId: null },
+    if (!folder?.parentId) return null;
+    const chain = await folderAncestors(folder.id);
+    const root = chain[0];
+    if (!root) return null;
+    const owned = await prisma.userFolder.findFirst({
+      where: { id: root.id, userId, parentId: null },
     });
-    if (!root || (subjectId && subjectId !== root.id)) return null;
+    if (!owned || (subjectId && subjectId !== root.id)) return null;
     return { folderId: topicGroupId };
   }
   if (subjectId) {

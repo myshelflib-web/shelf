@@ -1,12 +1,14 @@
 "use client";
 
 import { UserSubject, UserTopicGroup, UserPageSummary } from "@/types";
-import { pageHref } from "@/lib/myContentTree";
+import { getTopicChildren, pageHref } from "@/lib/myContentTree";
+import { MAX_FOLDER_DEPTH } from "@/lib/folderDepth";
 import {
   ChevronDown,
   ChevronRight,
   Trash2,
   FilePlus,
+  FolderPlus,
   Pencil,
   Loader2,
 } from "lucide-react";
@@ -27,38 +29,11 @@ import type { ReorderDragPayload } from "@/lib/libraryReorder";
 import { useAppDialog } from "@/hooks/useAppDialog";
 import { useDeleteProgressOptional } from "@/components/DeleteProgressProvider";
 
-export function ExplorerTopicBlock({
-  nb,
-  group,
-  tOpen,
-  selectionMode,
-  selected,
-  onSelectionChange,
-  libraryMoveEnabled,
-  activeDrag,
-  dropHint,
-  startReorderDrag,
-  allowReorderDrop,
-  finishReorderDrop,
-  clearDropHint,
-  clearActiveDrag,
-  onToggleTopic,
-  onRenameTopic,
-  onDeleteTopic,
-  onAddPage,
-  enablePageDrag,
-  scheduledHrefs,
-  onOpenPage,
-  onSharePage,
-  onRenamePage,
-  onDeletePage,
-  notebookSlug,
-  currentTopicSlug,
-  currentPageSlug,
-  currentHref,
-}: {
+type ExplorerTopicBlockProps = {
   nb: UserSubject;
   group: UserTopicGroup;
+  /** Folder depth (collection root = 1, first nested = 2). */
+  depth: number;
   tOpen: boolean;
   selectionMode: boolean;
   selected: Set<ExplorerSelectionKey>;
@@ -87,6 +62,7 @@ export function ExplorerTopicBlock({
     title: string
   ) => void | Promise<void>;
   onAddPage: (nb: UserSubject, topic?: UserTopicGroup) => void;
+  onAddNestedFolder: (nb: UserSubject, parent: UserTopicGroup) => void;
   enablePageDrag: boolean;
   scheduledHrefs: Set<string>;
   onOpenPage: (page: UserPageSummary, href: string) => void;
@@ -97,7 +73,42 @@ export function ExplorerTopicBlock({
   currentTopicSlug?: string;
   currentPageSlug?: string;
   currentHref?: string;
-}) {
+  expandedTopics: Record<string, boolean>;
+};
+
+export function ExplorerTopicBlock({
+  nb,
+  group,
+  depth,
+  tOpen,
+  selectionMode,
+  selected,
+  onSelectionChange,
+  libraryMoveEnabled,
+  activeDrag,
+  dropHint,
+  startReorderDrag,
+  allowReorderDrop,
+  finishReorderDrop,
+  clearDropHint,
+  clearActiveDrag,
+  onToggleTopic,
+  onRenameTopic,
+  onDeleteTopic,
+  onAddPage,
+  onAddNestedFolder,
+  enablePageDrag,
+  scheduledHrefs,
+  onOpenPage,
+  onSharePage,
+  onRenamePage,
+  onDeletePage,
+  notebookSlug,
+  currentTopicSlug,
+  currentPageSlug,
+  currentHref,
+  expandedTopics,
+}: ExplorerTopicBlockProps) {
   const { prompt } = useAppDialog();
   const topicKey = topicSelectionKey(nb.id, group.id);
   const topicDeleting = Boolean(
@@ -112,6 +123,8 @@ export function ExplorerTopicBlock({
     dropHint.subjectId === nb.id &&
     dropHint.topicGroupId === group.id;
   const topicPageIds = group.pages.map((p) => p.id);
+  const children = getTopicChildren(group);
+  const canNest = depth < MAX_FOLDER_DEPTH;
 
   return (
     <div>
@@ -203,7 +216,7 @@ export function ExplorerTopicBlock({
           {group.title}
         </span>
         <span className="text-[10px] text-[var(--text-muted)] shrink-0">
-          {group.pages.length}
+          {group.pages.length + children.length}
         </span>
         {!selectionMode && (
           <span
@@ -226,6 +239,16 @@ export function ExplorerTopicBlock({
             >
               <Pencil className="w-3 h-3" />
             </button>
+            {canNest && (
+              <button
+                type="button"
+                title="New folder"
+                className="p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+                onClick={() => onAddNestedFolder(nb, group)}
+              >
+                <FolderPlus className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               type="button"
               title="Add file"
@@ -250,7 +273,7 @@ export function ExplorerTopicBlock({
         )}
       </div>
       {tOpen && (
-        <div className="ml-3 space-y-0.5 mt-0.5">
+        <div className="ml-6 pl-3 border-l border-[var(--border)] space-y-0.5 mt-0.5">
           {group.pages.map((page) => {
             const href = pageHref(nb.slug, group.slug, page.slug);
             const isActive =
@@ -328,6 +351,46 @@ export function ExplorerTopicBlock({
                 />
               </>
             )}
+          {children.map((child) => {
+            const tKey = `${nb.slug}:${child.slug}`;
+            const childOpen = expandedTopics[tKey] ?? false;
+            return (
+              <ExplorerTopicBlock
+                key={child.id}
+                nb={nb}
+                group={child}
+                depth={depth + 1}
+                tOpen={childOpen}
+                selectionMode={selectionMode}
+                selected={selected}
+                onSelectionChange={onSelectionChange}
+                libraryMoveEnabled={libraryMoveEnabled}
+                activeDrag={activeDrag}
+                dropHint={dropHint}
+                startReorderDrag={startReorderDrag}
+                allowReorderDrop={allowReorderDrop}
+                finishReorderDrop={finishReorderDrop}
+                clearDropHint={clearDropHint}
+                clearActiveDrag={clearActiveDrag}
+                onToggleTopic={onToggleTopic}
+                onRenameTopic={onRenameTopic}
+                onDeleteTopic={onDeleteTopic}
+                onAddPage={onAddPage}
+                onAddNestedFolder={onAddNestedFolder}
+                enablePageDrag={enablePageDrag}
+                scheduledHrefs={scheduledHrefs}
+                onOpenPage={onOpenPage}
+                onSharePage={onSharePage}
+                onRenamePage={onRenamePage}
+                onDeletePage={onDeletePage}
+                notebookSlug={notebookSlug}
+                currentTopicSlug={currentTopicSlug}
+                currentPageSlug={currentPageSlug}
+                currentHref={currentHref}
+                expandedTopics={expandedTopics}
+              />
+            );
+          })}
         </div>
       )}
     </div>

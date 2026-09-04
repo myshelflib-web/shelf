@@ -79,6 +79,7 @@ interface MyContentExplorerTreeProps {
   ) => void | Promise<void>;
   onAddTopic: (nb: UserSubject) => void;
   onAddPage: (nb: UserSubject, topic?: UserTopicGroup) => void;
+  onAddNestedFolder: (nb: UserSubject, parent: UserTopicGroup) => void;
   openAddPage: () => void;
   openAddNotebook: () => void;
 }
@@ -123,6 +124,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
     onDeleteTopic,
     onAddTopic,
     onAddPage,
+    onAddNestedFolder,
     openAddPage,
     openAddNotebook,
   } = props;
@@ -329,6 +331,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               onEditNotebook={onEditNotebook}
               onAddTopic={onAddTopic}
               onAddPage={onAddPage}
+              onAddNestedFolder={onAddNestedFolder}
               onRenameTopic={onRenameTopic}
               onDeleteTopic={onDeleteTopic}
               startReorderDrag={startReorderDrag}

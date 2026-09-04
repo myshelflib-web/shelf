@@ -7,6 +7,7 @@ import {
 import { ensureLegacyLibraryMapped } from "./legacyLibraryMap.js";
 import { foldersForLegacySubjectIds } from "./legacyLibraryMapHelpers.js";
 import { uniqueFolderSlug } from "../utils/fileScope.js";
+import { assertCanNestUnder } from "../utils/folderPath.js";
 
 import type { SlimNotebook } from "../utils/notebookBrowse.js";
 
@@ -165,6 +166,8 @@ export async function createNestedFolder(
     where: { id: parentId, userId },
   });
   if (!parent) return null;
+
+  await assertCanNestUnder(parentId);
 
   const slug = await uniqueFolderSlug(userId, parentId, input.name);
   const order =

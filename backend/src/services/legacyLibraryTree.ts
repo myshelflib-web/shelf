@@ -21,9 +21,11 @@ export type LegacyTopicGroup = {
   slug: string;
   order: number;
   pages: LegacyPageSummary[];
+  /** Nested folders under this folder (depth 3+). */
+  children?: LegacyTopicGroup[];
 };
 
-/** Legacy collection shape (2-level folder tree for existing clients). */
+/** Legacy collection shape with recursive nested folders. */
 export type LegacySubject = {
   id: string;
   name: string;
@@ -47,7 +49,7 @@ type FolderRow = {
 
 type FileRow = LegacyPageSummary & { folderId: string | null };
 
-/** Build legacy 2-level tree from unified folders + files. */
+/** Build subject tree from unified folders + files (arbitrary nesting). */
 export function buildLegacySubjectTree(
   folders: FolderRow[],
   files: FileRow[]
@@ -78,16 +80,20 @@ export function buildLegacySubjectTree(
     list.sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
   }
 
+  function buildGroup(folder: FolderRow): LegacyTopicGroup {
+    const nested = childrenByParent.get(folder.id) ?? [];
+    return {
+      id: folder.id,
+      title: folder.name,
+      slug: folder.slug,
+      order: folder.order,
+      pages: (filesByFolder.get(folder.id) ?? []).map(stripFolderId),
+      children: nested.length > 0 ? nested.map(buildGroup) : undefined,
+    };
+  }
+
   return roots.map((root) => {
     const childFolders = childrenByParent.get(root.id) ?? [];
-    const topicGroups: LegacyTopicGroup[] = childFolders.map((child) => ({
-      id: child.id,
-      title: child.name,
-      slug: child.slug,
-      order: child.order,
-      pages: (filesByFolder.get(child.id) ?? []).map(stripFolderId),
-    }));
-
     return {
       id: root.id,
       name: root.name,
@@ -95,7 +101,7 @@ export function buildLegacySubjectTree(
       description: root.description,
       icon: root.icon,
       order: root.order,
-      topicGroups,
+      topicGroups: childFolders.map(buildGroup),
       pages: (filesByFolder.get(root.id) ?? []).map(stripFolderId),
     };
   });

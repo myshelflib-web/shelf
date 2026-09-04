@@ -1229,7 +1229,10 @@ export const api = {
         `/api/my-content/subjects/${id}`,
         { method: "PATCH", body: JSON.stringify(data) }
       ),
-    createTopicGroup: (subjectId: string, data: { title: string }) =>
+    createTopicGroup: (
+      subjectId: string,
+      data: { title: string; parentId?: string }
+    ) =>
       request<{ topicGroup: import("@/types").UserTopicGroup }>(
         `/api/my-content/subjects/${subjectId}/topic-groups`,
         { method: "POST", body: JSON.stringify(data) }

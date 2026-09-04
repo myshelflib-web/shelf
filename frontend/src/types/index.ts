@@ -181,6 +181,8 @@ export interface UserTopicGroup {
   slug: string;
   order: number;
   pages: UserPageSummary[];
+  /** Nested folders (depth 3+ under a collection). */
+  children?: UserTopicGroup[];
 }
 
 export type UserContentType =

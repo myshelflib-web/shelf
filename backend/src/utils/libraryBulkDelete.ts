@@ -93,10 +93,14 @@ export async function loadBulkDeleteTopicGroups(
     });
     if (!parent) continue;
     const group = await prisma.userFolder.findFirst({
-      where: { id: tg.groupId, userId, parentId: parent.id },
-      select: { id: true },
+      where: { id: tg.groupId, userId },
+      select: { id: true, parentId: true },
     });
-    if (!group) continue;
+    if (!group || group.parentId === null) continue;
+
+    const underRoot = await collectDescendantFolderIds(userId, [parent.id]);
+    if (!underRoot.has(group.id)) continue;
+
     const folderIds = await collectDescendantFolderIds(userId, [group.id]);
     const pages = await prisma.userTopic.findMany({
       where: { userId, folderId: { in: [...folderIds] } },

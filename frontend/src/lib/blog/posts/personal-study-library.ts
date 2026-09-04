@@ -9,7 +9,7 @@ export const personalStudyLibrary = buildPost(
     excerpt:
       "Shelf is built around your material: collections act like notebooks, topics group related pages, and root-level pages sit beside collections for quick access.",
     publishedAt: "2026-01-15",
-    updatedAt: "2026-08-29",
+    updatedAt: "2026-09-04",
     tags: ["library", "collections", "organization", "pdf"],
     readingMinutes: 6,
   },
@@ -18,25 +18,25 @@ export const personalStudyLibrary = buildPost(
       heading: "Your material, your structure",
       paragraphs: [
         "Most study apps treat you like a consumer of someone else's catalog. Shelf inverts that: after you sign in, /my-content becomes your home — a workspace for PDFs, YouTube lectures, typed notes, sketch pages, and imported documents you bring yourself.",
-        "Collections (sometimes called notebooks in the UI) are top-level folders. Inside a collection you can add topics — thematic groupings like \"Constitutional Law\" or \"Organic Chemistry Unit 3\" — and pages that hold the actual files.",
+        "Top-level folders (collections) hold nested folders and files. You can nest folders up to ten levels deep — enough for exam → paper → subject → topic → subtopic trees — without flattening everything into a two-level maze.",
       ],
     },
     {
       heading: "Flexible page placement",
       paragraphs: [
-        "Shelf supports three placement patterns without forcing a default \"General\" topic:",
+        "Shelf supports flexible placement without forcing a default \"General\" topic:",
       ],
       bullets: [
         "Library-root pages live directly under /my-content — ideal for one-off readings.",
-        "Collection-level pages sit inside a notebook but outside any topic — useful for syllabus overviews or mixed material.",
-        "Topic pages are the classic Collection → Topic → Page hierarchy for deep organization.",
+        "Folder-level pages sit inside any folder in the tree — useful for syllabus overviews or mixed material.",
+        "Nest folders under folders (up to 10 levels) when a unit needs chapters, then files under the right leaf.",
       ],
     },
     {
       heading: "Explorer, search, and resume reading",
       paragraphs: [
-        "The library sidebar supports search, sort, pagination, and pinning recently opened collections so they stay visible while you browse. Click a collection to expand it; Shelf remembers the last page you read in that collection and can resume there on any device once you are signed in.",
-        "Rename collections, topics, and page titles in place — URLs keep stable slugs, so bookmarks and planner links keep working after a rename.",
+        "The library sidebar supports search, sort, pagination, and pinning recently opened collections so they stay visible while you browse. Click a folder to expand it; use the folder-plus control on a nested folder to add another level. Shelf remembers the last page you read in a collection and can resume there on any device once you are signed in.",
+        "Rename folders and page titles in place — URLs keep stable slugs, so bookmarks and planner links keep working after a rename.",
       ],
     },
     {

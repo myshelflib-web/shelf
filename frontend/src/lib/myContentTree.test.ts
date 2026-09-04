@@ -71,4 +71,22 @@ describe("insertTopicInTree", () => {
     });
     expect(tree[0]!.topicGroups.map((g) => g.id)).toEqual(["tg1", "tg2"]);
   });
+
+  it("nests a topic under a parent topic", () => {
+    const tree = insertTopicInTree(
+      [notebook()],
+      "nb1",
+      {
+        id: "tg3",
+        title: "Deep",
+        slug: "deep",
+        order: 0,
+        pages: [],
+      },
+      "tg1"
+    );
+    expect(tree[0]!.topicGroups[0]!.children?.map((g) => g.id)).toEqual([
+      "tg3",
+    ]);
+  });
 });

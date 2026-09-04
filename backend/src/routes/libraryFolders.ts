@@ -11,6 +11,7 @@ import {
   loadRootFiles,
 } from "../services/libraryStore.js";
 import { fileSelect } from "../services/legacyLibraryTree.js";
+import { FolderDepthError } from "../utils/folderDepth.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -81,6 +82,10 @@ router.post("/folders", async (req: Request, res: Response) => {
   } catch (err) {
     if (err instanceof Error && err.message === "reserved") {
       res.status(400).json({ error: "That folder name is reserved" });
+      return;
+    }
+    if (err instanceof FolderDepthError) {
+      res.status(400).json({ error: err.message });
       return;
     }
     res.status(409).json({ error: "A folder with this name already exists" });

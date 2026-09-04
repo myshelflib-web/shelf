@@ -1,4 +1,5 @@
 import prisma from "./prisma.js";
+import { FolderDepthError, MAX_FOLDER_DEPTH } from "./folderDepth.js";
 
 export type FolderBreadcrumb = {
   id: string;
@@ -26,6 +27,30 @@ export async function folderAncestors(
     currentId = row.parentId;
   }
   return chain;
+}
+
+/** True when `folderId` is the root or a descendant of `rootId`. */
+export async function folderIsUnderRoot(
+  folderId: string,
+  rootId: string
+): Promise<boolean> {
+  const chain = await folderAncestors(folderId);
+  return chain[0]?.id === rootId;
+}
+
+/** Depth of a new child under `parentId` (parent depth + 1). */
+export async function nextFolderDepth(parentId: string): Promise<number> {
+  const chain = await folderAncestors(parentId);
+  return chain.length + 1;
+}
+
+export async function assertCanNestUnder(parentId: string): Promise<void> {
+  const depth = await nextFolderDepth(parentId);
+  if (depth > MAX_FOLDER_DEPTH) {
+    throw new FolderDepthError(
+      `Folders can be nested up to ${MAX_FOLDER_DEPTH} levels`
+    );
+  }
 }
 
 /** Slugs for S3 keys and reader URLs (supports arbitrary depth; legacy uses first two). */

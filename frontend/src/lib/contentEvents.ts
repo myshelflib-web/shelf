@@ -16,6 +16,9 @@ export type ContentChange =
       notebookId: string;
       notebookSlug: string;
       topicGroup: UserTopicGroup;
+      /** When set, nest under this folder instead of the collection root. */
+      parentTopicId?: string;
+      parentTopicSlug?: string;
     }
   | {
       type: "page-created";
