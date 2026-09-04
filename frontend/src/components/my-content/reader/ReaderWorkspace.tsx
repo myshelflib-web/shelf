@@ -801,8 +801,8 @@ export function ReaderWorkspace({
                         onDropPage={(tab) =>
                           handleOpenTab(panesToRender[0].id, tab)
                         }
-                        onReorderTabs={(fromKey, toIndex) =>
-                          reorderTabs(panesToRender[0].id, fromKey, toIndex)
+                        onReorderTabs={(fromKey, toKey, place) =>
+                          reorderTabs(panesToRender[0].id, fromKey, toKey, place)
                         }
                       />
                     </div>
@@ -863,8 +863,8 @@ export function ReaderWorkspace({
                           onClose={(key) => handleCloseTab(pane.id, key)}
                           onFocusPane={() => focusPane(pane.id)}
                           onDropPage={(tab) => handleOpenTab(pane.id, tab)}
-                          onReorderTabs={(fromKey, toIndex) =>
-                            reorderTabs(pane.id, fromKey, toIndex)
+                          onReorderTabs={(fromKey, toKey, place) =>
+                            reorderTabs(pane.id, fromKey, toKey, place)
                           }
                         />
                       )}
