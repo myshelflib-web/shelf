@@ -13,6 +13,7 @@ import {
   deleteHighlight,
 } from "@/lib/offline/highlights";
 import type { PersonalContentAreaProps } from "./personalContentAreaTypes";
+import { readArticleTextSelection } from "./readArticleTextSelection";
 
 export function PersonalContentArea({
   content,
@@ -239,70 +240,42 @@ export function PersonalContentArea({
     if (editing || readOnly || clipMode || eraseMode) return;
     const gen = ++selectGenRef.current;
     // Selection is often finalized after pointerup handlers return (Safari /
-    // trackpad). Read it on the next frame so the highlight menu can open.
-    window.requestAnimationFrame(() => {
+    // trackpad). Read on the next two frames so the range is stable.
+    const readSelection = () => {
       if (gen !== selectGenRef.current) return;
       if (editing || readOnly || clipMode || eraseMode) return;
-      const sel = window.getSelection();
       const container = containerRef.current;
       const contentRoot =
         (container?.querySelector(".personal-content") as HTMLElement | null) ??
         container;
-      if (!sel || sel.isCollapsed || !contentRoot) {
-        // Do not clear an existing menu from a stale collapsed read — only
-        // clear when this gesture produced no range.
-        if (gen === selectGenRef.current) setSelection(null);
-        return;
-      }
-      if (sel.rangeCount < 1) {
-        if (gen === selectGenRef.current) setSelection(null);
-        return;
-      }
-      const range = sel.getRangeAt(0);
-      if (!contentRoot.contains(range.commonAncestorContainer)) {
-        if (gen === selectGenRef.current) setSelection(null);
-        return;
-      }
-
-      const text = sel.toString().trim();
-      if (text.length < 3) {
-        if (gen === selectGenRef.current) setSelection(null);
-        return;
-      }
-
-      let rect = range.getBoundingClientRect();
-      if (rect.width === 0 && rect.height === 0) {
-        const clientRects = Array.from(range.getClientRects()).filter(
-          (r) => r.width > 0 || r.height > 0
-        );
-        if (clientRects.length === 0) {
-          if (gen === selectGenRef.current) setSelection(null);
-          return;
+      if (!contentRoot) {
+        if (gen === selectGenRef.current) {
+          setSelection(null);
+          selectionRef.current = null;
         }
-        rect = clientRects[0]!;
+        return;
       }
-      // Offsets must match applyHighlightsToHtml (plain text of the article
-      // root), not the scroll container.
-      const preRange = document.createRange();
-      preRange.selectNodeContents(contentRoot);
-      preRange.setEnd(range.startContainer, range.startOffset);
-      const startOffset = preRange.toString().length;
-      const next = {
-        text,
-        rect,
-        startOffset,
-        endOffset: startOffset + text.length,
-      };
+      const next = readArticleTextSelection(contentRoot);
+      if (!next) {
+        if (gen === selectGenRef.current) {
+          setSelection(null);
+          selectionRef.current = null;
+        }
+        return;
+      }
       selectionRef.current = next;
       setActiveHighlight(null);
       if (highlightModeRef.current) {
-        // Highlighter tool: apply preferred color immediately (PDF pen-like).
+        const color = preferredColorRef.current;
         setSelection(null);
+        saveHighlightRef.current?.(color);
         window.getSelection()?.removeAllRanges();
-        saveHighlightRef.current?.(preferredColorRef.current);
         return;
       }
       setSelection(next);
+    };
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(readSelection);
     });
   }, [editing, readOnly, clipMode, eraseMode]);
 
@@ -345,7 +318,7 @@ export function PersonalContentArea({
       onGuestLockedClick?.("Highlight and annotate");
       return;
     }
-    const sel = selection ?? selectionRef.current;
+    const sel = selectionRef.current ?? selection;
     if (!sel) return;
     const tempId = `tmp-${crypto.randomUUID()}`;
     const optimistic: UserContentHighlight = {
@@ -359,6 +332,7 @@ export function PersonalContentArea({
       kind: "TEXT",
     };
     commitHighlights([...highlightsRef.current, optimistic]);
+    selectionRef.current = null;
     setSelection(null);
     setActiveHighlight(null);
     window.getSelection()?.removeAllRanges();
@@ -424,7 +398,7 @@ export function PersonalContentArea({
       <div
         ref={containerRef}
         data-shelf-hotkeys={clipMode ? "off" : undefined}
-        className={`h-full overflow-auto relative${
+        className={`h-full overflow-auto relative select-text${
           fragment.includes("shelf-blank-canvas") ||
           fragment.includes("shelf-sketch-notebook")
             ? " blank-canvas-viewport"
@@ -433,7 +407,15 @@ export function PersonalContentArea({
               : readingWidth === "wide"
                 ? " px-6 py-6 max-w-none"
                 : " px-8 py-6 max-w-3xl mx-auto"
-        }${clipMode ? " cursor-crosshair" : eraseMode ? " cursor-pointer" : ""}`}
+        }${
+          clipMode
+            ? " cursor-crosshair"
+            : eraseMode
+              ? " cursor-pointer"
+              : highlightMode
+                ? " cursor-text"
+                : ""
+        }`}
         style={
           contentScale !== 1
             ? { zoom: contentScale }
@@ -453,7 +435,7 @@ export function PersonalContentArea({
         }
       >
         <div
-          className="prose-content personal-content"
+          className="prose-content personal-content select-text"
           dangerouslySetInnerHTML={{ __html: rendered }}
         />
         {clipBox && (

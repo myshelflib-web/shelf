@@ -264,16 +264,11 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
   }, []);
 
   const reorderTabs = useCallback(
-    (
-      paneId: string,
-      fromKey: string,
-      toKey: string,
-      place: "before" | "after"
-    ) => {
+    (paneId: string, fromKey: string, toIndex: number) => {
       setState((prev) => {
         const panes = prev.panes.map((p) => {
           if (p.id !== paneId) return p;
-          const tabs = reorderOpenTabs(p.tabs, fromKey, toKey, place);
+          const tabs = reorderOpenTabs(p.tabs, fromKey, toIndex);
           return tabs ? { ...p, tabs } : p;
         });
         return { ...prev, panes };
