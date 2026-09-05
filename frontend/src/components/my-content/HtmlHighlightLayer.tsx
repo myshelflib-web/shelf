@@ -105,7 +105,9 @@ export function HtmlHighlightLayer({
       width={w}
       height={h}
       viewBox={`0 0 ${w} ${h}`}
-      className={`absolute top-0 left-0 ${eraseMode ? "z-[2]" : "z-0"}`}
+      className={`absolute top-0 left-0 ${
+        eraseMode || (draftPoints && draftPoints.length > 1) ? "z-[3]" : "z-0"
+      }`}
       style={{ pointerEvents: "none", overflow: "visible" }}
     >
       {pointStrokes.map((hl) => (

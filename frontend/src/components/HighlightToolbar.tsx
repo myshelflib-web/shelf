@@ -49,7 +49,7 @@ export function HighlightToolbar({
   onCloseRef.current = onClose;
 
   useEffect(() => {
-    // Arm after mount so the opening gesture's pointerup cannot instantly dismiss.
+    // Arm after mount so the opening gesture cannot instantly dismiss.
     let armed = false;
     const armTimer = window.setTimeout(() => {
       armed = true;
@@ -59,28 +59,22 @@ export function HighlightToolbar({
       if (e.key === "Escape") onCloseRef.current();
     };
 
-    // pointerup (not pointerdown): closing on pointerdown cancels an
-    // in-progress text selection drag.
+    // Dismiss only for true chrome/backdrop clicks. Never touch article/PDF
+    // text layers here — capture-phase pointerup races the browser selection
+    // and removeAllRanges() was cancelling new selects.
     const onUp = (e: Event) => {
       if (!armed) return;
       const target = e.target;
       if (!(target instanceof Element)) return;
       if (rootRef.current?.contains(target)) return;
-      // Finishing a new selection in the article: keep the menu and let
-      // the reader mouseup handler replace the draft. Collapsed clicks
-      // (backdrop) dismiss.
       if (
         target.closest(
-          ".personal-content, .prose-content, .pdf-text-layer, .textLayer"
+          ".personal-content, .prose-content, .pdf-text-layer, .textLayer, .pdf-page-wrap"
         )
       ) {
-        const sel = window.getSelection();
-        if (sel && !sel.isCollapsed && (sel.toString().trim().length ?? 0) >= 2) {
-          return;
-        }
+        return;
       }
       onCloseRef.current();
-      window.getSelection()?.removeAllRanges();
     };
 
     document.addEventListener("keydown", onKey);
@@ -227,10 +221,7 @@ export function HighlightToolbar({
       <button
         type="button"
         onMouseDown={(e) => e.preventDefault()}
-        onClick={() => {
-          onClose();
-          window.getSelection()?.removeAllRanges();
-        }}
+        onClick={onClose}
         className="flex items-center justify-center w-7 h-7 -mr-0.5 rounded-lg text-white/55 hover:text-white hover:bg-white/10"
         title="Close"
         aria-label="Close"

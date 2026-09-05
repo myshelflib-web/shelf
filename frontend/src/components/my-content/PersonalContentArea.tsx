@@ -8,16 +8,12 @@ import { blankCanvasScrollTarget } from "@/lib/blankCanvas";
 import { LiveEditorRouter } from "./LiveEditorRouter";
 import { usePersonalContentClip } from "./usePersonalContentClip";
 import { PersonalContentHighlightChrome } from "./PersonalContentHighlightChrome";
-import { HtmlHighlightLayer } from "./HtmlHighlightLayer";
+import { PersonalContentArticle } from "./PersonalContentArticle";
 import { deleteHighlight } from "@/lib/offline/highlights";
 import type { PersonalContentAreaProps } from "./personalContentAreaTypes";
 import { usePersonalContentSelection } from "./usePersonalContentSelection";
 import { useHtmlHighlightStroke } from "./useHtmlHighlightStroke";
 import { useHtmlTextHighlightPaint } from "./useHtmlTextHighlightPaint";
-import {
-  highlightFromClientPoint,
-  textHighlightFromEvent,
-} from "./htmlHighlightGeometry";
 import type { HtmlTextPick } from "./htmlPageSelection";
 import {
   persistHtmlHighlight,
@@ -412,52 +408,27 @@ export function PersonalContentArea({
         onPointerMove={clipMode ? onPointerMove : undefined}
         onPointerUp={clipMode ? onPointerUp : undefined}
       >
-        <div
-          ref={setOrigin}
-          className={`relative${highlightMode ? " html-article-pen-mode" : ""}`}
-          style={
-            contentScale !== 1
-              ? { fontSize: `${Math.round(contentScale * 100)}%` }
-              : undefined
-          }
-          onPointerDown={highlightMode ? onStrokeDown : undefined}
-          onPointerMove={highlightMode ? onStrokeMove : undefined}
-          onPointerUp={highlightMode ? onStrokeUp : undefined}
-        >
-          {/* Always mounted so adding the first stroke does not remount article HTML. */}
-          <HtmlHighlightLayer
-            originRef={originRef}
-            highlights={highlights}
-            eraseMode={eraseMode}
-            draftPoints={draft}
-            draftColor={preferredHighlightColorId}
-            draftWidth={highlightWidth}
-            draftOpacity={highlightOpacity}
-            onActivate={onMarkActivate}
-          />
-          <div
-            ref={setContentRoot}
-            className="prose-content personal-content select-text relative z-[1] bg-transparent"
-            onClick={(e) => {
-              if (clipMode || highlightMode || editing) return;
-              // Don't steal a just-finished drag-select.
-              const live = window.getSelection();
-              if (live && !live.isCollapsed) return;
-              const root = contentRootRef.current;
-              const origin = originRef.current;
-              if (!root || !origin) return;
-              const hit =
-                highlightFromClientPoint(
-                  e.clientX,
-                  e.clientY,
-                  origin,
-                  highlights
-                ) ?? textHighlightFromEvent(e, root, highlights);
-              if (hit) onMarkActivate(hit, e.clientX, e.clientY);
-            }}
-            dangerouslySetInnerHTML={{ __html: fragment }}
-          />
-        </div>
+        <PersonalContentArticle
+          originRef={originRef}
+          setOrigin={setOrigin}
+          setContentRoot={setContentRoot}
+          contentRootRef={contentRootRef}
+          fragment={fragment}
+          highlights={highlights}
+          eraseMode={eraseMode}
+          highlightMode={highlightMode}
+          clipMode={clipMode}
+          editing={editing}
+          contentScale={contentScale}
+          draft={draft}
+          preferredHighlightColorId={preferredHighlightColorId}
+          highlightWidth={highlightWidth}
+          highlightOpacity={highlightOpacity}
+          onMarkActivate={onMarkActivate}
+          onStrokeDown={onStrokeDown}
+          onStrokeMove={onStrokeMove}
+          onStrokeUp={onStrokeUp}
+        />
         {clipBox && (
           <div
             className="clip-select-rect absolute border-2 border-[var(--accent)] bg-[var(--accent)]/10 pointer-events-none z-[3]"
