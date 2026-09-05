@@ -81,7 +81,7 @@ export function PersonalContentArticle({
         ref={setContentRoot}
         className="prose-content personal-content select-text relative z-[1] bg-transparent"
         onClick={(e) => {
-          if (clipMode || highlightMode || editing) return;
+          if (clipMode || editing) return;
           const live = window.getSelection();
           if (live && !live.isCollapsed) return;
           const root = contentRootRef.current;
@@ -98,15 +98,6 @@ export function PersonalContentArticle({
         }}
         dangerouslySetInnerHTML={{ __html: fragment }}
       />
-      {highlightMode ? (
-        <div
-          className="absolute inset-0 z-[2] touch-none"
-          style={{ cursor: "crosshair" }}
-          onPointerDown={onStrokeDown}
-          onPointerMove={onStrokeMove}
-          onPointerUp={onStrokeUp}
-        />
-      ) : null}
     </div>
   );
 }

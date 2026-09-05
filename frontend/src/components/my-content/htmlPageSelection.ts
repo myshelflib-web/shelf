@@ -42,9 +42,15 @@ export function captureHtmlTextSelection(
   const sel = window.getSelection();
   if (!sel || sel.isCollapsed || sel.rangeCount < 1) return null;
   const text = sel.toString().trim();
-  if (text.length < 2) return null;
+  if (text.length < 1) return null;
   const range = sel.getRangeAt(0);
-  if (!contentRoot.contains(range.commonAncestorContainer)) return null;
+
+  const isInside =
+    contentRoot.contains(range.startContainer) ||
+    contentRoot.contains(range.endContainer) ||
+    contentRoot.contains(range.commonAncestorContainer) ||
+    range.commonAncestorContainer.contains(contentRoot);
+  if (!isInside) return null;
   const clientRects = range.getClientRects();
   const rects = normRectsFromClient(
     origin.getBoundingClientRect(),

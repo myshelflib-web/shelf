@@ -67,7 +67,11 @@ export function HighlightToolbar({
       const target = e.target;
       if (!(target instanceof Element)) return;
       if (rootRef.current?.contains(target)) return;
+      const sel = window.getSelection();
       if (
+        sel &&
+        !sel.isCollapsed &&
+        (sel.toString().trim().length ?? 0) >= 1 &&
         target.closest(
           ".personal-content, .prose-content, .pdf-text-layer, .textLayer, .pdf-page-wrap"
         )

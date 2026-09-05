@@ -12,8 +12,6 @@ export function isHtmlTextHighlight(h: UserContentHighlight): boolean {
 /** Offset-only fallback. Rect / stroke highlights stay out of the article DOM. */
 export function isWrappedTextHighlight(h: UserContentHighlight): boolean {
   if (h.position?.points?.length) return false;
-  if (h.position?.rects?.length) return false;
-  if (h.position?.tool === "highlight") return false;
   return isHtmlTextHighlight(h);
 }
 

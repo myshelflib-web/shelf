@@ -321,7 +321,6 @@ export function PersonalContentArea({
     readOnly,
     clipMode,
     eraseMode,
-    highlightMode,
     contentRootRef,
     originRef,
     onTextPick,
@@ -402,7 +401,7 @@ export function PersonalContentArea({
               : " cursor-text"
         }`}
         onMouseUp={
-          clipMode || highlightMode || eraseMode ? undefined : handleMouseUp
+          clipMode || eraseMode ? undefined : handleMouseUp
         }
         onPointerDown={clipMode ? onPointerDown : undefined}
         onPointerMove={clipMode ? onPointerMove : undefined}

@@ -109,8 +109,13 @@ export function PersonalContentHighlightChrome({
           locked={guestLocked}
           lockedGate={annotationGate}
           onLockedClick={onGuestLockedClick}
-          onHighlight={() => {
-            removeHighlightNow(activeHighlight.highlight.id);
+          onHighlight={(color) => {
+            const h = activeHighlight.highlight;
+            const updated = { ...h, color };
+            onHighlightsChange(
+              highlights.map((item) => (item.id === h.id ? updated : item))
+            );
+            setActiveHighlight(null);
           }}
           onNote={() => {
             setNoteTarget({

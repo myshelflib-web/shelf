@@ -94,7 +94,10 @@ export function HtmlHighlightLayer({
 
   const pointStrokes = highlights.filter((h) => h.position?.points?.length);
   const rectStrokes = highlights.filter(
-    (h) => Boolean(h.position?.rects?.length) && !h.position?.points?.length
+    (h) =>
+      Boolean(h.position?.rects?.length) &&
+      !h.position?.points?.length &&
+      h.kind === "REGION"
   );
   const { w, h } = size;
   if (w < 1 || h < 1) return null;
