@@ -7,6 +7,11 @@ import {
 } from "@/lib/offline/tasks";
 import { StudyTask } from "@/types";
 import { AnalyticsEvents, track } from "@/lib/analytics";
+import {
+  runWithProgressUi,
+  useDeleteProgressOptional,
+} from "@/components/DeleteProgressProvider";
+import { shortPlannerTitle } from "@/components/PlannerFlashToast";
 
 function masterId(id: string) {
   return id.split("::")[0];
@@ -15,6 +20,7 @@ function masterId(id: string) {
 export function usePlannerTasks(from: Date, to: Date) {
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
+  const progress = useDeleteProgressOptional();
 
   const loadTasks = useCallback((opts?: { silent?: boolean }) => {
     const silent = opts?.silent === true;
@@ -67,15 +73,22 @@ export function usePlannerTasks(from: Date, to: Date) {
 
   const remove = async (id: string) => {
     const master = masterId(id);
+    const existing = tasks.find((t) => masterId(t.id) === master);
+    const label = existing
+      ? `Deleting “${shortPlannerTitle(existing.title)}”…`
+      : "Deleting task…";
     let snapshot: StudyTask[] = [];
     setTasks((prev) => {
       snapshot = prev;
       return prev.filter((t) => masterId(t.id) !== master);
     });
     try {
-      await deleteTask(master);
-    } catch {
+      const work = () => deleteTask(master);
+      if (progress) await runWithProgressUi(progress, label, work);
+      else await work();
+    } catch (err) {
       setTasks(snapshot);
+      throw err;
     }
     window.dispatchEvent(new Event("shelf:tasks-changed"));
   };

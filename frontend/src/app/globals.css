@@ -1128,6 +1128,107 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   transform: rotate(180deg);
 }
 
+/* Date field — same family as shelf-select */
+.shelf-date-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.125rem;
+  min-height: 2.375rem;
+  padding: 0.5rem 0.65rem 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.shelf-date-trigger:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.shelf-date-trigger:focus-visible,
+.shelf-date-trigger.is-open {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--ring);
+}
+
+.shelf-date-value {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.shelf-date-value.is-placeholder {
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+
+.shelf-date-part {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.shelf-date-sep {
+  color: var(--text-muted);
+  font-weight: 500;
+  opacity: 0.55;
+  font-size: 0.7rem;
+  margin-inline: 0.05rem;
+}
+
+.shelf-date-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border-radius: 7px;
+  background: var(--bg-primary);
+  color: var(--text-muted);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.shelf-date-trigger.is-open .shelf-date-icon,
+.shelf-date-trigger:hover .shelf-date-icon {
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+
+.shelf-date-menu {
+  position: fixed;
+  z-index: 1200;
+  width: 17.5rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  padding: 0.75rem;
+  box-shadow: 0 16px 38px rgba(var(--shadow-color) / 0.22);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.shelf-date-menu.is-ready {
+  visibility: visible;
+  pointer-events: auto;
+}
+
 .shelf-select-menu {
   position: fixed;
   z-index: 1200;

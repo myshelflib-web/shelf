@@ -125,8 +125,8 @@ export function useDeleteProgressOptional(): DeleteProgressContextValue | null {
 
 const MIN_PROGRESS_MS = 700;
 
-/** Show progress chip for at least MIN_PROGRESS_MS so fast deletes are visible. */
-export async function runDeleteWithProgressUi<T>(
+/** Show progress chip for at least MIN_PROGRESS_MS so fast actions are visible. */
+export async function runWithProgressUi<T>(
   progress: Pick<DeleteProgressContextValue, "start" | "finish">,
   label: string,
   work: () => Promise<T>,
@@ -145,3 +145,6 @@ export async function runDeleteWithProgressUi<T>(
     progress.finish(id, keyList);
   }
 }
+
+/** @deprecated Prefer runWithProgressUi — same helper, kept for existing call sites. */
+export const runDeleteWithProgressUi = runWithProgressUi;

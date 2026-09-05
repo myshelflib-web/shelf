@@ -16,9 +16,18 @@ import {
   PlannerWeekBoard,
 } from "@/components/PlannerBoardViews";
 import { PlannerTaskCard } from "@/components/PlannerTaskCard";
+import {
+  PlannerFlashToast,
+  shortPlannerTitle,
+} from "@/components/PlannerFlashToast";
 import { usePlannerDragDrop } from "@/components/usePlannerDragDrop";
 import { usePlannerTasks } from "@/components/usePlannerTasks";
+import {
+  runWithProgressUi,
+  useDeleteProgressOptional,
+} from "@/components/DeleteProgressProvider";
 import { localDateTimeAtNine } from "@/components/ui/ShelfDateTimeField";
+import { toUserFacingError } from "@/lib/userFacingError";
 import {
   addDays,
   formatWeekRange,
@@ -96,6 +105,8 @@ export function StudyCalendar({
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [focusedDay, setFocusedDay] = useState<Date | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const progress = useDeleteProgressOptional();
 
   const { from, to } = useMemo(() => rangeForView(view, cursor), [view, cursor]);
   const { tasks, setTasks, tasksLoading, loadTasks, toggleDone, remove } =
@@ -114,6 +125,12 @@ export function StudyCalendar({
     leaveDrop,
     finishDrop,
   } = usePlannerDragDrop(tasks, setTasks);
+
+  const flashError = dropError ?? actionError;
+  const clearFlashError = useCallback(() => {
+    clearDropError();
+    setActionError(null);
+  }, [clearDropError]);
 
   useEffect(() => {
     if (libraryProp) return;
@@ -233,8 +250,10 @@ export function StudyCalendar({
     if (!title.trim()) return;
     const isEvent = formKind === "EVENT";
     if (isEvent && recurrence !== "NONE" && !dueAt) return;
+    const name = title.trim();
+    const editing = editingId;
     const payload = {
-      title: title.trim(),
+      title: name,
       dueAt: dueAt ? new Date(dueAt).toISOString() : null,
       endsAt: endsAt ? new Date(endsAt).toISOString() : null,
       kind: formKind,
@@ -245,14 +264,10 @@ export function StudyCalendar({
           ? new Date(`${recurUntil}T23:59:00`).toISOString()
           : null,
     };
-    if (editingId) await updateTask(editingId, payload);
-    else {
-      await createTask({
-        ...payload,
-        endsAt: payload.endsAt ?? undefined,
-        href: payload.href ?? undefined,
-      });
-    }
+    const progressLabel = editing
+      ? `Saving “${shortPlannerTitle(name)}”…`
+      : `Creating “${shortPlannerTitle(name)}”…`;
+
     setTitle("");
     setHref("");
     setPageHref("");
@@ -260,8 +275,44 @@ export function StudyCalendar({
     setRecurrence("NONE");
     setRecurUntil("");
     closeForm();
-    loadTasks({ silent: true });
-    window.dispatchEvent(new Event("shelf:tasks-changed"));
+    clearFlashError();
+
+    const work = async () => {
+      if (editing) await updateTask(editing, payload);
+      else {
+        await createTask({
+          ...payload,
+          endsAt: payload.endsAt ?? undefined,
+          href: payload.href ?? undefined,
+        });
+      }
+      loadTasks({ silent: true });
+      window.dispatchEvent(new Event("shelf:tasks-changed"));
+    };
+
+    try {
+      if (progress) await runWithProgressUi(progress, progressLabel, work);
+      else await work();
+    } catch (err) {
+      const fallback = editing
+        ? "Couldn't save that item. Try again."
+        : "Couldn't create that item. Try again.";
+      setActionError(
+        err instanceof Error ? toUserFacingError(err.message, fallback) : fallback
+      );
+    }
+  };
+
+  const onRemove = async (id: string) => {
+    clearFlashError();
+    try {
+      await remove(id);
+    } catch (err) {
+      const fallback = "Couldn't delete that item. Try again.";
+      setActionError(
+        err instanceof Error ? toUserFacingError(err.message, fallback) : fallback
+      );
+    }
   };
 
   const now = new Date();
@@ -289,7 +340,7 @@ export function StudyCalendar({
       onDragEnd={onDragEnd}
       onEdit={fillFromTask}
       onToggleDone={toggleDone}
-      onRemove={remove}
+      onRemove={onRemove}
     />
   );
 
@@ -434,26 +485,8 @@ export function StudyCalendar({
         </div>
       )}
 
-      {dropError && (
-        <div
-          className="pointer-events-auto fixed bottom-6 left-1/2 z-[200] w-[min(100%,24rem)] -translate-x-1/2 px-3"
-          role="alert"
-          aria-live="assertive"
-        >
-          <div className="flex items-start gap-2 rounded-[10px] border border-red-500/35 bg-[var(--bg-elevated)] px-3.5 py-3 shadow-xl">
-            <p className="min-w-0 flex-1 text-sm font-medium text-red-400">
-              {dropError}
-            </p>
-            <button
-              type="button"
-              onClick={clearDropError}
-              className="shrink-0 rounded-md p-1 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)]"
-              aria-label="Dismiss"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
+      {flashError && (
+        <PlannerFlashToast message={flashError} onDismiss={clearFlashError} />
       )}
     </section>
   );
