@@ -16,6 +16,7 @@ import { LandingQuizSection } from "@/components/landing/LandingQuizSection";
 import { LandingIntegrationsSection } from "@/components/landing/LandingIntegrationsSection";
 import { LandingPillarMarquee } from "@/components/landing/LandingPillarMarquee";
 import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
+import { LandingPointerTorch } from "@/components/landing/LandingPointerTorch";
 import { useAuth } from "@/hooks/useAuth";
 import {
   CalendarDays,
@@ -48,6 +49,7 @@ export function HomePageClient() {
       <Header />
 
       <main className="landing-page flex-1 min-h-0 overflow-y-auto">
+        <LandingPointerTorch />
         <section
           className="landing-hero"
           id="landing-hero"

@@ -56,10 +56,10 @@
 
 .landing-hero {
   position: relative;
-  padding: 72px 64px 80px;
+  padding: 64px 56px 72px;
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 56px;
+  grid-template-columns: 0.92fr 1.08fr;
+  gap: 48px;
   align-items: center;
   isolation: isolate;
 }
@@ -167,7 +167,8 @@
   display: flex;
   width: max-content;
   gap: 0;
-  animation: landing-marquee 36s linear infinite;
+  will-change: transform;
+  animation: landing-marquee 48s linear infinite;
 }
 
 .landing-marquee:hover .landing-marquee-track {
@@ -179,13 +180,14 @@
   align-items: center;
   gap: 0;
   flex-shrink: 0;
+  min-width: max-content;
 }
 
 .landing-marquee-item {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 0 22px;
+  padding: 0 28px 0 0;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -201,14 +203,15 @@
   background: var(--accent);
   opacity: 0.45;
   flex-shrink: 0;
+  margin-right: 18px;
 }
 
 @keyframes landing-marquee {
   from {
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0);
   }
   to {
-    transform: translateX(-50%);
+    transform: translate3d(-50%, 0, 0);
   }
 }
 

@@ -51,7 +51,7 @@ export default function ContactPage() {
                 href="mailto:hello@shelf.study"
                 className="text-sm text-[var(--accent)] hover:underline"
               >
-                hello@shelf.study
+                myshelflib@gmail.com
               </a>
             </div>
           </RevealOnScroll>
@@ -122,8 +122,8 @@ export default function ContactPage() {
             {sent && (
               <p className="text-sm text-[var(--text-secondary)]">
                 Opening your email app… or write directly to{" "}
-                <a href="mailto:hello@shelf.study" className="text-[var(--accent)]">
-                  hello@shelf.study
+                <a href="mailto:myshelflib@gmail.com" className="text-[var(--accent)]">
+                  myshelflib@gmail.com
                 </a>
                 .
               </p>

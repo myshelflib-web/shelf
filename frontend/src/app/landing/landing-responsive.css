@@ -46,7 +46,7 @@
     max-width: 100%;
   }
   .landing-preview-body {
-    height: min(420px, 62vh);
+    height: min(320px, 52vh);
   }
   .landing-mini-content {
     grid-template-columns: 1fr;
@@ -142,6 +142,9 @@
   }
   .landing-marquee-track {
     animation: none;
+  }
+  .landing-torch {
+    display: none;
   }
   .landing-sticky-cta,
   .landing-sticky-cta.is-visible {

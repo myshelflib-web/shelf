@@ -37,9 +37,36 @@
   --lp-value-mini-bg: #faf9f7;
   --lp-bubble-user-text: #4d478f;
   --lp-goal-impact-text: #7069c9;
+  --torch-x: 50%;
+  --torch-y: 28%;
+  position: relative;
   background: var(--bg-primary);
   color: var(--text-primary);
   overflow-x: hidden;
+}
+
+.landing-torch {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  background: radial-gradient(
+    520px circle at var(--torch-x) var(--torch-y),
+    color-mix(in srgb, var(--accent) 18%, transparent) 0%,
+    color-mix(in srgb, var(--lp-sand) 28%, transparent) 28%,
+    transparent 58%
+  );
+}
+
+.landing-page.is-torch-on .landing-torch {
+  opacity: 1;
+}
+
+.landing-page > *:not(.landing-torch) {
+  position: relative;
+  z-index: 2;
 }
 /* Dark mode — follows app .dark class on html */
 .dark .landing-page {
@@ -81,6 +108,15 @@
   --lp-value-mini-bg: #161618;
   --lp-bubble-user-text: #b8b4e8;
   --lp-goal-impact-text: #9b96d4;
+}
+
+.dark .landing-torch {
+  background: radial-gradient(
+    560px circle at var(--torch-x) var(--torch-y),
+    color-mix(in srgb, var(--accent) 22%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 8%, transparent) 32%,
+    transparent 60%
+  );
 }
 
 .dark .landing-mini-top {
