@@ -97,6 +97,7 @@ export function LandingShowcaseCarousel() {
       className="landing-showcase-carousel-section landing-torch-zone"
       aria-labelledby="landing-showcase-heading"
     >
+      <div className="landing-torch-local" aria-hidden />
       <div className="landing-showcase-carousel-head">
         <div>
           <LandingKicker index="02">Product walkthrough</LandingKicker>

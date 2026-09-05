@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 
 /**
- * Soft accent spotlight clipped to `.landing-torch-zone` sections only
- * (hero, product walkthrough, CTA). Disabled for touch / reduced motion.
+ * Pointer spotlight on `.landing-torch-zone` sections only
+ * (hero, product walkthrough, CTA). Off for touch / reduced motion.
  */
 export function LandingPointerTorch() {
   useEffect(() => {
@@ -23,14 +23,6 @@ export function LandingPointerTorch() {
     const cleanups: Array<() => void> = [];
 
     for (const zone of zones) {
-      let local = zone.querySelector<HTMLElement>(":scope > .landing-torch-local");
-      if (!local) {
-        local = document.createElement("div");
-        local.className = "landing-torch-local";
-        local.setAttribute("aria-hidden", "true");
-        zone.insertBefore(local, zone.firstChild);
-      }
-
       const onMove = (event: PointerEvent) => {
         const rect = zone.getBoundingClientRect();
         zone.style.setProperty("--torch-x", `${event.clientX - rect.left}px`);
@@ -48,7 +40,6 @@ export function LandingPointerTorch() {
         zone.removeEventListener("pointermove", onMove);
         zone.removeEventListener("pointerleave", onLeave);
         zone.classList.remove("is-torch-on");
-        local?.remove();
       });
     }
 

@@ -56,6 +56,7 @@ export function HomePageClient() {
           aria-labelledby="landing-hero-heading"
         >
           <div className="landing-hero-glow" aria-hidden />
+          <div className="landing-torch-local" aria-hidden />
           <RevealOnScroll>
             <div>
               <div className="landing-eyebrow">Your personal study library</div>
