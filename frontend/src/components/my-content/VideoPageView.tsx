@@ -144,23 +144,40 @@ export function VideoPageView({
 
   const onNotesResizePointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
+      if (e.button !== 0) return;
       e.preventDefault();
+      e.stopPropagation();
       const shell = shellRef.current;
       if (!shell) return;
+      const handle = e.currentTarget;
+      const pointerId = e.pointerId;
       const startX = e.clientX;
       const startWidth = notesWidth;
       const shellWidth = shell.getBoundingClientRect().width;
       setResizing(true);
 
-      const onMove = (ev: PointerEvent) => {
+      let captured = false;
+      try {
+        handle.setPointerCapture(pointerId);
+        captured = true;
+      } catch {
+        /* fall back to window listeners */
+      }
+      const target: EventTarget = captured ? handle : window;
+
+      const onMove = (ev: Event) => {
+        const pe = ev as PointerEvent;
+        if (pe.pointerId !== pointerId) return;
         setNotesWidth(
-          clampNotesWidth(startWidth + (startX - ev.clientX), shellWidth)
+          clampNotesWidth(startWidth + (startX - pe.clientX), shellWidth)
         );
       };
-      const onUp = (ev: PointerEvent) => {
+      const onUp = (ev: Event) => {
+        const pe = ev as PointerEvent;
+        if (pe.pointerId !== pointerId) return;
         setResizing(false);
         const next = clampNotesWidth(
-          startWidth + (startX - ev.clientX),
+          startWidth + (startX - pe.clientX),
           shellWidth
         );
         setNotesWidth(next);
@@ -169,13 +186,22 @@ export function VideoPageView({
         } catch {
           /* ignore quota */
         }
-        window.removeEventListener("pointermove", onMove);
-        window.removeEventListener("pointerup", onUp);
-        window.removeEventListener("pointercancel", onUp);
+        if (captured) {
+          try {
+            if (handle.hasPointerCapture(pointerId)) {
+              handle.releasePointerCapture(pointerId);
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+        target.removeEventListener("pointermove", onMove);
+        target.removeEventListener("pointerup", onUp);
+        target.removeEventListener("pointercancel", onUp);
       };
-      window.addEventListener("pointermove", onMove);
-      window.addEventListener("pointerup", onUp);
-      window.addEventListener("pointercancel", onUp);
+      target.addEventListener("pointermove", onMove);
+      target.addEventListener("pointerup", onUp);
+      target.addEventListener("pointercancel", onUp);
     },
     [notesWidth]
   );
@@ -271,7 +297,11 @@ export function VideoPageView({
         resizing ? " select-none cursor-col-resize" : ""
       }`}
     >
-      <div className="flex-1 flex flex-col min-h-0 min-w-0 relative">
+      <div
+        className={`flex-1 flex flex-col min-h-0 min-w-0 relative${
+          resizing ? " pointer-events-none" : ""
+        }`}
+      >
         <YouTubeLecturePlayer
           videoId={videoId}
           title={title}
@@ -311,7 +341,9 @@ export function VideoPageView({
             onPointerDown={onNotesResizePointerDown}
           />
           <aside
-            className="shrink-0 h-full flex flex-col bg-[var(--bg-primary)] min-h-0 min-w-0 overflow-hidden"
+            className={`shrink-0 h-full flex flex-col bg-[var(--bg-primary)] min-h-0 min-w-0 overflow-hidden${
+              resizing ? " pointer-events-none" : ""
+            }`}
             style={{ width: notesWidth }}
             aria-label="Lecture notes"
           >
