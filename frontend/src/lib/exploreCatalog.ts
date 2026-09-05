@@ -1,4 +1,5 @@
 import {
+  LEARNING_SCIENCE_SUBJECT_SLUG,
   countArticles,
   groupSubjectsByGoal,
   subjectGoal,
@@ -341,8 +342,17 @@ export function featuredExploreCollectionsForGoal(
   goal: StudyGoal
 ): Subject[] {
   const featured = featuredExploreCollections(subjects);
-  if (goal !== "GENERAL") return featured;
-  return featured.filter((s) => subjectGoal(s) === "GENERAL");
+  const scoped =
+    goal === "GENERAL"
+      ? featured.filter((s) => subjectGoal(s) === "GENERAL")
+      : featured;
+  const skills = subjects.find(
+    (s) =>
+      s.slug === LEARNING_SCIENCE_SUBJECT_SLUG &&
+      s.topics.some((t) => (t.articles?.length ?? 0) > 0)
+  );
+  if (!skills || scoped.some((s) => s.id === skills.id)) return scoped;
+  return [skills, ...scoped];
 }
 
 export function collectionMeta(subject: Subject): string {

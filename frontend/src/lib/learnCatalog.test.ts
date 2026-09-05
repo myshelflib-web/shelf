@@ -91,6 +91,29 @@ describe("learnCatalog", () => {
     );
   });
 
+  it("keeps Learning Science available on every study track", () => {
+    const catalog = [
+      subject("study-skills-learning", "GENERAL"),
+      subject("gate-info", "GATE"),
+      subject("upsc-polity", "UPSC"),
+    ];
+    expect(
+      subjectsForCatalogGoal(catalog, "GATE").map((s) => s.slug)
+    ).toEqual(["study-skills-learning", "gate-info"]);
+    expect(
+      subjectsForCatalogGoal(catalog, "UPSC").map((s) => s.slug)
+    ).toEqual(["study-skills-learning", "upsc-polity"]);
+    expect(
+      subjectsForCatalogGoal(catalog, "GENERAL").map((s) => s.slug)
+    ).toEqual(["study-skills-learning"]);
+    expect(
+      subjectMatchesCatalogGoal(
+        subject("study-skills-learning", "GENERAL"),
+        "NEET_PG"
+      )
+    ).toBe(true);
+  });
+
   it("searches collections, topics, and articles", () => {
     const catalog: Subject[] = [
       {

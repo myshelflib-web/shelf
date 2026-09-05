@@ -109,15 +109,15 @@ export function ExploreSidebarBrowse({
           }}
           href={subjectHref(collectionSubject.slug)}
           className={clsx(
-            "explore-side-collection",
-            !activeTopic && "explore-side-collection-active"
+            "explore-side-row",
+            !activeTopic && "explore-side-row-active"
           )}
         >
           <span className="explore-side-collection-mark" aria-hidden>
             {collectionSubject.icon ||
               collectionSubject.name.charAt(0).toUpperCase()}
           </span>
-          <span className="truncate">{collectionSubject.name}</span>
+          <span className="min-w-0 flex-1 truncate">{collectionSubject.name}</span>
         </BrowseFolderLink>
 
         <div className="mt-3 pt-2 border-t border-[var(--border-subtle)]">

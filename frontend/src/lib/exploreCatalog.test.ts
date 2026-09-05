@@ -168,4 +168,13 @@ describe("exploreCatalog", () => {
     expect(featured.every((s) => s.studyGoal === "GENERAL")).toBe(true);
     expect(featured.some((s) => s.slug === "study-skills-learning")).toBe(true);
   });
+
+  it("includes Learning Science in featured collections for every track", () => {
+    for (const goal of ["UPSC", "GATE", "JUDICIARY", "GENERAL"] as const) {
+      const featured = featuredExploreCollectionsForGoal(sampleSubjects, goal);
+      expect(featured.some((s) => s.slug === "study-skills-learning")).toBe(
+        true
+      );
+    }
+  });
 });

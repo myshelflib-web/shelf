@@ -21,15 +21,23 @@ export function subjectGoal(subject: Subject): StudyGoal {
   return subject.studyGoal ?? "GENERAL";
 }
 
+/** Shown on every study track, not only General. */
+export const LEARNING_SCIENCE_SUBJECT_SLUG = "study-skills-learning";
+
+export function isCrossGoalLearnSubject(subject: Subject): boolean {
+  return subject.slug === LEARNING_SCIENCE_SUBJECT_SLUG;
+}
+
 /** Catalog subjects visible for a study track (General = non-exam only). */
 export function subjectsForCatalogGoal(
   subjects: Subject[],
   goal: StudyGoal
 ): Subject[] {
-  if (goal === "GENERAL") {
-    return subjects.filter((s) => subjectGoal(s) === "GENERAL");
-  }
-  return subjects.filter((s) => subjectGoal(s) === goal);
+  return subjects.filter((s) => {
+    if (isCrossGoalLearnSubject(s)) return true;
+    if (goal === "GENERAL") return subjectGoal(s) === "GENERAL";
+    return subjectGoal(s) === goal;
+  });
 }
 
 export function subjectMatchesCatalogGoal(

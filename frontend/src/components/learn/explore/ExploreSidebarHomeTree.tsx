@@ -121,14 +121,14 @@ export function ExploreSidebarHomeTree({
               path={withResolvedArea({ subjectSlug: subject.slug }, subjects)}
               preventNav={Boolean(onOpenPage)}
               className={clsx(
-                "explore-side-collection",
-                activeSubject === subject.slug && "explore-side-collection-active"
+                "explore-side-row",
+                activeSubject === subject.slug && "explore-side-row-active"
               )}
             >
               <span className="explore-side-collection-mark" aria-hidden>
                 {subject.icon || subject.name.charAt(0).toUpperCase()}
               </span>
-              <span className="truncate">{subject.name}</span>
+              <span className="min-w-0 flex-1 truncate">{subject.name}</span>
             </BrowseFolderLink>
           ))}
         </div>
