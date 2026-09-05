@@ -108,7 +108,7 @@ export function ExploreMainPane({
   const searchSubjects = useMemo(() => {
     if (subject) return [subject];
     if (areaId) {
-      return subjectsForArea(subjects, areaId);
+      return subjectsForArea(subjects, areaId, catalogGoal);
     }
     return subjectsForCatalogGoal(subjects, catalogGoal);
   }, [subjects, subject, areaId, catalogGoal]);
@@ -125,13 +125,14 @@ export function ExploreMainPane({
 
   const resources = useMemo(() => {
     if (areaId && !subjectSlug) {
-      return listAreaResources(subjects, areaId, { query });
+      return listAreaResources(subjects, areaId, { query, goal: catalogGoal });
     }
     if (subject) {
       const items = listAreaResources(subjects, areaForSubject(subject), {
         subjectSlug: subject.slug,
         topicSlug: topic?.slug,
         query,
+        goal: catalogGoal,
       });
       if (items.length > 0) return items;
       const manual: ReturnType<typeof listAreaResources> = [];
@@ -162,7 +163,7 @@ export function ExploreMainPane({
       return manual;
     }
     return [];
-  }, [subjects, areaId, subject, topic, query, subjectSlug]);
+  }, [subjects, areaId, subject, topic, query, subjectSlug, catalogGoal]);
 
   const featured = featuredExploreCollectionsForGoal(subjects, catalogGoal);
   const searching = loading && query.trim().length > 0 && hits.length === 0;
@@ -194,6 +195,7 @@ export function ExploreMainPane({
           resources={resources}
           loading={loading}
           query={query}
+          catalogGoal={catalogGoal}
         />
       ) : subject ? (
         <ExploreCollectionContent
@@ -257,8 +259,8 @@ function ExploreHomeContent({
           </div>
           <div className="explore-area-grid">
             {shownAreas.map((area) => {
-              const groups = subjectsForArea(subjects, area.id);
-              const articles = countAreaItems(subjects, area.id);
+              const groups = subjectsForArea(subjects, area.id, catalogGoal);
+              const articles = countAreaItems(subjects, area.id, catalogGoal);
               return (
                 <BrowseFolderLink
                   key={area.id}

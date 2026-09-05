@@ -96,10 +96,11 @@ export function ExploreSidebarHomeTree({
             key={area.id}
             area={area}
             subjects={subjects}
+            studyGoal={studyGoal}
             expanded={
               expandArea === area.id ||
               (Boolean(searchQuery.trim()) &&
-                subjectsForArea(subjects, area.id).some((s) =>
+                subjectsForArea(subjects, area.id, studyGoal).some((s) =>
                   subjectMatchesQuery(s, searchQuery)
                 ))
             }
@@ -141,6 +142,7 @@ export function ExploreSidebarHomeTree({
 function AreaBranch({
   area,
   subjects,
+  studyGoal,
   expanded,
   activeSubject,
   activeTopic,
@@ -151,6 +153,7 @@ function AreaBranch({
 }: {
   area: ExploreAreaDef;
   subjects: Subject[];
+  studyGoal: StudyGoal;
   expanded: boolean;
   activeSubject?: string | null;
   activeTopic?: string | null;
@@ -159,8 +162,8 @@ function AreaBranch({
   lockFolders?: boolean;
   onOpenPage?: OpenPageFn;
 }) {
-  const count = countAreaItems(subjects, area.id);
-  const collections = subjectsForArea(subjects, area.id).filter((s) =>
+  const count = countAreaItems(subjects, area.id, studyGoal);
+  const collections = subjectsForArea(subjects, area.id, studyGoal).filter((s) =>
     subjectMatchesQuery(s, searchQuery)
   );
   const areaActive = expanded && !activeSubject;

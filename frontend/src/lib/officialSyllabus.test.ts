@@ -56,9 +56,10 @@ describe("officialSyllabus", () => {
         ],
       },
     ] as Subject[];
-    expect(syllabusBrowseSubjects(catalog).map((s) => s.slug)).toEqual([
-      "upsc-official",
-    ]);
+    expect(
+      syllabusBrowseSubjects(catalog, "UPSC").map((s) => s.slug)
+    ).toEqual(["upsc-official"]);
+    expect(syllabusBrowseSubjects(catalog, "GATE")).toEqual([]);
     expect(
       syllabusBrowseSubjects(catalog)[0]?.topics.map((t) => t.slug)
     ).toEqual(["syllabus"]);

@@ -104,6 +104,12 @@ describe("exploreCatalog", () => {
       "upsc-official",
       "gate",
     ]);
+    expect(
+      subjectsForArea(sampleSubjects, "syllabus", "GATE").map((s) => s.slug)
+    ).toEqual(["gate"]);
+    expect(
+      subjectsForArea(sampleSubjects, "syllabus", "UPSC").map((s) => s.slug)
+    ).toEqual(["upsc-official"]);
   });
 
   it("counts articles in an area without double-counting tracks", () => {
@@ -201,6 +207,12 @@ describe("exploreCatalog", () => {
       "official-syllabus-upsc",
       "gate",
     ]);
+    expect(
+      subjectsForArea(withSyllabus, "syllabus", "UPSC").map((s) => s.slug)
+    ).toEqual(["official-syllabus-upsc"]);
+    expect(
+      subjectsForArea(withSyllabus, "syllabus", "GATE").map((s) => s.slug)
+    ).toEqual(["gate"]);
     expect(
       subjectsForArea(withSyllabus, "upsc").map((s) => s.slug)
     ).toEqual(["upsc-official"]);

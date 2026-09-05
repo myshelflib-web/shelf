@@ -1,4 +1,4 @@
-import { ArticleSummary, Subject, Topic } from "@/types";
+import { ArticleSummary, StudyGoal, Subject, Topic } from "@/types";
 
 /** Canonical Learn slugs for official exam syllabus PDFs from S3. */
 export const OFFICIAL_SYLLABUS_SUBJECT_PREFIX = "official-syllabus-";
@@ -52,8 +52,12 @@ function withPublishedTopics(subject: Subject): Subject {
  * Collections shown under Browse → Syllabus.
  * Dedicated official-syllabus folders plus exam collections that already
  * have a syllabus topic. General-track material is omitted.
+ * When `goal` is an exam track, only that exam's syllabus is returned.
  */
-export function syllabusBrowseSubjects(subjects: Subject[]): Subject[] {
+export function syllabusBrowseSubjects(
+  subjects: Subject[],
+  goal?: StudyGoal
+): Subject[] {
   const official = subjects
     .filter(isOfficialSyllabusSubject)
     .map(withPublishedTopics)
@@ -72,5 +76,7 @@ export function syllabusBrowseSubjects(subjects: Subject[]): Subject[] {
     }))
     .filter((subject) => subject.topics.length > 0);
 
-  return [...official, ...derived];
+  const all = [...official, ...derived];
+  if (!goal || goal === "GENERAL") return all;
+  return all.filter((subject) => (subject.studyGoal ?? "GENERAL") === goal);
 }

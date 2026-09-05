@@ -137,10 +137,11 @@ export function areaForSubject(subject: Subject): ExploreAreaId {
 
 export function subjectsForArea(
   subjects: Subject[],
-  areaId: ExploreAreaId
+  areaId: ExploreAreaId,
+  goal?: StudyGoal
 ): Subject[] {
   if (areaId === "syllabus") {
-    return syllabusBrowseSubjects(subjects).sort(
+    return syllabusBrowseSubjects(subjects, goal).sort(
       (a, b) =>
         LEARN_TRACK_ORDER.indexOf(subjectGoal(a)) -
           LEARN_TRACK_ORDER.indexOf(subjectGoal(b)) ||
@@ -208,8 +209,12 @@ export function areaGroupsSection(areaId: ExploreAreaId): {
   }
 }
 
-export function countAreaItems(subjects: Subject[], areaId: ExploreAreaId): number {
-  return countArticles(subjectsForArea(subjects, areaId));
+export function countAreaItems(
+  subjects: Subject[],
+  areaId: ExploreAreaId,
+  goal?: StudyGoal
+): number {
+  return countArticles(subjectsForArea(subjects, areaId, goal));
 }
 
 /** Home and sidebar only list areas that currently have published pages. */
@@ -235,7 +240,12 @@ export function visibleExploreAreasForGoal(
   const areas = visibleExploreAreas(subjects);
   if (goal !== "GENERAL") {
     return withStudySkillsArea(
-      areas.filter((area) => area.goals.includes(goal)),
+      areas.filter(
+        (area) =>
+          area.goals.includes(goal) &&
+          (area.id !== "syllabus" ||
+            countAreaItems(subjects, "syllabus", goal) > 0)
+      ),
       areas
     );
   }
@@ -293,10 +303,15 @@ function articleTypeLabel(title: string): string {
 export function listAreaResources(
   subjects: Subject[],
   areaId: ExploreAreaId,
-  opts?: { subjectSlug?: string; topicSlug?: string; query?: string }
+  opts?: {
+    subjectSlug?: string;
+    topicSlug?: string;
+    query?: string;
+    goal?: StudyGoal;
+  }
 ): ExploreResource[] {
   const needle = opts?.query?.trim().toLowerCase() ?? "";
-  const inArea = subjectsForArea(subjects, areaId);
+  const inArea = subjectsForArea(subjects, areaId, opts?.goal);
   const scopedSubjects = opts?.subjectSlug
     ? inArea.filter((s) => s.slug === opts.subjectSlug)
     : inArea;
@@ -333,9 +348,10 @@ export function listAreaResources(
 
 export function areaSidebarRows(
   subjects: Subject[],
-  areaId: ExploreAreaId
+  areaId: ExploreAreaId,
+  goal?: StudyGoal
 ): { slug: string; title: string; count: number }[] {
-  return subjectsForArea(subjects, areaId).map((subject) => ({
+  return subjectsForArea(subjects, areaId, goal).map((subject) => ({
     slug: subject.slug,
     title: subject.name,
     count: subject.topics.reduce((n, t) => n + (t.articles?.length ?? 0), 0),

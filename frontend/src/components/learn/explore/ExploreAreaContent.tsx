@@ -14,7 +14,7 @@ import {
   subjectsForArea,
 } from "@/lib/exploreCatalog";
 import { withResolvedArea } from "@/lib/preloadedBrowse";
-import { Subject } from "@/types";
+import { StudyGoal, Subject } from "@/types";
 
 export function ExploreAreaContent({
   areaId,
@@ -22,15 +22,17 @@ export function ExploreAreaContent({
   resources,
   loading,
   query,
+  catalogGoal,
 }: {
   areaId: ExploreAreaId;
   subjects: Subject[];
   resources: ReturnType<typeof listAreaResources>;
   loading: boolean;
   query: string;
+  catalogGoal?: StudyGoal;
 }) {
   const area = getExploreArea(areaId);
-  const groups = subjectsForArea(subjects, areaId);
+  const groups = subjectsForArea(subjects, areaId, catalogGoal);
   const groupsSection = areaGroupsSection(areaId);
   const searching = Boolean(query.trim());
 
