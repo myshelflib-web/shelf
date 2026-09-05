@@ -34,8 +34,8 @@ describe("parseOfficialSyllabusKey", () => {
       studyGoal: "GATE",
       subjectSlug: "official-syllabus-gate",
       topicSlug: "ese",
-      topicTitle: "Engineering Services (ESE)",
-      title: "Engineering Services 2026",
+      topicTitle: "Engineering Services (ESE / IES)",
+      title: "Engineering Services (ESE / IES) 2026",
     });
   });
 

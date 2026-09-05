@@ -43,7 +43,6 @@ const UPSC: Target[] = [
   ["Notif-CDS-II-2026-Engl-200526.pdf", "upsc/cds/cds-ii-2026"],
   ["ExamNotifi_CAPF_AC_Exam_2026_Eng_20022026.pdf", "upsc/capf/capf-2026"],
   ["Notif-NDA-II-2026-Engl-200526.pdf", "upsc/nda/nda-ii-2026"],
-  ["Exam_Notification_IES_ISS_Eng_11022026.pdf", "upsc/ies-iss/ies-iss-2026"],
   ["Notification-CMSE-2026-English-110326.pdf", "upsc/cms/cms-2026"],
   ["Notif-IFSP-2026-Engl-060226Rev.pdf", "upsc/ifos/ifos-2026"],
 ].map(([file, path]) => ({

@@ -33,36 +33,38 @@ export function LandingProductPreview() {
   ];
 
   return (
-    <div className="landing-preview" id="product">
-      <div className="landing-preview-head">
-        <div className="landing-preview-title">Live product walkthrough</div>
-        <div className="landing-preview-meta">Preview of the real app experience</div>
-      </div>
-      <div className="landing-preview-body">
-        {slides.map((slide, index) => (
-          <div
-            key={index}
-            className={`landing-slide${index === current ? " landing-slide-active" : ""}`}
-            aria-hidden={index !== current}
-          >
-            {slide}
-          </div>
-        ))}
-        <div className="landing-step-nav" role="tablist" aria-label="Product preview slides">
-          {Array.from({ length: SLIDE_COUNT }).map((_, index) => (
-            <button
-              key={index}
-              type="button"
-              role="tab"
-              aria-selected={index === current}
-              aria-label={`Slide ${index + 1}`}
-              className={`landing-step-dot${index === current ? " landing-step-dot-active" : ""}`}
-              onClick={() => showSlide(index)}
-            />
-          ))}
+    <div className="landing-preview-stage">
+      <div className="landing-preview" id="product">
+        <div className="landing-preview-head">
+          <div className="landing-preview-title">Live product walkthrough</div>
+          <div className="landing-preview-meta">Preview of the real app experience</div>
         </div>
-        <div className="landing-preview-progress" aria-hidden>
-          <span />
+        <div className="landing-preview-body">
+          {slides.map((slide, index) => (
+            <div
+              key={index}
+              className={`landing-slide${index === current ? " landing-slide-active" : ""}`}
+              aria-hidden={index !== current}
+            >
+              {slide}
+            </div>
+          ))}
+          <div className="landing-step-nav" role="tablist" aria-label="Product preview slides">
+            {Array.from({ length: SLIDE_COUNT }).map((_, index) => (
+              <button
+                key={index}
+                type="button"
+                role="tab"
+                aria-selected={index === current}
+                aria-label={`Slide ${index + 1}`}
+                className={`landing-step-dot${index === current ? " landing-step-dot-active" : ""}`}
+                onClick={() => showSlide(index)}
+              />
+            ))}
+          </div>
+          <div className="landing-preview-progress" aria-hidden>
+            <span />
+          </div>
         </div>
       </div>
     </div>

@@ -12,6 +12,7 @@ import {
   WorkspaceMockup,
 } from "./LandingShowcaseMockups";
 import { YoutubeLectureMockup } from "./LandingYoutubeMockup";
+import { LandingKicker } from "@/components/landing/LandingKicker";
 
 const ROTATE_MS = 6500;
 
@@ -98,7 +99,7 @@ export function LandingShowcaseCarousel() {
     >
       <div className="landing-showcase-carousel-head">
         <div>
-          <p className="landing-kicker">Product walkthrough</p>
+          <LandingKicker index="02">Product walkthrough</LandingKicker>
           <h2 id="landing-showcase-heading" className="landing-showcase-carousel-title">
             See how Shelf fits your study flow
           </h2>

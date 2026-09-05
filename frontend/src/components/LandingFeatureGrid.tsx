@@ -1,4 +1,5 @@
 import { RevealOnScroll } from "@/components/RevealOnScroll";
+import { LandingKicker } from "@/components/landing/LandingKicker";
 import { MARKETING_FEATURES } from "@/lib/marketing";
 
 export function LandingFeatureGrid({
@@ -12,7 +13,7 @@ export function LandingFeatureGrid({
     return (
       <section className="landing-features-section">
         <RevealOnScroll>
-          <div className="landing-kicker">Full feature set</div>
+          <LandingKicker index="05">Full feature set</LandingKicker>
           <div className="landing-value-title">{title}</div>
           <p className="landing-value-copy mt-2">
             Reader workspace, YouTube lectures, Study AI, quiz, planner, Telegram

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Music, Send, Share2, Youtube } from "lucide-react";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
+import { LandingKicker } from "@/components/landing/LandingKicker";
 
 const INTEGRATIONS = [
   {
@@ -47,7 +48,7 @@ export function LandingIntegrationsSection() {
       <RevealOnScroll>
         <div className="landing-value-head">
           <div>
-            <div className="landing-kicker">Integrations</div>
+            <LandingKicker index="04">Integrations</LandingKicker>
             <h2 id="landing-integrations-heading" className="landing-value-title">
               Telegram, YouTube, Spotify, and sharing — inside the reader
             </h2>

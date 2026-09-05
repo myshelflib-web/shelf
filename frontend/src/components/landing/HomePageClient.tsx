@@ -14,6 +14,8 @@ import { LandingGoalSection } from "@/components/landing/LandingGoalSection";
 import { LandingCtaBanner } from "@/components/landing/LandingCtaBanner";
 import { LandingQuizSection } from "@/components/landing/LandingQuizSection";
 import { LandingIntegrationsSection } from "@/components/landing/LandingIntegrationsSection";
+import { LandingPillarMarquee } from "@/components/landing/LandingPillarMarquee";
+import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
 import { useAuth } from "@/hooks/useAuth";
 import {
   CalendarDays,
@@ -46,12 +48,18 @@ export function HomePageClient() {
       <Header />
 
       <main className="landing-page flex-1 min-h-0 overflow-y-auto">
-        <section className="landing-hero" aria-labelledby="landing-hero-heading">
+        <section
+          className="landing-hero"
+          id="landing-hero"
+          aria-labelledby="landing-hero-heading"
+        >
+          <div className="landing-hero-glow" aria-hidden />
           <RevealOnScroll>
             <div>
               <div className="landing-eyebrow">Your personal study library</div>
               <h1 id="landing-hero-heading">
-                Everything you’re learning or working on. In one Shelf.
+                Everything you’re learning or working on.{" "}
+                <em className="landing-em">In one Shelf.</em>
               </h1>
               <p className="landing-lead">
                 Upload PDFs, YouTube lectures, sketch notebooks, and doc pages
@@ -105,6 +113,8 @@ export function HomePageClient() {
           </RevealOnScroll>
         </section>
 
+        <LandingPillarMarquee />
+
         <LandingValueSteps />
 
         <LandingShowcases />
@@ -131,6 +141,8 @@ export function HomePageClient() {
 
         <MarketingFooter variant="landing" />
       </main>
+
+      <LandingStickyCta />
     </div>
   );
 }

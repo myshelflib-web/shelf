@@ -13,7 +13,7 @@ export function LandingCtaBanner({
   buttonHref?: string;
 }) {
   return (
-    <section className="landing-cta-section">
+    <section className="landing-cta-section" id="landing-cta">
       <RevealOnScroll>
         <div className="landing-cta-banner">
           <div className="landing-cta-text">

@@ -1,4 +1,5 @@
 import { RevealOnScroll } from "@/components/RevealOnScroll";
+import { LandingKicker } from "@/components/landing/LandingKicker";
 
 export function LandingGoalSection() {
   return (
@@ -6,7 +7,7 @@ export function LandingGoalSection() {
       <div className="landing-goal-wrap">
         <RevealOnScroll>
           <div className="landing-goal-left">
-            <div className="landing-kicker">Optional study goal</div>
+            <LandingKicker index="06">Optional study goal</LandingKicker>
             <h2>A smart layer when you want focus — never required on day one.</h2>
             <p>
               Shelf starts with your library and reader. When you are ready, set

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
+import { LandingKicker } from "@/components/landing/LandingKicker";
 import {
   CalendarDays,
   FileText,
@@ -49,7 +50,7 @@ export function LandingValueSteps() {
       <RevealOnScroll>
         <div className="landing-value-head">
           <div>
-            <div className="landing-kicker">How it works</div>
+            <LandingKicker index="01">How it works</LandingKicker>
             <h2 id="landing-how-heading" className="landing-value-title">
               Five steps from scattered files to a study loop
             </h2>

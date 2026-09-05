@@ -2027,13 +2027,19 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 
 .reveal-on-scroll {
   opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 0.65s ease, transform 0.65s ease;
+  transform: translateY(18px);
+  filter: blur(4px);
+  transition:
+    opacity 0.7s ease,
+    transform 0.7s ease,
+    filter 0.7s ease;
+  will-change: opacity, transform, filter;
 }
 
 .reveal-on-scroll.is-visible {
   opacity: 1;
   transform: translateY(0);
+  filter: blur(0);
 }
 
 @keyframes feature-float {
@@ -2069,7 +2075,9 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   .reveal-on-scroll {
     opacity: 1;
     transform: none;
+    filter: none;
     transition: none;
+    will-change: auto;
   }
   .feature-card:hover {
     transform: none;

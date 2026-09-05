@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, ListChecks } from "lucide-react";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { LandingWindow } from "./LandingWindow";
+import { LandingKicker } from "@/components/landing/LandingKicker";
 
 const PILLARS = [
   {
@@ -65,7 +66,9 @@ export function LandingQuizSection() {
     <section className="landing-showcase-section" id="quiz" aria-labelledby="landing-quiz-heading">
       <div className="landing-showcase-block grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
         <RevealOnScroll>
-          <p className="landing-kicker mb-2">Exam-style quiz</p>
+          <LandingKicker index="03" className="mb-2">
+            Exam-style quiz
+          </LandingKicker>
           <h2 id="landing-quiz-heading" className="!mb-3">
             Sit real papers from your own notes
           </h2>
