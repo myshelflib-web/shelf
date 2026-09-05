@@ -7,7 +7,7 @@ import type { ChatContextKind, StudyRelevancyDocSummary, UserSubject } from "@/t
 import { quizApi } from "@/lib/quiz/api";
 import type { QuizLaunch, QuizSourceKind } from "@/lib/quiz/types";
 import { DIFFICULTY_LABELS, quizHref } from "@/lib/quiz/href";
-import { quizBtnPrimary, quizFieldClass } from "@/lib/quiz/ui";
+import { quizBtnPrimary } from "@/lib/quiz/ui";
 import { AnalyticsEvents, track } from "@/lib/analytics";
 import { type QuizScopeValue } from "./QuizScopeFields";
 import { QuizCustomizeModal, type CustomizeSettings } from "./QuizCustomizeModal";
@@ -45,7 +45,7 @@ const SOURCES: Array<{ id: QuizSourceKind; title: string; body: string }> = [
   },
   {
     id: "EXAM_BANK",
-    title: "Exam bank",
+    title: "Previous Year Questions",
     body: "Practice original previous-year questions and standard papers.",
   },
 ];
@@ -67,6 +67,10 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
   const [sourceText, setSourceText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // Previous year questions (PYQs) customization states
+  const [pyqPaper, setPyqPaper] = useState("Mechanical Engineering");
+  const [pyqYears, setPyqYears] = useState("Last 5 available years");
 
   // Popup Modal states
   const [customizeOpen, setCustomizeOpen] = useState(false);
@@ -210,7 +214,10 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
         contextTopicId: scope.contextTopicId || null,
         contextPageId: scope.contextPageId || null,
         relevancyDocId: scope.relevancyDocId || null,
-        focusTopic: focus.trim() || null,
+        focusTopic:
+          sourceKind === "EXAM_BANK"
+            ? `${pyqPaper} · ${pyqYears}${focus ? ` · ${focus}` : ""}`
+            : focus.trim() || null,
         sourceText: sourceKind === "UPLOAD" ? sourceText || null : null,
         file: sourceKind === "UPLOAD" ? file : null,
       });
@@ -242,10 +249,10 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
   };
 
   const labelMix = (val: string) => {
-    if (val === "balanced") return "Balanced mix";
+    if (val === "balanced") return "Balanced";
     if (val === "mcq") return "MCQs only";
     if (val === "mostly-mcq") return "Mostly MCQs";
-    return "More written";
+    return "More written answers";
   };
 
   const mixLabel = useMemo(() => {
@@ -253,13 +260,22 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
     if (writtenCount === 0) return "MCQs only";
     const ratio = mcqCount / (mcqCount + writtenCount);
     if (ratio >= 0.8) return "Mostly MCQs";
-    return "Balanced mix";
+    return "Balanced";
   }, [mcqCount, writtenCount]);
 
-  // Compute dynamic header display for current selected source popup context
+  // Determine the primary action button text for the selected source box
+  const sourceButtonText = useMemo(() => {
+    if (sourceKind === "UPLOAD" && !file && !sourceText.trim()) {
+      return "Upload";
+    }
+    if (sourceKind === "LIBRARY" && scope.contextKind !== "LIBRARY" && !scope.contextNotebookId) {
+      return "Select";
+    }
+    return "Change";
+  }, [sourceKind, file, sourceText, scope]);
   const sourceDisplayTitle = useMemo(() => {
     if (sourceKind === "EXAM_BANK") {
-      return "Exam Bank material";
+      return `Previous questions · ${pyqPaper}`;
     }
     if (sourceKind === "UPLOAD") {
       if (file) return `Uploaded: ${file.name}`;
@@ -298,12 +314,12 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
       "Select file...";
 
     return `${folderName} › ${pageTitle}`;
-  }, [sourceKind, scope, file, sourceText, notebooks]);
+  }, [sourceKind, scope, file, sourceText, notebooks, pyqPaper]);
 
   const sourceDisplaySubtitle = useMemo(() => {
     let base = "";
     if (sourceKind === "EXAM_BANK") {
-      base = "Exam bank · preloaded curriculum & syllabus";
+      base = `Original PYQs · ${pyqPaper} · ${pyqYears}`;
     } else if (sourceKind === "UPLOAD") {
       if (file) {
         base = `Document · ${(file.size / 1024).toFixed(1)} KB`;
@@ -332,7 +348,7 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
       }
     }
     return base;
-  }, [sourceKind, scope.contextKind, scope.relevancyDocId, file, sourceText, docs]);
+  }, [sourceKind, scope.contextKind, scope.relevancyDocId, file, sourceText, docs, pyqPaper, pyqYears]);
 
   return (
     <>
@@ -393,7 +409,7 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
                 onClick={() => setSourceModalOpen(true)}
                 className="change h-[29px] border border-[var(--border)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-secondary)] rounded-[8px] px-3.5 text-[11.5px] text-[var(--accent)] font-extrabold transition-all shrink-0 shadow-xs"
               >
-                Change
+                {sourceButtonText}
               </button>
             </div>
           </div>
@@ -578,6 +594,10 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
         onFileChange={setFile}
         sourceText={sourceText}
         onSourceTextChange={setSourceText}
+        pyqPaper={pyqPaper}
+        onPyqPaperChange={setPyqPaper}
+        pyqYears={pyqYears}
+        onPyqYearsChange={setPyqYears}
         busy={busy}
       />
     </>

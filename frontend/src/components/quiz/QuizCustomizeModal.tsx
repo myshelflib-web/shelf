@@ -136,10 +136,10 @@ export function QuizCustomizeModal({
                 value={draft.mix}
                 onChange={(mix) => setDraft((prev) => ({ ...prev, mix }))}
                 options={[
-                  { value: "balanced", label: "Balanced mix" },
+                  { value: "balanced", label: "Balanced" },
                   { value: "mcq", label: "MCQs only" },
                   { value: "mostly-mcq", label: "Mostly MCQs" },
-                  { value: "written", label: "More written" },
+                  { value: "written", label: "More written answers" },
                 ]}
                 aria-label="Question mix"
                 className="w-full h-9"
