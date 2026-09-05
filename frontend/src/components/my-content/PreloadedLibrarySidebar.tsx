@@ -29,6 +29,8 @@ import { getExploreArea, learnAreaHref } from "@/lib/exploreCatalog";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { ExploreSidebarBrowse } from "@/components/learn/explore/ExploreSidebarBrowse";
 import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
+import { useOptionalPreloadedOpenFiles } from "@/components/learn/PreloadedOpenFilesContext";
+import { isCurriculumScope } from "@/lib/learnContent";
 
 interface PreloadedLibrarySidebarProps {
   mode: LibraryMode;
@@ -73,14 +75,27 @@ export function PreloadedLibrarySidebar({
     {}
   );
 
-  const browse = parseLearnPath(currentHref);
-  const activeSubject = browse.subjectSlug;
-  const activeTopic = browse.topicSlug;
-  const activeArticle = browse.articleSlug;
+  const folderBrowse = useOptionalPreloadedBrowse();
+  const openFiles = useOptionalPreloadedOpenFiles();
+  const fromHref = parseLearnPath(currentHref);
+  const activeSubject =
+    folderBrowse?.path.subjectSlug ?? fromHref.subjectSlug;
+  const activeTopic = folderBrowse?.path.topicSlug ?? fromHref.topicSlug;
+  const tabScope =
+    openFiles?.activeTab && isCurriculumScope(openFiles.activeTab.scope)
+      ? openFiles.activeTab.scope
+      : null;
+  const activeArticle =
+    tabScope &&
+    tabScope.subjectSlug === activeSubject &&
+    tabScope.topicSlug === activeTopic
+      ? tabScope.articleSlug
+      : folderBrowse?.path.articleSlug ?? fromHref.articleSlug;
   const explorer = preloadedExplorerMode({ workspaceMode, activeSubject });
   const isReaderCollection = explorer === "collection";
   const isScopedCollection = isReaderCollection;
   const activeArea =
+    folderBrowse?.path.areaId ??
     exploreAreaProp ??
     resolveBrowseArea(
       { subjectSlug: activeSubject, topicSlug: activeTopic },
@@ -145,8 +160,6 @@ export function PreloadedLibrarySidebar({
     const key = `${subjectSlug}:${topicSlug}`;
     setExpandedTopics((prev) => ({ ...prev, [key]: !prev[key] }));
   };
-
-  const folderBrowse = useOptionalPreloadedBrowse();
 
   const collapseAll = () => {
     setExpandedSubjects({});

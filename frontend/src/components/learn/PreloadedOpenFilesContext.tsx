@@ -22,7 +22,6 @@ import {
   writePreloadedOpenFiles,
   type PreloadedOpenFilesState,
 } from "@/lib/preloadedOpenFiles";
-import { browsePathFromHref } from "@/lib/preloadedBrowse";
 import {
   PreloadedBrowseProvider,
   useOptionalPreloadedBrowse,
@@ -59,21 +58,12 @@ export function PreloadedOpenFilesProvider({
     writePreloadedOpenFiles(state);
   }, [state]);
 
-  const syncBrowseToTab = useCallback(
+  const expandFolderForTab = useCallback(
     (tab: OpenTab | null) => {
-      if (!browse) return;
-      if (!tab || !isCurriculumScope(tab.scope)) {
-        browse.setPath({
-          areaId: browse.path.areaId,
-          subjectSlug: browse.path.subjectSlug,
-          topicSlug: browse.path.topicSlug,
-        });
-        return;
-      }
+      if (!browse || !tab || !isCurriculumScope(tab.scope)) return;
       browse.setPath({
         subjectSlug: tab.scope.subjectSlug,
         topicSlug: tab.scope.topicSlug,
-        articleSlug: tab.scope.articleSlug,
       });
     },
     [browse]
@@ -85,47 +75,28 @@ export function PreloadedOpenFilesProvider({
       if (!tab) return;
       setState((prev) => {
         const next = openPreloadedTab(prev, tab);
-        const active = activePreloadedTab(next);
-        queueMicrotask(() => syncBrowseToTab(active));
+        queueMicrotask(() => expandFolderForTab(activePreloadedTab(next)));
         return next;
       });
     },
-    [syncBrowseToTab]
+    [expandFolderForTab]
   );
 
-  const activateTab = useCallback(
-    (key: string) => {
-      setState((prev) => {
-        const next = activatePreloadedTab(prev, key);
-        queueMicrotask(() => syncBrowseToTab(activePreloadedTab(next)));
-        return next;
-      });
-    },
-    [syncBrowseToTab]
-  );
+  const activateTab = useCallback((key: string) => {
+    setState((prev) => activatePreloadedTab(prev, key));
+  }, []);
 
   const closeTab = useCallback(
     (key: string) => {
       setState((prev) => {
         const next = closePreloadedTab(prev, key);
-        queueMicrotask(() => {
-          if (!next.tabs.length) {
-            const folder = browsePathFromHref(
-              prev.tabs.find((t) => t.key === key)?.href ?? ""
-            );
-            browse?.setPath({
-              areaId: browse.path.areaId ?? folder.areaId,
-              subjectSlug: folder.subjectSlug ?? browse.path.subjectSlug,
-              topicSlug: folder.topicSlug ?? browse.path.topicSlug,
-            });
-            return;
-          }
-          syncBrowseToTab(activePreloadedTab(next));
-        });
+        if (!next.tabs.length) {
+          browse?.setPath({});
+        }
         return next;
       });
     },
-    [browse, syncBrowseToTab]
+    [browse]
   );
 
   const updateTabMeta = useCallback(
