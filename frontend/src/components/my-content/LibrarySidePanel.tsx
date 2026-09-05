@@ -13,6 +13,8 @@ import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
 import { StudyGoal, UserSubject } from "@/types";
 import { inferLibraryModeFromHref, LibraryMode } from "@/lib/libraryMode";
 import type { ExploreAreaId } from "@/lib/exploreCatalog";
+import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
+import { browseHref } from "@/lib/preloadedBrowse";
 
 interface LibrarySidePanelProps {
   notebook?: UserSubject;
@@ -56,6 +58,10 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
   const pathname = usePathname();
   const { user, loading: authLoading } = useAuth();
   const { mode, setMode, showPreloaded, goal, isGuest } = useLibraryMode();
+  const browse = useOptionalPreloadedBrowse();
+  const resolvedHref =
+    currentHref ?? (browse ? browseHref(browse.path) : undefined);
+  const resolvedExploreArea = exploreArea ?? browse?.path.areaId ?? null;
   const [signInFeature, setSignInFeature] = useState<string | null>(null);
 
   const handleModeChange = useCallback(
@@ -74,9 +80,9 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
   );
 
   useEffect(() => {
-    const inferred = inferLibraryModeFromHref(currentHref);
+    const inferred = inferLibraryModeFromHref(resolvedHref);
     if (inferred) setMode(inferred);
-  }, [currentHref, setMode]);
+  }, [resolvedHref, setMode]);
 
   const tabs: ReactNode = showPreloaded ? (
     <LibraryModeTabs
@@ -96,7 +102,7 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
       >
         <MyContentSidebar
           {...sidebarProps}
-          currentHref={currentHref}
+          currentHref={resolvedHref}
           libraryModeTabs={tabs}
           className={sidebarProps.className}
         />
@@ -111,7 +117,7 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
             onModeChange={handleModeChange}
             showPreloaded={showPreloaded}
             studyGoal={goal}
-            currentHref={currentHref}
+            currentHref={resolvedHref}
             workspaceMode={sidebarProps.workspaceMode}
             showGoalPicker={Boolean(showGoalPicker) && isGuest}
             onStudyGoalChange={onStudyGoalChange}
@@ -119,7 +125,7 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
             onGuestLibraryClick={
               onGuestPersonalClick ?? (() => setSignInFeature("Your personal library"))
             }
-            exploreArea={exploreArea}
+            exploreArea={resolvedExploreArea}
             className={sidebarProps.className}
           />
         </div>

@@ -96,6 +96,9 @@ export function featuredGoalFor(
   return undefined;
 }
 
+/** First URL segments under /learn that are not catalog subjects. */
+const LEARN_RESERVED_SEGMENTS = new Set(["tracks", "current-affairs"]);
+
 export function parseLearnPath(href?: string | null): {
   subjectSlug?: string;
   topicSlug?: string;
@@ -106,7 +109,7 @@ export function parseLearnPath(href?: string | null): {
   const match = path.match(
     /^\/learn(?:\/([^/]+))?(?:\/([^/]+))?(?:\/([^/]+))?$/
   );
-  if (!match?.[1]) return {};
+  if (!match?.[1] || LEARN_RESERVED_SEGMENTS.has(match[1])) return {};
   return {
     subjectSlug: match[1],
     topicSlug: match[2],

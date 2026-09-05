@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { FileText, Folder, Lock, Newspaper } from "lucide-react";
+import { FileText, Folder, Lock } from "lucide-react";
+import { BrowseFolderLink } from "@/components/learn/BrowseFolderLink";
 import { ExploreAreaIcon } from "@/components/learn/explore/ExploreAreaIcon";
+import { ExploreSidebarHomeTree } from "@/components/learn/explore/ExploreSidebarHomeTree";
 import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { useAuth } from "@/hooks/useAuth";
@@ -14,12 +16,9 @@ import {
   ExploreAreaId,
   areaSidebarRows,
   catalogGoalAllowsArea,
-  countAreaItems,
-  featuredExploreCollectionsForGoal,
   isExploreAreaId,
   learnAreaHref,
   subjectExploreHref,
-  visibleExploreAreasForGoal,
 } from "@/lib/exploreCatalog";
 import { subjectHref, subjectMatchesCatalogGoal, topicHref } from "@/lib/learnCatalog";
 import { learnHref, learnScope } from "@/lib/learnContent";
@@ -72,8 +71,6 @@ export function ExploreSidebarBrowse({
   const { user } = useAuth();
   const isPremium = isPremiumUser(user);
   const { subjects } = useLearnSubjects();
-  const featured = featuredExploreCollectionsForGoal(subjects, studyGoal);
-  const browseAreas = visibleExploreAreasForGoal(subjects, studyGoal);
   const scopedRows = activeArea ? areaSidebarRows(subjects, activeArea) : [];
   const collectionSubject = activeSubject
     ? subjects.find((s) => s.slug === activeSubject)
@@ -105,7 +102,11 @@ export function ExploreSidebarBrowse({
       subjectMatchesCatalogGoal(collectionSubject, studyGoal) ? (
       <div>
         <p className="explore-side-label">Public collection</p>
-        <Link
+        <BrowseFolderLink
+          path={{
+            areaId: activeArea,
+            subjectSlug: collectionSubject.slug,
+          }}
           href={subjectHref(collectionSubject.slug)}
           className={clsx(
             "explore-side-collection",
@@ -117,7 +118,7 @@ export function ExploreSidebarBrowse({
               collectionSubject.name.charAt(0).toUpperCase()}
           </span>
           <span className="truncate">{collectionSubject.name}</span>
-        </Link>
+        </BrowseFolderLink>
 
         <div className="mt-3 pt-2 border-t border-[var(--border-subtle)]">
           <p className="explore-side-label">Topics</p>
@@ -128,8 +129,13 @@ export function ExploreSidebarBrowse({
               const isActive =
                 activeTopic === topic.slug && !activeArticle;
               return (
-                <Link
+                <BrowseFolderLink
                   key={topic.id}
+                  path={{
+                    areaId: activeArea,
+                    subjectSlug: collectionSubject.slug,
+                    topicSlug: topic.slug,
+                  }}
                   href={topicHref(collectionSubject.slug, topic.slug)}
                   className={clsx(
                     "explore-side-row",
@@ -143,7 +149,7 @@ export function ExploreSidebarBrowse({
                   {count > 0 ? (
                     <span className="explore-side-count">{count}</span>
                   ) : null}
-                </Link>
+                </BrowseFolderLink>
               );
             })}
         </div>
@@ -226,51 +232,13 @@ export function ExploreSidebarBrowse({
           </p>
         )
       ) : mode === "home" ? (
-        <>
-          <div className="mt-1">
-            <p className="explore-side-label">Browse</p>
-            <Link href="/learn/current-affairs" className="explore-side-row">
-              <Newspaper className="w-4 h-4 text-[var(--accent)] shrink-0" />
-              <span className="min-w-0 flex-1 truncate">Live current affairs</span>
-            </Link>
-            {browseAreas.map((area) => {
-              const count = countAreaItems(subjects, area.id);
-              return (
-                <Link
-                  key={area.id}
-                  href={learnAreaHref(area.id)}
-                  className="explore-side-row"
-                >
-                  <ExploreAreaIcon tone={area.tone} size="sm" />
-                  <span className="min-w-0 flex-1 truncate">{area.title}</span>
-                  <span className="explore-side-count">{count}</span>
-                </Link>
-              );
-            })}
-          </div>
-
-          {featured.length > 0 ? (
-            <div className="mt-3 pt-2 border-t border-[var(--border-subtle)]">
-              <p className="explore-side-label">Public collections</p>
-              {featured.map((subject) => (
-                <Link
-                  key={subject.id}
-                  href={subjectExploreHref(subject.slug)}
-                  className={`explore-side-collection${
-                    activeSubject === subject.slug
-                      ? " explore-side-collection-active"
-                      : ""
-                  }`}
-                >
-                  <span className="explore-side-collection-mark" aria-hidden>
-                    {subject.icon || subject.name.charAt(0).toUpperCase()}
-                  </span>
-                  <span className="truncate">{subject.name}</span>
-                </Link>
-              ))}
-            </div>
-          ) : null}
-        </>
+        <ExploreSidebarHomeTree
+          activeArea={activeArea}
+          activeSubject={activeSubject}
+          activeTopic={activeTopic}
+          searchQuery={searchQuery}
+          studyGoal={studyGoal}
+        />
       ) : activeArea ? (
         catalogGoalAllowsArea(activeArea, studyGoal) ? (
         <div>

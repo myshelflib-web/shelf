@@ -33,7 +33,9 @@ import {
   subjectMatchesCatalogGoal,
   subjectsForCatalogGoal,
 } from "@/lib/learnCatalog";
-import { learnHref } from "@/lib/learnContent";
+import { BrowseFolderLink, useOpenBrowseHref } from "@/components/learn/BrowseFolderLink";
+import { isLearnReaderHref, learnHref } from "@/lib/learnContent";
+import { withResolvedArea } from "@/lib/preloadedBrowse";
 import { Subject, StudyGoal, Topic } from "@/types";
 import { useEffect, useMemo, useState } from "react";
 import { useLearnStudyGoal } from "@/hooks/useLearnStudyGoal";
@@ -73,6 +75,7 @@ export function ExploreMainPane({
 }) {
   const router = useRouter();
   const { startReaderOpen } = useLearnNavigation();
+  const openBrowseHref = useOpenBrowseHref();
   const { user } = useAuth();
   const { goal: filterGoal, accountGoal } = useLearnStudyGoal();
   const catalogGoal: StudyGoal = user ? (accountGoal ?? "GENERAL") : filterGoal;
@@ -97,8 +100,12 @@ export function ExploreMainPane({
     (subject ? areaForGoal(subjectGoal(subject)) : null);
 
   const openHit = (href: string) => {
-    startReaderOpen(href);
-    router.push(href);
+    if (isLearnReaderHref(href)) {
+      startReaderOpen(href);
+      router.push(href);
+      return;
+    }
+    openBrowseHref(href);
   };
 
   const searchSubjects = useMemo(() => {
@@ -218,9 +225,9 @@ export function ExploreMainPane({
       ) : (
         <div className="learn-empty">
           Collection not found.{" "}
-          <Link href="/learn" className="text-[var(--accent)]">
+          <BrowseFolderLink path={{}} href="/learn" className="text-[var(--accent)]">
             Back to Explore
-          </Link>
+          </BrowseFolderLink>
           .
         </div>
       )}
@@ -239,7 +246,6 @@ function ExploreHomeContent({
   featured: Subject[];
   catalogGoal: StudyGoal;
 }) {
-  const router = useRouter();
   const areas = loading ? [] : visibleExploreAreasForGoal(subjects, catalogGoal);
 
   return (
@@ -262,10 +268,10 @@ function ExploreHomeContent({
               const groups = subjectsForArea(subjects, area.id);
               const articles = countAreaItems(subjects, area.id);
               return (
-                <button
+                <BrowseFolderLink
                   key={area.id}
-                  type="button"
-                  onClick={() => router.push(learnAreaHref(area.id))}
+                  path={{ areaId: area.id }}
+                  href={learnAreaHref(area.id)}
                   className="explore-area-card"
                 >
                   <ExploreAreaIcon tone={area.tone} />
@@ -275,7 +281,7 @@ function ExploreHomeContent({
                     {groups.length} group{groups.length === 1 ? "" : "s"} ·{" "}
                     {articles} article{articles === 1 ? "" : "s"}
                   </p>
-                </button>
+                </BrowseFolderLink>
               );
             })}
           </div>
@@ -292,8 +298,9 @@ function ExploreHomeContent({
           </div>
           <div className="explore-collection-grid">
             {featured.map((s) => (
-              <Link
+              <BrowseFolderLink
                 key={s.id}
+                path={withResolvedArea({ subjectSlug: s.slug }, subjects)}
                 href={subjectExploreHref(s.slug)}
                 className="explore-collection-card"
               >
@@ -306,7 +313,7 @@ function ExploreHomeContent({
                     {collectionMeta(s)}
                   </span>
                 </span>
-              </Link>
+              </BrowseFolderLink>
             ))}
           </div>
         </section>

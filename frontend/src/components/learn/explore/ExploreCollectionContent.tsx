@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useMemo } from "react";
 import { ChevronRight, Lock } from "lucide-react";
+import { BrowseFolderLink } from "@/components/learn/BrowseFolderLink";
 import { ExploreResourceCard } from "@/components/learn/explore/ExploreResourceCard";
 import { LearnCatalogSkeleton } from "@/components/learn/LearnBrowseSkeletons";
 import {
@@ -33,6 +33,11 @@ export function ExploreCollectionContent({
 }) {
   const goal = subjectGoal(subject);
   const area = areaId ? getExploreArea(areaId) : null;
+  const backPath = topic
+    ? { areaId, subjectSlug: subject.slug }
+    : areaId
+      ? { areaId }
+      : {};
   const backHref = topic
     ? subjectHref(subject.slug)
     : areaId
@@ -58,36 +63,39 @@ export function ExploreCollectionContent({
     <>
       <header className="explore-scoped-head !items-start mb-2">
         <div className="min-w-0 flex-1">
-          <Link
+          <BrowseFolderLink
+            path={backPath}
             href={backHref}
             className="explore-back-library mb-2 inline-flex w-auto"
           >
             ← {backLabel}
-          </Link>
+          </BrowseFolderLink>
           <nav className="explore-breadcrumb" aria-label="Breadcrumb">
-            <Link href="/learn" className="hover:text-[var(--accent)]">
+            <BrowseFolderLink path={{}} href="/learn" className="hover:text-[var(--accent)]">
               Explore
-            </Link>
+            </BrowseFolderLink>
             <ChevronRight className="w-3 h-3" aria-hidden />
             {area && !topic ? (
               <>
-                <Link
+                <BrowseFolderLink
+                  path={{ areaId: areaId! }}
                   href={learnAreaHref(areaId!)}
                   className="hover:text-[var(--accent)] truncate max-w-[10rem]"
                 >
                   {area.title}
-                </Link>
+                </BrowseFolderLink>
                 <ChevronRight className="w-3 h-3" aria-hidden />
               </>
             ) : null}
             {topic ? (
               <>
-                <Link
+                <BrowseFolderLink
+                  path={{ areaId, subjectSlug: subject.slug }}
                   href={subjectHref(subject.slug)}
                   className="hover:text-[var(--accent)] truncate max-w-[10rem]"
                 >
                   {subject.name}
-                </Link>
+                </BrowseFolderLink>
                 <ChevronRight className="w-3 h-3" aria-hidden />
                 <span className="text-[var(--text-secondary)] truncate">
                   {topic.title}
@@ -124,8 +132,13 @@ export function ExploreCollectionContent({
             {visibleTopics.map((t) => {
               const count = t.articles?.length ?? 0;
               return (
-                <Link
+                <BrowseFolderLink
                   key={t.id}
+                  path={{
+                    areaId,
+                    subjectSlug: subject.slug,
+                    topicSlug: t.slug,
+                  }}
                   href={topicHref(subject.slug, t.slug)}
                   className="explore-collection-card"
                 >
@@ -138,7 +151,7 @@ export function ExploreCollectionContent({
                       {count} article{count === 1 ? "" : "s"}
                     </span>
                   </span>
-                </Link>
+                </BrowseFolderLink>
               );
             })}
           </div>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useLibraryMode } from "@/hooks/useLibraryMode";
 import { LibraryEmptyWorkspace } from "@/components/my-content/LibraryEmptyWorkspace";
 import { ExploreMainPane } from "@/components/learn/explore/ExploreMainPane";
+import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
 import type { ExploreAreaId } from "@/lib/exploreCatalog";
 
 type LibraryCenterPaneProps = {
@@ -24,7 +25,18 @@ export function LibraryCenterPane({
   readerOverlay,
 }: LibraryCenterPaneProps = {}) {
   const { mode, showPreloaded } = useLibraryMode();
+  const browse = useOptionalPreloadedBrowse();
   const preloadedActive = showPreloaded && mode === "preloaded";
+  const resolvedExplore = explore ??
+    (browse
+      ? {
+          subjectSlug: browse.path.subjectSlug,
+          topicSlug: browse.path.topicSlug,
+          areaId: browse.path.subjectSlug ? null : browse.path.areaId,
+          sidebarAreaId: browse.path.areaId,
+          returnTo: "/my-content",
+        }
+      : undefined);
 
   if (readerOverlay) {
     return (
@@ -46,11 +58,11 @@ export function LibraryCenterPane({
       ) : (
         <div key="preloaded" className="library-center-pane-swap h-full min-h-0">
           <ExploreMainPane
-            subjectSlug={explore?.subjectSlug}
-            topicSlug={explore?.topicSlug}
-            areaId={explore?.areaId}
-            sidebarAreaId={explore?.sidebarAreaId}
-            returnTo={explore?.returnTo ?? "/my-content"}
+            subjectSlug={resolvedExplore?.subjectSlug}
+            topicSlug={resolvedExplore?.topicSlug}
+            areaId={resolvedExplore?.areaId}
+            sidebarAreaId={resolvedExplore?.sidebarAreaId}
+            returnTo={resolvedExplore?.returnTo ?? "/my-content"}
           />
         </div>
       )}

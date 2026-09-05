@@ -905,7 +905,8 @@ a.explore-resource-card:focus-visible .explore-resource-open {
 }
 
 .explore-side-row,
-a.explore-side-row {
+a.explore-side-row,
+button.explore-side-row {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -918,6 +919,36 @@ a.explore-side-row {
   text-align: left;
   text-decoration: none;
   transition: background 0.15s ease, color 0.15s ease;
+}
+
+button.explore-side-row,
+button.explore-side-collection,
+button.explore-back-library {
+  font: inherit;
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+}
+
+button.explore-area-card,
+button.explore-collection-card {
+  font: inherit;
+  cursor: pointer;
+}
+
+.explore-side-chevron {
+  width: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.explore-side-branch {
+  margin-left: 0.75rem;
+  padding-left: 0.375rem;
+  border-left: 1px solid var(--border-subtle);
 }
 
 .explore-side-row:hover {
@@ -936,7 +967,8 @@ a.explore-side-row {
   color: var(--text-muted);
 }
 
-.explore-side-collection {
+.explore-side-collection,
+button.explore-side-collection {
   display: flex;
   align-items: center;
   gap: 0.5rem;

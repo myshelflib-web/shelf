@@ -16,6 +16,7 @@ import {
   subjectsForCatalogGoal,
   topicHref,
 } from "@/lib/learnCatalog";
+import { preloadedExplorerMode, resolveBrowseArea } from "@/lib/preloadedBrowse";
 import { GuestStudyGoalSelect } from "@/components/learn/GuestStudyGoalSelect";
 import { StudyGoal } from "@/types";
 import { ExplorerSidebarSkeleton } from "@/components/dashboard/DashboardSkeletons";
@@ -75,12 +76,15 @@ export function PreloadedLibrarySidebar({
   const activeSubject = browse.subjectSlug;
   const activeTopic = browse.topicSlug;
   const activeArticle = browse.articleSlug;
-  const activeArea = exploreAreaProp ?? null;
-
-  const isExploreArea = !workspaceMode && !activeSubject && Boolean(activeArea);
-  const isBrowseCollection = !workspaceMode && Boolean(activeSubject);
-  const isReaderCollection = workspaceMode && Boolean(activeSubject);
-  const isScopedCollection = isBrowseCollection || isReaderCollection;
+  const explorer = preloadedExplorerMode({ workspaceMode, activeSubject });
+  const isReaderCollection = explorer === "collection";
+  const isScopedCollection = isReaderCollection;
+  const activeArea =
+    exploreAreaProp ??
+    resolveBrowseArea(
+      { subjectSlug: activeSubject, topicSlug: activeTopic },
+      subjects
+    );
 
   const activeSubjectData = activeSubject
     ? subjects.find((s) => s.slug === activeSubject)
@@ -146,14 +150,9 @@ export function PreloadedLibrarySidebar({
     setExpandedTopics({});
   };
 
-  const exploreSidebarMode =
-    isBrowseCollection || isReaderCollection
-      ? "collection"
-      : isExploreArea
-        ? "area"
-        : "home";
+  const exploreSidebarMode = isReaderCollection ? "collection" : "home";
 
-  const showFullTree = workspaceMode && !activeSubject;
+  const showFullTree = explorer === "tree";
   const showExploreBrowse = !showFullTree;
 
   const sidebarBackHref = isScopedCollection
