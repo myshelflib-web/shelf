@@ -1309,6 +1309,16 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   background: #e59866;
 }
 
+.html-pen-stroke {
+  fill: none;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+.html-reader-dark .html-pen-stroke {
+  mix-blend-mode: screen;
+}
+
 .pdf-pen-stroke {
   fill: none;
   stroke-linecap: round;
@@ -1486,8 +1496,15 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   user-select: text;
 }
 
+.personal-content,
+.personal-content * {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Distinct from yellow highlight wash so a drag is visible on marked text. */
 .personal-content ::selection {
-  background: color-mix(in srgb, var(--highlight-yellow) 50%, transparent);
+  background: color-mix(in srgb, #4c8dff 42%, transparent);
   color: inherit;
 }
 

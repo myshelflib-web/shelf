@@ -8,7 +8,7 @@ import { blankCanvasScrollTarget } from "@/lib/blankCanvas";
 import { LiveEditorRouter } from "./LiveEditorRouter";
 import { usePersonalContentClip } from "./usePersonalContentClip";
 import { PersonalContentHighlightChrome } from "./PersonalContentHighlightChrome";
-import { HtmlHighlightLayer } from "./HtmlHighlightLayer";
+import { hasHtmlStrokes, HtmlHighlightLayer } from "./HtmlHighlightLayer";
 import { deleteHighlight } from "@/lib/offline/highlights";
 import type { PersonalContentAreaProps } from "./personalContentAreaTypes";
 import { usePersonalContentSelection } from "./usePersonalContentSelection";
@@ -415,9 +415,21 @@ export function PersonalContentArea({
           onPointerMove={highlightMode ? onStrokeMove : undefined}
           onPointerUp={highlightMode ? onStrokeUp : undefined}
         >
+          {hasHtmlStrokes(highlights) || draft.length > 1 || highlightMode ? (
+            <HtmlHighlightLayer
+              originRef={originRef}
+              highlights={highlights}
+              eraseMode={eraseMode}
+              draftPoints={draft}
+              draftColor={preferredHighlightColorId}
+              draftWidth={highlightWidth}
+              draftOpacity={highlightOpacity}
+              onActivate={onMarkActivate}
+            />
+          ) : null}
           <div
             ref={setContentRoot}
-            className="prose-content personal-content select-text"
+            className="prose-content personal-content select-text relative z-[1] bg-transparent"
             onClick={(e) => {
               if (clipMode || highlightMode || editing) return;
               const root = contentRootRef.current;
@@ -426,15 +438,6 @@ export function PersonalContentArea({
               if (hit) onMarkActivate(hit, e.clientX, e.clientY);
             }}
             dangerouslySetInnerHTML={{ __html: fragment }}
-          />
-          <HtmlHighlightLayer
-            highlights={highlights}
-            drawLocked={highlightMode || clipMode}
-            draftPoints={draft}
-            draftColor={preferredHighlightColorId}
-            draftWidth={highlightWidth}
-            draftOpacity={highlightOpacity}
-            onActivate={onMarkActivate}
           />
         </div>
         {clipBox && (

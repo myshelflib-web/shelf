@@ -1,26 +1,50 @@
 "use client";
 
+import { useLayoutEffect, useState, type MutableRefObject } from "react";
 import type { UserContentHighlight } from "@/types";
-import {
-  DEFAULT_PEN_WIDTH,
-  penHitWidthPx,
-  penStrokeWidthPx,
-} from "@/lib/straightenStroke";
+import { DEFAULT_PEN_WIDTH } from "@/lib/straightenStroke";
 import { strokePointsFromRects } from "./htmlPageSelection";
-import { isInkHighlight, penStroke, pointsToPath } from "./pdfViewerHelpers";
+import { isInkHighlight, penStroke } from "./pdfViewerHelpers";
 
-/** PDF highlighter strokes only — text highlights paint in the article. */
+/** Map PDF page-fraction widths to a thin HTML marker (XS ≈ 7px, L ≈ 16px). */
+function htmlStrokePx(width: number): number {
+  return Math.round(Math.min(18, Math.max(6, width * 2800)));
+}
+
+function pathFromNorm(
+  points: Array<{ x: number; y: number }>,
+  w: number,
+  h: number
+): string {
+  if (!points.length) return "";
+  return points
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x * w} ${p.y * h}`)
+    .join(" ");
+}
+
+function isStrokeHighlight(h: UserContentHighlight): boolean {
+  return Boolean(h.position?.points?.length) ||
+    (h.position?.tool === "highlight" && Boolean(h.position.rects?.length));
+}
+
+export function hasHtmlStrokes(highlights: UserContentHighlight[]): boolean {
+  return highlights.some(isStrokeHighlight);
+}
+
+/** Pixel-space SVG behind the article — never a covering hit target. */
 export function HtmlHighlightLayer({
+  originRef,
   highlights,
-  drawLocked,
+  eraseMode,
   draftPoints,
   draftColor,
   draftWidth = DEFAULT_PEN_WIDTH,
   draftOpacity = 0.72,
   onActivate,
 }: {
+  originRef: MutableRefObject<HTMLElement | null>;
   highlights: UserContentHighlight[];
-  drawLocked: boolean;
+  eraseMode: boolean;
   draftPoints?: Array<{ x: number; y: number }>;
   draftColor: string;
   draftWidth?: number;
@@ -31,6 +55,21 @@ export function HtmlHighlightLayer({
     clientY: number
   ) => void;
 }) {
+  const [size, setSize] = useState({ w: 0, h: 0 });
+
+  useLayoutEffect(() => {
+    const el = originRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setSize({ w: Math.max(0, r.width), h: Math.max(0, r.height) });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [originRef]);
+
   const pointStrokes = highlights.filter((h) => h.position?.points?.length);
   const rectStrokes = highlights.filter(
     (h) =>
@@ -38,42 +77,47 @@ export function HtmlHighlightLayer({
       h.position.rects?.length &&
       !h.position.points?.length
   );
+  const { w, h } = size;
+  if (w < 1 || h < 1) return null;
 
   return (
     <svg
-      className="absolute inset-0 w-full h-full"
-      viewBox="0 0 100 100"
-      preserveAspectRatio="none"
-      style={{ pointerEvents: "none" }}
+      aria-hidden
+      width={w}
+      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      className={`absolute top-0 left-0 ${eraseMode ? "z-[2]" : "z-0"}`}
+      style={{ pointerEvents: "none", overflow: "visible" }}
     >
-      {pointStrokes.map((h) => (
+      {pointStrokes.map((hl) => (
         <StrokeMark
-          key={h.id}
-          highlight={h}
-          points={h.position!.points!}
-          drawLocked={drawLocked}
+          key={hl.id}
+          highlight={hl}
+          d={pathFromNorm(hl.position!.points!, w, h)}
+          eraseMode={eraseMode}
           onActivate={onActivate}
         />
       ))}
-      {rectStrokes.flatMap((h) =>
-        strokePointsFromRects(h.position!.rects ?? []).map((pts, i) => (
+      {rectStrokes.flatMap((hl) =>
+        strokePointsFromRects(hl.position!.rects ?? []).map((pts, i) => (
           <StrokeMark
-            key={`${h.id}-r${i}`}
-            highlight={h}
-            points={pts}
-            drawLocked={drawLocked}
+            key={`${hl.id}-r${i}`}
+            highlight={hl}
+            d={pathFromNorm(pts, w, h)}
+            eraseMode={eraseMode}
             onActivate={onActivate}
           />
         ))
       )}
       {draftPoints && draftPoints.length > 1 ? (
         <path
-          className="pdf-pen-stroke"
-          d={pointsToPath(draftPoints)}
+          d={pathFromNorm(draftPoints, w, h)}
+          fill="none"
           stroke={penStroke(draftColor, draftOpacity)}
-          strokeWidth={penStrokeWidthPx(draftWidth)}
-          vectorEffect="nonScalingStroke"
-          style={{ pointerEvents: "none" }}
+          strokeWidth={htmlStrokePx(draftWidth)}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="html-pen-stroke"
         />
       ) : null}
     </svg>
@@ -82,49 +126,50 @@ export function HtmlHighlightLayer({
 
 function StrokeMark({
   highlight,
-  points,
-  drawLocked,
+  d,
+  eraseMode,
   onActivate,
 }: {
   highlight: UserContentHighlight;
-  points: Array<{ x: number; y: number }>;
-  drawLocked: boolean;
+  d: string;
+  eraseMode: boolean;
   onActivate: (
     highlight: UserContentHighlight,
     clientX: number,
     clientY: number
   ) => void;
 }) {
-  const width = highlight.position?.width ?? DEFAULT_PEN_WIDTH;
+  const px = htmlStrokePx(highlight.position?.width ?? DEFAULT_PEN_WIDTH);
   return (
     <g
-      style={{ cursor: "pointer" }}
+      style={{ pointerEvents: eraseMode ? "stroke" : "none" }}
       onClick={(e) => {
-        if (drawLocked) return;
+        if (!eraseMode) return;
         e.stopPropagation();
         onActivate(highlight, e.clientX, e.clientY);
       }}
     >
+      {eraseMode ? (
+        <path
+          d={d}
+          fill="none"
+          stroke="transparent"
+          strokeWidth={px + 10}
+          strokeLinecap="round"
+        />
+      ) : null}
       <path
-        d={pointsToPath(points)}
+        d={d}
         fill="none"
-        stroke="transparent"
-        strokeWidth={penHitWidthPx(width)}
-        strokeLinecap="round"
-        vectorEffect="nonScalingStroke"
-        style={{ pointerEvents: drawLocked ? "none" : "stroke" }}
-      />
-      <path
-        className={isInkHighlight(highlight) ? "pdf-ink-stroke" : "pdf-pen-stroke"}
-        d={pointsToPath(points)}
+        className="html-pen-stroke"
         stroke={
           isInkHighlight(highlight)
             ? highlight.position?.color || highlight.color
             : penStroke(highlight.color, highlight.position?.opacity ?? 0.72)
         }
-        strokeWidth={penStrokeWidthPx(width)}
-        vectorEffect="nonScalingStroke"
-        style={{ pointerEvents: "none" }}
+        strokeWidth={px}
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </g>
   );

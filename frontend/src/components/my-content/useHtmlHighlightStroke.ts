@@ -5,6 +5,20 @@ import { straightenStroke } from "@/lib/straightenStroke";
 
 type Pt = { x: number; y: number };
 
+function localPoint(
+  origin: HTMLElement | null,
+  clientX: number,
+  clientY: number
+): Pt | null {
+  if (!origin) return null;
+  const r = origin.getBoundingClientRect();
+  if (r.width < 1 || r.height < 1) return null;
+  return {
+    x: (clientX - r.left) / r.width,
+    y: (clientY - r.top) / r.height,
+  };
+}
+
 /** PDF highlighter: drag a stroke on the article wrap (normalized 0–1). */
 export function useHtmlHighlightStroke(
   originRef: MutableRefObject<HTMLElement | null>,
@@ -17,21 +31,10 @@ export function useHtmlHighlightStroke(
   const pointsRef = useRef<Pt[]>([]);
   const [draft, setDraft] = useState<Pt[]>([]);
 
-  const local = (clientX: number, clientY: number): Pt | null => {
-    const el = originRef.current;
-    if (!el) return null;
-    const r = el.getBoundingClientRect();
-    if (r.width < 1 || r.height < 1) return null;
-    return {
-      x: (clientX - r.left) / r.width,
-      y: (clientY - r.top) / r.height,
-    };
-  };
-
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (!enabled || e.button !== 0) return;
-      const pt = local(e.clientX, e.clientY);
+      const pt = localPoint(originRef.current, e.clientX, e.clientY);
       if (!pt) return;
       e.preventDefault();
       drawing.current = true;
@@ -39,13 +42,13 @@ export function useHtmlHighlightStroke(
       setDraft([pt]);
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     },
-    [enabled]
+    [enabled, originRef]
   );
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!enabled || !drawing.current) return;
-      const pt = local(e.clientX, e.clientY);
+      const pt = localPoint(originRef.current, e.clientX, e.clientY);
       if (!pt) return;
       const last = pointsRef.current[pointsRef.current.length - 1];
       if (last) {
@@ -56,7 +59,7 @@ export function useHtmlHighlightStroke(
       pointsRef.current = [...pointsRef.current, pt];
       setDraft(pointsRef.current);
     },
-    [enabled]
+    [enabled, originRef]
   );
 
   const endStroke = useCallback(() => {

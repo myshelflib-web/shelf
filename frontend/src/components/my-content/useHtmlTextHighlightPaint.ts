@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useRef } from "react";
 import type { UserContentHighlight } from "@/types";
 import {
   applyHighlightsToElement,
@@ -40,10 +40,12 @@ export function useHtmlTextHighlightPaint(
   highlights: UserContentHighlight[]
 ) {
   const paintKey = highlightPaintKey(highlights);
+  const highlightsRef = useRef(highlights);
+  highlightsRef.current = highlights;
 
   useLayoutEffect(() => {
     if (!root) return;
-    const textHs = highlights.filter(isWrappedTextHighlight);
+    const textHs = highlightsRef.current.filter(isWrappedTextHighlight);
     const api = cssHighlightApi();
 
     if (api) {
@@ -68,5 +70,7 @@ export function useHtmlTextHighlightPaint(
 
     applyHighlightsToElement(root, textHs);
     return () => unwrapHighlightMarks(root);
-  }, [root, highlights, paintKey]);
+    // paintKey is the visual signature; skip array-identity churn mid-drag.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- highlights via paintKey
+  }, [root, paintKey]);
 }
