@@ -53,18 +53,18 @@ export function LibraryCenterPane({
 
   if (readerOverlay) {
     return (
-      <div className="library-center-pane relative h-full min-h-0 overflow-hidden">
+      <div className="library-center-pane relative flex h-full min-h-0 flex-col overflow-hidden">
         {readerOverlay}
       </div>
     );
   }
 
   return (
-    <div className="library-center-pane relative h-full min-h-0 overflow-hidden">
+    <div className="library-center-pane relative flex h-full min-h-0 flex-col overflow-hidden">
       {!preloadedActive ? (
         <>
           <div className="library-empty-glow pointer-events-none" aria-hidden />
-          <div key="personal" className="library-center-pane-swap h-full min-h-0">
+          <div key="personal" className="library-center-pane-swap flex-1 min-h-0">
             <LibraryEmptyWorkspace />
           </div>
         </>
@@ -76,7 +76,7 @@ export function LibraryCenterPane({
             resolvedExplore?.topicSlug ?? "",
             browse?.path.articleSlug ?? "",
           ].join("/")}
-          className="library-center-pane-swap explore-folder-swap h-full min-h-0"
+          className="library-center-pane-swap explore-folder-swap flex-1 min-h-0 overflow-hidden"
         >
           {browse?.path.articleSlug &&
           browse.path.subjectSlug &&

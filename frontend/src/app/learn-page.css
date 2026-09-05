@@ -410,6 +410,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
   overflow: hidden;
   background: var(--bg-primary);
 }
@@ -424,6 +425,8 @@
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .explore-workspace-scroll-guest {
@@ -1100,11 +1103,9 @@ button.explore-side-collection {
 @keyframes explore-folder-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 

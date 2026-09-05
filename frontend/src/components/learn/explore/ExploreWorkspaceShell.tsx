@@ -44,7 +44,7 @@ export function ExploreWorkspaceShell({
   const registerNext = `/login?register=1&next=${encodeURIComponent(returnTo)}`;
 
   return (
-    <div className="explore-workspace relative">
+    <div className="explore-workspace relative h-full min-h-0">
       <header className="explore-workspace-header">
         <div className="explore-page-inner explore-page-header">
           <div className="explore-home-head">
