@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { buildLegacySubjectTree } from "./legacyLibraryTree.js";
+import {
+  buildLegacySubjectTree,
+  orderSubjectsByIds,
+} from "./legacyLibraryTree.js";
 
 describe("buildLegacySubjectTree", () => {
   it("maps root folders and one nested level to legacy subject shape", () => {
@@ -102,5 +105,36 @@ describe("buildLegacySubjectTree", () => {
     const tree = buildLegacySubjectTree(folders, files);
     expect(tree[0]?.topicGroups[0]?.children?.[0]?.id).toBe("deep1");
     expect(tree[0]?.topicGroups[0]?.children?.[0]?.pages).toHaveLength(1);
+  });
+});
+
+describe("orderSubjectsByIds", () => {
+  it("preserves browse/sort id order instead of manual folder order", () => {
+    const folders = [
+      {
+        id: "a",
+        name: "Alpha",
+        slug: "alpha",
+        description: null,
+        icon: "📁",
+        order: 1,
+        parentId: null,
+      },
+      {
+        id: "z",
+        name: "Zulu",
+        slug: "zulu",
+        description: null,
+        icon: "📁",
+        order: 2,
+        parentId: null,
+      },
+    ];
+    const tree = buildLegacySubjectTree(folders, []);
+    expect(tree.map((s) => s.id)).toEqual(["a", "z"]);
+    expect(orderSubjectsByIds(tree, ["z", "a"]).map((s) => s.id)).toEqual([
+      "z",
+      "a",
+    ]);
   });
 });

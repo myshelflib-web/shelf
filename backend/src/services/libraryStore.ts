@@ -2,6 +2,7 @@ import prisma from "../utils/prisma.js";
 import {
   buildLegacySubjectTree,
   fileSelect,
+  orderSubjectsByIds,
   type LegacySubject,
 } from "./legacyLibraryTree.js";
 import { ensureLegacyLibraryMapped } from "./legacyLibraryMap.js";
@@ -40,6 +41,8 @@ export async function slimRootFolders(userId: string): Promise<SlimNotebook[]> {
       title: true,
       contentType: true,
       starred: true,
+      viewedAt: true,
+      updatedAt: true,
     },
   });
 
@@ -69,13 +72,19 @@ export async function slimRootFolders(userId: string): Promise<SlimNotebook[]> {
   return roots.map((root) => {
     const folderIds = collectFolderIds(root.id);
     const pages = files.filter((f) => f.folderId && folderIds.has(f.folderId));
+    let lastActivity = root.updatedAt.getTime();
+    for (const page of pages) {
+      const t = (page.viewedAt ?? page.updatedAt)?.getTime() ?? 0;
+      if (t > lastActivity) lastActivity = t;
+    }
     return {
       id: root.id,
       name: root.name,
       description: root.description,
       order: root.order,
       createdAt: root.createdAt,
-      updatedAt: root.updatedAt,
+      // Browse "recent"/"oldest" use this — prefer last page activity over folder row edits.
+      updatedAt: new Date(lastActivity),
       pageCount: pages.length,
       hasPdf: pages.some((p) => p.contentType === "PDF"),
       hasLink: pages.some((p) => p.contentType === "LINK"),
@@ -125,7 +134,10 @@ export async function loadLegacySubjectsForUser(
           orderBy: { order: "asc" },
         });
 
-  return buildLegacySubjectTree(scopedFolders, files);
+  return orderSubjectsByIds(
+    buildLegacySubjectTree(scopedFolders, files),
+    ids
+  );
 }
 
 export async function loadRootFiles(userId: string) {

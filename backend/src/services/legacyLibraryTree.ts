@@ -107,6 +107,24 @@ export function buildLegacySubjectTree(
   });
 }
 
+/**
+ * Re-apply browse/sort order after the tree builder (which sorts roots by
+ * manual `order`). Nested folders stay order-sorted inside each collection.
+ */
+export function orderSubjectsByIds(
+  subjects: LegacySubject[],
+  ids?: string[]
+): LegacySubject[] {
+  if (!ids || ids.length === 0) return subjects;
+  const byId = new Map(subjects.map((s) => [s.id, s]));
+  const ordered: LegacySubject[] = [];
+  for (const id of ids) {
+    const subject = byId.get(id);
+    if (subject) ordered.push(subject);
+  }
+  return ordered;
+}
+
 function stripFolderId(file: FileRow): LegacyPageSummary {
   const { folderId: _f, ...rest } = file as FileRow & { folderId?: string | null };
   return rest;
