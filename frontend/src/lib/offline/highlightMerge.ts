@@ -62,3 +62,20 @@ export function mergeHighlightLists(
 
   return merged;
 }
+
+function isOptimisticHighlightId(id: string): boolean {
+  return id.startsWith("tmp-") || id.startsWith("local-");
+}
+
+/** Keep in-flight marks when a background listHighlights() arrives. */
+export function keepOptimisticHighlights(
+  previous: UserContentHighlight[],
+  incoming: UserContentHighlight[]
+): UserContentHighlight[] {
+  const incomingIds = new Set(incoming.map((h) => h.id));
+  const optimistic = previous.filter(
+    (h) => isOptimisticHighlightId(h.id) && !incomingIds.has(h.id)
+  );
+  if (!optimistic.length) return incoming;
+  return [...incoming, ...optimistic];
+}

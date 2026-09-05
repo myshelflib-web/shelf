@@ -316,7 +316,7 @@ export function PersonalContentArea({
     setSelection(null);
   }, []);
 
-  const { handleMouseUp } = usePersonalContentSelection({
+  usePersonalContentSelection({
     editing,
     readOnly,
     clipMode,
@@ -402,9 +402,6 @@ export function PersonalContentArea({
               ? " cursor-pointer"
               : " cursor-text"
         }`}
-        onMouseUp={
-          clipMode || eraseMode || highlightMode ? undefined : handleMouseUp
-        }
         onPointerDown={clipMode ? onPointerDown : undefined}
         onPointerMove={clipMode ? onPointerMove : undefined}
         onPointerUp={clipMode ? onPointerUp : undefined}

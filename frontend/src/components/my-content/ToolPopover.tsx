@@ -7,6 +7,19 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
+
+/** True when a pointerup outside the panel / anchor should dismiss. */
+export function shouldCloseToolPopover(
+  target: EventTarget | null,
+  panel: Node | null,
+  anchor: Node | null
+): boolean {
+  if (!target) return true;
+  if (panel?.contains(target as Node)) return false;
+  if (anchor?.contains(target as Node)) return false;
+  return true;
+}
 
 export function ToolPopover({
   open,
@@ -72,22 +85,7 @@ export function ToolPopover({
     // in-progress text selection in the article.
     const onUp = (e: Event) => {
       if (!armed) return;
-      const target = e.target as Node;
-      if (panelRef.current?.contains(target)) return;
-      if (anchorEl?.contains(target)) return;
-      // Keep open while the user is selecting article text (incl. page padding).
-      const sel = window.getSelection();
-      if (sel && !sel.isCollapsed && sel.toString().trim().length >= 1) {
-        return;
-      }
-      if (
-        target instanceof Element &&
-        target.closest(
-          "[data-shelf-doc-surface], .personal-content, .prose-content, .highlight-menu"
-        )
-      ) {
-        return;
-      }
+      if (!shouldCloseToolPopover(e.target, panelRef.current, anchorEl)) return;
       onCloseRef.current();
     };
     document.addEventListener("keydown", onKey);
@@ -99,11 +97,12 @@ export function ToolPopover({
     };
   }, [open, anchorEl]);
 
-  if (!open || !anchorEl) return null;
+  if (!open || !anchorEl || typeof document === "undefined") return null;
 
-  return (
+  return createPortal(
     <div
       ref={panelRef}
+      data-shelf-tool-popover=""
       role="group"
       aria-label={title}
       className={`fixed z-[91] ${widthClass} rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-3.5 shadow-[0_10px_40px_rgba(0,0,0,0.18)]`}
@@ -113,7 +112,8 @@ export function ToolPopover({
         {title}
       </p>
       {children}
-    </div>
+    </div>,
+    document.body
   );
 }
 

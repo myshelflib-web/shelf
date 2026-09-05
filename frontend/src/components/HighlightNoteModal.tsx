@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { StickyNote, Trash2, X } from "lucide-react";
 
 interface HighlightNoteModalProps {
@@ -38,8 +39,8 @@ export function HighlightNoteModal({
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+  const modal = (
+    <div className="fixed inset-0 z-[210] flex items-center justify-center p-4">
       <button
         type="button"
         aria-label="Close note"
@@ -138,4 +139,7 @@ export function HighlightNoteModal({
       </div>
     </div>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(modal, document.body);
 }

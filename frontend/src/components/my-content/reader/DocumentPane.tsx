@@ -16,6 +16,7 @@ import {
 } from "@/lib/analytics";
 import { captureVisibleSketchPage } from "@/lib/captureSketchPage";
 import { listHighlights } from "@/lib/offline/highlights";
+import { keepOptimisticHighlights } from "@/lib/offline/highlightMerge";
 import {
   highlightPageOffset,
   scrollHtmlHighlight,
@@ -626,7 +627,7 @@ export function DocumentPane({
           try {
             const hl = await listHighlights(page.id);
             if (gen !== pageLoadGen.current) return;
-            setHighlights(hl);
+            setHighlights((prev) => keepOptimisticHighlights(prev, hl));
           } catch {
             try {
               const { highlights: serverHl } =
@@ -635,10 +636,12 @@ export function DocumentPane({
                   scope.kind === "shared" ? scope.linkToken : undefined
                 );
               if (gen !== pageLoadGen.current) return;
-              setHighlights(serverHl);
+              setHighlights((prev) =>
+                keepOptimisticHighlights(prev, serverHl)
+              );
             } catch {
               if (gen !== pageLoadGen.current) return;
-              setHighlights([]);
+              setHighlights((prev) => keepOptimisticHighlights(prev, []));
             }
           } finally {
             if (gen === pageLoadGen.current) setHighlightsHydrating(false);

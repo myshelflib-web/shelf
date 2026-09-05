@@ -41,10 +41,10 @@ import { usePdfReadProgressSync } from "./PdfReadProgress";
 import { useInkGestures } from "./useInkGestures";
 import { useWindowPenStroke } from "./useWindowPenStroke";
 import {
+  capturePdfTextSelection,
   highlightHex,
   isInkHighlight,
   markerRect,
-  mergeLineRects,
   penStroke,
   pointsToPath,
 } from "./pdfViewerHelpers";
@@ -240,6 +240,8 @@ export function PdfViewer({
   const [undoCount, setUndoCount] = useState(0);
   const [undoing, setUndoing] = useState(false);
   const [mode, setMode] = useState<ToolMode>("text");
+  const modeRef = useRef<ToolMode>("text");
+  modeRef.current = mode;
   const [eraseKind, setEraseKind] = useState<EraseKind>("stroke");
   const cursorTool =
     mode === "pen" || mode === "ink" || (mode === "erase" && eraseKind === "stroke");
@@ -1318,33 +1320,15 @@ export function PdfViewer({
     return crop.toDataURL("image/png");
   };
 
-  const handleTextMouseUp = (pageNum: number) => {
-    if (mode !== "text") return;
-    const sel = window.getSelection();
-    if (!sel || sel.isCollapsed) return;
-    const text = sel.toString().trim();
-    if (text.length < 2) return;
-    const wrap = pageRefs.current.get(pageNum);
-    if (!wrap) return;
-    const range = sel.getRangeAt(0);
-    const wrapRect = wrap.getBoundingClientRect();
-    const rects = mergeLineRects(
-      Array.from(range.getClientRects())
-        .filter((r) => r.width > 1 && r.height > 1)
-        .map((r) => ({
-          x: (r.left - wrapRect.left) / wrapRect.width,
-          y: (r.top - wrapRect.top) / wrapRect.height,
-          w: r.width / wrapRect.width,
-          h: r.height / wrapRect.height,
-        }))
-    ).map(markerRect);
-    if (!rects.length) return;
-    setToolbar({
-      kind: "TEXT",
-      text,
-      rect: range.getBoundingClientRect(),
-      pageNumber: pageNum,
-      position: { rects },
+  const handleTextPointerUp = (pageNum: number) => {
+    if (modeRef.current !== "text") return;
+    window.requestAnimationFrame(() => {
+      if (modeRef.current !== "text") return;
+      const wrap = pageRefs.current.get(pageNum);
+      if (!wrap) return;
+      const next = capturePdfTextSelection(wrap, pageNum);
+      if (!next) return;
+      setToolbar(next);
     });
   };
 
@@ -1980,7 +1964,10 @@ export function PdfViewer({
               }
               onPointerDown={(e) => onPointerDown(pageNum, e)}
               onPointerMove={(e) => onPointerMove(pageNum, e)}
-              onPointerUp={(e) => onPointerUp(pageNum, e)}
+              onPointerUp={(e) => {
+                onPointerUp(pageNum, e);
+                handleTextPointerUp(pageNum);
+              }}
               onPointerCancel={(e) => onPointerCancel(pageNum, e)}
             >
               <canvas
@@ -2004,28 +1991,19 @@ export function PdfViewer({
               <div
                 className="textLayer pdf-text-layer absolute inset-0"
                 style={{ pointerEvents: mode === "text" ? "auto" : "none" }}
-                onMouseUp={() => handleTextMouseUp(pageNum)}
               />
               <svg
                 className="absolute inset-0 w-full h-full"
                 viewBox="0 0 100 100"
                 preserveAspectRatio="none"
-                style={{
-                  pointerEvents:
-                    mode === "pen" ||
-                    mode === "ink" ||
-                    mode === "clip" ||
-                    (mode === "erase" && eraseKind === "stroke")
-                      ? "none"
-                      : "auto",
-                }}
+                style={{ pointerEvents: "none" }}
               >
                 {penHighlights(pageNum).map((h) => (
                   // Click sits on the group so the painted stroke (which takes
                   // pointer events while erasing) activates too, not just the halo.
                   <g
                     key={h.id}
-                    style={{ cursor: "pointer" }}
+                    style={{ cursor: "pointer", pointerEvents: "auto" }}
                     onClick={(e) => {
                       if (mode === "erase" && eraseKind === "stroke") return;
                       e.stopPropagation();

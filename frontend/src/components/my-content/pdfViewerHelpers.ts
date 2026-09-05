@@ -63,3 +63,49 @@ export function pointsToPath(points: Array<{ x: number; y: number }>) {
     .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x * 100} ${p.y * 100}`)
     .join(" ");
 }
+
+export type PdfTextPick = {
+  text: string;
+  rect: DOMRect;
+  kind: "TEXT";
+  pageNumber: number;
+  position: { rects: Array<{ x: number; y: number; w: number; h: number }> };
+};
+
+/** Native PDF.js selection → highlight geometry on that page wrap. */
+export function capturePdfTextSelection(
+  wrap: HTMLElement,
+  pageNumber: number
+): PdfTextPick | null {
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || sel.rangeCount < 1) return null;
+  const text = sel.toString().trim();
+  if (text.length < 1) return null;
+  const range = sel.getRangeAt(0);
+  const inside =
+    wrap.contains(range.startContainer) ||
+    wrap.contains(range.endContainer) ||
+    wrap.contains(range.commonAncestorContainer) ||
+    range.commonAncestorContainer.contains(wrap);
+  if (!inside) return null;
+  const wrapRect = wrap.getBoundingClientRect();
+  const clientRects = range.getClientRects();
+  const rects = mergeLineRects(
+    Array.from(clientRects.length ? clientRects : [range.getBoundingClientRect()])
+      .filter((r) => r.width > 1 && r.height > 1)
+      .map((r) => ({
+        x: (r.left - wrapRect.left) / wrapRect.width,
+        y: (r.top - wrapRect.top) / wrapRect.height,
+        w: r.width / wrapRect.width,
+        h: r.height / wrapRect.height,
+      }))
+  ).map(markerRect);
+  if (!rects.length) return null;
+  return {
+    text,
+    rect: range.getBoundingClientRect(),
+    kind: "TEXT",
+    pageNumber,
+    position: { rects },
+  };
+}
