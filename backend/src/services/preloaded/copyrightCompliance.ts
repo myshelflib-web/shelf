@@ -11,6 +11,9 @@ export const OFFICIAL_REDISTRIBUTION_HOSTS = new Set([
   "upsc.gov.in",
   "indiabudget.gov.in",
   "www.indiabudget.gov.in",
+  "gate2026.iitg.ac.in",
+  "rpsc.rajasthan.gov.in",
+  "delhihighcourt.nic.in",
 ]);
 
 export type CopyrightSeverity = "ok" | "warn" | "error";
@@ -51,7 +54,11 @@ function hostname(url: string): string | null {
 export function isOfficialRedistributionHost(url: string): boolean {
   const host = hostname(url);
   if (!host) return false;
-  return OFFICIAL_REDISTRIBUTION_HOSTS.has(host);
+  if (OFFICIAL_REDISTRIBUTION_HOSTS.has(host)) return true;
+  for (const allowed of OFFICIAL_REDISTRIBUTION_HOSTS) {
+    if (host === allowed || host.endsWith(`.${allowed}`)) return true;
+  }
+  return false;
 }
 
 /** Block admin/user full-PDF fetch when URL is not on the official allowlist. */

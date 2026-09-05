@@ -10,9 +10,25 @@ describe("copyrightCompliance", () => {
       true
     );
     expect(isOfficialRedistributionHost("https://upsc.gov.in/doc.pdf")).toBe(true);
+    expect(isOfficialRedistributionHost("https://www.upsc.gov.in/doc.pdf")).toBe(
+      true
+    );
+    expect(
+      isOfficialRedistributionHost(
+        "https://gate2026.iitg.ac.in/doc/GATE2026_Syllabus/CS_2026_Syllabus.pdf"
+      )
+    ).toBe(true);
     expect(isOfficialRedistributionHost("https://www.indiabudget.gov.in/doc.pdf")).toBe(
       true
     );
+    expect(
+      isOfficialRedistributionHost("https://rpsc.rajasthan.gov.in/Static/Syllabus/a.pdf")
+    ).toBe(true);
+    expect(
+      isOfficialRedistributionHost(
+        "https://delhihighcourt.nic.in/files/2026-02/djs.pdf"
+      )
+    ).toBe(true);
     expect(isOfficialRedistributionHost("https://openstax.org/details/books/bio")).toBe(
       false
     );

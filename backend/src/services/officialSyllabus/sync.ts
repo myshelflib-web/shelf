@@ -90,16 +90,15 @@ async function upsertPdf(entry: OfficialSyllabusPdf, order: number): Promise<voi
   });
 
   if (existing) {
-    if (existing.pdfKey !== entry.pdfKey) {
-      await prisma.article.update({
-        where: { id: existing.id },
-        data: {
-          pdfKey: entry.pdfKey,
-          status: "PUBLISHED",
-          sourceLicense: "OFFICIAL_DOCUMENT",
-        },
-      });
-    }
+    await prisma.article.update({
+      where: { id: existing.id },
+      data: {
+        title: entry.title,
+        pdfKey: entry.pdfKey,
+        status: "PUBLISHED",
+        sourceLicense: "OFFICIAL_DOCUMENT",
+      },
+    });
     return;
   }
 
@@ -118,7 +117,7 @@ async function upsertPdf(entry: OfficialSyllabusPdf, order: number): Promise<voi
   });
 }
 
-async function syncOfficialSyllabusFromS3(): Promise<number> {
+export async function syncOfficialSyllabusFromS3(): Promise<number> {
   const keys = await collectSyllabusKeys();
   const entries = parseOfficialSyllabusKeys(keys).sort((a, b) => {
     const goalCmp =

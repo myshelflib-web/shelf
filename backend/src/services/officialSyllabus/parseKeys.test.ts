@@ -15,7 +15,36 @@ describe("parseOfficialSyllabusKey", () => {
       subjectName: "UPSC CSE",
       topicSlug: "official",
       articleSlug: "cse-2026",
-      title: "Cse 2026",
+      title: "CSE 2026",
+    });
+    expect(
+      parseOfficialSyllabusKey(
+        "admin/official-syllabus/gate/cs/cs-2026/source.pdf"
+      )
+    ).toMatchObject({
+      title: "Computer Science 2026",
+      topicTitle: "Computer Science",
+    });
+  });
+
+  it("names other official exam PDFs", () => {
+    expect(
+      parseOfficialSyllabusKey(
+        "admin/official-syllabus/upsc/cds/cds-i-2026/source.pdf"
+      )
+    ).toMatchObject({
+      studyGoal: "UPSC",
+      topicTitle: "CDS",
+      title: "CDS I 2026",
+    });
+    expect(
+      parseOfficialSyllabusKey(
+        "admin/official-syllabus/state-pcs/rpsc/rpsc-ras-pre-2024/source.pdf"
+      )
+    ).toMatchObject({
+      studyGoal: "STATE_PCS",
+      topicTitle: "RPSC RAS",
+      title: "RPSC RAS Prelims 2024",
     });
   });
 

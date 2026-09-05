@@ -62,6 +62,63 @@ const PREFIXES = [
   "syllabus/",
 ] as const;
 
+const GATE_PAPER_NAME: Record<string, string> = {
+  ae: "Aerospace Engineering",
+  ag: "Agricultural Engineering",
+  ar: "Architecture and Planning",
+  bm: "Biomedical Engineering",
+  bt: "Biotechnology",
+  ce: "Civil Engineering",
+  ch: "Chemical Engineering",
+  cs: "Computer Science",
+  cy: "Chemistry",
+  da: "Data Science and AI",
+  ec: "Electronics and Communication",
+  ee: "Electrical Engineering",
+  es: "Environmental Science",
+  ey: "Ecology and Evolution",
+  ge: "Geomatics Engineering",
+  gg: "Geology and Geophysics",
+  in: "Instrumentation Engineering",
+  ma: "Mathematics",
+  me: "Mechanical Engineering",
+  mn: "Mining Engineering",
+  mt: "Metallurgical Engineering",
+  nm: "Naval Architecture",
+  pe: "Petroleum Engineering",
+  ph: "Physics",
+  pi: "Production and Industrial",
+  st: "Statistics",
+  tf: "Textile Engineering",
+  ga: "General Aptitude",
+};
+
+const SYLLABUS_TITLE: Record<string, string> = {
+  "cse-2026": "CSE 2026",
+  "cds-i-2026": "CDS I 2026",
+  "cds-ii-2026": "CDS II 2026",
+  "capf-2026": "CAPF AC 2026",
+  "nda-ii-2026": "NDA II 2026",
+  "ies-iss-2026": "IES / ISS 2026",
+  "ese-2026": "Engineering Services 2026",
+  "cms-2026": "CMS 2026",
+  "ifos-2026": "Indian Forest Service 2026",
+  "djs-rules-2026": "Delhi Judicial Service Rules 2026",
+  "dhjs-2026": "Delhi Higher Judicial Service 2026",
+  djs: "Delhi Judicial Service",
+  dhjs: "Delhi Higher Judicial Service",
+  "rpsc-ras-pre-2024": "RPSC RAS Prelims 2024",
+  "rpsc-ras-mains-2024": "RPSC RAS Mains 2024",
+  cds: "CDS",
+  capf: "CAPF",
+  nda: "NDA",
+  "ies-iss": "IES / ISS",
+  ese: "Engineering Services",
+  cms: "CMS",
+  ifos: "Indian Forest Service",
+  rpsc: "RPSC RAS",
+};
+
 function titleFromPart(part: string): string {
   const cleaned = part
     .replace(/\.pdf$/i, "")
@@ -69,12 +126,23 @@ function titleFromPart(part: string): string {
     .replace(/\s+/g, " ")
     .trim();
   if (!cleaned) return "Official syllabus";
+  const slug = cleaned.toLowerCase().replace(/\s+/g, "-");
+  if (SYLLABUS_TITLE[slug]) return SYLLABUS_TITLE[slug];
+  const code = cleaned.split(" ")[0]?.toLowerCase() ?? "";
+  if (code === "cse") {
+    const year = cleaned.replace(/^[a-z0-9]+\s*/i, "").trim();
+    return year ? `CSE ${year}` : "CSE";
+  }
+  if (GATE_PAPER_NAME[code]) {
+    const year = cleaned.replace(/^[a-z0-9]+\s*/i, "").trim();
+    return year ? `${GATE_PAPER_NAME[code]} ${year}` : GATE_PAPER_NAME[code];
+  }
   return cleaned.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function topicTitle(slug: string): string {
   if (slug === "official") return "Official PDFs";
-  return titleFromPart(slug);
+  return SYLLABUS_TITLE[slug] ?? GATE_PAPER_NAME[slug] ?? titleFromPart(slug);
 }
 
 function goalFromSegment(segment: string): StudyGoal | null {
