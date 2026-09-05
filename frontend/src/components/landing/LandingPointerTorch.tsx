@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 
 /**
- * Soft accent spotlight that follows the pointer — only over sections
- * marked `.landing-torch-zone`. Disabled for touch / reduced motion.
+ * Soft accent spotlight clipped to `.landing-torch-zone` sections only
+ * (hero, product walkthrough, CTA). Disabled for touch / reduced motion.
  */
 export function LandingPointerTorch() {
   useEffect(() => {
@@ -15,29 +15,47 @@ export function LandingPointerTorch() {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!finePointer || reduceMotion) return;
 
-    const onMove = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Element) || !target.closest(".landing-torch-zone")) {
-        root.classList.remove("is-torch-on");
-        return;
+    const zones = Array.from(
+      root.querySelectorAll<HTMLElement>(".landing-torch-zone")
+    );
+    if (zones.length === 0) return;
+
+    const cleanups: Array<() => void> = [];
+
+    for (const zone of zones) {
+      let local = zone.querySelector<HTMLElement>(":scope > .landing-torch-local");
+      if (!local) {
+        local = document.createElement("div");
+        local.className = "landing-torch-local";
+        local.setAttribute("aria-hidden", "true");
+        zone.insertBefore(local, zone.firstChild);
       }
-      root.style.setProperty("--torch-x", `${event.clientX}px`);
-      root.style.setProperty("--torch-y", `${event.clientY}px`);
-      root.classList.add("is-torch-on");
-    };
 
-    const onLeave = () => {
-      root.classList.remove("is-torch-on");
-    };
+      const onMove = (event: PointerEvent) => {
+        const rect = zone.getBoundingClientRect();
+        zone.style.setProperty("--torch-x", `${event.clientX - rect.left}px`);
+        zone.style.setProperty("--torch-y", `${event.clientY - rect.top}px`);
+        zone.classList.add("is-torch-on");
+      };
 
-    root.addEventListener("pointermove", onMove, { passive: true });
-    root.addEventListener("pointerleave", onLeave);
+      const onLeave = () => {
+        zone.classList.remove("is-torch-on");
+      };
+
+      zone.addEventListener("pointermove", onMove, { passive: true });
+      zone.addEventListener("pointerleave", onLeave);
+      cleanups.push(() => {
+        zone.removeEventListener("pointermove", onMove);
+        zone.removeEventListener("pointerleave", onLeave);
+        zone.classList.remove("is-torch-on");
+        local?.remove();
+      });
+    }
+
     return () => {
-      root.removeEventListener("pointermove", onMove);
-      root.removeEventListener("pointerleave", onLeave);
-      root.classList.remove("is-torch-on");
+      for (const cleanup of cleanups) cleanup();
     };
   }, []);
 
-  return <div className="landing-torch" aria-hidden />;
+  return null;
 }

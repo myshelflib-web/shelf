@@ -77,7 +77,7 @@
   opacity: 0.9;
 }
 
-.landing-hero > *:not(.landing-hero-glow) {
+.landing-hero > *:not(.landing-hero-glow):not(.landing-torch-local) {
   position: relative;
   z-index: 1;
 }

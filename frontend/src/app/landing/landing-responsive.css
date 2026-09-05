@@ -143,7 +143,7 @@
   .landing-marquee-track {
     animation: none;
   }
-  .landing-torch {
+  .landing-torch-local {
     display: none;
   }
   .landing-sticky-cta,

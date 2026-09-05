@@ -37,36 +37,39 @@
   --lp-value-mini-bg: #faf9f7;
   --lp-bubble-user-text: #4d478f;
   --lp-goal-impact-text: #7069c9;
-  --torch-x: 50%;
-  --torch-y: 28%;
   position: relative;
   background: var(--bg-primary);
   color: var(--text-primary);
   overflow-x: hidden;
 }
 
-.landing-torch {
-  position: fixed;
+.landing-torch-zone {
+  position: relative;
+  isolation: isolate;
+}
+
+.landing-torch-local {
+  position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 0;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.45s ease;
+  transition: opacity 0.35s ease;
   background: radial-gradient(
-    520px circle at var(--torch-x) var(--torch-y),
+    420px circle at var(--torch-x, 50%) var(--torch-y, 40%),
     color-mix(in srgb, var(--accent) 18%, transparent) 0%,
-    color-mix(in srgb, var(--lp-sand) 28%, transparent) 28%,
+    color-mix(in srgb, var(--lp-sand) 24%, transparent) 28%,
     transparent 58%
   );
 }
 
-.landing-page.is-torch-on .landing-torch {
+.landing-torch-zone.is-torch-on > .landing-torch-local {
   opacity: 1;
 }
 
-.landing-page > *:not(.landing-torch) {
+.landing-torch-zone > *:not(.landing-torch-local) {
   position: relative;
-  z-index: 2;
+  z-index: 1;
 }
 /* Dark mode — follows app .dark class on html */
 .dark .landing-page {
@@ -110,9 +113,9 @@
   --lp-goal-impact-text: #9b96d4;
 }
 
-.dark .landing-torch {
+.dark .landing-torch-local {
   background: radial-gradient(
-    560px circle at var(--torch-x) var(--torch-y),
+    460px circle at var(--torch-x, 50%) var(--torch-y, 40%),
     color-mix(in srgb, var(--accent) 22%, transparent) 0%,
     color-mix(in srgb, var(--accent) 8%, transparent) 32%,
     transparent 60%
