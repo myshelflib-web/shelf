@@ -12,6 +12,10 @@ import {
   listAreaResources,
 } from "@/lib/exploreCatalog";
 import { catalogGoalLabel, subjectGoal, subjectHref, topicHref } from "@/lib/learnCatalog";
+import {
+  isOfficialSyllabusSubject,
+  syllabusTopicsFromSubject,
+} from "@/lib/officialSyllabus";
 import { Subject, Topic } from "@/types";
 
 export function ExploreCollectionContent({
@@ -46,14 +50,19 @@ export function ExploreCollectionContent({
   const backLabel = topic ? subject.name : area ? area.title : "Explore";
 
   const visibleTopics = useMemo(() => {
+    const syllabusOnly =
+      areaId === "syllabus" && !isOfficialSyllabusSubject(subject);
+    const topics = syllabusOnly
+      ? syllabusTopicsFromSubject(subject)
+      : subject.topics;
     const needle = query.trim().toLowerCase();
-    if (!needle) return subject.topics;
-    return subject.topics.filter(
+    if (!needle) return topics;
+    return topics.filter(
       (t) =>
         t.title.toLowerCase().includes(needle) ||
         (t.articles ?? []).some((a) => a.title.toLowerCase().includes(needle))
     );
-  }, [subject.topics, query]);
+  }, [areaId, query, subject]);
 
   const showTopics = !topic && visibleTopics.length > 0;
   const showArticles =

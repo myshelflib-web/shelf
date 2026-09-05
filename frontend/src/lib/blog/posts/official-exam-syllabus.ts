@@ -25,14 +25,14 @@ export const officialExamSyllabus = buildPost(
       heading: "The same reader, not a new flow",
       paragraphs: [
         "Syllabus PDFs use the existing public reader path. You can highlight, ask Study AI, and save a copy to your Library the same way you do for other Learn articles that have a PDF.",
-        "Closing the last open PDF still returns you to Explore. Guest browse and signed-in Library browse both show the Syllabus section in Browse.",
+        "Closing the last open PDF still returns you to Explore. Exam tracks show Syllabus in Browse. The General track does not — it stays Study skills only.",
       ],
     },
     {
       heading: "Which exams appear",
       paragraphs: [
         "The section lists exams that already have an official syllabus PDF in Shelf storage — typically UPSC CSE, State PCS, Judiciary, CA, NEET PG, and GATE when those files are present. If an exam has no file yet, it simply does not show up.",
-        "Your study-track filter still scopes generated notes. Syllabus stays visible on every track so you can open another exam's official PDF without leaving Explore.",
+        "Your study-track filter still scopes generated notes. Syllabus is hidden on General and listed on exam tracks (UPSC, GATE, and the others) whenever those exams have a syllabus PDF.",
       ],
     },
   ]

@@ -129,7 +129,7 @@ export const BLOG_EXPANSIONS_C: Record<string, BlogSection[]> = {
       heading: "Where to find it",
       paragraphs: [
         "Signed-in: Library → Preloaded → Browse → Syllabus. Guests: the same explorer on /learn. The row sits with Current affairs and your exam track — it does not replace generated starter packs.",
-        "If your study goal is UPSC, you still see UPSC collections. Syllabus is extra, so you can open a GATE or CA official PDF without changing Settings.",
+        "If your study goal is UPSC, you still see UPSC collections plus Syllabus. Switch the study goal to General and Syllabus disappears — that track is Study skills only.",
       ],
     },
     {

@@ -100,6 +100,10 @@ describe("exploreCatalog", () => {
     expect(subjectsForArea(sampleSubjects, "engineering").map((s) => s.slug)).toEqual([
       "gate",
     ]);
+    expect(subjectsForArea(sampleSubjects, "syllabus").map((s) => s.slug)).toEqual([
+      "upsc-official",
+      "gate",
+    ]);
   });
 
   it("counts articles in an area without double-counting tracks", () => {
@@ -155,7 +159,6 @@ describe("exploreCatalog", () => {
 
   it("limits General track users to non-exam browse areas", () => {
     expect(visibleExploreAreasForGoal(sampleSubjects, "GENERAL").map((a) => a.id)).toEqual([
-      "syllabus",
       "books",
     ]);
     expect(
@@ -196,6 +199,7 @@ describe("exploreCatalog", () => {
     ] as Subject[];
     expect(subjectsForArea(withSyllabus, "syllabus").map((s) => s.slug)).toEqual([
       "official-syllabus-upsc",
+      "gate",
     ]);
     expect(
       subjectsForArea(withSyllabus, "upsc").map((s) => s.slug)
@@ -205,7 +209,7 @@ describe("exploreCatalog", () => {
     ).toEqual(["syllabus", "upsc", "books"]);
     expect(
       visibleExploreAreasForGoal(withSyllabus, "GENERAL").map((a) => a.id)
-    ).toEqual(["syllabus", "books"]);
+    ).toEqual(["books"]);
   });
 
   it("includes Learning Science in featured collections for every track", () => {

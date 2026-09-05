@@ -91,7 +91,7 @@ describe("learnCatalog", () => {
     );
   });
 
-  it("keeps official exam syllabi available on every study track", () => {
+  it("keeps official exam syllabi on exam tracks, not General", () => {
     const catalog = [
       subject("official-syllabus-upsc", "UPSC", "UPSC CSE"),
       subject("gate-info", "GATE"),
@@ -101,7 +101,7 @@ describe("learnCatalog", () => {
     ).toEqual(["official-syllabus-upsc", "gate-info"]);
     expect(
       subjectsForCatalogGoal(catalog, "GENERAL").map((s) => s.slug)
-    ).toEqual(["official-syllabus-upsc"]);
+    ).toEqual([]);
   });
 
   it("keeps Learning Science available on every study track", () => {

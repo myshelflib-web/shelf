@@ -8,7 +8,10 @@ import {
   topicHref,
 } from "@/lib/learnCatalog";
 import { learnHref } from "@/lib/learnContent";
-import { isOfficialSyllabusSubject } from "@/lib/officialSyllabus";
+import {
+  isOfficialSyllabusSubject,
+  syllabusBrowseSubjects,
+} from "@/lib/officialSyllabus";
 import { StudyGoal, Subject } from "@/types";
 
 export type ExploreAreaId =
@@ -51,7 +54,6 @@ export const EXPLORE_AREAS: ExploreAreaDef[] = [
       "CA",
       "NEET_PG",
       "GATE",
-      "GENERAL",
     ],
   },
   {
@@ -138,15 +140,13 @@ export function subjectsForArea(
   areaId: ExploreAreaId
 ): Subject[] {
   if (areaId === "syllabus") {
-    return subjects
-      .filter((s) => isOfficialSyllabusSubject(s))
-      .sort(
-        (a, b) =>
-          LEARN_TRACK_ORDER.indexOf(subjectGoal(a)) -
-            LEARN_TRACK_ORDER.indexOf(subjectGoal(b)) ||
-          (a.order ?? 0) - (b.order ?? 0) ||
-          a.name.localeCompare(b.name)
-      );
+    return syllabusBrowseSubjects(subjects).sort(
+      (a, b) =>
+        LEARN_TRACK_ORDER.indexOf(subjectGoal(a)) -
+          LEARN_TRACK_ORDER.indexOf(subjectGoal(b)) ||
+        (a.order ?? 0) - (b.order ?? 0) ||
+        a.name.localeCompare(b.name)
+    );
   }
   const goals = new Set(getExploreArea(areaId).goals);
   return subjects
@@ -212,11 +212,9 @@ export function countAreaItems(subjects: Subject[], areaId: ExploreAreaId): numb
   return countArticles(subjectsForArea(subjects, areaId));
 }
 
-/** Home and sidebar list areas with pages. Syllabus stays listed so it is findable. */
+/** Home and sidebar only list areas that currently have published pages. */
 export function visibleExploreAreas(subjects: Subject[]): ExploreAreaDef[] {
-  return EXPLORE_AREAS.filter(
-    (area) => area.id === "syllabus" || countAreaItems(subjects, area.id) > 0
-  );
+  return EXPLORE_AREAS.filter((area) => countAreaItems(subjects, area.id) > 0);
 }
 
 /** Study skills stay in Browse on every track. */
@@ -248,7 +246,8 @@ export function catalogGoalAllowsArea(
   areaId: ExploreAreaId,
   goal: StudyGoal
 ): boolean {
-  if (areaId === "books" || areaId === "syllabus") return true;
+  if (areaId === "books") return true;
+  if (areaId === "syllabus") return goal !== "GENERAL";
   const area = getExploreArea(areaId);
   if (goal === "GENERAL") return area.goals.includes("GENERAL");
   return area.goals.includes(goal);

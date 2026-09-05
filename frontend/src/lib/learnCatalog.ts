@@ -36,7 +36,7 @@ export function subjectsForCatalogGoal(
 ): Subject[] {
   return subjects.filter((s) => {
     if (isCrossGoalLearnSubject(s)) return true;
-    if (isOfficialSyllabusSubject(s)) return true;
+    if (isOfficialSyllabusSubject(s)) return goal !== "GENERAL";
     if (goal === "GENERAL") return subjectGoal(s) === "GENERAL";
     return subjectGoal(s) === goal;
   });
