@@ -4,6 +4,10 @@ import { useEffect } from "react";
 import { X } from "lucide-react";
 import { StudyItemKind } from "@/types";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
+import {
+  ShelfDateField,
+  ShelfDateTimeField,
+} from "@/components/ui/ShelfDateTimeField";
 
 export type Recurrence = "NONE" | "DAILY" | "WEEKLY" | "MONTHLY";
 
@@ -128,11 +132,10 @@ export function CalendarItemModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <label className="text-[11px] text-[var(--text-muted)]">
               Start
-              <input
-                type="datetime-local"
+              <ShelfDateTimeField
                 value={dueAt}
-                onChange={(e) => onDueAtChange(e.target.value)}
-                className="mt-0.5 w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
+                onChange={onDueAtChange}
+                aria-label="Start"
               />
               <span className="block mt-0.5 text-[10px] text-[var(--text-muted)]">
                 Leave empty to keep in To plan.
@@ -140,11 +143,10 @@ export function CalendarItemModal({
             </label>
             <label className="text-[11px] text-[var(--text-muted)]">
               End
-              <input
-                type="datetime-local"
+              <ShelfDateTimeField
                 value={endsAt}
-                onChange={(e) => onEndsAtChange(e.target.value)}
-                className="mt-0.5 w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
+                onChange={onEndsAtChange}
+                aria-label="End"
               />
             </label>
           </div>
@@ -177,11 +179,10 @@ export function CalendarItemModal({
               {recurrence !== "NONE" && (
                 <label className="text-[11px] text-[var(--text-muted)] block">
                   Until (optional)
-                  <input
-                    type="date"
+                  <ShelfDateField
                     value={recurUntil}
-                    onChange={(e) => onRecurUntilChange(e.target.value)}
-                    className="mt-0.5 w-full px-3 py-2 text-sm rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
+                    onChange={onRecurUntilChange}
+                    aria-label="Repeat until"
                   />
                 </label>
               )}

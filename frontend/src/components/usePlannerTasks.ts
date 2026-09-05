@@ -16,15 +16,16 @@ export function usePlannerTasks(from: Date, to: Date) {
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
 
-  const loadTasks = useCallback(() => {
-    setTasksLoading(true);
+  const loadTasks = useCallback((opts?: { silent?: boolean }) => {
+    const silent = opts?.silent === true;
+    if (!silent) setTasksLoading(true);
     const fromIso = from.toISOString();
     const toIso = to.toISOString();
     let settled = false;
     void peekLocalTasks(fromIso, toIso).then((cached) => {
       if (settled || cached.length === 0) return;
       setTasks(cached);
-      setTasksLoading(false);
+      if (!silent) setTasksLoading(false);
     });
     listTasks(fromIso, toIso)
       .then((next) => {
@@ -34,7 +35,9 @@ export function usePlannerTasks(from: Date, to: Date) {
       .catch(() => {
         settled = true;
       })
-      .finally(() => setTasksLoading(false));
+      .finally(() => {
+        if (!silent) setTasksLoading(false);
+      });
   }, [from, to]);
 
   useEffect(() => {
