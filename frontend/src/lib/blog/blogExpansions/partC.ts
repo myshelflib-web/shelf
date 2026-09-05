@@ -136,7 +136,7 @@ export const BLOG_EXPANSIONS_C: Record<string, BlogSection[]> = {
       heading: "How files get there",
       paragraphs: [
         "Shelf lists official syllabus objects already stored for each exam and publishes them as normal Learn articles with a PDF. There is no separate viewer and no new URL scheme beyond /learn/{exam-syllabus}/…",
-        "When an exam has no official file in storage yet, that exam is omitted. The section appears only when at least one PDF is available.",
+        "When an exam has no official file in storage yet, that exam is omitted. The Syllabus row stays in Browse so the section is always findable.",
       ],
     },
     {

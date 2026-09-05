@@ -9,6 +9,7 @@ export const officialExamSyllabus = buildPost(
     excerpt:
       "Explore now has a Syllabus section for official exam PDFs already stored on Shelf. Each file opens in the same reader you use for other public study pages.",
     publishedAt: "2026-09-05",
+    updatedAt: "2026-09-05",
     tags: ["learn", "syllabus", "pdf", "exams"],
     readingMinutes: 4,
   },
@@ -24,7 +25,7 @@ export const officialExamSyllabus = buildPost(
       heading: "The same reader, not a new flow",
       paragraphs: [
         "Syllabus PDFs use the existing public reader path. You can highlight, ask Study AI, and save a copy to your Library the same way you do for other Learn articles that have a PDF.",
-        "Closing the last open PDF still returns you to Explore. Guest browse and signed-in Library browse both show the section when files are available.",
+        "Closing the last open PDF still returns you to Explore. Guest browse and signed-in Library browse both show the Syllabus section in Browse.",
       ],
     },
     {

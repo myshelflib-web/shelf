@@ -129,6 +129,7 @@ describe("exploreCatalog", () => {
 
   it("hides browse areas that have no published pages", () => {
     expect(visibleExploreAreas(sampleSubjects).map((a) => a.id)).toEqual([
+      "syllabus",
       "upsc",
       "law",
       "engineering",
@@ -154,14 +155,15 @@ describe("exploreCatalog", () => {
 
   it("limits General track users to non-exam browse areas", () => {
     expect(visibleExploreAreasForGoal(sampleSubjects, "GENERAL").map((a) => a.id)).toEqual([
+      "syllabus",
       "books",
     ]);
     expect(
       visibleExploreAreasForGoal(sampleSubjects, "UPSC").map((a) => a.id)
-    ).toEqual(["upsc", "books"]);
+    ).toEqual(["syllabus", "upsc", "books"]);
     expect(
       visibleExploreAreasForGoal(sampleSubjects, "GATE").map((a) => a.id)
-    ).toEqual(["engineering", "books"]);
+    ).toEqual(["syllabus", "engineering", "books"]);
   });
 
   it("limits General track featured collections to study skills", () => {

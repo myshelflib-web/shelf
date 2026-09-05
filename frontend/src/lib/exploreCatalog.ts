@@ -212,9 +212,11 @@ export function countAreaItems(subjects: Subject[], areaId: ExploreAreaId): numb
   return countArticles(subjectsForArea(subjects, areaId));
 }
 
-/** Home and sidebar only list areas that currently have published pages. */
+/** Home and sidebar list areas with pages. Syllabus stays listed so it is findable. */
 export function visibleExploreAreas(subjects: Subject[]): ExploreAreaDef[] {
-  return EXPLORE_AREAS.filter((area) => countAreaItems(subjects, area.id) > 0);
+  return EXPLORE_AREAS.filter(
+    (area) => area.id === "syllabus" || countAreaItems(subjects, area.id) > 0
+  );
 }
 
 /** Study skills stay in Browse on every track. */

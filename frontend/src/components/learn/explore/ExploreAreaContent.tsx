@@ -88,7 +88,11 @@ export function ExploreAreaContent({
           {loading && groups.length === 0 ? (
             <LearnCatalogSkeleton cards={4} />
           ) : groups.length === 0 ? (
-            <div className="learn-empty">No public material in this area yet.</div>
+            <div className="learn-empty">
+              {areaId === "syllabus"
+                ? "Official exam syllabus PDFs will appear here once they are published."
+                : "No public material in this area yet."}
+            </div>
           ) : (
             <div className="explore-collection-grid">
               {groups.map((subject) => (
