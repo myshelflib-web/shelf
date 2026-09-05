@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { ExploreWorkspaceShell } from "@/components/learn/explore/ExploreWorkspaceShell";
 import { ExploreAreaIcon } from "@/components/learn/explore/ExploreAreaIcon";
 import { ExploreAreaContent } from "@/components/learn/explore/ExploreAreaContent";
@@ -34,6 +33,7 @@ import {
   subjectsForCatalogGoal,
 } from "@/lib/learnCatalog";
 import { BrowseFolderLink, useOpenBrowseHref } from "@/components/learn/BrowseFolderLink";
+import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
 import { isLearnReaderHref, learnHref } from "@/lib/learnContent";
 import { withResolvedArea } from "@/lib/preloadedBrowse";
 import { Subject, StudyGoal, Topic } from "@/types";
@@ -73,9 +73,9 @@ export function ExploreMainPane({
   sidebarAreaId?: ExploreAreaId | null;
   returnTo: string;
 }) {
-  const router = useRouter();
   const { startReaderOpen } = useLearnNavigation();
   const openBrowseHref = useOpenBrowseHref();
+  const browse = useOptionalPreloadedBrowse();
   const { user } = useAuth();
   const { goal: filterGoal, accountGoal } = useLearnStudyGoal();
   const catalogGoal: StudyGoal = user ? (accountGoal ?? "GENERAL") : filterGoal;
@@ -100,10 +100,8 @@ export function ExploreMainPane({
     (subject ? areaForGoal(subjectGoal(subject)) : null);
 
   const openHit = (href: string) => {
-    if (isLearnReaderHref(href)) {
+    if (isLearnReaderHref(href) && !browse?.interceptFolderNav) {
       startReaderOpen(href);
-      router.push(href);
-      return;
     }
     openBrowseHref(href);
   };

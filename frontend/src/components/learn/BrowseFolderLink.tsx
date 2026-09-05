@@ -3,23 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
-import { isLearnReaderHref } from "@/lib/learnContent";
 import {
   PreloadedBrowsePath,
   browseHref,
   browsePathFromHref,
 } from "@/lib/preloadedBrowse";
 
-/** Folder hrefs stay in the explorer; article hrefs still open the reader. */
+/** Folder and article hrefs stay on Library when the browse context is mounted. */
 export function useOpenBrowseHref() {
   const browse = useOptionalPreloadedBrowse();
   const router = useRouter();
 
   return (href: string) => {
-    if (isLearnReaderHref(href)) {
-      router.push(href);
-      return;
-    }
     const path = browsePathFromHref(href);
     if (browse?.interceptFolderNav) {
       browse.setPath(path);

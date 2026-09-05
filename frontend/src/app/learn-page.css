@@ -698,17 +698,23 @@
     background 0.18s ease;
 }
 
-a.explore-resource-card {
+a.explore-resource-card,
+button.explore-resource-card {
   display: flex;
   flex-direction: column;
   min-height: 100%;
+  width: 100%;
   text-decoration: none;
   color: inherit;
   cursor: pointer;
+  font: inherit;
+  text-align: left;
 }
 
 a.explore-resource-card:hover,
-a.explore-resource-card:focus-visible {
+a.explore-resource-card:focus-visible,
+button.explore-resource-card:hover,
+button.explore-resource-card:focus-visible {
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
   background: var(--bg-secondary);
@@ -718,7 +724,8 @@ a.explore-resource-card:focus-visible {
   outline: none;
 }
 
-a.explore-resource-card:focus-visible {
+a.explore-resource-card:focus-visible,
+button.explore-resource-card:focus-visible {
   box-shadow:
     0 0 0 2px var(--bg-primary),
     0 0 0 4px var(--ring),
@@ -788,7 +795,9 @@ a.explore-resource-card:focus-visible {
 }
 
 a.explore-resource-card:hover .explore-resource-card-arrow,
-a.explore-resource-card:focus-visible .explore-resource-card-arrow {
+a.explore-resource-card:focus-visible .explore-resource-card-arrow,
+button.explore-resource-card:hover .explore-resource-card-arrow,
+button.explore-resource-card:focus-visible .explore-resource-card-arrow {
   opacity: 1;
   transform: translate(0, 0);
   color: var(--accent);
@@ -869,7 +878,9 @@ a.explore-resource-card:focus-visible .explore-resource-card-arrow {
 }
 
 a.explore-resource-card:hover .explore-resource-open,
-a.explore-resource-card:focus-visible .explore-resource-open {
+a.explore-resource-card:focus-visible .explore-resource-open,
+button.explore-resource-card:hover .explore-resource-open,
+button.explore-resource-card:focus-visible .explore-resource-open {
   background: var(--accent-light);
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
   color: var(--accent-hover);

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Folder, Newspaper } from "lucide-react";
+import { ChevronDown, ChevronRight, FileText, Folder, Lock, Newspaper } from "lucide-react";
 import clsx from "clsx";
 import { BrowseFolderLink } from "@/components/learn/BrowseFolderLink";
 import { ExploreAreaIcon } from "@/components/learn/explore/ExploreAreaIcon";
@@ -15,8 +15,11 @@ import {
   visibleExploreAreasForGoal,
 } from "@/lib/exploreCatalog";
 import { topicHref } from "@/lib/learnCatalog";
+import { learnHref } from "@/lib/learnContent";
 import { withResolvedArea } from "@/lib/preloadedBrowse";
-import { StudyGoal, Subject, Topic } from "@/types";
+import { isPremiumUser } from "@/lib/premium";
+import { useAuth } from "@/hooks/useAuth";
+import { ArticleSummary, StudyGoal, Subject, Topic } from "@/types";
 
 function topicMatchesQuery(topic: Topic, query: string): boolean {
   const needle = query.trim().toLowerCase();
@@ -34,16 +37,24 @@ function subjectMatchesQuery(subject: Subject, query: string): boolean {
   return subject.topics.some((topic) => topicMatchesQuery(topic, query));
 }
 
+function articleMatchesQuery(article: ArticleSummary, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  if (!needle) return true;
+  return article.title.toLowerCase().includes(needle);
+}
+
 export function ExploreSidebarHomeTree({
   activeArea,
   activeSubject,
   activeTopic,
+  activeArticle,
   searchQuery = "",
   studyGoal = "GENERAL",
 }: {
   activeArea?: ExploreAreaId | null;
   activeSubject?: string | null;
   activeTopic?: string | null;
+  activeArticle?: string | null;
   searchQuery?: string;
   studyGoal?: StudyGoal;
 }) {
@@ -82,6 +93,7 @@ export function ExploreSidebarHomeTree({
             }
             activeSubject={activeSubject}
             activeTopic={activeTopic}
+            activeArticle={activeArticle}
             searchQuery={searchQuery}
           />
         ))}
@@ -117,6 +129,7 @@ function AreaBranch({
   expanded,
   activeSubject,
   activeTopic,
+  activeArticle,
   searchQuery,
 }: {
   area: ExploreAreaDef;
@@ -124,6 +137,7 @@ function AreaBranch({
   expanded: boolean;
   activeSubject?: string | null;
   activeTopic?: string | null;
+  activeArticle?: string | null;
   searchQuery: string;
 }) {
   const count = countAreaItems(subjects, area.id);
@@ -161,6 +175,7 @@ function AreaBranch({
               areaId={area.id}
               expanded={activeSubject === subject.slug}
               activeTopic={activeTopic}
+              activeArticle={activeArticle}
               searchQuery={searchQuery}
             />
           ))}
@@ -175,12 +190,14 @@ function CollectionBranch({
   areaId,
   expanded,
   activeTopic,
+  activeArticle,
   searchQuery,
 }: {
   subject: Subject;
   areaId: ExploreAreaId;
   expanded: boolean;
   activeTopic?: string | null;
+  activeArticle?: string | null;
   searchQuery: string;
 }) {
   const topics = subject.topics.filter((topic) =>
@@ -211,29 +228,92 @@ function CollectionBranch({
       </BrowseFolderLink>
       {expanded ? (
         <div className="explore-side-branch">
-          {topics.map((topic) => {
-            const count = topic.articles?.length ?? 0;
-            const isActive = activeTopic === topic.slug;
+          {topics.map((topic) => (
+            <TopicBranch
+              key={topic.id}
+              topic={topic}
+              areaId={areaId}
+              subjectSlug={subject.slug}
+              expanded={activeTopic === topic.slug}
+              activeArticle={activeArticle}
+              searchQuery={searchQuery}
+            />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function TopicBranch({
+  topic,
+  areaId,
+  subjectSlug,
+  expanded,
+  activeArticle,
+  searchQuery,
+}: {
+  topic: Topic;
+  areaId: ExploreAreaId;
+  subjectSlug: string;
+  expanded: boolean;
+  activeArticle?: string | null;
+  searchQuery: string;
+}) {
+  const { user } = useAuth();
+  const isPremium = isPremiumUser(user);
+  const articles = (topic.articles ?? []).filter((article) =>
+    articleMatchesQuery(article, searchQuery)
+  );
+  const count = topic.articles?.length ?? 0;
+  const topicActive = expanded && !activeArticle;
+
+  return (
+    <div>
+      <BrowseFolderLink
+        path={{ areaId, subjectSlug, topicSlug: topic.slug }}
+        href={topicHref(subjectSlug, topic.slug)}
+        className={clsx(
+          "explore-side-row",
+          topicActive && "explore-side-row-active"
+        )}
+      >
+        <span className="explore-side-chevron" aria-hidden>
+          {expanded ? (
+            <ChevronDown className="w-3 h-3" />
+          ) : (
+            <ChevronRight className="w-3 h-3" />
+          )}
+        </span>
+        <span className="explore-side-folder" aria-hidden>
+          <Folder className="w-3 h-3" />
+        </span>
+        <span className="min-w-0 flex-1 truncate">{topic.title}</span>
+        {count > 0 ? <span className="explore-side-count">{count}</span> : null}
+      </BrowseFolderLink>
+      {expanded ? (
+        <div className="explore-side-branch">
+          {articles.map((article) => {
+            const isActive = activeArticle === article.slug;
             return (
               <BrowseFolderLink
-                key={topic.id}
+                key={article.id}
                 path={{
                   areaId,
-                  subjectSlug: subject.slug,
+                  subjectSlug,
                   topicSlug: topic.slug,
+                  articleSlug: article.slug,
                 }}
-                href={topicHref(subject.slug, topic.slug)}
+                href={learnHref(subjectSlug, topic.slug, article.slug)}
                 className={clsx(
                   "explore-side-row",
                   isActive && "explore-side-row-active"
                 )}
               >
-                <span className="explore-side-folder" aria-hidden>
-                  <Folder className="w-3 h-3" />
-                </span>
-                <span className="min-w-0 flex-1 truncate">{topic.title}</span>
-                {count > 0 ? (
-                  <span className="explore-side-count">{count}</span>
+                <FileText className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
+                <span className="min-w-0 flex-1 truncate">{article.title}</span>
+                {article.isPremium && !isPremium ? (
+                  <Lock className="w-3 h-3 shrink-0 text-amber-500" />
                 ) : null}
               </BrowseFolderLink>
             );

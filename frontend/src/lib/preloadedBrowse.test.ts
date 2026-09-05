@@ -55,11 +55,27 @@ describe("browseHref / browsePathFromHref", () => {
       areaId: "upsc",
       subjectSlug: undefined,
       topicSlug: undefined,
+      articleSlug: undefined,
     });
     expect(browseHref({ subjectSlug: "upsc-polity" })).toBe("/learn/upsc-polity");
     expect(
       browseHref({ subjectSlug: "upsc-polity", topicSlug: "constitution" })
     ).toBe("/learn/upsc-polity/constitution");
+    expect(
+      browseHref({
+        subjectSlug: "upsc-polity",
+        topicSlug: "constitution",
+        articleSlug: "preamble",
+      })
+    ).toBe("/learn/upsc-polity/constitution/preamble");
+    expect(
+      browsePathFromHref("/learn/upsc-polity/constitution/preamble")
+    ).toEqual({
+      areaId: null,
+      subjectSlug: "upsc-polity",
+      topicSlug: "constitution",
+      articleSlug: "preamble",
+    });
   });
 });
 

@@ -236,6 +236,7 @@ export function ExploreSidebarBrowse({
           activeArea={activeArea}
           activeSubject={activeSubject}
           activeTopic={activeTopic}
+          activeArticle={activeArticle}
           searchQuery={searchQuery}
           studyGoal={studyGoal}
         />

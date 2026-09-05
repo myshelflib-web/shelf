@@ -5,12 +5,14 @@ import {
   learnAreaHref,
 } from "@/lib/exploreCatalog";
 import { parseLearnPath, subjectGoal, subjectHref, topicHref } from "@/lib/learnCatalog";
+import { learnHref } from "@/lib/learnContent";
 import { Subject } from "@/types";
 
 export type PreloadedBrowsePath = {
   areaId?: ExploreAreaId | null;
   subjectSlug?: string;
   topicSlug?: string;
+  articleSlug?: string;
 };
 
 /** Which left-pane chrome to show for Preloaded (browse vs reader). */
@@ -24,6 +26,9 @@ export function preloadedExplorerMode(opts: {
 }
 
 export function browseHref(path: PreloadedBrowsePath): string {
+  if (path.subjectSlug && path.topicSlug && path.articleSlug) {
+    return learnHref(path.subjectSlug, path.topicSlug, path.articleSlug);
+  }
   if (path.subjectSlug && path.topicSlug) {
     return topicHref(path.subjectSlug, path.topicSlug);
   }
@@ -43,6 +48,7 @@ export function browsePathFromHref(href: string): PreloadedBrowsePath {
     areaId: isExploreAreaId(areaFromQuery) ? areaFromQuery : null,
     subjectSlug: parsed.subjectSlug,
     topicSlug: parsed.topicSlug,
+    articleSlug: parsed.articleSlug,
   };
 }
 

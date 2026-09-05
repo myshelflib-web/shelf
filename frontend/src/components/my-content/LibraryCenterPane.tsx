@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useLibraryMode } from "@/hooks/useLibraryMode";
 import { LibraryEmptyWorkspace } from "@/components/my-content/LibraryEmptyWorkspace";
 import { ExploreMainPane } from "@/components/learn/explore/ExploreMainPane";
+import { PreloadedInlineReader } from "@/components/learn/PreloadedInlineReader";
 import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
 import type { ExploreAreaId } from "@/lib/exploreCatalog";
 
@@ -57,13 +58,23 @@ export function LibraryCenterPane({
         </>
       ) : (
         <div key="preloaded" className="library-center-pane-swap h-full min-h-0">
-          <ExploreMainPane
-            subjectSlug={resolvedExplore?.subjectSlug}
-            topicSlug={resolvedExplore?.topicSlug}
-            areaId={resolvedExplore?.areaId}
-            sidebarAreaId={resolvedExplore?.sidebarAreaId}
-            returnTo={resolvedExplore?.returnTo ?? "/my-content"}
-          />
+          {browse?.path.articleSlug &&
+          browse.path.subjectSlug &&
+          browse.path.topicSlug ? (
+            <PreloadedInlineReader
+              subjectSlug={browse.path.subjectSlug}
+              topicSlug={browse.path.topicSlug}
+              articleSlug={browse.path.articleSlug}
+            />
+          ) : (
+            <ExploreMainPane
+              subjectSlug={resolvedExplore?.subjectSlug}
+              topicSlug={resolvedExplore?.topicSlug}
+              areaId={resolvedExplore?.areaId}
+              sidebarAreaId={resolvedExplore?.sidebarAreaId}
+              returnTo={resolvedExplore?.returnTo ?? "/my-content"}
+            />
+          )}
         </div>
       )}
     </div>

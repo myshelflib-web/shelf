@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
+import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
 import { formatArticleUpdatedAt } from "@/lib/exploreCatalog";
+import { browsePathFromHref } from "@/lib/preloadedBrowse";
 
 export function ExploreResourceCard({
   title,
@@ -23,15 +25,11 @@ export function ExploreResourceCard({
   updatedAt?: string | null;
 }) {
   const { startReaderOpen } = useLearnNavigation();
+  const browse = useOptionalPreloadedBrowse();
   const mark = title.trim().charAt(0).toUpperCase() || "•";
   const updatedLabel = formatArticleUpdatedAt(updatedAt);
-
-  return (
-    <Link
-      href={href}
-      onClick={() => startReaderOpen(href)}
-      className="explore-resource-card"
-    >
+  const body = (
+    <>
       <div className="explore-resource-card-top">
         <span className="explore-resource-mark" aria-hidden>
           {mark}
@@ -53,6 +51,28 @@ export function ExploreResourceCard({
       </div>
       <p className="explore-resource-copy">{copy}</p>
       <span className="explore-resource-open">{openLabel}</span>
+    </>
+  );
+
+  if (browse?.interceptFolderNav) {
+    return (
+      <button
+        type="button"
+        className="explore-resource-card"
+        onClick={() => browse.setPath(browsePathFromHref(href))}
+      >
+        {body}
+      </button>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      onClick={() => startReaderOpen(href)}
+      className="explore-resource-card"
+    >
+      {body}
     </Link>
   );
 }
