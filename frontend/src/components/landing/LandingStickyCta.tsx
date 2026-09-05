@@ -74,6 +74,20 @@ export function LandingStickyCta() {
         >
           Browse free library
         </Link>
+        <Link
+          href="/login"
+          className="landing-btn landing-btn-ghost"
+          tabIndex={visible ? 0 : -1}
+        >
+          Sign in
+        </Link>
+        <Link
+          href="/login?register=1"
+          className="landing-btn landing-btn-ghost"
+          tabIndex={visible ? 0 : -1}
+        >
+          Sign up
+        </Link>
       </div>
     </div>
   );

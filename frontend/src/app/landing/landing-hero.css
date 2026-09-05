@@ -241,7 +241,8 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.28s ease, transform 0.28s ease;
-  width: min(calc(100% - 32px), 520px);
+  width: max-content;
+  max-width: min(calc(100% - 24px), 640px);
 }
 
 .landing-sticky-cta.is-visible {
@@ -253,21 +254,40 @@
 .landing-sticky-cta-inner {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 8px 10px;
   border-radius: 999px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
   backdrop-filter: blur(12px);
   box-shadow: 0 12px 36px rgba(38, 35, 29, 0.12);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .landing-sticky-cta-inner .landing-btn {
-  flex: 1;
+  flex: 0 0 auto;
   height: 36px;
+  padding: 0 14px;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 .landing-sticky-cta-inner .landing-btn-primary {
-  flex: 1.15;
+  flex: 0 0 auto;
+}
+
+.landing-sticky-cta-inner .landing-btn-ghost {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.landing-sticky-cta-inner .landing-btn-ghost:hover {
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border-color: transparent;
 }
