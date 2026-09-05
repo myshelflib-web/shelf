@@ -59,7 +59,7 @@ export function HomePageClient() {
               <div className="landing-eyebrow">Your personal study library</div>
               <h1 id="landing-hero-heading">
                 Everything you’re learning or working on.{" "}
-                <em className="landing-em">In one Shelf.</em>
+                <span className="landing-em">In one Shelf.</span>
               </h1>
               <p className="landing-lead">
                 Upload PDFs, YouTube lectures, sketch notebooks, and doc pages

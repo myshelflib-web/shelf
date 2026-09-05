@@ -1,7 +1,7 @@
 .landing-btn {
   height: 40px;
   padding: 0 16px;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-primary);
@@ -101,9 +101,10 @@
 }
 
 .landing-em {
-  font-style: italic;
-  font-weight: 650;
+  font-style: normal;
+  font-weight: 700;
   color: var(--accent);
+  letter-spacing: -0.03em;
 }
 
 .landing-lead {

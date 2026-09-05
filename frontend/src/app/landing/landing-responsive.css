@@ -137,6 +137,9 @@
   .landing-preview-stage:hover {
     transform: none;
   }
+  .landing-preview-stage::before {
+    opacity: 0.4;
+  }
   .landing-marquee-track {
     animation: none;
   }

@@ -1,48 +1,58 @@
 /* Product preview carousel */
 .landing-preview-stage {
   position: relative;
-  border-radius: 14px;
-  padding: 3px;
-  background:
-    linear-gradient(
-      145deg,
-      color-mix(in srgb, var(--accent) 28%, var(--border)) 0%,
-      var(--border) 42%,
-      color-mix(in srgb, var(--lp-sand) 55%, var(--border)) 100%
-    );
+  border-radius: 24px;
+  padding: 0;
+  background: transparent;
   box-shadow:
-    0 18px 48px rgba(38, 35, 29, 0.1),
-    0 2px 0 color-mix(in srgb, var(--lp-surface-white) 70%, transparent);
+    0 4px 12px rgba(38, 35, 29, 0.04),
+    0 28px 64px rgba(38, 35, 29, 0.12);
   transition: transform 0.35s ease, box-shadow 0.35s ease;
 }
 
+.landing-preview-stage::before {
+  content: "";
+  position: absolute;
+  inset: 12% 8% -6%;
+  border-radius: 32px;
+  background: radial-gradient(
+    ellipse at 50% 100%,
+    color-mix(in srgb, var(--accent) 22%, transparent) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.7;
+}
+
 .landing-preview-stage:hover {
-  transform: translateY(-3px);
+  transform: translateY(-4px);
   box-shadow:
-    0 24px 56px rgba(38, 35, 29, 0.14),
-    0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+    0 8px 20px rgba(38, 35, 29, 0.06),
+    0 36px 72px rgba(38, 35, 29, 0.14);
 }
 
 .landing-preview {
   background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border-radius: 22px;
   overflow: hidden;
-  box-shadow: 0 14px 40px rgba(38, 35, 29, 0.08);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--lp-surface-white) 60%, transparent);
 }
 
 .landing-preview-head {
   height: 52px;
   display: flex;
   align-items: center;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-elevated);
+  padding: 0 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--bg-elevated) 92%, var(--bg-secondary));
 }
 
 .landing-preview-title {
   font-size: 13px;
-  font-weight: 730;
+  font-weight: 650;
+  letter-spacing: -0.01em;
 }
 
 .landing-preview-meta {
@@ -56,6 +66,7 @@
   height: 432px;
   overflow: hidden;
   background: var(--bg-primary);
+  border-radius: 0 0 22px 22px;
 }
 
 .landing-preview-progress {
@@ -134,8 +145,8 @@
 .landing-mini-nav span {
   font-size: 8.5px;
   color: var(--text-muted);
-  padding: 6px 7px;
-  border-radius: 7px;
+  padding: 6px 8px;
+  border-radius: 999px;
 }
 
 .landing-mini-nav-active {
@@ -221,11 +232,11 @@
 .landing-search-mini {
   height: 28px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--lp-surface-white);
   display: flex;
   align-items: center;
-  padding: 0 9px;
+  padding: 0 10px;
   color: #9c978f;
   font-size: 8.5px;
   margin-bottom: 10px;
@@ -356,11 +367,11 @@
 .landing-center-search {
   height: 42px;
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 999px;
   background: var(--lp-surface-white);
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 14px;
   margin-top: 14px;
   color: #9c978f;
   font-size: 9px;
@@ -382,7 +393,7 @@
 
 .landing-cta-card {
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--lp-surface-white);
   padding: 12px;
   text-align: left;
