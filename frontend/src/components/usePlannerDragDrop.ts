@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { updateTask } from "@/lib/offline/tasks";
+import { toUserFacingError } from "@/lib/userFacingError";
 import type { StudyTask } from "@/types";
 import {
   PLANNER_DND_MIME,
@@ -14,13 +15,53 @@ function masterId(id: string) {
   return id.split("::")[0];
 }
 
+const EXIT_MS = 180;
+const ENTER_MS = 220;
+const ERROR_MS = 4500;
+
+export type PlannerCardMotion = "exit" | "enter" | null;
+
 export function usePlannerDragDrop(
   tasks: StudyTask[],
   setTasks: React.Dispatch<React.SetStateAction<StudyTask[]>>
 ) {
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropError, setDropError] = useState<string | null>(null);
+  const [motionTaskId, setMotionTaskId] = useState<string | null>(null);
+  const [cardMotion, setCardMotion] = useState<PlannerCardMotion>(null);
   const depthRef = useRef<Map<string, number>>(new Map());
+  const rollbackTimers = useRef<number[]>([]);
+  const errorTimer = useRef<number | null>(null);
+
+  const clearRollbackTimers = useCallback(() => {
+    for (const id of rollbackTimers.current) window.clearTimeout(id);
+    rollbackTimers.current = [];
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      clearRollbackTimers();
+      if (errorTimer.current != null) window.clearTimeout(errorTimer.current);
+    };
+  }, [clearRollbackTimers]);
+
+  const showDropError = useCallback((message: string) => {
+    setDropError(message);
+    if (errorTimer.current != null) window.clearTimeout(errorTimer.current);
+    errorTimer.current = window.setTimeout(() => {
+      setDropError(null);
+      errorTimer.current = null;
+    }, ERROR_MS);
+  }, []);
+
+  const clearDropError = useCallback(() => {
+    setDropError(null);
+    if (errorTimer.current != null) {
+      window.clearTimeout(errorTimer.current);
+      errorTimer.current = null;
+    }
+  }, []);
 
   const resetDragUi = useCallback(() => {
     depthRef.current.clear();
@@ -67,13 +108,40 @@ export function usePlannerDragDrop(
     depthRef.current.set(key, next);
   }, []);
 
+  const rollbackMove = useCallback(
+    (id: string, prevDue: string | null, prevEnd: string | null | undefined) => {
+      clearRollbackTimers();
+      setMotionTaskId(id);
+      setCardMotion("exit");
+
+      const t1 = window.setTimeout(() => {
+        setTasks((prev) =>
+          prev.map((t) =>
+            masterId(t.id) === id
+              ? { ...t, dueAt: prevDue, endsAt: prevEnd ?? null }
+              : t
+          )
+        );
+        setCardMotion("enter");
+        const t2 = window.setTimeout(() => {
+          setMotionTaskId(null);
+          setCardMotion(null);
+        }, ENTER_MS);
+        rollbackTimers.current.push(t2);
+      }, EXIT_MS);
+      rollbackTimers.current.push(t1);
+    },
+    [clearRollbackTimers, setTasks]
+  );
+
   const applyDrop = useCallback(
     (target: Date | "backlog", rawId: string) => {
       const task = tasks.find((t) => t.id === rawId);
       if (!task || !canDragItem(task)) return;
 
       const id = masterId(task.id);
-      const snapshot = tasks;
+      const prevDue = task.dueAt;
+      const prevEnd = task.endsAt;
       let nextDue: string | null = null;
       let nextEnd: string | null = null;
 
@@ -96,11 +164,17 @@ export function usePlannerDragDrop(
         .then(() => {
           window.dispatchEvent(new Event("shelf:tasks-changed"));
         })
-        .catch(() => {
-          setTasks(snapshot);
+        .catch((err) => {
+          const fallback = "Couldn't move that item. It's back where it was.";
+          const message =
+            err instanceof Error
+              ? toUserFacingError(err.message, fallback)
+              : fallback;
+          showDropError(message);
+          rollbackMove(id, prevDue, prevEnd);
         });
     },
-    [tasks, setTasks, resetDragUi]
+    [tasks, setTasks, resetDragUi, showDropError, rollbackMove]
   );
 
   const finishDrop = useCallback(
@@ -119,6 +193,10 @@ export function usePlannerDragDrop(
   return {
     dropTarget,
     draggingId,
+    dropError,
+    clearDropError,
+    motionTaskId,
+    cardMotion,
     onDragStart,
     onDragEnd,
     enterDrop,

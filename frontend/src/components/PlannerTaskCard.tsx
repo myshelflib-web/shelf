@@ -8,11 +8,13 @@ import {
 } from "lucide-react";
 import type { StudyTask } from "@/types";
 import { canDragItem, formatPlanTime } from "@/lib/plannerBoard";
+import type { PlannerCardMotion } from "@/components/usePlannerDragDrop";
 
 export function PlannerTaskCard({
   task,
   compact = false,
   dragging = false,
+  motion = null,
   notebook,
   now,
   onDragStart,
@@ -24,6 +26,7 @@ export function PlannerTaskCard({
   task: StudyTask;
   compact?: boolean;
   dragging?: boolean;
+  motion?: PlannerCardMotion;
   notebook: string | null;
   now: Date;
   onDragStart: (task: StudyTask, e: React.DragEvent) => void;
@@ -37,6 +40,12 @@ export function PlannerTaskCard({
   const ext = isEvent && task.href && /^https?:\/\//i.test(task.href) ? task.href : null;
   const draggable = canDragItem(task);
   const dragClass = dragging ? "opacity-40" : "";
+  const motionClass =
+    motion === "exit"
+      ? "planner-card-exit"
+      : motion === "enter"
+        ? "planner-card-enter"
+        : "";
 
   if (compact) {
     return (
@@ -58,7 +67,7 @@ export function PlannerTaskCard({
             : "border-l-[var(--accent)] bg-[var(--accent-light)] text-[var(--text-primary)]"
         } ${task.completed ? "line-through opacity-60" : ""} ${
           draggable ? "cursor-grab active:cursor-grabbing" : ""
-        } ${dragClass}`}
+        } ${dragClass} ${motionClass}`}
       >
         {task.title}
       </button>
@@ -75,7 +84,7 @@ export function PlannerTaskCard({
         isEvent ? "border-l-[var(--text-muted)]" : "border-l-[var(--accent)]"
       } ${task.completed ? "opacity-60" : ""} ${
         draggable ? "cursor-grab active:cursor-grabbing" : ""
-      } ${dragClass}`}
+      } ${dragClass} ${motionClass}`}
     >
       <div className="flex items-start gap-1.5 min-w-0">
         {isEvent ? (
