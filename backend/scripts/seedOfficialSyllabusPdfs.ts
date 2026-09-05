@@ -4,13 +4,32 @@
  * Requires DATABASE_URL and S3_* in the environment.
  */
 import "./normalizeS3Env.js";
+import {
+  CopyObjectCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { downloadOfficialPdf } from "../src/services/ingest/officialPdfDownload.js";
-import { listObjectKeys, uploadToS3 } from "../src/services/s3.js";
+import { getS3Bucket, listObjectKeys, uploadToS3 } from "../src/services/s3.js";
 import { syncOfficialSyllabusFromS3 } from "../src/services/officialSyllabus/sync.js";
 import { assertOfficialRedistributionAllowed } from "../src/services/preloaded/copyrightCompliance.js";
 import { fetchWithRetry } from "../src/utils/fetchRetry.js";
+import prisma from "../src/utils/prisma.js";
 
 type Target = { url: string; key: string };
+
+/** Moves after earlier seed layouts — CSE under Civil Services; ESE with GATE. */
+const RELOCATE: { from: string; to: string }[] = [
+  {
+    from: "admin/official-syllabus/upsc/cse-2026/source.pdf",
+    to: "admin/official-syllabus/upsc/cse/cse-2026/source.pdf",
+  },
+  {
+    from: "admin/official-syllabus/upsc/ese/ese-2026/source.pdf",
+    to: "admin/official-syllabus/gate/ese/ese-2026/source.pdf",
+  },
+];
 
 const GATE_CODES = [
   "AE", "AG", "AR", "BM", "BT", "CE", "CH", "CS", "CY", "DA",
@@ -19,19 +38,23 @@ const GATE_CODES = [
 ] as const;
 
 const UPSC: Target[] = [
-  ["Notif-CSP-2026-Engl-060226Rev.pdf", "upsc/cse-2026"],
+  ["Notif-CSP-2026-Engl-060226Rev.pdf", "upsc/cse/cse-2026"],
   ["Notif-CDSE-I-2026-Engl-101225.pdf", "upsc/cds/cds-i-2026"],
   ["Notif-CDS-II-2026-Engl-200526.pdf", "upsc/cds/cds-ii-2026"],
   ["ExamNotifi_CAPF_AC_Exam_2026_Eng_20022026.pdf", "upsc/capf/capf-2026"],
   ["Notif-NDA-II-2026-Engl-200526.pdf", "upsc/nda/nda-ii-2026"],
   ["Exam_Notification_IES_ISS_Eng_11022026.pdf", "upsc/ies-iss/ies-iss-2026"],
-  ["Notif-ESEP-26-Engl.pdf", "upsc/ese/ese-2026"],
   ["Notification-CMSE-2026-English-110326.pdf", "upsc/cms/cms-2026"],
   ["Notif-IFSP-2026-Engl-060226Rev.pdf", "upsc/ifos/ifos-2026"],
 ].map(([file, path]) => ({
   url: `https://www.upsc.gov.in/sites/default/files/${file}`,
   key: `admin/official-syllabus/${path}/source.pdf`,
 }));
+
+const GATE_ESE: Target = {
+  url: "https://www.upsc.gov.in/sites/default/files/Notif-ESEP-26-Engl.pdf",
+  key: "admin/official-syllabus/gate/ese/ese-2026/source.pdf",
+};
 
 const OTHER: Target[] = [
   {
@@ -57,7 +80,60 @@ function targets(): Target[] {
     url: `https://gate2026.iitg.ac.in/doc/GATE2026_Syllabus/${code}_2026_Syllabus.pdf`,
     key: `admin/official-syllabus/gate/${code.toLowerCase()}/${code.toLowerCase()}-2026/source.pdf`,
   }));
-  return [...UPSC, ...gate, ...OTHER];
+  return [...UPSC, GATE_ESE, ...gate, ...OTHER];
+}
+
+function s3Client(): S3Client {
+  return new S3Client({
+    endpoint: process.env.S3_ENDPOINT,
+    region: "auto",
+    credentials: {
+      accessKeyId: process.env.S3_ACCESS_KEY!,
+      secretAccessKey: process.env.S3_SECRET_KEY!,
+    },
+    forcePathStyle: true,
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
+  });
+}
+
+async function relocateMisplaced(): Promise<string[]> {
+  const client = s3Client();
+  const bucket = getS3Bucket();
+  const movedFrom: string[] = [];
+  for (const { from, to } of RELOCATE) {
+    try {
+      await client.send(new HeadObjectCommand({ Bucket: bucket, Key: from }));
+    } catch {
+      continue;
+    }
+    try {
+      await client.send(new HeadObjectCommand({ Bucket: bucket, Key: to }));
+    } catch {
+      await client.send(
+        new CopyObjectCommand({
+          Bucket: bucket,
+          CopySource: `${bucket}/${from}`,
+          Key: to,
+          ContentType: "application/pdf",
+        })
+      );
+    }
+    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: from }));
+    movedFrom.push(from);
+    console.log("relocated", from, "->", to);
+  }
+  if (movedFrom.length > 0) {
+    await prisma.article.updateMany({
+      where: { pdfKey: { in: movedFrom } },
+      data: {
+        status: "ARCHIVED",
+        pdfKey: null,
+        archivedAt: new Date(),
+      },
+    });
+  }
+  return movedFrom;
 }
 
 async function downloadPdf(url: string): Promise<Buffer> {
@@ -80,6 +156,8 @@ async function downloadPdf(url: string): Promise<Buffer> {
 }
 
 async function main() {
+  const relocated = await relocateMisplaced();
+  console.log("relocated", relocated.length);
   const existing = new Set(
     await listObjectKeys("admin/official-syllabus/", { max: 500 })
   );
@@ -96,7 +174,14 @@ async function main() {
   }
 
   const published = await syncOfficialSyllabusFromS3();
-  console.log(JSON.stringify({ uploaded: uploaded.length, published }));
+  console.log(JSON.stringify({ uploaded: uploaded.length, relocated, published }));
 }
 
-void main();
+void main()
+  .catch((err) => {
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

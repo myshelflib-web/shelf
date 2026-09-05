@@ -94,13 +94,15 @@ const GATE_PAPER_NAME: Record<string, string> = {
 };
 
 const SYLLABUS_TITLE: Record<string, string> = {
-  "cse-2026": "CSE 2026",
+  "cse-2026": "Civil Services 2026",
+  cse: "Civil Services (CSE)",
   "cds-i-2026": "CDS I 2026",
   "cds-ii-2026": "CDS II 2026",
   "capf-2026": "CAPF AC 2026",
   "nda-ii-2026": "NDA II 2026",
   "ies-iss-2026": "IES / ISS 2026",
   "ese-2026": "Engineering Services 2026",
+  ese: "Engineering Services (ESE)",
   "cms-2026": "CMS 2026",
   "ifos-2026": "Indian Forest Service 2026",
   "djs-rules-2026": "Delhi Judicial Service Rules 2026",
@@ -113,7 +115,6 @@ const SYLLABUS_TITLE: Record<string, string> = {
   capf: "CAPF",
   nda: "NDA",
   "ies-iss": "IES / ISS",
-  ese: "Engineering Services",
   cms: "CMS",
   ifos: "Indian Forest Service",
   rpsc: "RPSC RAS",
@@ -131,7 +132,7 @@ function titleFromPart(part: string): string {
   const code = cleaned.split(" ")[0]?.toLowerCase() ?? "";
   if (code === "cse") {
     const year = cleaned.replace(/^[a-z0-9]+\s*/i, "").trim();
-    return year ? `CSE ${year}` : "CSE";
+    return year ? `Civil Services ${year}` : "Civil Services (CSE)";
   }
   if (GATE_PAPER_NAME[code]) {
     const year = cleaned.replace(/^[a-z0-9]+\s*/i, "").trim();

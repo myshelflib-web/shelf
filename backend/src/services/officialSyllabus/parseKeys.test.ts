@@ -7,15 +7,16 @@ import {
 describe("parseOfficialSyllabusKey", () => {
   it("maps dedicated prefix keys to an exam subject", () => {
     const parsed = parseOfficialSyllabusKey(
-      "admin/official-syllabus/upsc/cse-2026/source.pdf"
+      "admin/official-syllabus/upsc/cse/cse-2026/source.pdf"
     );
     expect(parsed).toMatchObject({
       studyGoal: "UPSC",
       subjectSlug: "official-syllabus-upsc",
       subjectName: "UPSC CSE",
-      topicSlug: "official",
+      topicSlug: "cse",
+      topicTitle: "Civil Services (CSE)",
       articleSlug: "cse-2026",
-      title: "CSE 2026",
+      title: "Civil Services 2026",
     });
     expect(
       parseOfficialSyllabusKey(
@@ -24,6 +25,17 @@ describe("parseOfficialSyllabusKey", () => {
     ).toMatchObject({
       title: "Computer Science 2026",
       topicTitle: "Computer Science",
+    });
+    expect(
+      parseOfficialSyllabusKey(
+        "admin/official-syllabus/gate/ese/ese-2026/source.pdf"
+      )
+    ).toMatchObject({
+      studyGoal: "GATE",
+      subjectSlug: "official-syllabus-gate",
+      topicSlug: "ese",
+      topicTitle: "Engineering Services (ESE)",
+      title: "Engineering Services 2026",
     });
   });
 
