@@ -93,60 +93,75 @@ export function HtmlHighlightLayer({
   }, [originRef]);
 
   const pointStrokes = highlights.filter((h) => h.position?.points?.length);
-  const rectStrokes = highlights.filter(
-    (h) =>
-      Boolean(h.position?.rects?.length) &&
-      !h.position?.points?.length &&
-      h.kind === "REGION"
+  const rectHighlights = highlights.filter(
+    (h) => Boolean(h.position?.rects?.length) && !h.position?.points?.length
   );
   const { w, h } = size;
   if (w < 1 || h < 1) return null;
 
   return (
-    <svg
-      aria-hidden
-      width={w}
-      height={h}
-      viewBox={`0 0 ${w} ${h}`}
-      className={`absolute top-0 left-0 ${
-        eraseMode || (draftPoints && draftPoints.length > 1) ? "z-[3]" : "z-0"
-      }`}
-      style={{ pointerEvents: "none", overflow: "visible" }}
-    >
-      {pointStrokes.map((hl) => (
-        <StrokeMark
-          key={strokeReactKey(hl)}
-          highlight={hl}
-          d={pathFromNorm(hl.position!.points!, w, h)}
-          width={hl.position?.width ?? DEFAULT_PEN_WIDTH}
-          eraseMode={eraseMode}
-          onActivate={onActivate}
-        />
-      ))}
-      {rectStrokes.flatMap((hl) =>
-        strokePointsFromRects(hl.position!.rects ?? []).map((pts, i) => (
+    <>
+      <svg
+        aria-hidden
+        width={w}
+        height={h}
+        viewBox={`0 0 ${w} ${h}`}
+        className={`absolute top-0 left-0 ${
+          eraseMode || (draftPoints && draftPoints.length > 1) ? "z-[3]" : "z-0"
+        }`}
+        style={{ pointerEvents: "none", overflow: "visible" }}
+      >
+        {pointStrokes.map((hl) => (
           <StrokeMark
-            key={strokeReactKey(hl, `-r${i}`)}
+            key={strokeReactKey(hl)}
             highlight={hl}
-            d={pathFromNorm(pts, w, h)}
-            width={hl.position?.width ?? XS_WIDTH}
+            d={pathFromNorm(hl.position!.points!, w, h)}
+            width={hl.position?.width ?? DEFAULT_PEN_WIDTH}
             eraseMode={eraseMode}
             onActivate={onActivate}
           />
+        ))}
+        {draftPoints && draftPoints.length > 1 ? (
+          <path
+            d={pathFromNorm(draftPoints, w, h)}
+            fill="none"
+            stroke={penStroke(draftColor, draftOpacity)}
+            strokeWidth={htmlStrokePx(draftWidth)}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="html-pen-stroke"
+          />
+        ) : null}
+      </svg>
+      {rectHighlights.flatMap((hl) =>
+        (hl.position!.rects ?? []).map((r, idx) => (
+          <div
+            key={strokeReactKey(hl, `-r${idx}`)}
+            role="button"
+            tabIndex={0}
+            title={
+              hl.note?.trim()
+                ? `Note: ${hl.note}`
+                : "Click for highlight options"
+            }
+            className={`pdf-highlight-overlay highlight-${hl.color || "yellow"}${
+              hl.note?.trim() ? " has-note" : ""
+            }`}
+            style={{
+              left: `${r.x * 100}%`,
+              top: `${r.y * 100}%`,
+              width: `${r.w * 100}%`,
+              height: `${r.h * 100}%`,
+              pointerEvents: "auto",
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onActivate(hl, e.clientX, e.clientY);
+            }}
+          />
         ))
       )}
-      {draftPoints && draftPoints.length > 1 ? (
-        <path
-          d={pathFromNorm(draftPoints, w, h)}
-          fill="none"
-          stroke={penStroke(draftColor, draftOpacity)}
-          strokeWidth={htmlStrokePx(draftWidth)}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="html-pen-stroke"
-        />
-      ) : null}
-    </svg>
+    </>
   );
 }
 
