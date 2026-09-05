@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ThinkingIndicator } from "@/components/GreetingAccent";
 import type { QuizSummary } from "@/lib/quiz/types";
 import { DIFFICULTY_LABELS, quizHref } from "@/lib/quiz/href";
 
@@ -15,9 +16,19 @@ const STATUS: Record<string, string> = {
 
 export function QuizHistory({
   quizzes,
+  loading = false,
 }: {
   quizzes: QuizSummary[];
+  loading?: boolean;
 }) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <ThinkingIndicator label="Loading past quizzes" />
+      </div>
+    );
+  }
+
   if (quizzes.length === 0) {
     return (
       <p className="text-[13px] text-[var(--text-muted)]">

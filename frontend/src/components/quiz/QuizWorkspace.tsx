@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
-import { LivelyLine } from "@/components/LivelyLine";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { useAuth } from "@/hooks/useAuth";
 import { quizApi } from "@/lib/quiz/api";
@@ -29,6 +28,7 @@ export function QuizWorkspace({
   const { user, loading: authLoading, refreshUser } = useAuth();
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [history, setHistory] = useState<QuizSummary[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(!quizId);
   const [error, setError] = useState("");
   const [retrying, setRetrying] = useState(false);
   const [proctorNotice, setProctorNotice] = useState<string | null>(null);
@@ -40,10 +40,22 @@ export function QuizWorkspace({
 
   useEffect(() => {
     if (!user || quizId) return;
+    let cancelled = false;
+    setHistoryLoading(true);
     void quizApi
       .list()
-      .then(({ quizzes }) => setHistory(quizzes))
-      .catch(() => {});
+      .then(({ quizzes }) => {
+        if (!cancelled) setHistory(quizzes);
+      })
+      .catch(() => {
+        if (!cancelled) setHistory([]);
+      })
+      .finally(() => {
+        if (!cancelled) setHistoryLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [user, quizId]);
 
   const applyQuiz = useCallback(
@@ -143,7 +155,7 @@ export function QuizWorkspace({
             <div className="flex-1 min-h-0 overflow-hidden">
               {homeTab === "past" ? (
                 <div className="h-full min-h-0 overflow-y-auto">
-                  <QuizHistory quizzes={history} />
+                  <QuizHistory quizzes={history} loading={historyLoading} />
                 </div>
               ) : (
                 <QuizSetup launch={launch} />

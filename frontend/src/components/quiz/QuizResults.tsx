@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { QuizQuestionCard } from "./QuizQuestionCard";
 import { QuizAnalysisBoard } from "./QuizAnalysisBoard";
 import type { Quiz } from "@/lib/quiz/types";
 import { quizBtnGhost } from "@/lib/quiz/ui";
-import Link from "next/link";
 
 export function QuizResults({
   quiz,
@@ -28,7 +29,8 @@ export function QuizResults({
           <p className="page-subtitle mt-1 truncate">{quiz.title}</p>
         </div>
         <Link href="/quiz?tab=past" className={quizBtnGhost}>
-          Past quizzes
+          <ArrowLeft className="w-3.5 h-3.5" aria-hidden />
+          Back
         </Link>
       </div>
       {notice && (
