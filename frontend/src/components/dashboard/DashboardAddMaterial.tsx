@@ -1,12 +1,10 @@
 "use client";
 
 import { Upload } from "lucide-react";
-import { DashboardAddMaterialSkeleton } from "@/components/dashboard/DashboardSkeletons";
 import { useAddContent } from "@/components/my-content/MyContentAddProvider";
 
-export function DashboardAddMaterial({ loading = false }: { loading?: boolean }) {
+export function DashboardAddMaterial() {
   const { openAdd } = useAddContent();
-  if (loading) return <DashboardAddMaterialSkeleton />;
 
   return (
     <div className="mt-2.5 flex items-center">

@@ -7,6 +7,7 @@ import {
   WORKSPACE_CHANGED_EVENT,
   WORKSPACE_STORAGE_KEY,
 } from "@/components/my-content/reader/types";
+import { clearDashboardHomeSession } from "@/lib/dashboardHomeSeed";
 import { adoptUnkeyedReadingStats } from "@/lib/readingStats";
 import { clearPdfByteCache } from "@/lib/pdfByteCache";
 import { clearPdfDeleteUndos } from "@/lib/pdfDeleteUndo";
@@ -78,6 +79,7 @@ export function clearAccountLocalState(): Promise<void> {
   try {
     wipeLocalAccountKeys();
     wipeSessionAccountKeys();
+    clearDashboardHomeSession();
     window.dispatchEvent(new Event(WORKSPACE_CHANGED_EVENT));
     window.dispatchEvent(new Event("shelf:reading-stats-changed"));
     window.dispatchEvent(new Event("shelf:reading-goal-changed"));

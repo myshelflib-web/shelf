@@ -22,6 +22,12 @@ import { SHELF_CONTENT_CHANGED } from "@/lib/contentEvents";
 import { pickNextUpTasks } from "@/lib/dashboardNextUp";
 import { getReadingStats } from "@/lib/readingStats";
 import {
+  DASHBOARD_RECENT_NOTEBOOKS,
+  pickRecentNotebooks,
+  rememberDashboardHome,
+  seedDashboardHome,
+} from "@/lib/dashboardHomeSeed";
+import {
   getLastRead,
   getRecentNotebookReads,
   getTabViewState,
@@ -29,8 +35,6 @@ import {
   LastRead,
 } from "@/lib/tabViewState";
 import { StudyTask, UserPageSummary, UserSubject } from "@/types";
-
-const RECENT_NOTEBOOKS = 3;
 
 async function resolveRecentNotebooks(
   listed: UserSubject[]
@@ -46,7 +50,7 @@ async function resolveRecentNotebooks(
             typeof slug === "string" && slug.length > 0 && !bySlug.has(slug)
         )
     ),
-  ].slice(0, RECENT_NOTEBOOKS);
+  ].slice(0, DASHBOARD_RECENT_NOTEBOOKS);
 
   const fetched = await Promise.all(
     missing.map((slug) =>
@@ -60,41 +64,23 @@ async function resolveRecentNotebooks(
     if (nb) bySlug.set(nb.slug, nb);
   }
 
-  const ordered: UserSubject[] = [];
-  const used = new Set<string>();
-  for (const read of recent) {
-    const slug = read.notebookSlug;
-    if (!slug || used.has(slug)) continue;
-    const nb = bySlug.get(slug);
-    if (!nb) continue;
-    ordered.push(nb);
-    used.add(slug);
-    if (ordered.length >= RECENT_NOTEBOOKS) return ordered;
-  }
-  for (const s of listed) {
-    if (used.has(s.slug)) continue;
-    ordered.push(s);
-    used.add(s.slug);
-    if (ordered.length >= RECENT_NOTEBOOKS) break;
-  }
-  return ordered;
+  return pickRecentNotebooks([...bySlug.values()]);
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [listed, setListed] = useState<UserSubject[]>([]);
-  const [rootPages, setRootPages] = useState<UserPageSummary[]>([]);
-  const [notebookTotal, setNotebookTotal] = useState(0);
-  const [recentNotebooks, setRecentNotebooks] = useState<UserSubject[]>([]);
-  const [lastRead, setLastRead] = useState<LastRead | null>(null);
-  const [tasks, setTasks] = useState<StudyTask[]>([]);
-  const [bootLoading, setBootLoading] = useState(true);
-  const [reading, setReading] = useState({
-    streak: 0,
-    todaySeconds: 0,
-    activeDates: [] as string[],
-  });
+  const [seed] = useState(() => seedDashboardHome());
+  const [listed, setListed] = useState<UserSubject[]>(seed.listed);
+  const [rootPages, setRootPages] = useState<UserPageSummary[]>(seed.rootPages);
+  const [notebookTotal, setNotebookTotal] = useState(seed.notebookTotal);
+  const [recentNotebooks, setRecentNotebooks] = useState<UserSubject[]>(
+    seed.recentNotebooks
+  );
+  const [lastRead, setLastRead] = useState<LastRead | null>(seed.lastRead);
+  const [tasks, setTasks] = useState<StudyTask[]>(seed.tasks);
+  const [fetching, setFetching] = useState(true);
+  const [reading, setReading] = useState(seed.reading);
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
@@ -110,34 +96,61 @@ export default function DashboardPage() {
     if (lastRes.status === "fulfilled") {
       hydrateLastReads(lastRes.value);
     }
-    setLastRead(getLastRead() ?? getRecentNotebookReads()[0] ?? null);
+    const nextLastRead =
+      getLastRead() ?? getRecentNotebookReads()[0] ?? null;
+    setLastRead(nextLastRead);
 
-    if (taskRes.status === "fulfilled") {
-      setTasks(taskRes.value);
-    } else {
-      setTasks([]);
-    }
+    const nextTasks = taskRes.status === "fulfilled" ? taskRes.value : [];
+    setTasks(nextTasks);
+
+    let nextListed: UserSubject[] = [];
+    let nextRootPages: UserPageSummary[] = [];
+    let nextTotal = 0;
+    let nextRecent: UserSubject[] = [];
 
     if (libraryRes.status === "fulfilled") {
       const res = libraryRes.value;
-      setListed(res.subjects);
-      setRootPages(res.rootPages ?? []);
-      setNotebookTotal(res.total);
-      setRecentNotebooks(res.subjects.slice(0, RECENT_NOTEBOOKS));
-      void resolveRecentNotebooks(res.subjects).then(setRecentNotebooks);
+      nextListed = res.subjects;
+      nextRootPages = res.rootPages ?? [];
+      nextTotal = res.total;
+      nextRecent = pickRecentNotebooks(res.subjects);
+      setListed(nextListed);
+      setRootPages(nextRootPages);
+      setNotebookTotal(nextTotal);
+      setRecentNotebooks(nextRecent);
+      void resolveRecentNotebooks(res.subjects).then((resolved) => {
+        setRecentNotebooks(resolved);
+        rememberDashboardHome({
+          listed: nextListed,
+          rootPages: nextRootPages,
+          notebookTotal: nextTotal,
+          recentNotebooks: resolved,
+          lastRead: nextLastRead,
+          tasks: nextTasks,
+        });
+      });
     } else {
       setListed([]);
       setRootPages([]);
       setNotebookTotal(0);
       setRecentNotebooks([]);
     }
+
+    rememberDashboardHome({
+      listed: nextListed,
+      rootPages: nextRootPages,
+      notebookTotal: nextTotal,
+      recentNotebooks: nextRecent,
+      lastRead: nextLastRead,
+      tasks: nextTasks,
+    });
   }, []);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
     void loadHome().finally(() => {
-      if (!cancelled) setBootLoading(false);
+      if (!cancelled) setFetching(false);
     });
     const onChange = () => {
       void loadHome();
@@ -171,8 +184,11 @@ export default function DashboardPage() {
 
   const nextUp = useMemo(() => pickNextUpTasks(tasks), [tasks]);
   const hasLibrary = notebookTotal > 0 || rootPages.length > 0;
-  const isFirstTime =
-    !bootLoading && !hasLibrary && !lastRead && nextUp.total === 0;
+  const emptySoFar = !hasLibrary && !lastRead && nextUp.total === 0;
+  const isFirstTime = emptySoFar && !fetching;
+  /** Seeded or confirmed library/continue/tasks — never flash full-page skeletons. */
+  const showReturning = !emptySoFar;
+  const coldEmpty = emptySoFar && fetching;
 
   const continueNotebookName = lastRead?.notebookSlug
     ? recentNotebooks.find((n) => n.slug === lastRead.notebookSlug)?.name ??
@@ -211,9 +227,8 @@ export default function DashboardPage() {
                 className="text-[13px] text-[var(--text-muted)] mt-1.5"
               />
             </div>
-            {(bootLoading || !isFirstTime) && (
+            {showReturning && (
               <DashboardMetricsPills
-                loading={bootLoading}
                 readingSeconds={reading.todaySeconds}
                 streak={reading.streak}
               />
@@ -222,9 +237,7 @@ export default function DashboardPage() {
 
           <div className="mb-4 shrink-0">
             <DashboardAskBar />
-            {(bootLoading || !isFirstTime) && (
-              <DashboardAddMaterial loading={bootLoading} />
-            )}
+            {showReturning && <DashboardAddMaterial />}
           </div>
 
           {isFirstTime ? (
@@ -232,25 +245,25 @@ export default function DashboardPage() {
               <DashboardStarter />
               <DashboardNextUp items={[]} remaining={0} />
             </div>
+          ) : coldEmpty ? (
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-5">
+              <DashboardContinue loading />
+              <DashboardNextUp loading items={[]} remaining={0} />
+              <DashboardNotebooks loading notebooks={[]} />
+            </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-5">
               <DashboardContinue
-                loading={bootLoading}
                 lastRead={lastRead}
                 notebookName={continueNotebookName}
                 pdfPage={continuePdfPage}
               />
               <DashboardNextUp
-                loading={bootLoading}
                 items={nextUp.items}
                 remaining={nextUp.remaining}
               />
-              <DashboardNotebooks
-                loading={bootLoading}
-                notebooks={recentNotebooks}
-              />
+              <DashboardNotebooks notebooks={recentNotebooks} />
               <DashboardAchievements
-                loading={bootLoading}
                 streak={reading.streak}
                 activeDays={reading.activeDates.length}
                 hasLibrary={hasLibrary}

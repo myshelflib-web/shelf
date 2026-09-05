@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import { Clock, Flame, Share2 } from "lucide-react";
-import { DashboardMetricsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 import { StudyShareLauncher } from "@/components/study-share/StudyShareLauncher";
 
 function formatReadingToday(seconds: number): string {
@@ -42,14 +41,10 @@ function MetricPill({
 export function DashboardMetricsPills({
   readingSeconds,
   streak,
-  loading = false,
 }: {
   readingSeconds: number;
   streak: number;
-  loading?: boolean;
 }) {
-  if (loading) return <DashboardMetricsSkeleton />;
-
   return (
     <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
       <MetricPill

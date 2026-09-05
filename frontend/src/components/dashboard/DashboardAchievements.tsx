@@ -12,7 +12,6 @@ import {
   Trophy,
   Zap,
 } from "lucide-react";
-import { DashboardAchievementsSkeleton } from "@/components/dashboard/DashboardSkeletons";
 import {
   AchievementId,
   dashboardAchievementState,
@@ -33,12 +32,10 @@ export function DashboardAchievements({
   streak,
   activeDays,
   hasLibrary,
-  loading = false,
 }: {
   streak: number;
   activeDays: number;
   hasLibrary: boolean;
-  loading?: boolean;
 }) {
   const rows = useMemo(
     () =>
@@ -50,8 +47,6 @@ export function DashboardAchievements({
     [streak, activeDays, hasLibrary]
   );
   const earned = rows.filter((r) => r.earned).length;
-
-  if (loading) return <DashboardAchievementsSkeleton />;
 
   return (
     <section className="shrink-0">
