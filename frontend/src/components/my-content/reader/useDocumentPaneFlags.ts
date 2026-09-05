@@ -1,8 +1,11 @@
-import { useCallback } from "react";
+import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { api } from "@/lib/api";
 import { updatePageProgress } from "@/lib/offline/progress";
-import { requireOnline } from "@/lib/offline/notice";
+import { notifyActionError, requireOnline } from "@/lib/offline/notice";
 import { syncPageInTree } from "@/lib/myContentTree";
+import { emitPageFlags } from "@/lib/contentEvents";
+import { patchLibraryCachePageFlags } from "@/lib/offline/library";
+import { toUserFacingError } from "@/lib/userFacingError";
 import type { UserSubject } from "@/types";
 import type { LoadedPage } from "./DocumentPane";
 
@@ -11,6 +14,25 @@ type SignInGate = {
   prompt: (feature: string) => void;
 };
 
+function applyFlagsLocally(
+  pageId: string,
+  flags: { completed?: boolean; starred?: boolean },
+  setPageData: Dispatch<SetStateAction<LoadedPage | null>>,
+  onNotebookPatch: (
+    updater: (prev: UserSubject | null) => UserSubject | null
+  ) => void,
+  isPreloaded: boolean
+) {
+  setPageData((prev) => (prev ? { ...prev, ...flags } : prev));
+  if (!isPreloaded) {
+    onNotebookPatch((prev) =>
+      prev ? syncPageInTree([prev], pageId, flags)[0] : prev
+    );
+    emitPageFlags(pageId, flags);
+    patchLibraryCachePageFlags(pageId, flags);
+  }
+}
+
 export function useDocumentPaneFlags({
   pageData,
   setPageData,
@@ -18,7 +40,7 @@ export function useDocumentPaneFlags({
   signInGate,
 }: {
   pageData: LoadedPage | null;
-  setPageData: (page: LoadedPage) => void;
+  setPageData: Dispatch<SetStateAction<LoadedPage | null>>;
   onNotebookPatch: (
     updater: (prev: UserSubject | null) => UserSubject | null
   ) => void;
@@ -31,31 +53,40 @@ export function useDocumentPaneFlags({
     }
     if (!pageData) return;
     const completed = !pageData.completed;
-    const previous = pageData;
-    setPageData({ ...pageData, completed });
-    if (!pageData.isPreloaded) {
-      onNotebookPatch((prev) =>
-        prev ? syncPageInTree([prev], pageData.id, { completed })[0] : prev
-      );
-    }
+    const previous = pageData.completed;
+    const pageId = pageData.id;
+    const isPreloaded = Boolean(pageData.isPreloaded);
+
+    applyFlagsLocally(
+      pageId,
+      { completed },
+      setPageData,
+      onNotebookPatch,
+      isPreloaded
+    );
+
     try {
-      if (pageData.isPreloaded) {
+      if (isPreloaded) {
         if (!requireOnline("Mark as complete")) throw new Error("offline");
-        await api.progress.update(pageData.id, { completed });
+        await api.progress.update(pageId, { completed });
       } else {
-        await updatePageProgress(pageData.id, { completed });
+        await updatePageProgress(pageId, { completed });
       }
-    } catch {
-      setPageData(previous);
-      if (!previous.isPreloaded) {
-        onNotebookPatch((prev) =>
-          prev
-            ? syncPageInTree([prev], previous.id, {
-                completed: previous.completed,
-              })[0]
-            : prev
-        );
-      }
+    } catch (err) {
+      applyFlagsLocally(
+        pageId,
+        { completed: previous },
+        setPageData,
+        onNotebookPatch,
+        isPreloaded
+      );
+      if (err instanceof Error && err.message === "offline") return;
+      notifyActionError(
+        toUserFacingError(
+          err instanceof Error ? err.message : "",
+          "Couldn't update mark done. Try again."
+        )
+      );
     }
   }, [pageData, onNotebookPatch, signInGate, setPageData]);
 
@@ -66,29 +97,45 @@ export function useDocumentPaneFlags({
     }
     if (!pageData || !requireOnline("Star files")) return;
     const starred = !pageData.starred;
-    const previous = pageData;
-    setPageData({ ...pageData, starred });
-    if (!pageData.isPreloaded) {
-      onNotebookPatch((prev) =>
-        prev ? syncPageInTree([prev], pageData.id, { starred })[0] : prev
-      );
-    }
+    const previous = pageData.starred;
+    const pageId = pageData.id;
+    const isPreloaded = Boolean(pageData.isPreloaded);
+
+    applyFlagsLocally(
+      pageId,
+      { starred },
+      setPageData,
+      onNotebookPatch,
+      isPreloaded
+    );
+
     try {
-      const { starred: next } = pageData.isPreloaded
-        ? await api.progress.toggleStar(pageData.id)
-        : await api.myContent.toggleStar(pageData.id);
-      setPageData({ ...pageData, starred: next });
-    } catch {
-      setPageData(previous);
-      if (!previous.isPreloaded) {
-        onNotebookPatch((prev) =>
-          prev
-            ? syncPageInTree([prev], previous.id, {
-                starred: previous.starred,
-              })[0]
-            : prev
+      const { starred: next } = isPreloaded
+        ? await api.progress.toggleStar(pageId)
+        : await api.myContent.toggleStar(pageId);
+      if (next !== starred) {
+        applyFlagsLocally(
+          pageId,
+          { starred: next },
+          setPageData,
+          onNotebookPatch,
+          isPreloaded
         );
       }
+    } catch (err) {
+      applyFlagsLocally(
+        pageId,
+        { starred: previous },
+        setPageData,
+        onNotebookPatch,
+        isPreloaded
+      );
+      notifyActionError(
+        toUserFacingError(
+          err instanceof Error ? err.message : "",
+          "Couldn't update star. Try again."
+        )
+      );
     }
   }, [pageData, onNotebookPatch, signInGate, setPageData]);
 

@@ -3,6 +3,7 @@ import { getStoredUserId } from "@/lib/accountLocalState";
 import { isCacheFresh } from "@/lib/cacheTtl";
 import { applyBulkDeleteToTree } from "@/lib/explorerBulkDeleteTree";
 import type { buildBulkDeletePayload } from "@/lib/explorerSelection";
+import { syncPageInTree, syncRootPages } from "@/lib/myContentTree";
 import type { UserPageSummary, UserSubject } from "@/types";
 import { type LibraryCache, OFFLINE_STORES, withStore } from "./db";
 import { isOnline } from "./network";
@@ -190,6 +191,32 @@ export async function patchLibraryCacheAfterDelete(
     subjects: next.subjects,
     rootPages: next.rootPages,
     cachedAt: nextCachedAt,
+  });
+}
+
+/** Keep memory + IDB library rows in sync after optimistic star / mark-done. */
+export function patchLibraryCachePageFlags(
+  pageId: string,
+  flags: { completed?: boolean; starred?: boolean }
+): void {
+  if (!memoryLibrary) return;
+  const subjects = syncPageInTree(memoryLibrary.subjects, pageId, flags);
+  const rootPages = syncRootPages(memoryLibrary.rootPages, pageId, flags);
+  rememberLibrary(
+    {
+      ...memoryLibrary,
+      subjects,
+      rootPages,
+    },
+    memoryLibrary.cachedAt
+  );
+  const userId = getStoredUserId();
+  if (!userId) return;
+  void putLibraryCache({
+    userId,
+    subjects,
+    rootPages,
+    cachedAt: memoryLibrary.cachedAt,
   });
 }
 

@@ -1,6 +1,7 @@
 import { isOnline } from "./network";
 
 export const OFFLINE_NOTICE_EVENT = "shelf:offline-notice";
+export const ACTION_ERROR_EVENT = "shelf:action-error";
 
 export function offlineFeatureMessage(feature?: string): string {
   if (feature) {
@@ -13,6 +14,14 @@ export function notifyOffline(feature?: string): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(
     new CustomEvent(OFFLINE_NOTICE_EVENT, { detail: { feature: feature ?? null } }),
+  );
+}
+
+/** Toast a short failure after an optimistic UI rollback (star, mark done, …). */
+export function notifyActionError(message: string): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(
+    new CustomEvent(ACTION_ERROR_EVENT, { detail: { message } }),
   );
 }
 

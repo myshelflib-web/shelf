@@ -2,12 +2,6 @@
 
 import { NotebookSort, UserSubject, UserPageSummary } from "@/types";
 import {
-  insertPageInTree,
-  insertTopicInTree,
-  syncPageInTree,
-  syncRootPages,
-} from "@/lib/myContentTree";
-import {
   ChevronLeft,
   ChevronRight,
   FolderOpen,
@@ -26,16 +20,14 @@ import { SharePageModal } from "@/components/my-content/SharePageModal";
 import { MyContentExplorerTree } from "@/components/my-content/MyContentExplorerTree";
 import { BulkDeleteModal } from "@/components/my-content/BulkDeleteModal";
 import {
-  buildBulkDeletePayload,
   buildSelectionLabels,
-  pageSelectionKey,
   type ExplorerSelectionKey,
 } from "@/lib/explorerSelection";
-import { applyBulkDeleteToTree } from "@/lib/explorerBulkDeleteTree";
 import {
   mergeExplorerTreeWithPending,
   applyPendingDeletesToSubjects,
 } from "@/lib/pendingExplorerDeletes";
+import { applyExplorerContentChange } from "@/lib/explorerContentChange";
 import { useExplorerMoves } from "@/components/my-content/useExplorerMoves";
 import { useAddContent } from "@/components/my-content/MyContentAddProvider";
 import { useExplorerDeletes } from "@/components/my-content/useExplorerDeletes";
@@ -247,104 +239,15 @@ export function MyContentSidebar({
   useEffect(() => {
     load();
     const onChange = (e: Event) => {
-      const change = contentChangeFromEvent(e);
-      if (change?.type === "notebook-created") {
-        setSubjects((prev) =>
-          prev.some((s) => s.id === change.subject.id)
-            ? prev
-            : [change.subject, ...prev]
-        );
-        setTotalNotebooks((n) => n + 1);
-        setExpandedNotebooks((prev) => ({
-          ...prev,
-          [change.subject.slug]: true,
-        }));
-      } else if (change?.type === "topic-created") {
-        setSubjects((prev) =>
-          insertTopicInTree(
-            prev,
-            change.notebookId,
-            change.topicGroup,
-            change.parentTopicId
-          )
-        );
-        setPinnedExtra((prev) =>
-          insertTopicInTree(
-            prev,
-            change.notebookId,
-            change.topicGroup,
-            change.parentTopicId
-          )
-        );
-        setExpandedNotebooks((prev) => ({
-          ...prev,
-          [change.notebookSlug]: true,
-        }));
-        if (change.parentTopicSlug) {
-          const tKey = `${change.notebookSlug}:${change.parentTopicSlug}`;
-          setExpandedTopics((prev) => ({ ...prev, [tKey]: true }));
-        }
-      } else if (change?.type === "page-created") {
-        if (change.notebookId) {
-          setSubjects((prev) =>
-            insertPageInTree(
-              prev,
-              change.page,
-              change.notebookId,
-              change.topicId
-            )
-          );
-          setPinnedExtra((prev) =>
-            insertPageInTree(
-              prev,
-              change.page,
-              change.notebookId,
-              change.topicId
-            )
-          );
-        } else {
-          setRootPages((prev) =>
-            prev.some((p) => p.id === change.page.id)
-              ? prev
-              : [change.page, ...prev]
-          );
-        }
-        if (change.notebookSlug) {
-          setExpandedNotebooks((prev) => ({
-            ...prev,
-            [change.notebookSlug as string]: true,
-          }));
-        }
-        if (change.notebookSlug && change.topicSlug) {
-          setExpandedTopics((prev) => ({
-            ...prev,
-            [`${change.notebookSlug}:${change.topicSlug}`]: true,
-          }));
-        }
-      } else if (change?.type === "page-renamed") {
-        setRootPages((prev) =>
-          syncRootPages(prev, change.pageId, { title: change.title })
-        );
-        setSubjects((prev) =>
-          syncPageInTree(prev, change.pageId, { title: change.title })
-        );
-        setPinnedExtra((prev) =>
-          syncPageInTree(prev, change.pageId, { title: change.title })
-        );
-      } else if (change?.type === "page-deleted") {
-        const payload = buildBulkDeletePayload(
-          new Set([pageSelectionKey(change.pageId)])
-        );
-        setSubjects((s) => applyBulkDeleteToTree(payload, s, []).subjects);
-        setPinnedExtra((p) =>
-          applyBulkDeleteToTree(payload, p, []).subjects
-        );
-        setRootPages((r) =>
-          applyBulkDeleteToTree(payload, [], r).rootPages
-        );
-      } else {
-        load({ silent: true });
-      }
+      applyExplorerContentChange(contentChangeFromEvent(e), {
+        setSubjects,
+        setPinnedExtra,
+        setRootPages,
+        setExpandedNotebooks,
+        setExpandedTopics,
+        setTotalNotebooks,
+        reloadSilent: () => load({ silent: true }),
+      });
     };
     window.addEventListener(SHELF_CONTENT_CHANGED, onChange);
     return () => window.removeEventListener(SHELF_CONTENT_CHANGED, onChange);

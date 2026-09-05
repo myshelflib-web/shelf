@@ -69,6 +69,9 @@ export function LibraryEmptyWorkspace() {
     load();
     const onChange = (e: Event) => {
       const change = contentChangeFromEvent(e);
+      if (change?.type === "page-flags" || change?.type === "page-renamed") {
+        return;
+      }
       if (
         change?.type === "notebook-created" ||
         change?.type === "page-created"

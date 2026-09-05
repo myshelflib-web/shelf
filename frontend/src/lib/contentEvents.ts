@@ -35,6 +35,12 @@ export type ContentChange =
       title: string;
     }
   | {
+      type: "page-flags";
+      pageId: string;
+      completed?: boolean;
+      starred?: boolean;
+    }
+  | {
       type: "page-deleted";
       pageId: string;
     };
@@ -55,6 +61,13 @@ export function emitContentChanged(detail?: ContentChange) {
 
 export function emitPageRenamed(pageId: string, title: string) {
   emitContentChanged({ type: "page-renamed", pageId, title });
+}
+
+export function emitPageFlags(
+  pageId: string,
+  flags: { completed?: boolean; starred?: boolean }
+) {
+  emitContentChanged({ type: "page-flags", pageId, ...flags });
 }
 
 export function emitPageDeleted(pageId: string) {

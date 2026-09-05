@@ -199,6 +199,13 @@ export function ReaderWorkspace({
             ? syncPageInTree([prev], change.pageId, { title: change.title })[0]
             : prev
         );
+      } else if (change?.type === "page-flags") {
+        const patch: { completed?: boolean; starred?: boolean } = {};
+        if (change.completed !== undefined) patch.completed = change.completed;
+        if (change.starred !== undefined) patch.starred = change.starred;
+        setNotebook((prev) =>
+          prev ? syncPageInTree([prev], change.pageId, patch)[0] : prev
+        );
       } else {
         load();
       }
