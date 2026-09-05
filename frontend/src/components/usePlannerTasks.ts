@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type SetStateAction } from "react";
 import {
   createTask,
   deleteTask,
   listTasks,
+  peekCachedTasks,
   peekLocalTasks,
+  rememberTasks,
   updateTask,
   type TaskWriteInput,
 } from "@/lib/offline/tasks";
@@ -40,37 +42,66 @@ export function usePlannerTasks(
   to: Date,
   motion: CardMotionApi
 ) {
-  const [tasks, setTasks] = useState<StudyTask[]>([]);
-  const [tasksLoading, setTasksLoading] = useState(true);
+  const fromIso = from.toISOString();
+  const toIso = to.toISOString();
+  const seeded = peekCachedTasks(fromIso, toIso);
+  const [tasks, setTasksState] = useState<StudyTask[]>(() => seeded ?? []);
+  const [tasksLoading, setTasksLoading] = useState(() => seeded == null);
   const progress = useDeleteProgressOptional();
 
-  const loadTasks = useCallback((opts?: { silent?: boolean }) => {
-    const silent = opts?.silent === true;
-    if (!silent) setTasksLoading(true);
-    const fromIso = from.toISOString();
-    const toIso = to.toISOString();
-    let settled = false;
-    void peekLocalTasks(fromIso, toIso).then((cached) => {
-      if (settled || cached.length === 0) return;
-      setTasks(cached);
-      if (!silent) setTasksLoading(false);
-    });
-    listTasks(fromIso, toIso)
-      .then((next) => {
-        settled = true;
-        setTasks(next);
-      })
-      .catch(() => {
-        settled = true;
-      })
-      .finally(() => {
-        if (!silent) setTasksLoading(false);
+  const setTasks = useCallback(
+    (next: SetStateAction<StudyTask[]>) => {
+      setTasksState((prev) => {
+        const resolved = typeof next === "function" ? next(prev) : next;
+        rememberTasks(fromIso, toIso, resolved);
+        return resolved;
       });
-  }, [from, to]);
+    },
+    [fromIso, toIso]
+  );
+
+  const loadTasks = useCallback(
+    (opts?: { silent?: boolean }) => {
+      const cached = peekCachedTasks(fromIso, toIso);
+      const silent = opts?.silent === true || cached != null;
+      if (cached) {
+        setTasksState(cached);
+        setTasksLoading(false);
+      } else if (!silent) {
+        setTasksLoading(true);
+      }
+
+      let settled = false;
+      void peekLocalTasks(fromIso, toIso).then((local) => {
+        if (settled || local.length === 0) return;
+        setTasksState(local);
+        setTasksLoading(false);
+      });
+      listTasks(fromIso, toIso)
+        .then((next) => {
+          settled = true;
+          setTasksState(next);
+        })
+        .catch(() => {
+          settled = true;
+        })
+        .finally(() => setTasksLoading(false));
+    },
+    [fromIso, toIso]
+  );
 
   useEffect(() => {
-    loadTasks();
-  }, [loadTasks]);
+    // Range changed: paint memory cache instantly when we have it.
+    const cached = peekCachedTasks(fromIso, toIso);
+    if (cached) {
+      setTasksState(cached);
+      setTasksLoading(false);
+      loadTasks({ silent: true });
+      return;
+    }
+    setTasksState([]);
+    loadTasks({ silent: false });
+  }, [fromIso, toIso, loadTasks]);
 
   const toggleDone = async (task: StudyTask) => {
     const next = !task.completed;

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkey } from "@/hooks/useHotkeys";
-import { listSubjects } from "@/lib/offline/library";
+import { listSubjects, peekCachedLibrary } from "@/lib/offline/library";
 import { StudyItemKind, StudyTask, UserSubject } from "@/types";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import {
@@ -61,7 +61,9 @@ export function StudyCalendar({
   const [cursor, setCursor] = useState(() =>
     startOfLocalDay(initialCursorProp ?? new Date())
   );
-  const [fetchedLibrary, setFetchedLibrary] = useState<UserSubject[]>([]);
+  const [fetchedLibrary, setFetchedLibrary] = useState<UserSubject[]>(
+    () => peekCachedLibrary()?.subjects ?? []
+  );
   const [formKind, setFormKind] = useState<StudyItemKind>("TASK");
   const [title, setTitle] = useState("");
   const [dueAt, setDueAt] = useState("");
@@ -328,12 +330,6 @@ export function StudyCalendar({
 
   return (
     <section className="relative h-full min-h-0 flex flex-col overflow-hidden">
-      {tasksLoading && tasks.length === 0 && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[10px] bg-[var(--bg-primary)]/70 backdrop-blur-[1px]">
-          <CircleLoader size="md" label="Loading planner" />
-        </div>
-      )}
-
       <div className="shrink-0 mb-3 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2 flex flex-wrap items-center gap-2">
         <button type="button" onClick={() => shift(-1)} className="p-1.5 rounded-lg border border-[var(--border)]" aria-label="Previous">
           <ChevronLeft className="w-4 h-4" />
@@ -349,6 +345,11 @@ export function StudyCalendar({
           <ChevronRight className="w-4 h-4" />
         </button>
         <p className="text-[13px] font-semibold ml-1">{label}</p>
+        {tasksLoading && tasks.length === 0 && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] ml-1">
+            <CircleLoader size="sm" label="Loading" />
+          </span>
+        )}
         <div className="flex-1" />
         <div className="flex gap-1 p-0.5 rounded-lg bg-[var(--bg-primary)]">
           {(["week", "month"] as const).map((v) => (

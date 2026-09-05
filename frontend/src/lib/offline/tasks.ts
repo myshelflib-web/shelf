@@ -24,6 +24,7 @@ import {
   taskInRange,
   toLocalTask,
 } from "./taskMerge";
+import { isCacheFresh } from "@/lib/cacheTtl";
 
 export type TaskWriteInput = {
   title: string;
@@ -37,6 +38,36 @@ export type TaskWriteInput = {
   recurUntil?: string | null;
   completed?: boolean;
 };
+
+type TasksMemoryEntry = { tasks: StudyTask[]; cachedAt: number };
+
+const tasksMemory = new Map<string, TasksMemoryEntry>();
+
+function tasksRangeKey(from?: string, to?: string) {
+  return `${from ?? ""}|${to ?? ""}`;
+}
+
+/** Sync in-memory snapshot for instant planner remounts. */
+export function peekCachedTasks(from?: string, to?: string): StudyTask[] | null {
+  const key = tasksRangeKey(from, to);
+  const hit = tasksMemory.get(key);
+  if (!hit || !isCacheFresh(hit.cachedAt)) {
+    if (hit) tasksMemory.delete(key);
+    return null;
+  }
+  return hit.tasks;
+}
+
+export function rememberTasks(
+  from: string | undefined,
+  to: string | undefined,
+  tasks: StudyTask[]
+) {
+  tasksMemory.set(tasksRangeKey(from, to), {
+    tasks,
+    cachedAt: Date.now(),
+  });
+}
 
 function newLocalId(): string {
   return `local-${crypto.randomUUID()}`;
@@ -123,7 +154,9 @@ export async function peekLocalTasks(
   const userId = getStoredUserId();
   if (!userId) return [];
   const local = await readLocalTasksForOffline(userId);
-  return mergeTaskLists([], local).filter((t) => taskInRange(t, from, to));
+  const filtered = mergeTaskLists([], local).filter((t) => taskInRange(t, from, to));
+  if (filtered.length > 0) rememberTasks(from, to, filtered);
+  return filtered;
 }
 
 export async function listTasks(from?: string, to?: string): Promise<StudyTask[]> {
@@ -137,7 +170,9 @@ export async function listTasks(from?: string, to?: string): Promise<StudyTask[]
       await touchOfflineMeta(offlineMetaKey("tasks", userId));
       const freshLocal = await readAllLocalTasks(userId);
       const merged = mergeTaskLists(tasks, freshLocal);
-      return merged.filter((t) => taskInRange(t, from, to));
+      const filtered = merged.filter((t) => taskInRange(t, from, to));
+      rememberTasks(from, to, filtered);
+      return filtered;
     } catch (err) {
       if (!isNetworkError(err)) throw err;
     }
@@ -145,7 +180,9 @@ export async function listTasks(from?: string, to?: string): Promise<StudyTask[]
 
   const local = await readLocalTasksForOffline(userId);
   const merged = mergeTaskLists([], local);
-  return merged.filter((t) => taskInRange(t, from, to));
+  const filtered = merged.filter((t) => taskInRange(t, from, to));
+  rememberTasks(from, to, filtered);
+  return filtered;
 }
 
 export async function createTask(data: TaskWriteInput): Promise<StudyTask> {
