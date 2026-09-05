@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Upload, X } from "lucide-react";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import type { StudyGoal } from "@/types";
 import type { QuizSourceKind } from "@/lib/quiz/types";
@@ -54,6 +54,7 @@ export function QuizSourceModal({
   const [draftSourceText, setDraftSourceText] = useState<string>(sourceText);
   const [draftPaper, setDraftPaper] = useState<string>(pyqPaper);
   const [draftYears, setDraftYears] = useState<string>(pyqYears);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const subjectOptions = useMemo(
     () => pyqSubjectsForGoal(studyGoal),
@@ -186,25 +187,53 @@ export function QuizSourceModal({
 
           {sourceKind === "UPLOAD" && (
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-[11px] text-[var(--text-muted)]">
-                Upload document
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] text-[var(--text-muted)]">
+                  Upload document
+                </span>
                 <input
+                  ref={fileInputRef}
                   type="file"
                   accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain"
                   disabled={busy}
-                  className="mt-0.5 block w-full text-[12px] text-[var(--text-secondary)] file:mr-3 file:inline-flex file:h-8 file:cursor-pointer file:items-center file:rounded-lg file:border file:border-[var(--border)] file:bg-[var(--bg-secondary)] file:px-3 file:text-[12px] file:font-medium file:text-[var(--text-primary)] hover:file:border-[var(--accent)]/40 disabled:opacity-50"
+                  className="sr-only"
                   onChange={(e) => setDraftFile(e.target.files?.[0] ?? null)}
                 />
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={quizBtnPrimary}
+                  >
+                    <Upload className="w-3.5 h-3.5" aria-hidden />
+                    {draftFile ? "Change file" : "Choose file"}
+                  </button>
+                  {draftFile ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        setDraftFile(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }}
+                      className={quizBtnGhost}
+                      aria-label="Remove file"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
                 {draftFile ? (
-                  <span className="mt-1.5 block text-[12px] text-[var(--accent)] truncate">
+                  <p className="text-[12px] text-[var(--text-primary)] truncate">
                     {draftFile.name}
-                  </span>
+                  </p>
                 ) : (
-                  <span className="mt-1.5 block text-[12px] text-[var(--text-muted)]">
+                  <p className="text-[12px] text-[var(--text-muted)]">
                     PDF, TXT, or Markdown
-                  </span>
+                  </p>
                 )}
-              </label>
+              </div>
               <label className="block text-[11px] text-[var(--text-muted)]">
                 Or paste notes
                 <textarea
