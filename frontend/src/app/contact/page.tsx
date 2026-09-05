@@ -28,7 +28,7 @@ export default function ContactPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
-      <main className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-16 sm:py-20 max-w-2xl mx-auto w-full">
+      <main className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-16 sm:py-20 max-w-4xl mx-auto w-full">
         <RevealOnScroll>
           <p className="text-sm font-medium text-[var(--accent)] mb-3 tracking-wide uppercase">
             Contact
@@ -42,7 +42,7 @@ export default function ContactPage() {
           </p>
         </RevealOnScroll>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 items-stretch">
           <RevealOnScroll delay={60} className="h-full">
             <div className="feature-card h-full p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] flex flex-col justify-center gap-2">
               <div className="flex items-center gap-2.5">
