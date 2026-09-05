@@ -23,6 +23,7 @@ import { pickNextUpTasks } from "@/lib/dashboardNextUp";
 import { getReadingStats } from "@/lib/readingStats";
 import {
   DASHBOARD_RECENT_NOTEBOOKS,
+  peekDashboardHomeSession,
   pickRecentNotebooks,
   rememberDashboardHome,
   seedDashboardHome,
@@ -71,6 +72,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [seed] = useState(() => seedDashboardHome());
+  const [fromSession] = useState(() => Boolean(peekDashboardHomeSession()));
   const [listed, setListed] = useState<UserSubject[]>(seed.listed);
   const [rootPages, setRootPages] = useState<UserPageSummary[]>(seed.rootPages);
   const [notebookTotal, setNotebookTotal] = useState(seed.notebookTotal);
@@ -79,7 +81,8 @@ export default function DashboardPage() {
   );
   const [lastRead, setLastRead] = useState<LastRead | null>(seed.lastRead);
   const [tasks, setTasks] = useState<StudyTask[]>(seed.tasks);
-  const [fetching, setFetching] = useState(true);
+  /** First network home load finished (or session seed already painted it). */
+  const [homeReady, setHomeReady] = useState(fromSession);
   const [reading, setReading] = useState(seed.reading);
 
   useEffect(() => {
@@ -150,7 +153,7 @@ export default function DashboardPage() {
     if (!user) return;
     let cancelled = false;
     void loadHome().finally(() => {
-      if (!cancelled) setFetching(false);
+      if (!cancelled) setHomeReady(true);
     });
     const onChange = () => {
       void loadHome();
@@ -185,10 +188,15 @@ export default function DashboardPage() {
   const nextUp = useMemo(() => pickNextUpTasks(tasks), [tasks]);
   const hasLibrary = notebookTotal > 0 || rootPages.length > 0;
   const emptySoFar = !hasLibrary && !lastRead && nextUp.total === 0;
-  const isFirstTime = emptySoFar && !fetching;
-  /** Seeded or confirmed library/continue/tasks — never flash full-page skeletons. */
+  const isFirstTime = emptySoFar && homeReady;
+  /** Seeded or confirmed content — metrics / add material stay visible. */
   const showReturning = !emptySoFar;
-  const coldEmpty = emptySoFar && fetching;
+
+  // Network sections: skeleton only until first load when that slice has no seed.
+  const continueLoading = !homeReady && !lastRead;
+  const nextUpLoading = !homeReady && !fromSession;
+  const notebooksLoading =
+    !homeReady && recentNotebooks.length === 0 && !fromSession;
 
   const continueNotebookName = lastRead?.notebookSlug
     ? recentNotebooks.find((n) => n.slug === lastRead.notebookSlug)?.name ??
@@ -245,29 +253,30 @@ export default function DashboardPage() {
               <DashboardStarter />
               <DashboardNextUp items={[]} remaining={0} />
             </div>
-          ) : coldEmpty ? (
-            <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-5">
-              <DashboardContinue loading />
-              <DashboardNextUp loading items={[]} remaining={0} />
-              <DashboardNotebooks loading notebooks={[]} />
-            </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-hidden flex flex-col gap-5">
               <DashboardContinue
+                loading={continueLoading}
                 lastRead={lastRead}
                 notebookName={continueNotebookName}
                 pdfPage={continuePdfPage}
               />
               <DashboardNextUp
+                loading={nextUpLoading}
                 items={nextUp.items}
                 remaining={nextUp.remaining}
               />
-              <DashboardNotebooks notebooks={recentNotebooks} />
-              <DashboardAchievements
-                streak={reading.streak}
-                activeDays={reading.activeDates.length}
-                hasLibrary={hasLibrary}
+              <DashboardNotebooks
+                loading={notebooksLoading}
+                notebooks={recentNotebooks}
               />
+              {showReturning && (
+                <DashboardAchievements
+                  streak={reading.streak}
+                  activeDays={reading.activeDates.length}
+                  hasLibrary={hasLibrary}
+                />
+              )}
             </div>
           )}
         </div>
