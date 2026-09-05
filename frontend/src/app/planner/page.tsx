@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { getStoredUser } from "@/lib/api";
 import { listSubjects, peekCachedLibrary } from "@/lib/offline/library";
 import { UserSubject } from "@/types";
-import { ThinkingIndicator } from "@/components/GreetingAccent";
+import { ThinkingIndicator, GreetingDots } from "@/components/GreetingAccent";
 
 function PlannerShell({
   children,
@@ -28,7 +28,10 @@ function PlannerShell({
       <main className="flex-1 min-h-0 px-5 sm:px-6 py-5 max-w-[90rem] mx-auto w-full flex flex-col">
         <div className="shrink-0 mb-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="page-title">Planner</h1>
+            <h1 className="page-title">
+              Planner
+              <GreetingDots className="text-[var(--text-muted)]" />
+            </h1>
             <LivelyLine surface="planner" className="page-subtitle mt-1" />
           </div>
           {menu}

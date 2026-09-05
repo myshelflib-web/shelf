@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
-import { ThinkingIndicator } from "@/components/GreetingAccent";
+import { ThinkingIndicator, GreetingDots } from "@/components/GreetingAccent";
 import { useAuth } from "@/hooks/useAuth";
 import { quizApi } from "@/lib/quiz/api";
 import type { Quiz, QuizLaunch, QuizSummary } from "@/lib/quiz/types";
@@ -142,6 +142,7 @@ export function QuizWorkspace({
                 {homeTab === "past"
                   ? "Your Quiz History"
                   : "Test yourself on anything in your Shelf"}
+                <GreetingDots className="text-[var(--text-muted)]" />
               </h1>
               <p className="text-[12px] text-[var(--text-muted)] leading-relaxed max-w-[700px] mt-1.5">
                 {homeTab === "past"
