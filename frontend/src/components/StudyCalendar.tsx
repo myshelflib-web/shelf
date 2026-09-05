@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkey } from "@/hooks/useHotkeys";
-import { createTask, updateTask } from "@/lib/offline/tasks";
 import { listSubjects } from "@/lib/offline/library";
 import { StudyItemKind, StudyTask, UserSubject } from "@/types";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
@@ -16,16 +15,10 @@ import {
   PlannerWeekBoard,
 } from "@/components/PlannerBoardViews";
 import { PlannerTaskCard } from "@/components/PlannerTaskCard";
-import {
-  PlannerFlashToast,
-  shortPlannerTitle,
-} from "@/components/PlannerFlashToast";
+import { PlannerFlashToast } from "@/components/PlannerFlashToast";
 import { usePlannerDragDrop } from "@/components/usePlannerDragDrop";
+import { usePlannerCardMotion } from "@/components/usePlannerCardMotion";
 import { usePlannerTasks } from "@/components/usePlannerTasks";
-import {
-  runWithProgressUi,
-  useDeleteProgressOptional,
-} from "@/components/DeleteProgressProvider";
 import { localDateTimeAtNine } from "@/components/ui/ShelfDateTimeField";
 import { toUserFacingError } from "@/lib/userFacingError";
 import {
@@ -35,60 +28,36 @@ import {
   startOfLocalDay,
   startOfWeek,
 } from "@/lib/plannerBoard";
+import type { PlannerHeaderActions } from "@/components/PlannerHeaderMenu";
+import {
+  masterTaskId,
+  normalizeExternalUrl,
+  rangeForView,
+  taskHref,
+  toDateInput,
+  toLocalInput,
+  type PlannerView,
+} from "@/lib/plannerCalendarUtils";
 
-type View = "week" | "month";
-
-function masterId(id: string) {
-  return id.split("::")[0];
-}
-
-function rangeForView(view: View, cursor: Date): { from: Date; to: Date } {
-  if (view === "week") {
-    const from = startOfWeek(cursor);
-    return { from, to: addDays(from, 7) };
-  }
-  const from = startOfLocalDay(new Date(cursor.getFullYear(), cursor.getMonth(), 1));
-  const last = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0);
-  return { from, to: addDays(startOfLocalDay(last), 1) };
-}
-
-function toLocalInput(d: Date) {
-  const local = new Date(d);
-  local.setMinutes(local.getMinutes() - local.getTimezoneOffset());
-  return local.toISOString().slice(0, 16);
-}
-
-function toDateInput(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function normalizeExternalUrl(raw: string) {
-  const t = raw.trim();
-  if (!t) return null;
-  if (/^https?:\/\//i.test(t)) return t;
-  return `https://${t}`;
-}
-
-export function taskHref(task: StudyTask): string | null {
-  if (task.href) return task.href;
-  const a = task.article;
-  if (!a) return null;
-  return `/learn/${a.topic.subject.slug}/${a.topic.slug}/${a.slug}`;
-}
+export { taskHref } from "@/lib/plannerCalendarUtils";
 
 export function StudyCalendar({
   library: libraryProp,
   initialView = "week",
   initialCursor: initialCursorProp,
   initialEditTaskId,
+  actionsRef,
 }: {
   library?: UserSubject[];
-  initialView?: View | "day";
+  initialView?: PlannerView | "day";
   initialCursor?: Date;
   initialEditTaskId?: string | null;
+  actionsRef?: React.MutableRefObject<PlannerHeaderActions | null>;
 }) {
   const openedEdit = useRef(false);
-  const [view, setView] = useState<View>(initialView === "month" ? "month" : "week");
+  const [view, setView] = useState<PlannerView>(
+    initialView === "month" ? "month" : "week"
+  );
   const [cursor, setCursor] = useState(() =>
     startOfLocalDay(initialCursorProp ?? new Date())
   );
@@ -106,25 +75,30 @@ export function StudyCalendar({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [focusedDay, setFocusedDay] = useState<Date | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const progress = useDeleteProgressOptional();
 
+  const motion = usePlannerCardMotion();
   const { from, to } = useMemo(() => rangeForView(view, cursor), [view, cursor]);
-  const { tasks, setTasks, tasksLoading, loadTasks, toggleDone, remove } =
-    usePlannerTasks(from, to);
+  const {
+    tasks,
+    setTasks,
+    tasksLoading,
+    toggleDone,
+    createItem,
+    updateItem,
+    remove,
+  } = usePlannerTasks(from, to, motion);
   const {
     dropTarget,
     draggingId,
     dropError,
     clearDropError,
-    motionTaskId,
-    cardMotion,
     onDragStart,
     onDragEnd,
     enterDrop,
     allowDrop,
     leaveDrop,
     finishDrop,
-  } = usePlannerDragDrop(tasks, setTasks);
+  } = usePlannerDragDrop(tasks, setTasks, motion);
 
   const flashError = dropError ?? actionError;
   const clearFlashError = useCallback(() => {
@@ -202,6 +176,16 @@ export function StudyCalendar({
     setShowForm(true);
   };
 
+  if (actionsRef) {
+    actionsRef.current = {
+      onNewTask: () => openForm("TASK"),
+      onNewEvent: () => openForm("EVENT"),
+      onToday: () => setCursor(startOfLocalDay(new Date())),
+      onWeek: () => setView("week"),
+      onMonth: () => setView("month"),
+    };
+  }
+
   const calendarKeys = !showForm;
   useHotkey("n", () => openForm("TASK"), { enabled: calendarKeys });
   useHotkey("shift+n", () => openForm("EVENT"), { enabled: calendarKeys });
@@ -216,7 +200,7 @@ export function StudyCalendar({
       const h = task.href ?? "";
       const isEvent = task.kind === "EVENT";
       const linked = !isEvent ? pages.find((p) => p.href === h) : undefined;
-      setEditingId(task.seriesId || masterId(task.id));
+      setEditingId(task.seriesId || masterTaskId(task.id));
       setFormKind(isEvent ? "EVENT" : "TASK");
       setTitle(task.title);
       const start = task.seriesStart || task.dueAt;
@@ -238,7 +222,7 @@ export function StudyCalendar({
   useEffect(() => {
     if (openedEdit.current || !initialEditTaskId) return;
     const task = tasks.find(
-      (t) => t.id === initialEditTaskId || masterId(t.id) === initialEditTaskId
+      (t) => t.id === initialEditTaskId || masterTaskId(t.id) === initialEditTaskId
     );
     if (!task) return;
     fillFromTask(task);
@@ -264,9 +248,6 @@ export function StudyCalendar({
           ? new Date(`${recurUntil}T23:59:00`).toISOString()
           : null,
     };
-    const progressLabel = editing
-      ? `Saving “${shortPlannerTitle(name)}”…`
-      : `Creating “${shortPlannerTitle(name)}”…`;
 
     setTitle("");
     setHref("");
@@ -277,22 +258,9 @@ export function StudyCalendar({
     closeForm();
     clearFlashError();
 
-    const work = async () => {
-      if (editing) await updateTask(editing, payload);
-      else {
-        await createTask({
-          ...payload,
-          endsAt: payload.endsAt ?? undefined,
-          href: payload.href ?? undefined,
-        });
-      }
-      loadTasks({ silent: true });
-      window.dispatchEvent(new Event("shelf:tasks-changed"));
-    };
-
     try {
-      if (progress) await runWithProgressUi(progress, progressLabel, work);
-      else await work();
+      if (editing) await updateItem(editing, payload);
+      else await createItem(payload);
     } catch (err) {
       const fallback = editing
         ? "Couldn't save that item. Try again."
@@ -333,7 +301,7 @@ export function StudyCalendar({
       task={task}
       compact={compact}
       dragging={draggingId === task.id}
-      motion={motionTaskId === masterId(task.id) ? cardMotion : null}
+      motion={motion.motionTaskId === masterTaskId(task.id) ? motion.cardMotion : null}
       notebook={notebookMeta(task)}
       now={now}
       onDragStart={onDragStart}

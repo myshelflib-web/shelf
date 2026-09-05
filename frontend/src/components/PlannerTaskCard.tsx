@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import type { StudyTask } from "@/types";
 import { canDragItem, formatPlanTime } from "@/lib/plannerBoard";
-import type { PlannerCardMotion } from "@/components/usePlannerDragDrop";
+import type { PlannerCardMotion } from "@/components/usePlannerCardMotion";
 
 export function PlannerTaskCard({
   task,

@@ -10,41 +10,37 @@ import {
   moveDueToDay,
   moveEndsWithDue,
 } from "@/lib/plannerBoard";
+import type { usePlannerCardMotion } from "@/components/usePlannerCardMotion";
 
 function masterId(id: string) {
   return id.split("::")[0];
 }
 
-const EXIT_MS = 180;
-const ENTER_MS = 220;
 const ERROR_MS = 4500;
 
-export type PlannerCardMotion = "exit" | "enter" | null;
+type CardMotionApi = Pick<
+  ReturnType<typeof usePlannerCardMotion>,
+  "playExitSwapEnter"
+>;
+
+export type { PlannerCardMotion } from "@/components/usePlannerCardMotion";
 
 export function usePlannerDragDrop(
   tasks: StudyTask[],
-  setTasks: React.Dispatch<React.SetStateAction<StudyTask[]>>
+  setTasks: React.Dispatch<React.SetStateAction<StudyTask[]>>,
+  motion: CardMotionApi
 ) {
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropError, setDropError] = useState<string | null>(null);
-  const [motionTaskId, setMotionTaskId] = useState<string | null>(null);
-  const [cardMotion, setCardMotion] = useState<PlannerCardMotion>(null);
   const depthRef = useRef<Map<string, number>>(new Map());
-  const rollbackTimers = useRef<number[]>([]);
   const errorTimer = useRef<number | null>(null);
-
-  const clearRollbackTimers = useCallback(() => {
-    for (const id of rollbackTimers.current) window.clearTimeout(id);
-    rollbackTimers.current = [];
-  }, []);
 
   useEffect(() => {
     return () => {
-      clearRollbackTimers();
       if (errorTimer.current != null) window.clearTimeout(errorTimer.current);
     };
-  }, [clearRollbackTimers]);
+  }, []);
 
   const showDropError = useCallback((message: string) => {
     setDropError(message);
@@ -108,32 +104,6 @@ export function usePlannerDragDrop(
     depthRef.current.set(key, next);
   }, []);
 
-  const rollbackMove = useCallback(
-    (id: string, prevDue: string | null, prevEnd: string | null | undefined) => {
-      clearRollbackTimers();
-      setMotionTaskId(id);
-      setCardMotion("exit");
-
-      const t1 = window.setTimeout(() => {
-        setTasks((prev) =>
-          prev.map((t) =>
-            masterId(t.id) === id
-              ? { ...t, dueAt: prevDue, endsAt: prevEnd ?? null }
-              : t
-          )
-        );
-        setCardMotion("enter");
-        const t2 = window.setTimeout(() => {
-          setMotionTaskId(null);
-          setCardMotion(null);
-        }, ENTER_MS);
-        rollbackTimers.current.push(t2);
-      }, EXIT_MS);
-      rollbackTimers.current.push(t1);
-    },
-    [clearRollbackTimers, setTasks]
-  );
-
   const applyDrop = useCallback(
     (target: Date | "backlog", rawId: string) => {
       const task = tasks.find((t) => t.id === rawId);
@@ -171,10 +141,18 @@ export function usePlannerDragDrop(
               ? toUserFacingError(err.message, fallback)
               : fallback;
           showDropError(message);
-          rollbackMove(id, prevDue, prevEnd);
+          motion.playExitSwapEnter(id, () => {
+            setTasks((prev) =>
+              prev.map((t) =>
+                masterId(t.id) === id
+                  ? { ...t, dueAt: prevDue, endsAt: prevEnd ?? null }
+                  : t
+              )
+            );
+          });
         });
     },
-    [tasks, setTasks, resetDragUi, showDropError, rollbackMove]
+    [tasks, setTasks, resetDragUi, showDropError, motion]
   );
 
   const finishDrop = useCallback(
@@ -195,8 +173,6 @@ export function usePlannerDragDrop(
     draggingId,
     dropError,
     clearDropError,
-    motionTaskId,
-    cardMotion,
     onDragStart,
     onDragEnd,
     enterDrop,
