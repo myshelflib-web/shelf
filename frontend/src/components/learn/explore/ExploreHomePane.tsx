@@ -143,7 +143,7 @@ export function ExploreHomePane() {
                   <span className="explore-collection-mark" aria-hidden>
                     {subject.icon || subject.name.charAt(0).toUpperCase()}
                   </span>
-                  <span className="min-w-0">
+                  <span className="min-w-0 flex-1">
                     <span className="explore-collection-title">{subject.name}</span>
                     <span className="explore-collection-meta">
                       {collectionMeta(subject)}

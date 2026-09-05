@@ -86,7 +86,8 @@ export function ExploreSidebarHomeTree({
       <div className="mt-1">
         <p className="explore-side-label">Browse</p>
         <Link href="/learn/current-affairs" className="explore-side-row">
-          <Newspaper className="w-4 h-4 text-[var(--accent)] shrink-0" />
+          <span className="explore-side-chevron" aria-hidden />
+          <Newspaper className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
           <span className="min-w-0 flex-1 truncate">Live current affairs</span>
         </Link>
         {browseAreas.map((area) => (
@@ -361,6 +362,7 @@ function TopicBranch({
                   isActive && "explore-side-row-active"
                 )}
               >
+                <span className="explore-side-chevron" aria-hidden />
                 <FileText className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)]" />
                 <span className="min-w-0 flex-1 truncate">{article.title}</span>
                 {article.isPremium && !isPremium ? (

@@ -209,7 +209,7 @@ export function Header() {
             className="app-header-logo flex items-center gap-2.5 shrink-0 hover:opacity-90 transition-opacity"
           >
             <ShelfLogo size={26} />
-            <span className="font-semibold text-[17px] tracking-tight text-[var(--text-primary)]">
+            <span className="font-semibold text-[17px] leading-none tracking-tight text-[var(--text-primary)]">
               Shelf
             </span>
           </Link>

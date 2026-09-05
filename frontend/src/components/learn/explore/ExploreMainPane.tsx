@@ -305,7 +305,7 @@ function ExploreHomeContent({
                 <span className="explore-collection-mark" aria-hidden>
                   {s.icon || s.name.charAt(0).toUpperCase()}
                 </span>
-                <span className="min-w-0">
+                <span className="min-w-0 flex-1">
                   <span className="explore-collection-title">{s.name}</span>
                   <span className="explore-collection-meta">
                     {collectionMeta(s)}

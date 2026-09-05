@@ -45,7 +45,7 @@ export function ExploreHeroSearch({
             }
           }}
           placeholder={placeholder}
-          className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
+          className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm leading-none text-[var(--text-primary)] placeholder:text-[var(--text-muted)]"
         />
         {scopeLabel ? (
           <span className="explore-hero-scope">{scopeLabel}</span>

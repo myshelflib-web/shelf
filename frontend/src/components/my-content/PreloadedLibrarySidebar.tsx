@@ -227,7 +227,7 @@ export function PreloadedLibrarySidebar({
             compact
           />
         ) : studyGoal !== "GENERAL" && !isScopedCollection ? (
-          <p className="text-[11px] text-[var(--text-muted)] px-1">
+          <p className="text-xs leading-snug text-[var(--text-muted)] px-1">
             {STUDY_GOAL_LABELS[studyGoal]} curriculum
           </p>
         ) : null}
@@ -239,7 +239,7 @@ export function PreloadedLibrarySidebar({
             placeholder={
               isScopedCollection ? "Search this collection…" : "Search preloaded…"
             }
-            className="w-full pl-8 pr-3 py-1.5 rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+            className="w-full h-8 pl-8 pr-3 rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] text-xs leading-none text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
           />
         </div>
       </div>

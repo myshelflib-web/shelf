@@ -26,7 +26,7 @@ export function ExploreAreaIcon({
 }) {
   const box =
     size === "sm"
-      ? "w-6 h-6 rounded-md"
+      ? "w-[1.375rem] h-[1.375rem] rounded-md"
       : "w-8 h-8 rounded-[9px]";
   const icon = size === "sm" ? "w-3 h-3" : "w-4 h-4";
 

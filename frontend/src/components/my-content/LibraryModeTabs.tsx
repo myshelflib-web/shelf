@@ -42,7 +42,7 @@ export function LibraryModeTabs({
             aria-selected={active}
             onClick={() => onChange(tab.id)}
             className={clsx(
-              "flex-1 px-2.5 py-1 rounded-[8px] text-[12px] font-medium transition",
+              "flex-1 inline-flex items-center justify-center h-7 px-2.5 rounded-[8px] text-[12px] font-medium leading-none transition",
               active
                 ? "bg-[var(--bg-elevated)] text-[var(--text-primary)] shadow-sm"
                 : "text-[var(--text-muted)] hover:text-[var(--text-secondary)]"

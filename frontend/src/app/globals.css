@@ -1966,6 +1966,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 
 .app-header-logo {
   min-width: 0;
+  align-items: center;
 }
 
 .app-header-menu-slot {

@@ -219,12 +219,7 @@ export function ExploreSidebarBrowse({
     ) : null;
 
   return (
-    <div className="px-1.5 pb-2">
-      <p className="px-1.5 pb-2 text-sm font-semibold text-[var(--text-primary)]">
-        Explore
-      </p>
-      <div className="h-px bg-[var(--border-subtle)] -mx-1.5 mb-2" />
-
+    <div className="pb-2">
       {mode === "collection" && activeSubject ? (
         collectionBody ?? (
           <p className="px-1.5 text-xs text-[var(--text-muted)]">

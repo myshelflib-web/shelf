@@ -52,7 +52,7 @@ export function ExploreAreaContent({
             <ChevronRight className="w-3 h-3" aria-hidden />
             <span className="text-[var(--text-secondary)]">{area.title}</span>
           </nav>
-          <h1 className="page-title mt-2">{area.title}</h1>
+          <h1 className="page-title">{area.title}</h1>
           <p className="page-subtitle mt-2 max-w-2xl">{area.description}</p>
         </div>
       </header>
@@ -104,7 +104,7 @@ export function ExploreAreaContent({
                   <span className="explore-collection-mark" aria-hidden>
                     {subject.icon || subject.name.charAt(0).toUpperCase()}
                   </span>
-                  <span className="min-w-0">
+                  <span className="min-w-0 flex-1">
                     <span className="explore-collection-title">{subject.name}</span>
                     <span className="explore-collection-meta">
                       {collectionMeta(subject)}
