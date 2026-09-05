@@ -9,11 +9,36 @@ export function isHtmlTextHighlight(h: UserContentHighlight): boolean {
   return h.endOffset > h.startOffset;
 }
 
-/** Text marks painted in the article (not highlighter pen strokes). */
+/** Offset-only fallback. Rect / stroke highlights stay out of the article DOM. */
 export function isWrappedTextHighlight(h: UserContentHighlight): boolean {
   if (h.position?.points?.length) return false;
+  if (h.position?.rects?.length) return false;
   if (h.position?.tool === "highlight") return false;
   return isHtmlTextHighlight(h);
+}
+
+/** Hit a saved line box or pen stroke (normalized to the article wrap). */
+export function highlightFromClientPoint(
+  clientX: number,
+  clientY: number,
+  origin: HTMLElement,
+  highlights: UserContentHighlight[]
+): UserContentHighlight | null {
+  const live = window.getSelection();
+  if (live && !live.isCollapsed) return null;
+  const box = origin.getBoundingClientRect();
+  if (box.width < 1 || box.height < 1) return null;
+  const x = (clientX - box.left) / box.width;
+  const y = (clientY - box.top) / box.height;
+  for (let i = highlights.length - 1; i >= 0; i -= 1) {
+    const h = highlights[i]!;
+    for (const r of h.position?.rects ?? []) {
+      if (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h) {
+        return h;
+      }
+    }
+  }
+  return null;
 }
 
 export function textHighlightFromEvent(

@@ -2,13 +2,19 @@
 
 import { useLayoutEffect, useState, type MutableRefObject } from "react";
 import type { UserContentHighlight } from "@/types";
-import { DEFAULT_PEN_WIDTH } from "@/lib/straightenStroke";
+import { DEFAULT_PEN_WIDTH, PEN_WIDTHS } from "@/lib/straightenStroke";
 import { strokePointsFromRects } from "./htmlPageSelection";
 import { isInkHighlight, penStroke } from "./pdfViewerHelpers";
 
-/** Map PDF page-fraction widths to a thin HTML marker (XS ≈ 7px, L ≈ 16px). */
+const XS_WIDTH = PEN_WIDTHS.find((s) => s.id === "xs")?.width ?? 0.0016;
+
+/** Vertical thickness in CSS px — covers most of a body-text line, not a thin underline. */
+const HTML_STROKE_PX = { xs: 16, s: 18, m: 20, l: 22 } as const;
+
 function htmlStrokePx(width: number): number {
-  return Math.round(Math.min(18, Math.max(6, width * 2800)));
+  const preset = PEN_WIDTHS.find((s) => Math.abs(s.width - width) < 0.00015);
+  if (preset) return HTML_STROKE_PX[preset.id];
+  return Math.round(Math.min(22, Math.max(14, width * 2800)));
 }
 
 function pathFromNorm(
@@ -23,8 +29,9 @@ function pathFromNorm(
 }
 
 function isStrokeHighlight(h: UserContentHighlight): boolean {
-  return Boolean(h.position?.points?.length) ||
-    (h.position?.tool === "highlight" && Boolean(h.position.rects?.length));
+  return (
+    Boolean(h.position?.points?.length) || Boolean(h.position?.rects?.length)
+  );
 }
 
 export function hasHtmlStrokes(highlights: UserContentHighlight[]): boolean {
@@ -72,10 +79,7 @@ export function HtmlHighlightLayer({
 
   const pointStrokes = highlights.filter((h) => h.position?.points?.length);
   const rectStrokes = highlights.filter(
-    (h) =>
-      h.position?.tool === "highlight" &&
-      h.position.rects?.length &&
-      !h.position.points?.length
+    (h) => Boolean(h.position?.rects?.length) && !h.position?.points?.length
   );
   const { w, h } = size;
   if (w < 1 || h < 1) return null;
@@ -94,6 +98,7 @@ export function HtmlHighlightLayer({
           key={hl.id}
           highlight={hl}
           d={pathFromNorm(hl.position!.points!, w, h)}
+          width={hl.position?.width ?? DEFAULT_PEN_WIDTH}
           eraseMode={eraseMode}
           onActivate={onActivate}
         />
@@ -104,6 +109,7 @@ export function HtmlHighlightLayer({
             key={`${hl.id}-r${i}`}
             highlight={hl}
             d={pathFromNorm(pts, w, h)}
+            width={hl.position?.width ?? XS_WIDTH}
             eraseMode={eraseMode}
             onActivate={onActivate}
           />
@@ -127,11 +133,13 @@ export function HtmlHighlightLayer({
 function StrokeMark({
   highlight,
   d,
+  width,
   eraseMode,
   onActivate,
 }: {
   highlight: UserContentHighlight;
   d: string;
+  width: number;
   eraseMode: boolean;
   onActivate: (
     highlight: UserContentHighlight,
@@ -139,7 +147,7 @@ function StrokeMark({
     clientY: number
   ) => void;
 }) {
-  const px = htmlStrokePx(highlight.position?.width ?? DEFAULT_PEN_WIDTH);
+  const px = htmlStrokePx(width);
   return (
     <g
       style={{ pointerEvents: eraseMode ? "stroke" : "none" }}

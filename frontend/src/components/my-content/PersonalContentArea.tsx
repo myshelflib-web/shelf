@@ -14,7 +14,10 @@ import type { PersonalContentAreaProps } from "./personalContentAreaTypes";
 import { usePersonalContentSelection } from "./usePersonalContentSelection";
 import { useHtmlHighlightStroke } from "./useHtmlHighlightStroke";
 import { useHtmlTextHighlightPaint } from "./useHtmlTextHighlightPaint";
-import { textHighlightFromEvent } from "./htmlHighlightGeometry";
+import {
+  highlightFromClientPoint,
+  textHighlightFromEvent,
+} from "./htmlHighlightGeometry";
 import type { HtmlTextPick } from "./htmlPageSelection";
 import {
   persistHtmlHighlight,
@@ -433,8 +436,15 @@ export function PersonalContentArea({
             onClick={(e) => {
               if (clipMode || highlightMode || editing) return;
               const root = contentRootRef.current;
-              if (!root) return;
-              const hit = textHighlightFromEvent(e, root, highlights);
+              const origin = originRef.current;
+              if (!root || !origin) return;
+              const hit =
+                highlightFromClientPoint(
+                  e.clientX,
+                  e.clientY,
+                  origin,
+                  highlights
+                ) ?? textHighlightFromEvent(e, root, highlights);
               if (hit) onMarkActivate(hit, e.clientX, e.clientY);
             }}
             dangerouslySetInnerHTML={{ __html: fragment }}

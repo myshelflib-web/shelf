@@ -1,8 +1,13 @@
 import type { UserContentHighlight } from "@/types";
 import { createHighlight, deleteHighlight } from "@/lib/offline/highlights";
 import type { HighlightWriteInput } from "@/lib/offline/highlights";
+import { PEN_WIDTHS } from "@/lib/straightenStroke";
 import type { HtmlTextPick } from "./htmlPageSelection";
 
+const TEXT_HIGHLIGHT_WIDTH =
+  PEN_WIDTHS.find((s) => s.id === "xs")?.width ?? 0.0016;
+
+/** Select → color: same XS horizontal marker the PDF highlighter uses. */
 export function textHighlightDraft(
   userTopicId: string,
   sel: HtmlTextPick,
@@ -19,7 +24,11 @@ export function textHighlightDraft(
     note: note ?? null,
     kind: "TEXT",
     position: {
+      type: "pen",
+      tool: "highlight",
       rects: sel.position.rects,
+      width: TEXT_HIGHLIGHT_WIDTH,
+      opacity: 0.72,
     },
   };
 }

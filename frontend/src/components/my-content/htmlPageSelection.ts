@@ -45,9 +45,12 @@ export function captureHtmlTextSelection(
   if (text.length < 2) return null;
   const range = sel.getRangeAt(0);
   if (!contentRoot.contains(range.commonAncestorContainer)) return null;
+  const clientRects = range.getClientRects();
   const rects = normRectsFromClient(
     origin.getBoundingClientRect(),
-    range.getClientRects()
+    clientRects.length
+      ? clientRects
+      : [range.getBoundingClientRect()]
   );
   if (!rects.length) return null;
 
