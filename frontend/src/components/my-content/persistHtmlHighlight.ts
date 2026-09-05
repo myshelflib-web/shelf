@@ -7,9 +7,7 @@ export function textHighlightDraft(
   userTopicId: string,
   sel: HtmlTextPick,
   color: string,
-  note: string | undefined,
-  width: number,
-  opacity: number
+  note?: string
 ): UserContentHighlight {
   return {
     id: `tmp-${crypto.randomUUID()}`,
@@ -21,11 +19,7 @@ export function textHighlightDraft(
     note: note ?? null,
     kind: "TEXT",
     position: {
-      type: "pen",
-      tool: "highlight",
       rects: sel.position.rects,
-      width,
-      opacity,
     },
   };
 }

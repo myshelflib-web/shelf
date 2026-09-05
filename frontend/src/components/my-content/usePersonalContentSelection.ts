@@ -6,7 +6,7 @@ import {
   type HtmlTextPick,
 } from "./htmlPageSelection";
 
-/** PDF text-tool mouseup: capture the native selection, then apply it. */
+/** Pointer tool: keep the native selection and open the color menu. */
 export function usePersonalContentSelection(opts: {
   editing: boolean;
   readOnly: boolean;

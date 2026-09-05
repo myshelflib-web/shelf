@@ -13,6 +13,8 @@ import { deleteHighlight } from "@/lib/offline/highlights";
 import type { PersonalContentAreaProps } from "./personalContentAreaTypes";
 import { usePersonalContentSelection } from "./usePersonalContentSelection";
 import { useHtmlHighlightStroke } from "./useHtmlHighlightStroke";
+import { useHtmlTextHighlightPaint } from "./useHtmlTextHighlightPaint";
+import { textHighlightFromEvent } from "./htmlHighlightGeometry";
 import type { HtmlTextPick } from "./htmlPageSelection";
 import {
   persistHtmlHighlight,
@@ -85,15 +87,14 @@ export function PersonalContentArea({
   const contentRootRef = useRef<HTMLDivElement>(null);
   const originRef = useRef<HTMLDivElement>(null);
   const [contentEl, setContentEl] = useState<HTMLElement | null>(null);
-  const [originEl, setOriginEl] = useState<HTMLElement | null>(null);
   const setContentRoot = useCallback((el: HTMLDivElement | null) => {
     contentRootRef.current = el;
     setContentEl(el);
   }, []);
   const setOrigin = useCallback((el: HTMLDivElement | null) => {
     originRef.current = el;
-    setOriginEl(el);
   }, []);
+  useHtmlTextHighlightPaint(editing ? null : contentEl, highlights);
   useEffect(() => {
     if (editing || !fragment.includes("preloaded-official-fallback")) return;
     const root = containerRef.current;
@@ -248,26 +249,7 @@ export function PersonalContentArea({
     }
     const sel = selectionRef.current ?? selection;
     if (!sel) return;
-    const already = highlightsRef.current.find(
-      (h) =>
-        !note &&
-        h.startOffset === sel.startOffset &&
-        h.endOffset === sel.endOffset &&
-        h.endOffset > h.startOffset
-    );
-    if (already) {
-      selectionRef.current = null;
-      setSelection(null);
-      return already;
-    }
-    const optimistic = textHighlightDraft(
-      userTopicId,
-      sel,
-      color,
-      note,
-      highlightWidth,
-      highlightOpacity
-    );
+    const optimistic = textHighlightDraft(userTopicId, sel, color, note);
     persistHtmlHighlight({
       optimistic,
       payload: {
@@ -326,10 +308,8 @@ export function PersonalContentArea({
 
   const onTextPick = (pick: HtmlTextPick) => {
     selectionRef.current = pick;
-    const created = saveHighlight(preferredHighlightColorId);
     setActiveHighlight(null);
     setSelection(pick);
-    if (created) selectionRef.current = pick;
   };
 
   const { handleMouseUp } = usePersonalContentSelection({
@@ -438,11 +418,16 @@ export function PersonalContentArea({
           <div
             ref={setContentRoot}
             className="prose-content personal-content select-text"
+            onClick={(e) => {
+              if (clipMode || highlightMode || editing) return;
+              const root = contentRootRef.current;
+              if (!root) return;
+              const hit = textHighlightFromEvent(e, root, highlights);
+              if (hit) onMarkActivate(hit, e.clientX, e.clientY);
+            }}
             dangerouslySetInnerHTML={{ __html: fragment }}
           />
           <HtmlHighlightLayer
-            contentEl={contentEl}
-            originEl={originEl}
             highlights={highlights}
             drawLocked={highlightMode || clipMode}
             draftPoints={draft}

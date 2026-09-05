@@ -255,6 +255,22 @@
   cursor: text;
 }
 
+::highlight(shelf-hl-yellow) {
+  background-color: var(--highlight-yellow);
+}
+::highlight(shelf-hl-green) {
+  background-color: var(--highlight-green);
+}
+::highlight(shelf-hl-blue) {
+  background-color: var(--highlight-blue);
+}
+::highlight(shelf-hl-pink) {
+  background-color: var(--highlight-pink);
+}
+::highlight(shelf-hl-orange) {
+  background-color: #e59866;
+}
+
 .prose-content mark.highlight-yellow {
   background-color: var(--highlight-yellow);
 }
@@ -1468,6 +1484,11 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   position: relative;
   -webkit-user-select: text;
   user-select: text;
+}
+
+.personal-content ::selection {
+  background: color-mix(in srgb, var(--highlight-yellow) 50%, transparent);
+  color: inherit;
 }
 
 .html-article-pen-mode {
