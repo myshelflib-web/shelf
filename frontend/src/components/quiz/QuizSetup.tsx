@@ -3,14 +3,22 @@
 import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import type { ChatContextKind, StudyRelevancyDocSummary, UserSubject } from "@/types";
+import type { ChatContextKind, UserSubject } from "@/types";
 import { quizApi } from "@/lib/quiz/api";
 import type { QuizLaunch, QuizSourceKind } from "@/lib/quiz/types";
 import { DIFFICULTY_LABELS, quizHref } from "@/lib/quiz/href";
 import { quizBtnPrimary } from "@/lib/quiz/ui";
+import {
+  coercePyqPaper,
+  coercePyqYears,
+  defaultPyqPaper,
+  defaultPyqYears,
+} from "@/lib/quiz/pyqOptions";
 import { AnalyticsEvents, track } from "@/lib/analytics";
+import { useAuth } from "@/hooks/useAuth";
 import { type QuizScopeValue } from "./QuizScopeFields";
 import { QuizCustomizeModal, type CustomizeSettings } from "./QuizCustomizeModal";
+import { QuizProgressOverlay } from "./QuizProgressPanel";
 import { QuizSourceModal } from "./QuizSourceModal";
 
 function sourceFromLaunch(launch?: QuizLaunch): QuizSourceKind {
@@ -28,7 +36,7 @@ function scopeFromLaunch(launch?: QuizLaunch): QuizScopeValue {
     contextNotebookId: launch?.notebookId ?? "",
     contextTopicId: launch?.topicId ?? "",
     contextPageId: launch?.pageId ?? "",
-    relevancyDocId: launch?.relevancyDocId ?? "",
+    relevancyDocId: "",
   };
 }
 
@@ -52,6 +60,8 @@ const SOURCES: Array<{ id: QuizSourceKind; title: string; body: string }> = [
 
 export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
   const router = useRouter();
+  const { user } = useAuth();
+  const studyGoal = user?.studyGoal ?? null;
   const initial = useMemo(() => scopeFromLaunch(launch), [launch]);
   const [sourceKind, setSourceKind] = useState<QuizSourceKind>(() =>
     sourceFromLaunch(launch)
@@ -66,30 +76,31 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
   const [file, setFile] = useState<File | null>(null);
   const [sourceText, setSourceText] = useState("");
   const [busy, setBusy] = useState(false);
+  const [createStartedAt, setCreateStartedAt] = useState<number | null>(null);
   const [error, setError] = useState("");
 
-  // Previous year questions (PYQs) customization states
-  const [pyqPaper, setPyqPaper] = useState("Mechanical Engineering");
-  const [pyqYears, setPyqYears] = useState("Last 5 available years");
+  // Previous year questions (PYQs) — subjects/years follow study goal
+  const [pyqPaper, setPyqPaper] = useState(() => defaultPyqPaper(studyGoal));
+  const [pyqYears, setPyqYears] = useState(() => defaultPyqYears(studyGoal));
 
   // Popup Modal states
   const [customizeOpen, setCustomizeOpen] = useState(false);
   const [sourceModalOpen, setSourceModalOpen] = useState(false);
 
-  // Notebooks & docs list for display name resolution
+  // Notebooks list for display name resolution
   const [notebooks, setNotebooks] = useState<UserSubject[]>([]);
-  const [docs, setDocs] = useState<StudyRelevancyDocSummary[]>([]);
 
   useEffect(() => {
     void api.myContent
       .listSubjects({ pageSize: 100, sort: "name" })
       .then(({ subjects }) => setNotebooks(subjects))
       .catch(() => {});
-    void api.study
-      .listRelevancyDocs()
-      .then(({ docs: next }) => setDocs(next))
-      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    setPyqPaper((prev) => coercePyqPaper(studyGoal, prev));
+    setPyqYears((prev) => coercePyqYears(studyGoal, prev));
+  }, [studyGoal]);
 
   const [customizeSettings, setCustomizeSettings] = useState<CustomizeSettings>({
     questions: "10",
@@ -200,6 +211,7 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
       }
     }
     setBusy(true);
+    setCreateStartedAt(Date.now());
     setError("");
     try {
       const { quiz } = await quizApi.create({
@@ -213,7 +225,7 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
         contextNotebookId: scope.contextNotebookId || null,
         contextTopicId: scope.contextTopicId || null,
         contextPageId: scope.contextPageId || null,
-        relevancyDocId: scope.relevancyDocId || null,
+        relevancyDocId: null,
         focusTopic:
           sourceKind === "EXAM_BANK"
             ? `${pyqPaper} · ${pyqYears}${focus ? ` · ${focus}` : ""}`
@@ -237,8 +249,8 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
         phase: "create",
         error: message,
       });
-    } finally {
       setBusy(false);
+      setCreateStartedAt(null);
     }
   };
 
@@ -341,14 +353,8 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
       base = `My Library · ${kindLabel}`;
     }
 
-    if (scope.relevancyDocId) {
-      const docTitle = docs.find((d) => d.id === scope.relevancyDocId)?.title;
-      if (docTitle) {
-        base += ` · Syllabus: ${docTitle}`;
-      }
-    }
     return base;
-  }, [sourceKind, scope.contextKind, scope.relevancyDocId, file, sourceText, docs, pyqPaper, pyqYears]);
+  }, [sourceKind, scope.contextKind, file, sourceText, pyqPaper, pyqYears]);
 
   return (
     <>
@@ -569,10 +575,14 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
             disabled={busy}
             onClick={() => void start()}
           >
-            {busy ? "Starting…" : "Generate quiz"}
+            {busy ? "Creating…" : "Generate quiz"}
           </button>
         </div>
       </div>
+
+      {busy && createStartedAt ? (
+        <QuizProgressOverlay phase="creating" startedAt={createStartedAt} />
+      ) : null}
 
       {/* Customize overlay modal */}
       <QuizCustomizeModal
@@ -588,6 +598,7 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
         isOpen={sourceModalOpen}
         onClose={() => setSourceModalOpen(false)}
         sourceKind={sourceKind}
+        studyGoal={studyGoal}
         scope={scope}
         onScopeChange={setScope}
         file={file}

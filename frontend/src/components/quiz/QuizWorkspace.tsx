@@ -10,6 +10,7 @@ import type { Quiz, QuizLaunch, QuizSummary } from "@/lib/quiz/types";
 import { quizBtnGhost, quizBtnPrimary } from "@/lib/quiz/ui";
 import { QuizHistory } from "./QuizHistory";
 import { QuizHomeTabs } from "./QuizHomeTabs";
+import { QuizProgressPanel } from "./QuizProgressPanel";
 import { QuizResults } from "./QuizResults";
 import { QuizSetup } from "./QuizSetup";
 import { QuizTake } from "./QuizTake";
@@ -164,11 +165,12 @@ export function QuizWorkspace({
             </div>
           </>
         ) : generating ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3">
-            <ThinkingIndicator label="Writing an exam-level paper" />
-            <p className="text-[13px] text-[var(--text-muted)]">
-              Grounding in your syllabus and notes…
-            </p>
+          <div className="flex-1 flex flex-col items-center justify-center">
+            <QuizProgressPanel
+              phase="generating"
+              startedAt={quiz?.createdAt ?? null}
+              className="py-8"
+            />
           </div>
         ) : failed ? (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center">

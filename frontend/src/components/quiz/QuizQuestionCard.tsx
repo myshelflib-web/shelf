@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import type { QuizQuestion } from "@/lib/quiz/types";
-import { quizFieldClass } from "@/lib/quiz/ui";
+import { quizBtnGhost } from "@/lib/quiz/ui";
 import { QuizMarkdown } from "./QuizMarkdown";
 
 export function QuizQuestionCard({
@@ -111,19 +111,37 @@ export function QuizQuestionCard({
       )}
 
       {question.type !== "MCQ" && (
-        <div className="mt-3 space-y-3">
-          <textarea
-            rows={question.type === "IMAGE" ? 3 : 6}
-            disabled={disabled || reveal}
-            value={question.userAnswerText ?? ""}
-            onChange={(e) => onText(e.target.value)}
-            className={`${quizFieldClass} rounded-[12px] p-3 text-[12.5px]`}
-            placeholder={
-              question.type === "IMAGE"
-                ? "Optional notes. Use $...$ for math."
-                : "Type your answer. Use $...$ or $$...$$ for math."
-            }
-          />
+        <div className="mt-3 space-y-2.5">
+          <label className="block">
+            <span className="sr-only">
+              {question.type === "IMAGE" ? "Optional notes" : "Written answer"}
+            </span>
+            <textarea
+              rows={question.type === "IMAGE" ? 3 : 7}
+              disabled={disabled || reveal}
+              value={question.userAnswerText ?? ""}
+              onChange={(e) => onText(e.target.value)}
+              className="w-full min-h-[7.5rem] resize-y rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] px-3.5 py-3 text-[13px] sm:text-[14px] leading-relaxed text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-[border-color,box-shadow] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--ring)] disabled:opacity-60 disabled:cursor-not-allowed"
+              placeholder={
+                question.type === "IMAGE"
+                  ? "Add optional notes for your photo…"
+                  : "Write your answer here…"
+              }
+            />
+          </label>
+          {question.type === "WRITTEN" && !reveal && (
+            <p className="text-[11px] text-[var(--text-muted)] leading-snug">
+              Tip: use{" "}
+              <code className="rounded px-1 py-0.5 bg-[var(--bg-elevated)] border border-[var(--border)] text-[10px]">
+                $x^2$
+              </code>{" "}
+              for inline math, or{" "}
+              <code className="rounded px-1 py-0.5 bg-[var(--bg-elevated)] border border-[var(--border)] text-[10px]">
+                $$…$$
+              </code>{" "}
+              for a centered equation.
+            </p>
+          )}
           <div className="flex items-center gap-2.5">
             <input
               ref={fileRef}
@@ -143,7 +161,7 @@ export function QuizQuestionCard({
                 onFilePickerOpen?.();
                 fileRef.current?.click();
               }}
-              className="h-9 px-3.5 rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-secondary)] text-[12px] font-bold text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50 transition-colors"
+              className={quizBtnGhost}
             >
               {question.type === "IMAGE" ? "Upload answer photo" : "Upload working"}
             </button>
@@ -152,7 +170,7 @@ export function QuizQuestionCard({
               <img
                 src={question.userImageUrl}
                 alt="Your uploaded answer"
-                className="h-14 rounded-md border border-[var(--border)] object-cover shadow-sm"
+                className="h-14 w-14 rounded-[10px] border border-[var(--border)] object-cover"
               />
             )}
           </div>

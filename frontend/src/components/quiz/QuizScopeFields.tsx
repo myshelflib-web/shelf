@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
-import type { ChatContextKind, StudyRelevancyDocSummary, UserSubject } from "@/types";
+import type { ChatContextKind, UserSubject } from "@/types";
 import { quizFieldClass } from "@/lib/quiz/ui";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
 
@@ -11,6 +11,7 @@ export type QuizScopeValue = {
   contextNotebookId: string;
   contextTopicId: string;
   contextPageId: string;
+  /** Kept for API compatibility; quiz UI always uses study goal instead. */
   relevancyDocId: string;
 };
 
@@ -44,24 +45,17 @@ export function QuizScopeFields({
   value,
   onChange,
   disabled,
-  syllabusOnly = false,
 }: {
   value: QuizScopeValue;
   onChange: (next: QuizScopeValue) => void;
   disabled?: boolean;
-  syllabusOnly?: boolean;
 }) {
   const [notebooks, setNotebooks] = useState<UserSubject[]>([]);
-  const [docs, setDocs] = useState<StudyRelevancyDocSummary[]>([]);
 
   useEffect(() => {
     void api.myContent
       .listSubjects({ pageSize: 100, sort: "name" })
       .then(({ subjects }) => setNotebooks(subjects))
-      .catch(() => {});
-    void api.study
-      .listRelevancyDocs()
-      .then(({ docs: next }) => setDocs(next))
       .catch(() => {});
   }, []);
 
@@ -106,22 +100,15 @@ export function QuizScopeFields({
     [pages]
   );
 
-  const docOptions = useMemo(
-    () => [
-      { value: "", label: "None — use study goal + relevance" },
-      ...docs.map((d) => ({ value: d.id, label: d.title })),
-    ],
-    [docs]
-  );
+  const patch = (next: Partial<QuizScopeValue>) =>
+    onChange({ ...value, ...next, relevancyDocId: "" });
 
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      {!syllabusOnly && (
-      <>
-      <label className="text-[12px] font-medium text-[var(--text-secondary)]">
+      <label className="block text-[11px] text-[var(--text-muted)]">
         Scope
         <ShelfSelect
-          className={quizFieldClass}
+          className={`${quizFieldClass} mt-0.5`}
           disabled={disabled}
           value={value.contextKind}
           options={SCOPE_OPTIONS}
@@ -129,32 +116,32 @@ export function QuizScopeFields({
           onChange={(next) => {
             const contextKind = next as ChatContextKind;
             const nb = selectedNb ?? notebooks[0];
-            onChange({
+            patch({
               contextKind,
               contextNotebookId: contextKind === "LIBRARY" ? "" : nb?.id ?? "",
               contextTopicId:
                 contextKind === "TOPIC" ? nb?.topicGroups?.[0]?.id ?? "" : "",
               contextPageId:
                 contextKind === "PAGE"
-                  ? nb?.topicGroups?.[0]?.pages?.[0]?.id ?? nb?.pages?.[0]?.id ?? ""
+                  ? nb?.topicGroups?.[0]?.pages?.[0]?.id ??
+                    nb?.pages?.[0]?.id ??
+                    ""
                   : "",
-              relevancyDocId: value.relevancyDocId,
             });
           }}
         />
       </label>
       {value.contextKind !== "LIBRARY" && (
-        <label className="text-[12px] font-medium text-[var(--text-secondary)]">
+        <label className="block text-[11px] text-[var(--text-muted)]">
           Folder
           <ShelfSelect
-            className={quizFieldClass}
+            className={`${quizFieldClass} mt-0.5`}
             disabled={disabled}
             value={value.contextNotebookId}
             options={notebookOptions}
             aria-label="Folder"
             onChange={(contextNotebookId) =>
-              onChange({
-                ...value,
+              patch({
                 contextNotebookId,
                 contextTopicId: "",
                 contextPageId: "",
@@ -164,46 +151,33 @@ export function QuizScopeFields({
         </label>
       )}
       {(value.contextKind === "TOPIC" || value.contextKind === "PAGE") && (
-        <label className="text-[12px] font-medium text-[var(--text-secondary)]">
+        <label className="block text-[11px] text-[var(--text-muted)]">
           Nested folder
           <ShelfSelect
-            className={quizFieldClass}
+            className={`${quizFieldClass} mt-0.5`}
             disabled={disabled}
             value={value.contextTopicId}
             options={topicOptions}
             aria-label="Nested folder"
             onChange={(contextTopicId) =>
-              onChange({ ...value, contextTopicId, contextPageId: "" })
+              patch({ contextTopicId, contextPageId: "" })
             }
           />
         </label>
       )}
       {value.contextKind === "PAGE" && (
-        <label className="text-[12px] font-medium text-[var(--text-secondary)]">
+        <label className="block text-[11px] text-[var(--text-muted)]">
           File
           <ShelfSelect
-            className={quizFieldClass}
+            className={`${quizFieldClass} mt-0.5`}
             disabled={disabled}
             value={value.contextPageId}
             options={pageOptions}
             aria-label="File"
-            onChange={(contextPageId) => onChange({ ...value, contextPageId })}
+            onChange={(contextPageId) => patch({ contextPageId })}
           />
         </label>
       )}
-      </>
-      )}
-      <label className="text-[12px] font-medium text-[var(--text-secondary)] sm:col-span-2">
-        Syllabus / relevancy (optional)
-        <ShelfSelect
-          className={quizFieldClass}
-          disabled={disabled}
-          value={value.relevancyDocId}
-          options={docOptions}
-          aria-label="Syllabus or relevancy document"
-          onChange={(relevancyDocId) => onChange({ ...value, relevancyDocId })}
-        />
-      </label>
     </div>
   );
 }

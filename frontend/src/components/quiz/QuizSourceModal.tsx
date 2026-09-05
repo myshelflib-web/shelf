@@ -1,15 +1,24 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
+import type { StudyGoal } from "@/types";
 import type { QuizSourceKind } from "@/lib/quiz/types";
+import {
+  coercePyqPaper,
+  coercePyqYears,
+  pyqSubjectsForGoal,
+  pyqYearsForGoal,
+} from "@/lib/quiz/pyqOptions";
 import { QuizScopeFields, type QuizScopeValue } from "./QuizScopeFields";
-import { quizFieldClass } from "@/lib/quiz/ui";
+import { quizBtnGhost, quizBtnPrimary, quizFieldClass } from "@/lib/quiz/ui";
 
 interface QuizSourceModalProps {
   isOpen: boolean;
   onClose: () => void;
   sourceKind: QuizSourceKind;
+  studyGoal?: StudyGoal | null;
   scope: QuizScopeValue;
   onScopeChange: (next: QuizScopeValue) => void;
   file: File | null;
@@ -27,6 +36,7 @@ export function QuizSourceModal({
   isOpen,
   onClose,
   sourceKind,
+  studyGoal = null,
   scope,
   onScopeChange,
   file,
@@ -45,60 +55,88 @@ export function QuizSourceModal({
   const [draftPaper, setDraftPaper] = useState<string>(pyqPaper);
   const [draftYears, setDraftYears] = useState<string>(pyqYears);
 
+  const subjectOptions = useMemo(
+    () => pyqSubjectsForGoal(studyGoal),
+    [studyGoal]
+  );
+  const yearOptions = useMemo(() => pyqYearsForGoal(studyGoal), [studyGoal]);
+
   useEffect(() => {
     if (isOpen) {
-      setDraftScope(scope);
+      setDraftScope({ ...scope, relevancyDocId: "" });
       setDraftFile(file);
       setDraftSourceText(sourceText);
-      setDraftPaper(pyqPaper);
-      setDraftYears(pyqYears);
+      setDraftPaper(coercePyqPaper(studyGoal, pyqPaper));
+      setDraftYears(coercePyqYears(studyGoal, pyqYears));
     }
-  }, [isOpen, scope, file, sourceText, pyqPaper, pyqYears]);
+  }, [isOpen, scope, file, sourceText, pyqPaper, pyqYears, studyGoal]);
 
   if (!isOpen) return null;
 
   const handleApply = () => {
-    onScopeChange(draftScope);
+    onScopeChange({ ...draftScope, relevancyDocId: "" });
     onFileChange(draftFile);
     onSourceTextChange(draftSourceText);
-    onPyqPaperChange(draftPaper);
-    onPyqYearsChange(draftYears);
+    onPyqPaperChange(coercePyqPaper(studyGoal, draftPaper));
+    onPyqYearsChange(coercePyqYears(studyGoal, draftYears));
     onClose();
   };
 
+  const title =
+    sourceKind === "EXAM_BANK"
+      ? "Practice previous questions"
+      : sourceKind === "LIBRARY"
+        ? "Choose library scope"
+        : "Upload material";
+  const subtitle =
+    sourceKind === "EXAM_BANK"
+      ? "Subjects follow your study goal. Narrow the paper or years only if you want to."
+      : sourceKind === "LIBRARY"
+        ? "Pick a folder or file. Question style follows your study goal."
+        : "Upload a document or paste notes. Shelf will build questions from that material.";
+  const applyLabel =
+    sourceKind === "EXAM_BANK"
+      ? "Use PYQs"
+      : sourceKind === "UPLOAD"
+        ? "Use material"
+        : "Apply";
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-[2px]"
+      <button
+        type="button"
+        aria-label="Close"
+        className="absolute inset-0 bg-black/50"
         onClick={onClose}
       />
 
-      {/* Modal Container */}
-      <div className="relative w-full max-w-[520px] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-[15px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-[var(--border)] flex justify-between items-start shrink-0">
-          <div>
-            <h3 className="text-[15px] font-bold text-[var(--text-primary)]">
-              {sourceKind === "EXAM_BANK" ? "Practice previous questions" : sourceKind === "LIBRARY" ? "Configure Library Scope" : "Configure Upload Material"}
+      <div
+        role="dialog"
+        aria-labelledby="quiz-source-title"
+        className="relative w-full max-w-[520px] bg-[var(--bg-elevated)] border border-[var(--border)] rounded-[10px] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+      >
+        <div className="px-5 py-4 border-b border-[var(--border)] flex justify-between items-start gap-3 shrink-0">
+          <div className="min-w-0">
+            <h3
+              id="quiz-source-title"
+              className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight"
+            >
+              {title}
             </h3>
-            <p className="text-[11px] text-[var(--text-muted)] mt-1 leading-normal">
-              {sourceKind === "EXAM_BANK"
-                ? "Shelf already knows the exam context. Only narrow it if you want to."
-                : "Specify which parts of your library or materials Shelf should use to construct the questions."}
+            <p className="text-[12px] text-[var(--text-muted)] mt-1 leading-relaxed">
+              {subtitle}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="text-[18px] text-[var(--text-muted)] hover:text-[var(--text-primary)] leading-none transition-colors"
+            className="p-1.5 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors"
           >
-            ×
+            <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Body */}
         <div className="px-5 py-4 space-y-4 overflow-y-auto">
           {sourceKind === "LIBRARY" && (
             <div className="space-y-4">
@@ -107,125 +145,97 @@ export function QuizSourceModal({
                 onChange={setDraftScope}
                 disabled={busy}
               />
+              <p className="text-[12px] text-[var(--text-muted)] leading-relaxed">
+                Narrower scope gives more precise questions from the material you
+                selected.
+              </p>
             </div>
           )}
 
           {sourceKind === "EXAM_BANK" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Paper / subject dropdown */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
-                    Paper / subject
-                  </span>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block text-[11px] text-[var(--text-muted)]">
+                  Subject
                   <ShelfSelect
                     value={draftPaper}
                     onChange={setDraftPaper}
-                    options={[
-                      { value: "Mechanical Engineering", label: "Mechanical Engineering" },
-                      { value: "General Aptitude", label: "General Aptitude" },
-                      { value: "All papers", label: "All papers" },
-                    ]}
-                    aria-label="Paper / subject"
-                    className="w-full h-9"
+                    options={subjectOptions}
+                    aria-label="Subject"
+                    className={`${quizFieldClass} mt-0.5 w-full`}
                   />
-                </div>
-
-                {/* Years dropdown */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
-                    Years
-                  </span>
+                </label>
+                <label className="block text-[11px] text-[var(--text-muted)]">
+                  Years
                   <ShelfSelect
                     value={draftYears}
                     onChange={setDraftYears}
-                    options={[
-                      { value: "Last 5 available years", label: "Last 5 available years" },
-                      { value: "2020–2025", label: "2020–2025" },
-                      { value: "All available years", label: "All available years" },
-                    ]}
+                    options={yearOptions}
                     aria-label="Years selection"
-                    className="w-full h-9"
+                    className={`${quizFieldClass} mt-0.5 w-full`}
                   />
-                </div>
+                </label>
               </div>
-
-              <div className="p-3.5 rounded-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[11px] text-[var(--text-muted)] leading-relaxed">
-                Questions use their original wording. If an official answer key is unavailable or disputed, Shelf should mark that question unscored rather than guess.
-              </div>
+              <p className="text-[12px] text-[var(--text-muted)] leading-relaxed">
+                Questions keep their original wording. If an official answer key
+                is unavailable or disputed, Shelf marks that question unscored
+                rather than guessing.
+              </p>
             </div>
           )}
 
           {sourceKind === "UPLOAD" && (
-            <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wide flex flex-col gap-1.5">
-                  Upload Document
-                  <input
-                    type="file"
-                    accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain"
-                    disabled={busy}
-                    className={`${quizFieldClass} h-9 rounded-[9px]`}
-                    onChange={(e) => setDraftFile(e.target.files?.[0] ?? null)}
-                  />
-                  {draftFile && (
-                    <span className="text-[10px] text-[var(--accent)] font-semibold truncate mt-1">
-                      Selected: {draftFile.name}
-                    </span>
-                  )}
-                </label>
-                <label className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wide flex flex-col gap-1.5">
-                  Or paste notes
-                  <textarea
-                    rows={4}
-                    disabled={busy}
-                    value={draftSourceText}
-                    onChange={(e) => setDraftSourceText(e.target.value)}
-                    className={`${quizFieldClass} py-1.5 rounded-[9px] text-[12px]`}
-                    placeholder="Paste corporate finance notes, OS scheduling chapters, etc…"
-                  />
-                </label>
-              </div>
-
-              <div className="pt-2 border-t border-[var(--border)]">
-                <QuizScopeFields
-                  value={{ ...draftScope, contextKind: "LIBRARY" }}
-                  onChange={(next) => setDraftScope({ ...next, contextKind: "LIBRARY" })}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="block text-[11px] text-[var(--text-muted)]">
+                Upload document
+                <input
+                  type="file"
+                  accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain"
                   disabled={busy}
-                  syllabusOnly
+                  className="mt-0.5 block w-full text-[12px] text-[var(--text-secondary)] file:mr-3 file:inline-flex file:h-8 file:cursor-pointer file:items-center file:rounded-lg file:border file:border-[var(--border)] file:bg-[var(--bg-secondary)] file:px-3 file:text-[12px] file:font-medium file:text-[var(--text-primary)] hover:file:border-[var(--accent)]/40 disabled:opacity-50"
+                  onChange={(e) => setDraftFile(e.target.files?.[0] ?? null)}
                 />
-              </div>
-            </div>
-          )}
-
-          {sourceKind !== "EXAM_BANK" && (
-            <div className="p-3 rounded-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[11px] text-[var(--text-muted)] leading-relaxed">
-              By configuring the exact files or folders, Shelf will contextually target its question generation to give you highly precise study sessions.
+                {draftFile ? (
+                  <span className="mt-1.5 block text-[12px] text-[var(--accent)] truncate">
+                    {draftFile.name}
+                  </span>
+                ) : (
+                  <span className="mt-1.5 block text-[12px] text-[var(--text-muted)]">
+                    PDF, TXT, or Markdown
+                  </span>
+                )}
+              </label>
+              <label className="block text-[11px] text-[var(--text-muted)]">
+                Or paste notes
+                <textarea
+                  rows={5}
+                  disabled={busy}
+                  value={draftSourceText}
+                  onChange={(e) => setDraftSourceText(e.target.value)}
+                  className={`${quizFieldClass} mt-0.5 py-2 min-h-[7.5rem] text-[13px]`}
+                  placeholder="Paste notes, chapter excerpts, or outlines…"
+                />
+              </label>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-[var(--border)] flex items-center justify-between shrink-0 bg-[var(--bg-secondary)]/50">
-          <div className="text-[10px] text-[var(--text-muted)] max-w-[200px] leading-tight">
+        <div className="px-5 py-3 border-t border-[var(--border)] flex items-center justify-between gap-3 shrink-0">
+          <p className="text-[11px] text-[var(--text-muted)] max-w-[220px] leading-snug">
             {sourceKind === "EXAM_BANK"
-              ? "You can still choose Practice or Timed assessment on the main Quiz screen."
+              ? "You can still choose Practice or Timed on the Quiz screen."
               : ""}
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="h-[34px] px-4 border border-[var(--border)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-secondary)] rounded-[9px] text-[11.5px] font-semibold text-[var(--text-secondary)] transition-all"
-            >
+          </p>
+          <div className="flex gap-2 shrink-0">
+            <button type="button" onClick={onClose} className={quizBtnGhost}>
               Cancel
             </button>
             <button
               type="button"
               onClick={handleApply}
-              className="h-[34px] px-4 bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-[9px] text-[11.5px] font-bold text-white transition-all shadow-sm"
+              className={quizBtnPrimary}
             >
-              {sourceKind === "EXAM_BANK" ? "Use PYQs" : "Apply changes"}
+              {applyLabel}
             </button>
           </div>
         </div>

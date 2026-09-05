@@ -10,6 +10,7 @@ import { QuizQuestionCard } from "./QuizQuestionCard";
 import { QuizTakeChrome } from "./QuizTakeChrome";
 import { emitQuizStarted } from "@/lib/shelfEvents";
 import { AnalyticsEvents, track } from "@/lib/analytics";
+import { QuizProgressOverlay } from "./QuizProgressPanel";
 
 function isProctored(quiz: Quiz): boolean {
   return quiz.proctored !== false;
@@ -28,6 +29,8 @@ export function QuizTake({
   const proctored = isProctored(quiz);
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitStartedAt, setSubmitStartedAt] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [locked, setLocked] = useState(!proctored);
   const saveTimer = useRef<number | null>(null);
@@ -85,6 +88,8 @@ export function QuizTake({
       if (submittingRef.current) return;
       submittingRef.current = true;
       setBusy(true);
+      setSubmitting(true);
+      setSubmitStartedAt(Date.now());
       setError("");
       try {
         const { quiz: next } = await quizApi.submit(quiz.id, {
@@ -105,6 +110,8 @@ export function QuizTake({
         setError(err instanceof Error ? err.message : "Could not submit");
       } finally {
         setBusy(false);
+        setSubmitting(false);
+        setSubmitStartedAt(null);
       }
     },
     [quiz.id, quiz.questions.length, proctored, onQuiz, release, exit]
@@ -231,13 +238,22 @@ export function QuizTake({
         ) : (
           paper
         )}
+        {submitting ? (
+          <QuizProgressOverlay
+            phase="submitting"
+            startedAt={submitStartedAt}
+          />
+        ) : null}
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-hidden bg-[var(--bg-primary)]">
+    <div className="h-full overflow-hidden bg-[var(--bg-primary)] relative">
       {paper}
+      {submitting ? (
+        <QuizProgressOverlay phase="submitting" startedAt={submitStartedAt} />
+      ) : null}
     </div>
   );
 }
