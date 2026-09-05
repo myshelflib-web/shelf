@@ -3,6 +3,7 @@ import {
   OpenTab,
   tabFromScope,
 } from "@/components/my-content/reader/types";
+import { reorderOpenTabs } from "@/components/my-content/reader/reorderOpenTabs";
 import { isCurriculumScope } from "@/lib/learnContent";
 import { browsePathFromHref } from "@/lib/preloadedBrowse";
 import { learnScope } from "@/lib/learnContent";
@@ -95,6 +96,16 @@ export function activatePreloadedTab(
   if (!state.tabs.some((t) => t.key === key)) return state;
   if (state.activeKey === key) return state;
   return { ...state, activeKey: key };
+}
+
+export function reorderPreloadedTabs(
+  state: PreloadedOpenFilesState,
+  fromKey: string,
+  toKey: string,
+  place: "before" | "after"
+): PreloadedOpenFilesState {
+  const tabs = reorderOpenTabs(state.tabs, fromKey, toKey, place);
+  return tabs ? { ...state, tabs } : state;
 }
 
 export function updatePreloadedTabMeta(

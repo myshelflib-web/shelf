@@ -92,6 +92,7 @@ export function LearnReaderWorkspace({
     updateTabMeta,
     openInPane,
     closeTab,
+    reorderTabs,
   } = workspace;
 
   const returnTo = scopeHref(routeScope);
@@ -540,6 +541,9 @@ export function LearnReaderWorkspace({
                           onClose={(key) => handleCloseTab(pane.id, key)}
                           onFocusPane={() => focusPane(pane.id)}
                           onDropPage={(tab) => handleOpenTab(pane.id, tab)}
+                          onReorderTabs={(fromKey, toKey, place) =>
+                            reorderTabs(pane.id, fromKey, toKey, place)
+                          }
                         />
                       </div>
                       {isPhone ? (

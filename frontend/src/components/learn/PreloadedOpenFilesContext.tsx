@@ -17,6 +17,7 @@ import {
   emptyPreloadedOpenFiles,
   openPreloadedTab,
   readPreloadedOpenFiles,
+  reorderPreloadedTabs,
   tabFromLearnHref,
   updatePreloadedTabMeta,
   writePreloadedOpenFiles,
@@ -35,6 +36,11 @@ type PreloadedOpenFilesContextValue = {
   openFromHref: (href: string, title?: string, pageId?: string) => void;
   activateTab: (key: string) => void;
   closeTab: (key: string) => void;
+  reorderTabs: (
+    fromKey: string,
+    toKey: string,
+    place: "before" | "after"
+  ) => void;
   updateTabMeta: (
     key: string,
     patch: Partial<Pick<OpenTab, "title" | "pageId">>
@@ -99,6 +105,13 @@ export function PreloadedOpenFilesProvider({
     [browse]
   );
 
+  const reorderTabs = useCallback(
+    (fromKey: string, toKey: string, place: "before" | "after") => {
+      setState((prev) => reorderPreloadedTabs(prev, fromKey, toKey, place));
+    },
+    []
+  );
+
   const updateTabMeta = useCallback(
     (key: string, patch: Partial<Pick<OpenTab, "title" | "pageId">>) => {
       setState((prev) => updatePreloadedTabMeta(prev, key, patch));
@@ -115,9 +128,18 @@ export function PreloadedOpenFilesProvider({
       openFromHref,
       activateTab,
       closeTab,
+      reorderTabs,
       updateTabMeta,
     }),
-    [state.tabs, activeTab, openFromHref, activateTab, closeTab, updateTabMeta]
+    [
+      state.tabs,
+      activeTab,
+      openFromHref,
+      activateTab,
+      closeTab,
+      reorderTabs,
+      updateTabMeta,
+    ]
   );
 
   return (

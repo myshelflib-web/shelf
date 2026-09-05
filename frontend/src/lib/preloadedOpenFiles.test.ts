@@ -7,6 +7,7 @@ import {
   closePreloadedTab,
   emptyPreloadedOpenFiles,
   openPreloadedTab,
+  reorderPreloadedTabs,
   tabFromLearnHref,
 } from "./preloadedOpenFiles";
 
@@ -63,5 +64,18 @@ describe("preloadedOpenFiles", () => {
     expect(after.tabs).toHaveLength(1);
     expect(activePreloadedTab(after)?.scope).toMatchObject({ articleSlug: "a" });
     expect(activatePreloadedTab(after, "missing")).toBe(after);
+  });
+
+  it("reorders open tabs without changing the active key", () => {
+    const two = openPreloadedTab(
+      openPreloadedTab(emptyPreloadedOpenFiles(), tab("a")),
+      tab("b")
+    );
+    const aKey = two.tabs[0]!.key;
+    const bKey = two.tabs[1]!.key;
+    const moved = reorderPreloadedTabs(two, bKey, aKey, "before");
+    expect(moved.tabs.map((t) => t.key)).toEqual([bKey, aKey]);
+    expect(moved.activeKey).toBe(bKey);
+    expect(reorderPreloadedTabs(moved, bKey, bKey, "after")).toBe(moved);
   });
 });
