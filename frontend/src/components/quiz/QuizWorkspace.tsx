@@ -116,8 +116,8 @@ export function QuizWorkspace({
           taking
             ? "flex-1 min-h-0 overflow-hidden"
             : graded
-              ? "flex-1 min-h-0 px-4 sm:px-6 py-4 sm:py-5 max-w-[52rem] mx-auto w-full overflow-y-auto"
-              : "flex-1 min-h-0 px-4 sm:px-6 py-4 sm:py-5 max-w-[52rem] mx-auto w-full flex flex-col overflow-hidden"
+              ? "flex-1 min-h-0 px-4 sm:px-6 py-4 sm:py-5 max-w-[64rem] mx-auto w-full overflow-y-auto"
+              : "flex-1 min-h-0 px-4 sm:px-6 py-4 sm:py-5 max-w-[64rem] mx-auto w-full flex flex-col overflow-hidden"
         }
       >
         {!quizId ? (

@@ -1,15 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import type { ChatContextKind } from "@/types";
+import { api } from "@/lib/api";
+import type { ChatContextKind, StudyRelevancyDocSummary, UserSubject } from "@/types";
 import { quizApi } from "@/lib/quiz/api";
 import type { QuizLaunch, QuizSourceKind } from "@/lib/quiz/types";
 import { DIFFICULTY_LABELS, quizHref } from "@/lib/quiz/href";
 import { quizBtnPrimary, quizFieldClass } from "@/lib/quiz/ui";
 import { AnalyticsEvents, track } from "@/lib/analytics";
-import { QuizScopeFields, type QuizScopeValue } from "./QuizScopeFields";
+import { type QuizScopeValue } from "./QuizScopeFields";
 import { QuizCustomizeModal, type CustomizeSettings } from "./QuizCustomizeModal";
+import { QuizSourceModal } from "./QuizSourceModal";
 
 function sourceFromLaunch(launch?: QuizLaunch): QuizSourceKind {
   const v = String(launch?.source ?? "LIBRARY").toUpperCase();
@@ -66,8 +68,25 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  // Customize settings state
+  // Popup Modal states
   const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [sourceModalOpen, setSourceModalOpen] = useState(false);
+
+  // Notebooks & docs list for display name resolution
+  const [notebooks, setNotebooks] = useState<UserSubject[]>([]);
+  const [docs, setDocs] = useState<StudyRelevancyDocSummary[]>([]);
+
+  useEffect(() => {
+    void api.myContent
+      .listSubjects({ pageSize: 100, sort: "name" })
+      .then(({ subjects }) => setNotebooks(subjects))
+      .catch(() => {});
+    void api.study
+      .listRelevancyDocs()
+      .then(({ docs: next }) => setDocs(next))
+      .catch(() => {});
+  }, []);
+
   const [customizeSettings, setCustomizeSettings] = useState<CustomizeSettings>({
     questions: "10",
     difficulty: "EXAM",
@@ -155,20 +174,24 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
   const start = async () => {
     if (busy) return;
     if (sourceKind === "UPLOAD" && !file && !sourceText.trim()) {
-      setError("Upload a document or paste notes to quiz on.");
+      setError("Please configure upload material first by clicking Change.");
+      setSourceModalOpen(true);
       return;
     }
     if (sourceKind === "LIBRARY") {
       if (scope.contextKind === "NOTEBOOK" && !scope.contextNotebookId) {
-        setError("Choose a folder.");
+        setError("Please select a folder first by clicking Change.");
+        setSourceModalOpen(true);
         return;
       }
       if (scope.contextKind === "TOPIC" && !scope.contextTopicId) {
-        setError("Choose a nested folder.");
+        setError("Please select a nested folder first by clicking Change.");
+        setSourceModalOpen(true);
         return;
       }
       if (scope.contextKind === "PAGE" && !scope.contextPageId) {
-        setError("Choose a document.");
+        setError("Please select a document first by clicking Change.");
+        setSourceModalOpen(true);
         return;
       }
     }
@@ -233,6 +256,84 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
     return "Balanced mix";
   }, [mcqCount, writtenCount]);
 
+  // Compute dynamic header display for current selected source popup context
+  const sourceDisplayTitle = useMemo(() => {
+    if (sourceKind === "EXAM_BANK") {
+      return "Exam Bank material";
+    }
+    if (sourceKind === "UPLOAD") {
+      if (file) return `Uploaded: ${file.name}`;
+      if (sourceText.trim()) {
+        const textSlice = sourceText.trim().slice(0, 32);
+        return `Pasted: "${textSlice}${sourceText.trim().length > 32 ? "..." : ""}"`;
+      }
+      return "Configure your upload materials";
+    }
+
+    // LIBRARY Kind
+    if (scope.contextKind === "LIBRARY") {
+      return "Entire Library";
+    }
+
+    const nb = notebooks.find((n) => n.id === scope.contextNotebookId);
+    const folderName = nb?.name || "Select folder...";
+
+    if (scope.contextKind === "NOTEBOOK") {
+      return `Folder › ${folderName}`;
+    }
+
+    if (scope.contextKind === "TOPIC") {
+      const topicName =
+        nb?.topicGroups?.find((t) => t.id === scope.contextTopicId)?.title ||
+        "Select nested folder...";
+      return `${folderName} › ${topicName}`;
+    }
+
+    // PAGE Kind
+    const pageTitle =
+      nb?.pages?.find((p) => p.id === scope.contextPageId)?.title ||
+      nb?.topicGroups
+        ?.flatMap((t) => t.pages ?? [])
+        .find((p) => p.id === scope.contextPageId)?.title ||
+      "Select file...";
+
+    return `${folderName} › ${pageTitle}`;
+  }, [sourceKind, scope, file, sourceText, notebooks]);
+
+  const sourceDisplaySubtitle = useMemo(() => {
+    let base = "";
+    if (sourceKind === "EXAM_BANK") {
+      base = "Exam bank · preloaded curriculum & syllabus";
+    } else if (sourceKind === "UPLOAD") {
+      if (file) {
+        base = `Document · ${(file.size / 1024).toFixed(1)} KB`;
+      } else if (sourceText.trim()) {
+        base = `Pasted text · ${sourceText.trim().length} chars`;
+      } else {
+        base = "No document or notes uploaded yet. Click Change to configure.";
+      }
+    } else {
+      // LIBRARY
+      const kindLabel =
+        scope.contextKind === "LIBRARY"
+          ? "whole shelf"
+          : scope.contextKind === "NOTEBOOK"
+          ? "folder"
+          : scope.contextKind === "TOPIC"
+          ? "nested folder"
+          : "file";
+      base = `My Library · ${kindLabel}`;
+    }
+
+    if (scope.relevancyDocId) {
+      const docTitle = docs.find((d) => d.id === scope.relevancyDocId)?.title;
+      if (docTitle) {
+        base += ` · Syllabus: ${docTitle}`;
+      }
+    }
+    return base;
+  }, [sourceKind, scope.contextKind, scope.relevancyDocId, file, sourceText, docs]);
+
   return (
     <>
       <div className="h-full min-h-0 flex flex-col overflow-hidden rounded-[18px] border border-[var(--border)] bg-[var(--bg-elevated)] shadow-sm">
@@ -254,8 +355,14 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => setSourceKind(s.id)}
-                  className={`flex flex-col text-left rounded-[14px] border px-4 py-3 bg.var(--bg-elevated) transition-all duration-150 min-h-[96px] ${
+                  onClick={() => {
+                    setSourceKind(s.id);
+                    // Reset or setup default scope if switching
+                    if (s.id !== "LIBRARY") {
+                      setScope((prev) => ({ ...prev, contextKind: "LIBRARY" }));
+                    }
+                  }}
+                  className={`flex flex-col text-left rounded-[14px] border px-4 py-3 bg-[var(--bg-elevated)] transition-all duration-150 min-h-[96px] ${
                     sourceKind === s.id
                       ? "border-[var(--accent)] bg-[var(--accent-subtle)] ring-1 ring-[var(--accent)]/30"
                       : "border-[var(--border)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-secondary)]"
@@ -271,57 +378,23 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
               ))}
             </div>
 
-            {/* Configured Source Input fields rendered inside subtle box */}
-            <div className="mt-4 p-4 rounded-[12px] border border-[var(--border)] bg-[var(--bg-secondary)]/40">
-              {sourceKind === "LIBRARY" && (
-                <QuizScopeFields value={scope} onChange={setScope} disabled={busy} />
-              )}
-              {sourceKind === "EXAM_BANK" && (
-                <div className="space-y-3">
-                  <p className="text-[11px] text-[var(--text-muted)] leading-normal">
-                    Practice exam questions or study with dynamic question pools aligned to standard frameworks.
-                  </p>
-                  <QuizScopeFields
-                    value={{ ...scope, contextKind: "LIBRARY" }}
-                    onChange={(next) => setScope({ ...next, contextKind: "LIBRARY" })}
-                    disabled={busy}
-                    syllabusOnly
-                  />
+            {/* Premium selection Display (selectedSource / Change popup trigger) */}
+            <div className="selected mt-4 border border-[var(--border)] bg-[var(--bg-secondary)]/30 dark:bg-[var(--bg-secondary)]/15 rounded-[12px] p-4 flex items-center justify-between shadow-sm">
+              <div className="selMain flex-1 min-w-0 pr-4">
+                <div className="selName font-bold text-[12.5px] text-[var(--text-primary)] truncate">
+                  {sourceDisplayTitle}
                 </div>
-              )}
-              {sourceKind === "UPLOAD" && (
-                <div className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wide flex flex-col gap-1.5">
-                      Upload Document
-                      <input
-                        type="file"
-                        accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain"
-                        disabled={busy}
-                        className={`${quizFieldClass} h-9 rounded-[9px]`}
-                        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                      />
-                    </label>
-                    <label className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wide flex flex-col gap-1.5">
-                      Or paste notes
-                      <textarea
-                        rows={1}
-                        disabled={busy}
-                        value={sourceText}
-                        onChange={(e) => setSourceText(e.target.value)}
-                        className={`${quizFieldClass} min-h-[36px] max-h-[36px] py-1.5 rounded-[9px] resize-none`}
-                        placeholder="Paste text/notes to use…"
-                      />
-                    </label>
-                  </div>
-                  <QuizScopeFields
-                    value={{ ...scope, contextKind: "LIBRARY" }}
-                    onChange={(next) => setScope({ ...next, contextKind: "LIBRARY" })}
-                    disabled={busy}
-                    syllabusOnly
-                  />
+                <div className="selMeta text-[10.5px] text-[var(--text-muted)] mt-1 font-semibold leading-normal">
+                  {sourceDisplaySubtitle}
                 </div>
-              )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setSourceModalOpen(true)}
+                className="change h-[29px] border border-[var(--border)] bg-[var(--bg-elevated)] hover:bg-[var(--bg-secondary)] rounded-[8px] px-3.5 text-[11.5px] text-[var(--accent)] font-extrabold transition-all shrink-0 shadow-xs"
+              >
+                Change
+              </button>
             </div>
           </div>
 
@@ -492,6 +565,20 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
         onApply={handleApplySettings}
         initialSettings={customizeSettings}
         proctored={proctored}
+      />
+
+      {/* Source overlay modal */}
+      <QuizSourceModal
+        isOpen={sourceModalOpen}
+        onClose={() => setSourceModalOpen(false)}
+        sourceKind={sourceKind}
+        scope={scope}
+        onScopeChange={setScope}
+        file={file}
+        onFileChange={setFile}
+        sourceText={sourceText}
+        onSourceTextChange={setSourceText}
+        busy={busy}
       />
     </>
   );
