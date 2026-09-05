@@ -45,7 +45,6 @@
 
 .landing-torch-zone {
   position: relative;
-  isolation: isolate;
 }
 
 .landing-torch-local {
@@ -54,22 +53,17 @@
   z-index: 0;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.35s ease;
+  transition: opacity 0.28s ease;
   background: radial-gradient(
-    420px circle at var(--torch-x, 50%) var(--torch-y, 40%),
-    color-mix(in srgb, var(--accent) 18%, transparent) 0%,
-    color-mix(in srgb, var(--lp-sand) 24%, transparent) 28%,
-    transparent 58%
+    520px circle at var(--torch-x, 50%) var(--torch-y, 40%),
+    color-mix(in srgb, var(--accent) 26%, transparent) 0%,
+    color-mix(in srgb, var(--lp-sand) 32%, transparent) 26%,
+    transparent 62%
   );
 }
 
 .landing-torch-zone.is-torch-on > .landing-torch-local {
   opacity: 1;
-}
-
-.landing-torch-zone > *:not(.landing-torch-local) {
-  position: relative;
-  z-index: 1;
 }
 /* Dark mode — follows app .dark class on html */
 .dark .landing-page {
@@ -115,10 +109,10 @@
 
 .dark .landing-torch-local {
   background: radial-gradient(
-    460px circle at var(--torch-x, 50%) var(--torch-y, 40%),
-    color-mix(in srgb, var(--accent) 22%, transparent) 0%,
-    color-mix(in srgb, var(--accent) 8%, transparent) 32%,
-    transparent 60%
+    560px circle at var(--torch-x, 50%) var(--torch-y, 40%),
+    color-mix(in srgb, var(--accent) 32%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 12%, transparent) 34%,
+    transparent 64%
   );
 }
 

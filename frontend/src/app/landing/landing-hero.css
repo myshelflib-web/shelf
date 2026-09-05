@@ -58,10 +58,9 @@
   position: relative;
   padding: 64px 56px 40px;
   display: grid;
-  grid-template-columns: 0.92fr 1.08fr;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   gap: 48px;
   align-items: center;
-  isolation: isolate;
 }
 
 .landing-hero-glow {
@@ -80,6 +79,7 @@
 .landing-hero > *:not(.landing-hero-glow):not(.landing-torch-local) {
   position: relative;
   z-index: 1;
+  min-width: 0;
 }
 
 .landing-eyebrow {

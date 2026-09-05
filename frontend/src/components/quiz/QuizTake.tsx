@@ -204,6 +204,7 @@ export function QuizTake({
         void saveAnswer({ text: q.userAnswerText });
         setIndex((i) => Math.min(quiz.questions.length - 1, i + 1));
       }}
+      onExit={() => router.push("/quiz")}
     >
       {card}
     </QuizTakeChrome>

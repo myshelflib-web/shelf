@@ -122,11 +122,22 @@ export function QuizWorkspace({
       >
         {!quizId ? (
           <>
-            <div className="shrink-0 mb-3">
-              <h1 className="page-title">Quiz</h1>
-              <LivelyLine surface="quiz" className="page-subtitle mt-1" />
+            <div className="shrink-0 mb-5 flex flex-col">
+              <span className="text-[10px] font-bold text-[var(--accent)] uppercase tracking-[0.08em]">
+                Quiz
+              </span>
+              <h1 className="text-[26px] sm:text-[30px] font-black tracking-tight text-[var(--text-primary)] mt-1.5 leading-tight">
+                {homeTab === "past"
+                  ? "Your Quiz History"
+                  : "Test yourself on anything in your Shelf"}
+              </h1>
+              <p className="text-[12px] text-[var(--text-muted)] leading-relaxed max-w-[700px] mt-1.5">
+                {homeTab === "past"
+                  ? "Review your past attempts, mistake logs, and performance metrics."
+                  : "Choose your material, choose how you want to take the quiz, and generate. Shelf keeps the rest out of the way."}
+              </p>
             </div>
-            <div className="shrink-0 mb-3">
+            <div className="shrink-0 mb-5">
               <QuizHomeTabs tab={homeTab} launch={launch} />
             </div>
             <div className="flex-1 min-h-0 overflow-hidden">

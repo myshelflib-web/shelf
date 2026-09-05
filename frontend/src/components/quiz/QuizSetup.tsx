@@ -5,14 +5,11 @@ import { useRouter } from "next/navigation";
 import type { ChatContextKind } from "@/types";
 import { quizApi } from "@/lib/quiz/api";
 import type { QuizLaunch, QuizSourceKind } from "@/lib/quiz/types";
-import { DIFFICULTY_LABELS, TIME_OPTIONS, quizHref } from "@/lib/quiz/href";
+import { DIFFICULTY_LABELS, quizHref } from "@/lib/quiz/href";
 import { quizBtnPrimary, quizFieldClass } from "@/lib/quiz/ui";
 import { AnalyticsEvents, track } from "@/lib/analytics";
-import { ShelfSelect } from "@/components/ui/ShelfSelect";
-import {
-  QuizScopeFields,
-  type QuizScopeValue,
-} from "./QuizScopeFields";
+import { QuizScopeFields, type QuizScopeValue } from "./QuizScopeFields";
+import { QuizCustomizeModal, type CustomizeSettings } from "./QuizCustomizeModal";
 
 function sourceFromLaunch(launch?: QuizLaunch): QuizSourceKind {
   const v = String(launch?.source ?? "LIBRARY").toUpperCase();
@@ -36,18 +33,18 @@ function scopeFromLaunch(launch?: QuizLaunch): QuizScopeValue {
 const SOURCES: Array<{ id: QuizSourceKind; title: string; body: string }> = [
   {
     id: "LIBRARY",
-    title: "Library",
-    body: "A file, nested folder, or whole folder.",
+    title: "My Library",
+    body: "Use a file, topic, collection, or a wider part of your Shelf.",
   },
   {
     id: "UPLOAD",
     title: "Upload",
-    body: "Your notes plus an optional syllabus.",
+    body: "Use material that is not in your Shelf yet.",
   },
   {
     id: "EXAM_BANK",
     title: "Exam bank",
-    body: "PYQs, standard papers, and preloaded material.",
+    body: "Practice original previous-year questions and standard papers.",
   },
 ];
 
@@ -62,12 +59,98 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
   const [timeLimitSec, setTimeLimitSec] = useState<number | null>(1800);
   const [mcqCount, setMcqCount] = useState(8);
   const [writtenCount, setWrittenCount] = useState(2);
-  const [proctored, setProctored] = useState(true);
+  const [proctored, setProctored] = useState(false); // Default to Practice (proctored=false) per HTML mockup defaults
   const [focus, setFocus] = useState(launch?.focus ?? "");
   const [file, setFile] = useState<File | null>(null);
   const [sourceText, setSourceText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // Customize settings state
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [customizeSettings, setCustomizeSettings] = useState<CustomizeSettings>({
+    questions: "10",
+    difficulty: "EXAM",
+    mix: "balanced",
+    timer: "auto",
+  });
+
+  const handleApplySettings = (nextSettings: CustomizeSettings) => {
+    setCustomizeSettings(nextSettings);
+    setDifficulty(nextSettings.difficulty);
+
+    // Apply Timer
+    if (nextSettings.timer === "auto") {
+      setTimeLimitSec(1800); // 30 minutes
+    } else {
+      setTimeLimitSec(Number(nextSettings.timer) * 60);
+    }
+
+    // Apply Question count and mix mapping
+    const N = Number(nextSettings.questions);
+    const mix = nextSettings.mix;
+
+    let mcq = 8;
+    let writ = 2;
+
+    if (N === 5) {
+      if (mix === "mcq") {
+        mcq = 5;
+        writ = 0;
+      } else if (mix === "written") {
+        mcq = 2;
+        writ = 3;
+      } else {
+        mcq = 4;
+        writ = 1;
+      }
+    } else if (N === 10) {
+      if (mix === "mcq") {
+        mcq = 10;
+        writ = 0;
+      } else if (mix === "mostly-mcq") {
+        mcq = 9;
+        writ = 1;
+      } else if (mix === "written") {
+        mcq = 5;
+        writ = 5;
+      } else {
+        mcq = 8;
+        writ = 2;
+      }
+    } else if (N === 15) {
+      if (mix === "mcq") {
+        mcq = 15;
+        writ = 0;
+      } else if (mix === "mostly-mcq") {
+        mcq = 13;
+        writ = 2;
+      } else if (mix === "written") {
+        mcq = 7;
+        writ = 8;
+      } else {
+        mcq = 12;
+        writ = 3;
+      }
+    } else if (N === 20) {
+      if (mix === "mcq") {
+        mcq = 20;
+        writ = 0;
+      } else if (mix === "mostly-mcq") {
+        mcq = 18;
+        writ = 2;
+      } else if (mix === "written") {
+        mcq = 10;
+        writ = 10;
+      } else {
+        mcq = 16;
+        writ = 4;
+      }
+    }
+
+    setMcqCount(mcq);
+    setWrittenCount(writ);
+  };
 
   const start = async () => {
     if (busy) return;
@@ -129,195 +212,287 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
     }
   };
 
+  // Helper labels for settings
+  const labelDifficulty = (val: string) => {
+    if (val === "EXAM") return "Mixed";
+    return DIFFICULTY_LABELS[val] ?? "Mixed";
+  };
+
+  const labelMix = (val: string) => {
+    if (val === "balanced") return "Balanced mix";
+    if (val === "mcq") return "MCQs only";
+    if (val === "mostly-mcq") return "Mostly MCQs";
+    return "More written";
+  };
+
+  const mixLabel = useMemo(() => {
+    if (mcqCount === 0) return "Written only";
+    if (writtenCount === 0) return "MCQs only";
+    const ratio = mcqCount / (mcqCount + writtenCount);
+    if (ratio >= 0.8) return "Mostly MCQs";
+    return "Balanced mix";
+  }, [mcqCount, writtenCount]);
+
   return (
-    <div className="h-full min-h-0 flex flex-col overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)]">
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5">
-      <div className="grid gap-2 sm:grid-cols-3 mb-4">
-        {SOURCES.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => setSourceKind(s.id)}
-            className={`text-left rounded-[10px] border px-3 py-2.5 transition-colors ${
-              sourceKind === s.id
-                ? "border-[var(--accent)] bg-[var(--accent-subtle)]"
-                : "border-[var(--border)] hover:border-[var(--accent)]"
-            }`}
-          >
-            <div className="text-[13px] font-semibold text-[var(--text-primary)]">
-              {s.title}
+    <>
+      <div className="h-full min-h-0 flex flex-col overflow-hidden rounded-[18px] border border-[var(--border)] bg-[var(--bg-elevated)] shadow-sm">
+        <div className="flex-1 min-h-0 overflow-y-auto p-5 sm:p-6 space-y-6">
+          
+          {/* Block 1: What should the quiz use? */}
+          <div className="space-y-3">
+            <div>
+              <h2 className="text-[14px] font-bold text-[var(--text-primary)]">
+                What should the quiz use?
+              </h2>
+              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                Pick one source.
+              </p>
             </div>
-            <p className="mt-0.5 text-[11px] text-[var(--text-muted)] leading-snug">
-              {s.body}
-            </p>
-          </button>
-        ))}
-      </div>
+            
+            <div className="grid gap-3 sm:grid-cols-3">
+              {SOURCES.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSourceKind(s.id)}
+                  className={`flex flex-col text-left rounded-[14px] border px-4 py-3 bg.var(--bg-elevated) transition-all duration-150 min-h-[96px] ${
+                    sourceKind === s.id
+                      ? "border-[var(--accent)] bg-[var(--accent-subtle)] ring-1 ring-[var(--accent)]/30"
+                      : "border-[var(--border)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-secondary)]"
+                  }`}
+                >
+                  <div className="text-[12px] font-bold text-[var(--text-primary)]">
+                    {s.title}
+                  </div>
+                  <p className="mt-1.5 text-[10.5px] text-[var(--text-muted)] leading-snug">
+                    {s.body}
+                  </p>
+                </button>
+              ))}
+            </div>
 
-      {sourceKind === "LIBRARY" && (
-        <QuizScopeFields value={scope} onChange={setScope} disabled={busy} />
-      )}
-      {sourceKind === "EXAM_BANK" && (
-        <div className="space-y-3">
-          <p className="text-[12px] text-[var(--text-muted)]">
-            Uses your study goal, syllabus if attached, PYQ/standard papers in
-            your library, and preloaded curriculum when available.
-          </p>
-          <QuizScopeFields
-            value={{ ...scope, contextKind: "LIBRARY" }}
-            onChange={(next) => setScope({ ...next, contextKind: "LIBRARY" })}
-            disabled={busy}
-            syllabusOnly
-          />
-        </div>
-      )}
-      {sourceKind === "UPLOAD" && (
-        <div className="grid gap-3">
-          <label className="text-[12px] font-medium text-[var(--text-secondary)]">
-            Document
+            {/* Configured Source Input fields rendered inside subtle box */}
+            <div className="mt-4 p-4 rounded-[12px] border border-[var(--border)] bg-[var(--bg-secondary)]/40">
+              {sourceKind === "LIBRARY" && (
+                <QuizScopeFields value={scope} onChange={setScope} disabled={busy} />
+              )}
+              {sourceKind === "EXAM_BANK" && (
+                <div className="space-y-3">
+                  <p className="text-[11px] text-[var(--text-muted)] leading-normal">
+                    Practice exam questions or study with dynamic question pools aligned to standard frameworks.
+                  </p>
+                  <QuizScopeFields
+                    value={{ ...scope, contextKind: "LIBRARY" }}
+                    onChange={(next) => setScope({ ...next, contextKind: "LIBRARY" })}
+                    disabled={busy}
+                    syllabusOnly
+                  />
+                </div>
+              )}
+              {sourceKind === "UPLOAD" && (
+                <div className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wide flex flex-col gap-1.5">
+                      Upload Document
+                      <input
+                        type="file"
+                        accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain"
+                        disabled={busy}
+                        className={`${quizFieldClass} h-9 rounded-[9px]`}
+                        onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                      />
+                    </label>
+                    <label className="text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-wide flex flex-col gap-1.5">
+                      Or paste notes
+                      <textarea
+                        rows={1}
+                        disabled={busy}
+                        value={sourceText}
+                        onChange={(e) => setSourceText(e.target.value)}
+                        className={`${quizFieldClass} min-h-[36px] max-h-[36px] py-1.5 rounded-[9px] resize-none`}
+                        placeholder="Paste text/notes to use…"
+                      />
+                    </label>
+                  </div>
+                  <QuizScopeFields
+                    value={{ ...scope, contextKind: "LIBRARY" }}
+                    onChange={(next) => setScope({ ...next, contextKind: "LIBRARY" })}
+                    disabled={busy}
+                    syllabusOnly
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Block 2: How do you want to take it? */}
+          <div className="space-y-3 pt-2">
+            <div>
+              <h2 className="text-[14px] font-bold text-[var(--text-primary)]">
+                How do you want to take it?
+              </h2>
+              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                Practice is casual self-testing; Timed assessment sets an exact duration.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setProctored(false)}
+                className={`text-left rounded-[14px] border px-4 py-3 bg-[var(--bg-elevated)] transition-all duration-150 ${
+                  !proctored
+                    ? "border-[var(--accent)] bg-[var(--accent-subtle)] ring-1 ring-[var(--accent)]/30"
+                    : "border-[var(--border)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-secondary)]"
+                }`}
+              >
+                <div className="text-[12.5px] font-bold text-[var(--text-primary)]">
+                  Practice
+                </div>
+                <p className="mt-1.5 text-[10.5px] text-[var(--text-muted)] leading-relaxed">
+                  Flexible self-testing with feedback as you go.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setProctored(true)}
+                className={`text-left rounded-[14px] border px-4 py-3 bg-[var(--bg-elevated)] transition-all duration-150 ${
+                  proctored
+                    ? "border-[var(--accent)] bg-[var(--accent-subtle)] ring-1 ring-[var(--accent)]/30"
+                    : "border-[var(--border)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-secondary)]"
+                }`}
+              >
+                <div className="text-[12.5px] font-bold text-[var(--text-primary)]">
+                  Timed assessment
+                </div>
+                <p className="mt-1.5 text-[10.5px] text-[var(--text-muted)] leading-relaxed">
+                  Focused attempt with feedback at the end.
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* Block 3: Focus on anything specific? */}
+          <div className="space-y-2 pt-2">
+            <h2 className="text-[14px] font-bold text-[var(--text-primary)] flex items-center gap-1.5">
+              Focus on anything specific?
+              <span className="text-[10px] font-medium text-[var(--text-muted)] lowercase bg-[var(--bg-secondary)] px-1.5 py-0.5 rounded">
+                Optional
+              </span>
+            </h2>
             <input
-              type="file"
-              accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain"
+              type="text"
               disabled={busy}
-              className={quizFieldClass}
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              value={focus}
+              onChange={(e) => setFocus(e.target.value)}
+              placeholder="e.g. Transformers, corporate finance, heat transfer..."
+              className="w-full h-11 border border-[var(--border)] bg-[var(--bg-elevated)] rounded-[12px] px-3.5 outline-none text-[11.5px] focus:border-[var(--accent)] transition-colors duration-150 shadow-sm"
             />
-          </label>
-          <label className="text-[12px] font-medium text-[var(--text-secondary)]">
-            Or paste notes
-            <textarea
-              rows={4}
-              disabled={busy}
-              value={sourceText}
-              onChange={(e) => setSourceText(e.target.value)}
-              className={quizFieldClass}
-              placeholder="Paste the chapter, notes, or question bank text…"
-            />
-          </label>
-          <QuizScopeFields
-            value={{ ...scope, contextKind: "LIBRARY" }}
-            onChange={(next) => setScope({ ...next, contextKind: "LIBRARY" })}
-            disabled={busy}
-            syllabusOnly
-          />
-        </div>
-      )}
+          </div>
 
-      <div className="text-[12px] font-medium text-[var(--text-secondary)] mb-2">
-        Sitting
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2 mb-4">
-        {(
-          [
-            {
-              id: true,
-              title: "Proctored",
-              body: "Opens fullscreen. Switching tabs or leaving the window ends the quiz.",
-            },
-            {
-              id: false,
-              title: "Practice",
-              body: "Stay in the app. Tab switches are allowed; the timer still runs.",
-            },
-          ] as const
-        ).map((s) => (
+          {/* Summary Pills */}
+          <div className="flex flex-wrap gap-1.5 pt-2">
+            <span className="h-[26px] px-3 rounded-full border border-[var(--accent)]/30 bg-[var(--accent-subtle)] text-[10.5px] text-[var(--accent)] font-semibold inline-flex items-center justify-center">
+              {mcqCount + writtenCount} questions
+            </span>
+            <span className="h-[26px] px-3 rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] text-[10.5px] text-[var(--text-secondary)] font-medium inline-flex items-center justify-center">
+              {labelDifficulty(difficulty)} difficulty
+            </span>
+            <span className="h-[26px] px-3 rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] text-[10.5px] text-[var(--text-secondary)] font-medium inline-flex items-center justify-center">
+              {mixLabel}
+            </span>
+            <span className="h-[26px] px-3 rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] text-[10.5px] text-[var(--text-secondary)] font-medium inline-flex items-center justify-center">
+              {proctored ? "Timed assessment" : "Practice"}
+            </span>
+            {proctored && (
+              <span className="h-[26px] px-3 rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] text-[10.5px] text-[var(--text-secondary)] font-medium inline-flex items-center justify-center">
+                {timeLimitSec ? `${timeLimitSec / 60} min timer` : "No timer"}
+              </span>
+            )}
+            <span className="h-[26px] px-3 rounded-full border border-[var(--border)] bg-[var(--bg-secondary)] text-[10.5px] text-[var(--text-secondary)] font-medium inline-flex items-center justify-center">
+              Based on selected material
+            </span>
+          </div>
+
+          {/* Customize Button */}
           <button
-            key={String(s.id)}
             type="button"
-            onClick={() => setProctored(s.id)}
-            className={`text-left rounded-[10px] border px-3 py-2.5 transition-colors ${
-              proctored === s.id
-                ? "border-[var(--accent)] bg-[var(--accent-subtle)]"
-                : "border-[var(--border)] hover:border-[var(--accent)]"
-            }`}
+            onClick={() => setCustomizeOpen(true)}
+            className="w-full min-h-[48px] border border-[var(--border)] bg-[var(--bg-elevated)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-secondary)] rounded-[12px] p-2.5 flex items-center gap-3 text-left transition-all duration-150 group shadow-sm"
           >
-            <div className="text-[13px] font-semibold text-[var(--text-primary)]">
-              {s.title}
-            </div>
-            <p className="mt-0.5 text-[11px] text-[var(--text-muted)] leading-snug">
-              {s.body}
-            </p>
+            <span className="w-[30px] h-[30px] rounded-[9px] bg-[var(--accent-subtle)] text-[var(--accent)] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <svg viewBox="0 0 24 24" className="w-[15px] h-[15px] stroke-current fill-none stroke-[2]" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 7h10" />
+                <path d="M18 7h2" />
+                <circle cx="16" cy="7" r="2" />
+                <path d="M4 17h2" />
+                <path d="M10 17h10" />
+                <circle cx="8" cy="17" r="2" />
+                <path d="M4 12h4" />
+                <path d="M12 12h8" />
+                <circle cx="10" cy="12" r="2" />
+              </svg>
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="text-[11px] font-bold text-[var(--text-primary)] block">
+                Customize quiz
+              </span>
+              <span className="text-[9.5px] text-[var(--text-muted)] mt-0.5 leading-snug block">
+                {customizeSettings.questions === "10" &&
+                customizeSettings.difficulty === "EXAM" &&
+                customizeSettings.mix === "balanced" &&
+                customizeSettings.timer === "auto"
+                  ? "Adjust question count, difficulty, question mix, or timer"
+                  : `${customizeSettings.questions} questions · ${labelDifficulty(
+                      customizeSettings.difficulty
+                    )} · ${labelMix(customizeSettings.mix)}${
+                      proctored
+                        ? ` · ${
+                            customizeSettings.timer === "auto"
+                              ? "Auto timer"
+                              : `${customizeSettings.timer} min`
+                          }`
+                        : ""
+                    }`}
+              </span>
+            </span>
+            <span className="w-[18px] h-[18px] text-[var(--text-muted)] flex items-center justify-center shrink-0 ml-auto group-hover:translate-x-0.5 transition-transform">
+              <svg viewBox="0 0 24 24" className="w-[14px] h-[14px] stroke-current fill-none stroke-[2.2]" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m9 6 6 6-6 6" />
+              </svg>
+            </span>
           </button>
-        ))}
+
+          {error && (
+            <p className="text-[11.5px] font-medium text-red-400 mt-2">{error}</p>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="shrink-0 px-5 sm:px-6 py-3.5 border-t border-[var(--border)] flex items-center justify-between bg-[var(--bg-secondary)]/30">
+          <div className="text-[10px] text-[var(--text-muted)] max-w-[280px] sm:max-w-[400px] leading-relaxed">
+            Shelf will choose a balanced question set from the selected source.
+          </div>
+          <button
+            type="button"
+            className={`${quizBtnPrimary} h-[39px] rounded-[10px] px-4 text-[12px] font-bold`}
+            disabled={busy}
+            onClick={() => void start()}
+          >
+            {busy ? "Starting…" : "Generate quiz"}
+          </button>
+        </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 mt-4">
-        <label className="text-[12px] font-medium text-[var(--text-secondary)]">
-          Difficulty
-          <ShelfSelect
-            className={quizFieldClass}
-            disabled={busy}
-            value={difficulty}
-            options={Object.entries(DIFFICULTY_LABELS).map(([id, label]) => ({
-              value: id,
-              label,
-            }))}
-            aria-label="Difficulty"
-            onChange={setDifficulty}
-          />
-        </label>
-        <label className="text-[12px] font-medium text-[var(--text-secondary)]">
-          Time
-          <ShelfSelect
-            className={quizFieldClass}
-            disabled={busy}
-            value={String(timeLimitSec ?? 0)}
-            options={TIME_OPTIONS.map((t) => ({
-              value: String(t.sec ?? 0),
-              label: t.label,
-            }))}
-            aria-label="Time limit"
-            onChange={(v) => {
-              const n = Number(v);
-              setTimeLimitSec(n > 0 ? n : null);
-            }}
-          />
-        </label>
-        <label className="text-[12px] font-medium text-[var(--text-secondary)]">
-          MCQs
-          <input
-            type="number"
-            min={0}
-            max={20}
-            disabled={busy}
-            className={quizFieldClass}
-            value={mcqCount}
-            onChange={(e) => setMcqCount(Number(e.target.value))}
-          />
-        </label>
-        <label className="text-[12px] font-medium text-[var(--text-secondary)]">
-          Written / image answers
-          <input
-            type="number"
-            min={0}
-            max={8}
-            disabled={busy}
-            className={quizFieldClass}
-            value={writtenCount}
-            onChange={(e) => setWrittenCount(Number(e.target.value))}
-          />
-        </label>
-        <label className="text-[12px] font-medium text-[var(--text-secondary)] sm:col-span-2">
-          Focus (optional)
-          <input
-            className={quizFieldClass}
-            disabled={busy}
-            value={focus}
-            onChange={(e) => setFocus(e.target.value)}
-            placeholder="e.g. federalism, OS scheduling, Art. 32"
-          />
-        </label>
-      </div>
-
-      {error && (
-        <p className="mt-3 text-[12px] text-red-400">{error}</p>
-      )}
-      </div>
-      <div className="shrink-0 px-4 sm:px-5 py-3 border-t border-[var(--border)] flex justify-end">
-        <button type="button" className={quizBtnPrimary} disabled={busy} onClick={() => void start()}>
-          {busy ? "Starting…" : "Generate quiz"}
-        </button>
-      </div>
-    </div>
+      {/* Customize overlay modal */}
+      <QuizCustomizeModal
+        isOpen={customizeOpen}
+        onClose={() => setCustomizeOpen(false)}
+        onApply={handleApplySettings}
+        initialSettings={customizeSettings}
+        proctored={proctored}
+      />
+    </>
   );
 }
