@@ -20,10 +20,10 @@ const SAVE_STEPS: Record<string, string> = {
 };
 
 const savePrimaryButtonClass =
-  "shrink-0 inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 whitespace-nowrap";
+  "shrink-0 inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-3 py-0.5 text-[11px] font-semibold text-white hover:bg-[var(--accent-hover)] transition-colors disabled:opacity-50 whitespace-nowrap";
 
 const saveSecondaryButtonClass =
-  "shrink-0 inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-[var(--bg-elevated)] px-4 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors whitespace-nowrap";
+  "shrink-0 inline-flex items-center justify-center rounded-full border border-[var(--border)] bg-[var(--bg-elevated)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-colors whitespace-nowrap";
 
 function progressForPoll(poll: number, saveMode?: string): number {
   const base = saveMode === "download_remote" ? 15 : 20;
@@ -205,34 +205,32 @@ export function PreloadedSaveBanner({
     return (
       <div
         ref={rootRef}
-        className="shrink-0 px-4 py-3 border-b border-[var(--border)] bg-[var(--accent-light)]/40 flex flex-col gap-2 text-xs text-[var(--accent)]"
+        className="shrink-0 px-3 py-1.5 border-b border-[var(--border)] bg-[var(--accent-light)]/40 flex items-center gap-2 text-[11px] leading-snug text-[var(--accent)]"
       >
-        <div className="flex items-center gap-3">
-          <BookmarkPlus className="w-3.5 h-3.5 shrink-0" />
-          <span className="flex-1 min-w-0">
-            <strong className="text-[var(--text-primary)]">Preloaded</strong>
-            {" · "}
-            {saveAllowed
-              ? `${guestSaveHint} This page stays read-only until then.`
-              : saveReason ?? "Official preview only."}
-          </span>
-          {saveAllowed ? (
-            <Link
-              href={loginHref}
-              className={savePrimaryButtonClass}
-              onClick={() =>
-                rememberGuestLearnArticle(
-                  subjectSlug,
-                  topicSlug,
-                  articleSlug,
-                  pageTitle
-                )
-              }
-            >
-              Sign in to save
-            </Link>
-          ) : null}
-        </div>
+        <BookmarkPlus className="w-3.5 h-3.5 shrink-0" />
+        <span className="flex-1 min-w-0">
+          <strong className="text-[var(--text-primary)]">Preloaded</strong>
+          {" · "}
+          {saveAllowed
+            ? `${guestSaveHint} This page stays read-only until then.`
+            : saveReason ?? "Official preview only."}
+        </span>
+        {saveAllowed ? (
+          <Link
+            href={loginHref}
+            className={savePrimaryButtonClass}
+            onClick={() =>
+              rememberGuestLearnArticle(
+                subjectSlug,
+                topicSlug,
+                articleSlug,
+                pageTitle
+              )
+            }
+          >
+            Sign in to save
+          </Link>
+        ) : null}
       </div>
     );
   }
@@ -256,9 +254,9 @@ export function PreloadedSaveBanner({
   return (
     <div
       ref={rootRef}
-      className="shrink-0 px-4 py-3 border-b border-[var(--border)] bg-[var(--accent-light)]/40 flex flex-col gap-2 text-xs text-[var(--accent)]"
+      className="shrink-0 px-3 py-1.5 border-b border-[var(--border)] bg-[var(--accent-light)]/40 flex flex-col gap-1 text-[11px] leading-snug text-[var(--accent)]"
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <BookmarkPlus className="w-3.5 h-3.5 shrink-0" />
         <span className="flex-1 min-w-0">
           <strong className="text-[var(--text-primary)]">Preloaded</strong>
@@ -284,14 +282,14 @@ export function PreloadedSaveBanner({
         ) : null}
       </div>
       {phase === "saving" ? (
-        <div className="pl-6 pr-1">
-          <div className="h-1.5 rounded-full bg-[var(--border)] overflow-hidden">
+        <div className="pl-5 pr-1">
+          <div className="h-1 rounded-full bg-[var(--border)] overflow-hidden">
             <div
               className="h-full bg-[var(--accent)] transition-all duration-500 ease-out"
               style={{ width: `${progress}%` }}
             />
           </div>
-          <p className="text-[10px] text-[var(--text-muted)] mt-1">
+          <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
             {Math.round(progress)}%
           </p>
         </div>
