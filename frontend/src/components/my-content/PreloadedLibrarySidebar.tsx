@@ -28,6 +28,7 @@ import type { ExploreAreaId } from "@/lib/exploreCatalog";
 import { getExploreArea, learnAreaHref } from "@/lib/exploreCatalog";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { ExploreSidebarBrowse } from "@/components/learn/explore/ExploreSidebarBrowse";
+import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
 
 interface PreloadedLibrarySidebarProps {
   mode: LibraryMode;
@@ -145,9 +146,12 @@ export function PreloadedLibrarySidebar({
     setExpandedTopics((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const folderBrowse = useOptionalPreloadedBrowse();
+
   const collapseAll = () => {
     setExpandedSubjects({});
     setExpandedTopics({});
+    folderBrowse?.setPath({});
   };
 
   const exploreSidebarMode = isReaderCollection ? "collection" : "home";

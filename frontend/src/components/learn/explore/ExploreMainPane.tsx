@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { ExploreWorkspaceShell } from "@/components/learn/explore/ExploreWorkspaceShell";
 import { ExploreAreaIcon } from "@/components/learn/explore/ExploreAreaIcon";
 import { ExploreAreaContent } from "@/components/learn/explore/ExploreAreaContent";
 import { ExploreCollectionContent } from "@/components/learn/explore/ExploreCollectionContent";
 import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
 import {
+  LearnCatalogSkeleton,
   LearnCollectionSkeleton,
 } from "@/components/learn/LearnBrowseSkeletons";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
@@ -23,13 +23,13 @@ import {
   listAreaResources,
   subjectExploreHref,
   subjectsForArea,
+  featuredExploreCollections,
+  visibleExploreAreas,
   visibleExploreAreasForGoal,
-  catalogGoalAllowsArea,
 } from "@/lib/exploreCatalog";
 import {
   searchLearnCatalog,
   subjectGoal,
-  subjectMatchesCatalogGoal,
   subjectsForCatalogGoal,
 } from "@/lib/learnCatalog";
 import { BrowseFolderLink, useOpenBrowseHref } from "@/components/learn/BrowseFolderLink";
@@ -114,10 +114,6 @@ export function ExploreMainPane({
     return subjectsForCatalogGoal(subjects, catalogGoal);
   }, [subjects, subject, areaId, catalogGoal]);
 
-  const subjectAllowed =
-    !subject || subjectMatchesCatalogGoal(subject, catalogGoal);
-  const areaAllowed = !areaId || catalogGoalAllowsArea(areaId, catalogGoal);
-
   const hits = useMemo(() => {
     const q = query.trim();
     if (!q) return [];
@@ -192,14 +188,6 @@ export function ExploreMainPane({
           featured={featured}
           catalogGoal={catalogGoal}
         />
-      ) : !areaAllowed || (subject && !subjectAllowed) ? (
-        <div className="learn-empty">
-          This material is outside your study track.{" "}
-          <Link href={returnTo} className="text-[var(--accent)]">
-            Back to Explore
-          </Link>
-          .
-        </div>
       ) : areaId && !subjectSlug ? (
         <ExploreAreaContent
           areaId={areaId}
@@ -244,7 +232,10 @@ function ExploreHomeContent({
   featured: Subject[];
   catalogGoal: StudyGoal;
 }) {
-  const areas = loading ? [] : visibleExploreAreasForGoal(subjects, catalogGoal);
+  const areas = visibleExploreAreasForGoal(subjects, catalogGoal);
+  const shownAreas = areas.length > 0 ? areas : visibleExploreAreas(subjects);
+  const shownFeatured =
+    featured.length > 0 ? featured : featuredExploreCollections(subjects);
 
   return (
     <>
@@ -253,7 +244,11 @@ function ExploreHomeContent({
         useful, open it and save a copy into your own Library.
       </p>
 
-      {areas.length > 0 ? (
+      {loading && subjects.length === 0 ? (
+        <LearnCatalogSkeleton cards={4} />
+      ) : null}
+
+      {shownAreas.length > 0 ? (
         <section className="explore-section !mt-0">
           <div className="explore-section-head">
             <h2 className="explore-section-title">Browse by area</h2>
@@ -262,7 +257,7 @@ function ExploreHomeContent({
             </p>
           </div>
           <div className="explore-area-grid">
-            {areas.map((area) => {
+            {shownAreas.map((area) => {
               const groups = subjectsForArea(subjects, area.id);
               const articles = countAreaItems(subjects, area.id);
               return (
@@ -286,7 +281,7 @@ function ExploreHomeContent({
         </section>
       ) : null}
 
-      {featured.length > 0 ? (
+      {shownFeatured.length > 0 ? (
         <section className="explore-section">
           <div className="explore-section-head">
             <h2 className="explore-section-title">Public collections</h2>
@@ -295,7 +290,7 @@ function ExploreHomeContent({
             </p>
           </div>
           <div className="explore-collection-grid">
-            {featured.map((s) => (
+            {shownFeatured.map((s) => (
               <BrowseFolderLink
                 key={s.id}
                 path={withResolvedArea({ subjectSlug: s.slug }, subjects)}

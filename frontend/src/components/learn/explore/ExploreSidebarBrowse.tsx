@@ -15,12 +15,11 @@ import {
   EXPLORE_AREAS,
   ExploreAreaId,
   areaSidebarRows,
-  catalogGoalAllowsArea,
   isExploreAreaId,
   learnAreaHref,
   subjectExploreHref,
 } from "@/lib/exploreCatalog";
-import { subjectHref, subjectMatchesCatalogGoal, topicHref } from "@/lib/learnCatalog";
+import { subjectHref, topicHref } from "@/lib/learnCatalog";
 import { learnHref, learnScope } from "@/lib/learnContent";
 import { isPremiumUser } from "@/lib/premium";
 import { ArticleSummary, StudyGoal, Topic } from "@/types";
@@ -99,7 +98,6 @@ export function ExploreSidebarBrowse({
 
   const collectionBody =
     mode === "collection" && activeSubject && collectionSubject ? (
-      subjectMatchesCatalogGoal(collectionSubject, studyGoal) ? (
       <div>
         <p className="explore-side-label">Public collection</p>
         <BrowseFolderLink
@@ -211,11 +209,6 @@ export function ExploreSidebarBrowse({
           </div>
         ) : null}
       </div>
-      ) : (
-        <p className="px-1.5 text-xs text-[var(--text-muted)]">
-          This collection is outside your study track.
-        </p>
-      )
     ) : null;
 
   return (
@@ -237,7 +230,6 @@ export function ExploreSidebarBrowse({
           onOpenPage={onOpenPage}
         />
       ) : activeArea ? (
-        catalogGoalAllowsArea(activeArea, studyGoal) ? (
         <div>
           <p className="explore-side-label">
             {EXPLORE_AREAS.find((a) => a.id === activeArea)?.title}
@@ -274,11 +266,6 @@ export function ExploreSidebarBrowse({
             </Link>
           ))}
         </div>
-        ) : (
-          <p className="px-1.5 text-xs text-[var(--text-muted)]">
-            This browse area is outside your study track.
-          </p>
-        )
       ) : null}
     </div>
   );

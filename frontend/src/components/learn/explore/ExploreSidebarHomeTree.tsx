@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDown, ChevronRight, FileText, Folder, Lock, Newspaper } from "lucide-react";
+import { ChevronRight, FileText, Folder, Lock, Newspaper } from "lucide-react";
 import clsx from "clsx";
 import { BrowseFolderLink } from "@/components/learn/BrowseFolderLink";
 import { ExploreAreaIcon } from "@/components/learn/explore/ExploreAreaIcon";
+import { ExploreTreeReveal } from "@/components/learn/explore/ExploreTreeReveal";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import {
   ExploreAreaDef,
@@ -169,39 +170,41 @@ function AreaBranch({
       <BrowseFolderLink
         path={{ areaId: area.id }}
         preventNav={lockFolders}
+        expanded={expanded}
+        collapseTo={{}}
         className={clsx(
           "explore-side-row",
           areaActive && "explore-side-row-active"
         )}
       >
-        <span className="explore-side-chevron" aria-hidden>
-          {expanded ? (
-            <ChevronDown className="w-3 h-3" />
-          ) : (
-            <ChevronRight className="w-3 h-3" />
+        <span
+          className={clsx(
+            "explore-side-chevron",
+            expanded && "explore-side-chevron-open"
           )}
+          aria-hidden
+        >
+          <ChevronRight className="w-3 h-3" />
         </span>
         <ExploreAreaIcon tone={area.tone} size="sm" />
         <span className="min-w-0 flex-1 truncate">{area.title}</span>
         <span className="explore-side-count">{count}</span>
       </BrowseFolderLink>
-      {expanded ? (
-        <div className="explore-side-branch">
-          {collections.map((subject) => (
-            <CollectionBranch
-              key={subject.id}
-              subject={subject}
-              areaId={area.id}
-              expanded={activeSubject === subject.slug}
-              activeTopic={activeTopic}
-              activeArticle={activeArticle}
-              searchQuery={searchQuery}
-              lockFolders={lockFolders}
-              onOpenPage={onOpenPage}
-            />
-          ))}
-        </div>
-      ) : null}
+      <ExploreTreeReveal open={expanded}>
+        {collections.map((subject) => (
+          <CollectionBranch
+            key={subject.id}
+            subject={subject}
+            areaId={area.id}
+            expanded={activeSubject === subject.slug}
+            activeTopic={activeTopic}
+            activeArticle={activeArticle}
+            searchQuery={searchQuery}
+            lockFolders={lockFolders}
+            onOpenPage={onOpenPage}
+          />
+        ))}
+      </ExploreTreeReveal>
     </div>
   );
 }
@@ -235,40 +238,42 @@ function CollectionBranch({
       <BrowseFolderLink
         path={{ areaId, subjectSlug: subject.slug }}
         preventNav={lockFolders}
+        expanded={expanded}
+        collapseTo={{ areaId }}
         className={clsx(
           "explore-side-row",
           collectionActive && "explore-side-row-active"
         )}
       >
-        <span className="explore-side-chevron" aria-hidden>
-          {expanded ? (
-            <ChevronDown className="w-3 h-3" />
-          ) : (
-            <ChevronRight className="w-3 h-3" />
+        <span
+          className={clsx(
+            "explore-side-chevron",
+            expanded && "explore-side-chevron-open"
           )}
+          aria-hidden
+        >
+          <ChevronRight className="w-3 h-3" />
         </span>
         <span className="explore-side-folder" aria-hidden>
           <Folder className="w-3 h-3" />
         </span>
         <span className="min-w-0 flex-1 truncate">{subject.name}</span>
       </BrowseFolderLink>
-      {expanded ? (
-        <div className="explore-side-branch">
-          {topics.map((topic) => (
-            <TopicBranch
-              key={topic.id}
-              topic={topic}
-              areaId={areaId}
-              subjectSlug={subject.slug}
-              expanded={activeTopic === topic.slug}
-              activeArticle={activeArticle}
-              searchQuery={searchQuery}
-              lockFolders={lockFolders}
-              onOpenPage={onOpenPage}
-            />
-          ))}
-        </div>
-      ) : null}
+      <ExploreTreeReveal open={expanded}>
+        {topics.map((topic) => (
+          <TopicBranch
+            key={topic.id}
+            topic={topic}
+            areaId={areaId}
+            subjectSlug={subject.slug}
+            expanded={activeTopic === topic.slug}
+            activeArticle={activeArticle}
+            searchQuery={searchQuery}
+            lockFolders={lockFolders}
+            onOpenPage={onOpenPage}
+          />
+        ))}
+      </ExploreTreeReveal>
     </div>
   );
 }
@@ -306,17 +311,21 @@ function TopicBranch({
         path={{ areaId, subjectSlug, topicSlug: topic.slug }}
         href={topicHref(subjectSlug, topic.slug)}
         preventNav={lockFolders}
+        expanded={expanded}
+        collapseTo={{ areaId, subjectSlug }}
         className={clsx(
           "explore-side-row",
           topicActive && "explore-side-row-active"
         )}
       >
-        <span className="explore-side-chevron" aria-hidden>
-          {expanded ? (
-            <ChevronDown className="w-3 h-3" />
-          ) : (
-            <ChevronRight className="w-3 h-3" />
+        <span
+          className={clsx(
+            "explore-side-chevron",
+            expanded && "explore-side-chevron-open"
           )}
+          aria-hidden
+        >
+          <ChevronRight className="w-3 h-3" />
         </span>
         <span className="explore-side-folder" aria-hidden>
           <Folder className="w-3 h-3" />
@@ -324,9 +333,8 @@ function TopicBranch({
         <span className="min-w-0 flex-1 truncate">{topic.title}</span>
         {count > 0 ? <span className="explore-side-count">{count}</span> : null}
       </BrowseFolderLink>
-      {expanded ? (
-        <div className="explore-side-branch">
-          {articles.map((article) => {
+      <ExploreTreeReveal open={expanded}>
+        {articles.map((article) => {
             const isActive = activeArticle === article.slug;
             return (
               <BrowseFolderLink
@@ -371,8 +379,7 @@ function TopicBranch({
               </BrowseFolderLink>
             );
           })}
-        </div>
-      ) : null}
+      </ExploreTreeReveal>
     </div>
   );
 }

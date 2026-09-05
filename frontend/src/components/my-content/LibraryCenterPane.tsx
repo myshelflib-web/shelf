@@ -69,7 +69,15 @@ export function LibraryCenterPane({
           </div>
         </>
       ) : (
-        <div key="preloaded" className="library-center-pane-swap h-full min-h-0">
+        <div
+          key={[
+            resolvedExplore?.areaId ?? "",
+            resolvedExplore?.subjectSlug ?? "",
+            resolvedExplore?.topicSlug ?? "",
+            browse?.path.articleSlug ?? "",
+          ].join("/")}
+          className="library-center-pane-swap explore-folder-swap h-full min-h-0"
+        >
           {browse?.path.articleSlug &&
           browse.path.subjectSlug &&
           browse.path.topicSlug ? (

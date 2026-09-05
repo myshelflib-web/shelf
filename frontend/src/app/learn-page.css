@@ -982,6 +982,14 @@ button.explore-collection-card {
   flex-shrink: 0;
 }
 
+.explore-side-chevron svg {
+  transition: transform 0.18s ease;
+}
+
+.explore-side-chevron-open svg {
+  transform: rotate(90deg);
+}
+
 .explore-side-row:hover {
   background: var(--bg-secondary);
 }
@@ -1054,7 +1062,19 @@ button.explore-side-collection {
   flex-shrink: 0;
 }
 
+.explore-side-reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.18s ease;
+}
+
+.explore-side-reveal-open {
+  grid-template-rows: 1fr;
+}
+
 .explore-side-branch {
+  overflow: hidden;
+  min-height: 0;
   margin-left: 0.875rem;
   padding-left: 0.5rem;
   border-left: 1px solid var(--border-subtle);
@@ -1073,6 +1093,21 @@ button.explore-side-collection {
   pointer-events: none;
 }
 
+.library-center-pane-swap.explore-folder-swap {
+  animation: explore-folder-in 0.2s ease both;
+}
+
+@keyframes explore-folder-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .learn-browse-pane-enter {
   animation: learn-browse-pane-in 0.32s ease forwards;
 }
@@ -1089,6 +1124,11 @@ button.explore-side-collection {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .explore-side-reveal,
+  .explore-side-chevron svg {
+    transition: none;
+  }
+
   .learn-reader-shell {
     transition: none;
   }
@@ -1098,7 +1138,8 @@ button.explore-side-collection {
     transform: none;
   }
 
-  .learn-browse-pane-enter {
+  .learn-browse-pane-enter,
+  .library-center-pane-swap.explore-folder-swap {
     animation: none;
   }
 }

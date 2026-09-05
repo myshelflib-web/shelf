@@ -3,6 +3,7 @@ import { parseLearnPath } from "./learnCatalog";
 import {
   browseHref,
   browsePathFromHref,
+  isSameBrowseFolder,
   preloadedExplorerMode,
   resolveBrowseArea,
 } from "./preloadedBrowse";
@@ -76,6 +77,37 @@ describe("browseHref / browsePathFromHref", () => {
       topicSlug: "constitution",
       articleSlug: "preamble",
     });
+  });
+});
+
+describe("isSameBrowseFolder", () => {
+  it("matches a folder only when no child is selected", () => {
+    expect(
+      isSameBrowseFolder({ areaId: "upsc" }, { areaId: "upsc" })
+    ).toBe(true);
+    expect(
+      isSameBrowseFolder(
+        { areaId: "upsc", subjectSlug: "csat" },
+        { areaId: "upsc" }
+      )
+    ).toBe(false);
+    expect(
+      isSameBrowseFolder(
+        { areaId: "upsc", subjectSlug: "csat", topicSlug: "comprehension" },
+        { areaId: "upsc", subjectSlug: "csat", topicSlug: "comprehension" }
+      )
+    ).toBe(true);
+    expect(
+      isSameBrowseFolder(
+        {
+          areaId: "upsc",
+          subjectSlug: "csat",
+          topicSlug: "comprehension",
+          articleSlug: "passage-1",
+        },
+        { areaId: "upsc", subjectSlug: "csat", topicSlug: "comprehension" }
+      )
+    ).toBe(false);
   });
 });
 

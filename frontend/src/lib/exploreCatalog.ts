@@ -174,14 +174,27 @@ export function visibleExploreAreas(subjects: Subject[]): ExploreAreaDef[] {
   return EXPLORE_AREAS.filter((area) => countAreaItems(subjects, area.id) > 0);
 }
 
-/** General track users only see non-exam browse areas (e.g. study skills). */
+/** Study skills stay in Browse on every track. */
+function withStudySkillsArea(
+  areas: ExploreAreaDef[],
+  all: ExploreAreaDef[]
+): ExploreAreaDef[] {
+  const books = all.find((area) => area.id === "books");
+  if (!books || areas.some((area) => area.id === "books")) return areas;
+  return [...areas, books];
+}
+
+/** Exam tracks see their area plus study skills; General sees study skills only. */
 export function visibleExploreAreasForGoal(
   subjects: Subject[],
   goal: StudyGoal
 ): ExploreAreaDef[] {
   const areas = visibleExploreAreas(subjects);
   if (goal !== "GENERAL") {
-    return areas.filter((area) => area.goals.includes(goal));
+    return withStudySkillsArea(
+      areas.filter((area) => area.goals.includes(goal)),
+      areas
+    );
   }
   return areas.filter((area) => area.goals.includes("GENERAL"));
 }
@@ -190,6 +203,7 @@ export function catalogGoalAllowsArea(
   areaId: ExploreAreaId,
   goal: StudyGoal
 ): boolean {
+  if (areaId === "books") return true;
   const area = getExploreArea(areaId);
   if (goal === "GENERAL") return area.goals.includes("GENERAL");
   return area.goals.includes(goal);

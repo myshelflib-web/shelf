@@ -70,3 +70,17 @@ export function withResolvedArea(
     areaId: resolveBrowseArea(path, subjects),
   };
 }
+
+/** True when the current browse folder is this folder (not a child). */
+export function isSameBrowseFolder(
+  current: PreloadedBrowsePath,
+  folder: PreloadedBrowsePath
+): boolean {
+  return (
+    (current.areaId ?? null) === (folder.areaId ?? null) &&
+    (current.subjectSlug ?? undefined) === (folder.subjectSlug ?? undefined) &&
+    (current.topicSlug ?? undefined) === (folder.topicSlug ?? undefined) &&
+    !current.articleSlug &&
+    !folder.articleSlug
+  );
+}

@@ -7,6 +7,7 @@ import {
   PreloadedBrowsePath,
   browseHref,
   browsePathFromHref,
+  isSameBrowseFolder,
 } from "@/lib/preloadedBrowse";
 
 /** Folder and article hrefs stay on Library when the browse context is mounted. */
@@ -32,6 +33,8 @@ export function BrowseFolderLink({
   children,
   preventNav = false,
   onOpen,
+  expanded,
+  collapseTo,
 }: {
   path: PreloadedBrowsePath;
   href?: string;
@@ -40,6 +43,9 @@ export function BrowseFolderLink({
   /** Stay on this page — used by the reader so folders only expand. */
   preventNav?: boolean;
   onOpen?: () => void;
+  expanded?: boolean;
+  /** Clicking an already-open folder collapses to this parent path. */
+  collapseTo?: PreloadedBrowsePath;
 }) {
   const browse = useOptionalPreloadedBrowse();
   const resolvedHref = href ?? browseHref(path);
@@ -49,8 +55,16 @@ export function BrowseFolderLink({
       <button
         type="button"
         className={className}
+        aria-expanded={expanded}
         onClick={() => {
           onOpen?.();
+          if (
+            collapseTo !== undefined &&
+            isSameBrowseFolder(browse.path, path)
+          ) {
+            browse.setPath(collapseTo);
+            return;
+          }
           browse.setPath(path);
         }}
       >
