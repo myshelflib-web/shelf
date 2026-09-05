@@ -12,6 +12,7 @@ export function usePersonalContentSelection(opts: {
   readOnly: boolean;
   clipMode: boolean;
   eraseMode: boolean;
+  highlightMode?: boolean;
   contentRootRef: MutableRefObject<HTMLElement | null>;
   originRef: MutableRefObject<HTMLElement | null>;
   onTextPick: (pick: HtmlTextPick) => void;
@@ -22,6 +23,7 @@ export function usePersonalContentSelection(opts: {
     readOnly,
     clipMode,
     eraseMode,
+    highlightMode = false,
     contentRootRef,
     originRef,
     onTextPick,
@@ -29,7 +31,7 @@ export function usePersonalContentSelection(opts: {
   } = opts;
 
   const handleMouseUp = useCallback(() => {
-    if (editing || readOnly || clipMode || eraseMode) return;
+    if (editing || readOnly || clipMode || eraseMode || highlightMode) return;
     const root = contentRootRef.current;
     const origin = originRef.current;
     if (!root || !origin) return;
@@ -44,6 +46,7 @@ export function usePersonalContentSelection(opts: {
     readOnly,
     clipMode,
     eraseMode,
+    highlightMode,
     contentRootRef,
     originRef,
     onTextPick,

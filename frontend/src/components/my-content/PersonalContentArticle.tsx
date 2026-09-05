@@ -11,7 +11,7 @@ import {
 
 type Pt = { x: number; y: number };
 
-/** Article body + stroke layer + optional pen hit surface. */
+/** Article body + stroke layer + optional pen hit surface (PDF-style tools). */
 export function PersonalContentArticle({
   originRef,
   setOrigin,
@@ -81,7 +81,7 @@ export function PersonalContentArticle({
         ref={setContentRoot}
         className="prose-content personal-content select-text relative z-[1] bg-transparent"
         onClick={(e) => {
-          if (clipMode || editing) return;
+          if (clipMode || highlightMode || editing) return;
           const live = window.getSelection();
           if (live && !live.isCollapsed) return;
           const root = contentRootRef.current;
@@ -98,6 +98,17 @@ export function PersonalContentArticle({
         }}
         dangerouslySetInnerHTML={{ __html: fragment }}
       />
+      {/* Pen tool: capture strokes above prose (same idea as PDF pen mode). */}
+      {highlightMode ? (
+        <div
+          className="absolute inset-0 z-[2] touch-none"
+          style={{ cursor: "crosshair" }}
+          onPointerDown={onStrokeDown}
+          onPointerMove={onStrokeMove}
+          onPointerUp={onStrokeUp}
+          onPointerCancel={onStrokeUp}
+        />
+      ) : null}
     </div>
   );
 }
