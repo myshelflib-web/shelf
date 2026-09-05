@@ -63,7 +63,7 @@
 
 .landing-preview-body {
   position: relative;
-  height: 348px;
+  height: 400px;
   overflow: hidden;
   background: var(--bg-primary);
   border-radius: 0 0 22px 22px;
@@ -355,7 +355,7 @@
 .landing-library-welcome {
   display: grid;
   place-items: center;
-  min-height: 220px;
+  min-height: 260px;
   margin-top: 8px;
 }
 

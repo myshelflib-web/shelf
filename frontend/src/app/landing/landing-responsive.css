@@ -46,7 +46,7 @@
     max-width: 100%;
   }
   .landing-preview-body {
-    height: min(320px, 52vh);
+    height: min(380px, 56vh);
   }
   .landing-mini-content {
     grid-template-columns: 1fr;
