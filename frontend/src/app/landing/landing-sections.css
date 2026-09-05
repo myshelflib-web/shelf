@@ -1,6 +1,6 @@
 /* Value section */
 .landing-value-section {
-  padding: 40px 64px 64px;
+  padding: 80px 64px;
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -183,7 +183,7 @@
 
 /* Goal section */
 .landing-goal-section {
-  padding: 72px 64px;
+  padding: 88px 64px;
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -251,7 +251,7 @@
 
 /* CTA banner */
 .landing-cta-section {
-  padding: 72px 64px;
+  padding: 88px 64px;
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -298,7 +298,7 @@
 
 /* Showcase sections */
 .landing-showcase-section {
-  padding: 72px 64px;
+  padding: 88px 64px;
   border-top: 1px solid var(--border-subtle);
 }
 

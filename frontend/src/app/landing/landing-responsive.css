@@ -1,7 +1,7 @@
 @media (max-width: 1160px) {
   .landing-hero {
     grid-template-columns: 1fr;
-    padding: 54px 34px;
+    padding: 54px 34px 64px;
   }
   .landing-value-section,
   .landing-goal-section,
@@ -30,7 +30,7 @@
 
 @media (max-width: 760px) {
   .landing-hero {
-    padding: 38px 18px 34px;
+    padding: 38px 18px 48px;
   }
   .landing-hero-actions {
     flex-direction: column;
@@ -145,9 +145,6 @@
   }
   .landing-preview-stage::before {
     opacity: 0.4;
-  }
-  .landing-marquee-track {
-    animation: none;
   }
   .landing-torch-local {
     display: none;
