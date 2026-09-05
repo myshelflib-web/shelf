@@ -56,7 +56,7 @@
 
 .landing-hero {
   position: relative;
-  padding: 64px 56px 72px;
+  padding: 64px 56px 40px;
   display: grid;
   grid-template-columns: 0.92fr 1.08fr;
   gap: 48px;

@@ -1,6 +1,6 @@
 /* Value section */
 .landing-value-section {
-  padding: 72px 64px;
+  padding: 40px 64px 64px;
   border-top: 1px solid var(--border-subtle);
 }
 

@@ -41,16 +41,16 @@
 }
 
 .landing-preview-head {
-  height: 52px;
+  height: 40px;
   display: flex;
   align-items: center;
-  padding: 0 18px;
+  padding: 0 16px;
   border-bottom: 1px solid var(--border-subtle);
   background: color-mix(in srgb, var(--bg-elevated) 92%, var(--bg-secondary));
 }
 
 .landing-preview-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 650;
   letter-spacing: -0.01em;
 }

@@ -94,7 +94,7 @@ export function LandingShowcaseCarousel() {
 
   return (
     <section
-      className="landing-showcase-carousel-section"
+      className="landing-showcase-carousel-section landing-torch-zone"
       aria-labelledby="landing-showcase-heading"
     >
       <div className="landing-showcase-carousel-head">

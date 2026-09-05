@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 
 /**
- * Soft accent spotlight that follows the pointer over the landing page
- * (portfolio-style warmth). Disabled for touch / reduced motion.
+ * Soft accent spotlight that follows the pointer — only over sections
+ * marked `.landing-torch-zone`. Disabled for touch / reduced motion.
  */
 export function LandingPointerTorch() {
   useEffect(() => {
@@ -16,6 +16,11 @@ export function LandingPointerTorch() {
     if (!finePointer || reduceMotion) return;
 
     const onMove = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element) || !target.closest(".landing-torch-zone")) {
+        root.classList.remove("is-torch-on");
+        return;
+      }
       root.style.setProperty("--torch-x", `${event.clientX}px`);
       root.style.setProperty("--torch-y", `${event.clientY}px`);
       root.classList.add("is-torch-on");

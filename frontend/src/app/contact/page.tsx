@@ -44,42 +44,40 @@ export default function ContactPage() {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10 items-stretch">
           <RevealOnScroll delay={60} className="h-full">
-            <div className="feature-card h-full p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] flex flex-col">
-              <div className="flex items-center gap-2.5 mb-2">
+            <div className="feature-card h-full p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] flex flex-col justify-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <Mail className="w-5 h-5 text-[var(--accent)] shrink-0" aria-hidden />
                 <p className="font-medium">Email</p>
               </div>
               <a
                 href="mailto:myshelflib@gmail.com"
-                className="text-sm text-[var(--accent)] hover:underline mt-auto"
+                className="text-sm text-[var(--accent)] hover:underline"
               >
                 myshelflib@gmail.com
               </a>
             </div>
           </RevealOnScroll>
           <RevealOnScroll delay={120} className="h-full">
-            <div className="feature-card h-full p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] flex flex-col">
-              <div className="flex items-center gap-2.5 mb-2">
+            <div className="feature-card h-full p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] flex flex-col justify-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <MessageSquare className="w-5 h-5 text-[var(--accent)] shrink-0" aria-hidden />
                 <p className="font-medium">Support</p>
               </div>
-              <p className="text-sm text-[var(--text-secondary)] mt-auto">
+              <p className="text-sm text-[var(--text-secondary)]">
                 Account, uploads, and Study AI help — usually within 1–2 business days.
               </p>
             </div>
           </RevealOnScroll>
           <RevealOnScroll delay={180} className="h-full">
-            <div className="feature-card h-full p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] flex flex-col">
-              <div className="flex items-center gap-2.5 mb-2">
+            <div className="feature-card h-full p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] flex flex-col justify-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <Share2 className="w-5 h-5 text-[var(--accent)] shrink-0" aria-hidden />
                 <p className="font-medium">Follow</p>
               </div>
-              <p className="text-sm text-[var(--text-secondary)] mb-3">
+              <p className="text-sm text-[var(--text-secondary)]">
                 Instagram, YouTube, and LinkedIn.
               </p>
-              <div className="mt-auto">
-                <SocialLinks />
-              </div>
+              <SocialLinks />
             </div>
           </RevealOnScroll>
         </div>

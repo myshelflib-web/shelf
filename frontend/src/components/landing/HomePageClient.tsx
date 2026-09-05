@@ -51,7 +51,7 @@ export function HomePageClient() {
       <main className="landing-page flex-1 min-h-0 overflow-y-auto">
         <LandingPointerTorch />
         <section
-          className="landing-hero"
+          className="landing-hero landing-torch-zone"
           id="landing-hero"
           aria-labelledby="landing-hero-heading"
         >
