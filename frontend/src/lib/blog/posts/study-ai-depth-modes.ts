@@ -9,6 +9,7 @@ export const studyAiDepthModes = buildPost(
     excerpt:
       "Toggle Quick, Standard, or Deep before you ask. Deep reads your file section by section and synthesizes long chapter-wise summaries — ideal for 200-page textbooks.",
     publishedAt: "2026-08-28",
+    updatedAt: "2026-09-06",
     tags: ["study ai", "summaries", "premium", "rag"],
     readingMinutes: 5,
   },
@@ -28,7 +29,7 @@ export const studyAiDepthModes = buildPost(
       heading: "Long PDFs: map-reduce summaries",
       paragraphs: [
         "A 200-page file cannot fit in one model call. When you use Deep mode (or `/deep-summary` on a page), Shelf reads indexed sections in order, summarizes each part, then merges them into one structured answer. You will see progress like “Reading section 3 of 18…” while it works.",
-        "Use `/chapter-notes` or `/mains` for exam-style long answers. `/analyze` asks for thematic analysis with examples from your file.",
+        "Use `/notes` or `/mains` for exam-style long answers. `/analyze` asks for thematic analysis with examples from your file.",
       ],
     },
     {

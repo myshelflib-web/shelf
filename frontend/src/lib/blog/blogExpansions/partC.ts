@@ -63,12 +63,12 @@ export const BLOG_EXPANSIONS_C: Record<string, BlogSection[]> = {
     {
       heading: "Slash commands for long outputs",
       paragraphs: [
-        "/deep-summary on an open page triggers chapter-wise synthesis when the file is long. /chapter-notes, /analyze, and /mains expand into long-form prompts tuned for revision and exam tracks.",
+        "/deep-summary on an open page triggers chapter-wise synthesis when the file is long. /notes, /analyze, and /mains expand into long-form prompts tuned for revision and exam tracks.",
         "Combine depth with scope: library chat with Standard can pull across a collection; reader Deep focuses on the indexed chunks of the open PDF.",
       ],
       bullets: [
         "/deep-summary — full document, section by section",
-        "/chapter-notes — one heading per chapter",
+        "/notes — revision notes and must-remembers",
         "/mains — long-form answer skeleton",
         "/analyze — themes, evidence, gaps",
       ],

@@ -134,7 +134,7 @@ export function StudyAiToolsMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
-        title="Tools & slash commands"
+        title="Tools & commands"
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
         className={`no-focus-ring shrink-0 flex items-center justify-center transition-colors disabled:opacity-40 ${

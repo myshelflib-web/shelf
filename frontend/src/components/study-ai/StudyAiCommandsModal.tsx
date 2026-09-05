@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, Slash } from "lucide-react";
+import { Search } from "lucide-react";
 import {
   STUDY_AI_COMMANDS,
   filterCommands,
   type StudyAiCommand,
 } from "@/lib/studyAiCommands";
+import { commandIcon } from "@/lib/studyAiCommandGroups";
 
 export function StudyAiCommandsModal({
   open,
@@ -25,10 +26,8 @@ export function StudyAiCommandsModal({
 
   useEffect(() => {
     if (!open) return;
-    const next = initialQuery.startsWith("/")
-      ? initialQuery
-      : `/${initialQuery}`;
-    setQuery(next || "/");
+    const seed = initialQuery.replace(/^\//, "").trim();
+    setQuery(seed);
     setActive(0);
     const t = window.setTimeout(() => inputRef.current?.focus(), 30);
     return () => window.clearTimeout(t);
@@ -75,8 +74,7 @@ export function StudyAiCommandsModal({
             ref={inputRef}
             value={query}
             onChange={(e) => {
-              const v = e.target.value;
-              setQuery(v.startsWith("/") || v === "" ? v : `/${v}`);
+              setQuery(e.target.value.replace(/^\//, ""));
               setActive(0);
             }}
             onKeyDown={(e) => {
@@ -94,9 +92,6 @@ export function StudyAiCommandsModal({
             placeholder="Search commands…"
             className="no-focus-ring flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-[var(--text-muted)]"
           />
-          <span className="text-[10px] font-semibold text-[var(--accent)]">
-            /
-          </span>
         </div>
         <ul className="min-h-[12rem] max-h-[22rem] overflow-y-auto py-1.5">
           {hits.length === 0 ? (
@@ -104,7 +99,9 @@ export function StudyAiCommandsModal({
               No matching command
             </li>
           ) : (
-            hits.map((cmd, i) => (
+            hits.map((cmd, i) => {
+              const Icon = commandIcon(cmd.slash);
+              return (
               <li key={cmd.slash}>
                 <button
                   type="button"
@@ -117,16 +114,11 @@ export function StudyAiCommandsModal({
                   }`}
                 >
                   <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-[8px] border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--accent)]">
-                    <Slash className="w-3 h-3" />
+                    <Icon className="w-3 h-3" />
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline gap-2">
-                      <span className="text-[13px] font-semibold text-[var(--text-primary)]">
-                        /{cmd.slash}
-                      </span>
-                      <span className="text-[11px] text-[var(--text-muted)]">
-                        {cmd.name}
-                      </span>
+                    <span className="text-[13px] font-semibold text-[var(--text-primary)]">
+                      {cmd.name}
                     </span>
                     <span className="block text-[12px] text-[var(--text-secondary)] leading-snug mt-0.5">
                       {cmd.description}
@@ -134,7 +126,8 @@ export function StudyAiCommandsModal({
                   </span>
                 </button>
               </li>
-            ))
+              );
+            })
           )}
         </ul>
         <p className="px-3.5 py-2 border-t border-[var(--border)] text-[10px] text-[var(--text-muted)]">

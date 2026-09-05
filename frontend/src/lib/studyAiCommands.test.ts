@@ -41,12 +41,18 @@ describe("studyAiCommands", () => {
     });
   });
 
-  it("keeps bubble labels short for commands and chips", () => {
+  it("keeps bubble labels friendly — never internal /slash tokens", () => {
     const fromSlash = studyAiSendParts("/outline", "library");
     expect(fromSlash).toEqual({
       kind: "send",
-      display: "/outline",
+      display: "Outline",
       prompt: expect.stringContaining("Outline an exam answer"),
+    });
+    const withArgs = studyAiSendParts("/outline federalism", "library");
+    expect(withArgs).toEqual({
+      kind: "send",
+      display: "Outline: federalism",
+      prompt: expect.stringContaining("Focus on: federalism"),
     });
     const fromChip = studyAiSendParts("/outline", "library", {
       label: "Answer outline",
@@ -62,7 +68,8 @@ describe("studyAiCommands", () => {
     const leaked = studyAiSendParts(expanded.text, "library");
     expect(leaked.kind).toBe("send");
     if (leaked.kind === "send") {
-      expect(leaked.display).toBe("/flashcards");
+      expect(leaked.display).toBe("Flashcards");
+      expect(leaked.display.startsWith("/")).toBe(false);
     }
   });
 

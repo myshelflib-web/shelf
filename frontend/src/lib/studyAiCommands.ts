@@ -36,7 +36,7 @@ export const STUDY_AI_COMMANDS: StudyAiCommand[] = [
   {
     slash: "deep-summary",
     name: "Deep summary",
-    description: "Chapter-by-chapter thorough summary (use Deep mode).",
+    description: "Chapter-by-chapter summary for long files (Deep mode).",
     pageMode: "deep-summary",
     prompt: (scope, args) =>
       withTopic(
@@ -52,16 +52,6 @@ export const STUDY_AI_COMMANDS: StudyAiCommand[] = [
     prompt: (scope, args) =>
       withTopic(
         `Provide a thorough thematic analysis of ${fileOrLibrary(scope)}: core arguments, evidence, implications, and gaps. Use ### per theme with examples.`,
-        args
-      ),
-  },
-  {
-    slash: "chapter-notes",
-    name: "Chapter notes",
-    description: "Detailed notes with one section per chapter.",
-    prompt: (scope, args) =>
-      withTopic(
-        `Create detailed chapter-wise notes from ${fileOrLibrary(scope)}. Use ## Chapter notes and ### per chapter with key terms, facts, and must-remember points.`,
         args
       ),
   },
@@ -188,16 +178,6 @@ export const STUDY_AI_COMMANDS: StudyAiCommand[] = [
       ),
   },
   {
-    slash: "recap",
-    name: "Recap",
-    description: "Quick close-the-loop recap.",
-    prompt: (scope, args) =>
-      withTopic(
-        `Give a tight recap of ${fileOrLibrary(scope)}: 5 bullets + one trap to avoid.`,
-        args
-      ),
-  },
-  {
     slash: "outline",
     name: "Outline",
     description: "Answer skeleton / headings.",
@@ -260,7 +240,7 @@ export const STUDY_AI_COMMANDS: StudyAiCommand[] = [
   {
     slash: "help",
     name: "Commands",
-    description: "Show every slash command.",
+    description: "Show every command.",
     prompt: () => "/help",
   },
 ];
@@ -306,23 +286,22 @@ export type ResolvedStudyAiInput =
   | { kind: "prompt"; text: string; display: string }
   | { kind: "plain"; text: string };
 
-function slashDisplay(slash: string, args: string): string {
+/** Friendly bubble label — never the internal `/slash` token. */
+export function commandDisplayLabel(cmd: StudyAiCommand, args = ""): string {
   const a = args.trim();
-  return a ? `/${slash} ${a}` : `/${slash}`;
+  return a ? `${cmd.name}: ${a}` : cmd.name;
 }
 
-/** If `raw` is a known expanded command template, return its slash label. */
-export function slashLabelForExpandedPrompt(
+/** If `raw` is a known expanded command template, return that command. */
+export function commandForExpandedPrompt(
   raw: string,
   scope: StudyAiCommandScope
-): string | null {
+): StudyAiCommand | undefined {
   const text = raw.trim();
-  if (!text || text.startsWith("/")) return null;
-  for (const cmd of STUDY_AI_COMMANDS) {
-    if (cmd.slash === "help") continue;
-    if (cmd.prompt(scope, "") === text) return `/${cmd.slash}`;
-  }
-  return null;
+  if (!text || text.startsWith("/")) return undefined;
+  return STUDY_AI_COMMANDS.find(
+    (cmd) => cmd.slash !== "help" && cmd.prompt(scope, "") === text
+  );
 }
 
 export function resolveStudyAiInput(
@@ -341,7 +320,7 @@ export function resolveStudyAiInput(
   return {
     kind: "prompt",
     text: cmd.prompt(scope, parsed.args),
-    display: slashDisplay(cmd.slash, parsed.args),
+    display: commandDisplayLabel(cmd, parsed.args),
   };
 }
 
@@ -349,7 +328,7 @@ import { slashInsertForSuggestLabel } from "@/lib/studyAiSuggestions";
 
 /**
  * What to show in the bubble vs what the model receives.
- * Never returns an internal command template as `display`.
+ * Never returns an internal `/slash` token or expanded template as `display`.
  */
 export function studyAiSendParts(
   raw: string,
@@ -381,14 +360,12 @@ export function studyAiSendParts(
       prompt: resolved.text,
     };
   }
-  const collapsed = slashLabelForExpandedPrompt(trimmed, scope);
-  if (collapsed) {
-    const again = resolveStudyAiInput(collapsed, scope);
-    const prompt = again.kind === "prompt" ? again.text : trimmed;
+  const matched = commandForExpandedPrompt(trimmed, scope);
+  if (matched) {
     return {
       kind: "send",
-      display: label || collapsed,
-      prompt,
+      display: label || commandDisplayLabel(matched),
+      prompt: matched.prompt(scope, ""),
     };
   }
   return {
