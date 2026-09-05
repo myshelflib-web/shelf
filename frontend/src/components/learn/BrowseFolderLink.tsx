@@ -30,11 +30,16 @@ export function BrowseFolderLink({
   href,
   className,
   children,
+  preventNav = false,
+  onOpen,
 }: {
   path: PreloadedBrowsePath;
   href?: string;
   className?: string;
   children: React.ReactNode;
+  /** Stay on this page — used by the reader so folders only expand. */
+  preventNav?: boolean;
+  onOpen?: () => void;
 }) {
   const browse = useOptionalPreloadedBrowse();
   const resolvedHref = href ?? browseHref(path);
@@ -44,7 +49,22 @@ export function BrowseFolderLink({
       <button
         type="button"
         className={className}
-        onClick={() => browse.setPath(path)}
+        onClick={() => {
+          onOpen?.();
+          browse.setPath(path);
+        }}
+      >
+        {children}
+      </button>
+    );
+  }
+
+  if (preventNav || onOpen) {
+    return (
+      <button
+        type="button"
+        className={className}
+        onClick={() => onOpen?.()}
       >
         {children}
       </button>

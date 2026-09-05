@@ -239,6 +239,7 @@ export function ExploreSidebarBrowse({
           activeArticle={activeArticle}
           searchQuery={searchQuery}
           studyGoal={studyGoal}
+          onOpenPage={onOpenPage}
         />
       ) : activeArea ? (
         catalogGoalAllowsArea(activeArea, studyGoal) ? (

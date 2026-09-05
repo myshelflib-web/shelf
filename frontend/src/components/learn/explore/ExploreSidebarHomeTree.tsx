@@ -15,11 +15,19 @@ import {
   visibleExploreAreasForGoal,
 } from "@/lib/exploreCatalog";
 import { topicHref } from "@/lib/learnCatalog";
-import { learnHref } from "@/lib/learnContent";
+import { learnHref, learnScope } from "@/lib/learnContent";
 import { withResolvedArea } from "@/lib/preloadedBrowse";
 import { isPremiumUser } from "@/lib/premium";
 import { useAuth } from "@/hooks/useAuth";
+import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
 import { ArticleSummary, StudyGoal, Subject, Topic } from "@/types";
+
+type OpenPageFn = (payload: {
+  href: string;
+  title: string;
+  pageId: string;
+  scope: PersonalPageReaderScope;
+}) => void;
 
 function topicMatchesQuery(topic: Topic, query: string): boolean {
   const needle = query.trim().toLowerCase();
@@ -50,6 +58,7 @@ export function ExploreSidebarHomeTree({
   activeArticle,
   searchQuery = "",
   studyGoal = "GENERAL",
+  onOpenPage,
 }: {
   activeArea?: ExploreAreaId | null;
   activeSubject?: string | null;
@@ -57,6 +66,7 @@ export function ExploreSidebarHomeTree({
   activeArticle?: string | null;
   searchQuery?: string;
   studyGoal?: StudyGoal;
+  onOpenPage?: OpenPageFn;
 }) {
   const { subjects } = useLearnSubjects();
   const featured = featuredExploreCollectionsForGoal(subjects, studyGoal);
@@ -95,6 +105,8 @@ export function ExploreSidebarHomeTree({
             activeTopic={activeTopic}
             activeArticle={activeArticle}
             searchQuery={searchQuery}
+            lockFolders={Boolean(onOpenPage)}
+            onOpenPage={onOpenPage}
           />
         ))}
       </div>
@@ -106,6 +118,7 @@ export function ExploreSidebarHomeTree({
             <BrowseFolderLink
               key={subject.id}
               path={withResolvedArea({ subjectSlug: subject.slug }, subjects)}
+              preventNav={Boolean(onOpenPage)}
               className={clsx(
                 "explore-side-collection",
                 activeSubject === subject.slug && "explore-side-collection-active"
@@ -131,6 +144,8 @@ function AreaBranch({
   activeTopic,
   activeArticle,
   searchQuery,
+  lockFolders,
+  onOpenPage,
 }: {
   area: ExploreAreaDef;
   subjects: Subject[];
@@ -139,6 +154,8 @@ function AreaBranch({
   activeTopic?: string | null;
   activeArticle?: string | null;
   searchQuery: string;
+  lockFolders?: boolean;
+  onOpenPage?: OpenPageFn;
 }) {
   const count = countAreaItems(subjects, area.id);
   const collections = subjectsForArea(subjects, area.id).filter((s) =>
@@ -150,6 +167,7 @@ function AreaBranch({
     <div>
       <BrowseFolderLink
         path={{ areaId: area.id }}
+        preventNav={lockFolders}
         className={clsx(
           "explore-side-row",
           areaActive && "explore-side-row-active"
@@ -177,6 +195,8 @@ function AreaBranch({
               activeTopic={activeTopic}
               activeArticle={activeArticle}
               searchQuery={searchQuery}
+              lockFolders={lockFolders}
+              onOpenPage={onOpenPage}
             />
           ))}
         </div>
@@ -192,6 +212,8 @@ function CollectionBranch({
   activeTopic,
   activeArticle,
   searchQuery,
+  lockFolders,
+  onOpenPage,
 }: {
   subject: Subject;
   areaId: ExploreAreaId;
@@ -199,6 +221,8 @@ function CollectionBranch({
   activeTopic?: string | null;
   activeArticle?: string | null;
   searchQuery: string;
+  lockFolders?: boolean;
+  onOpenPage?: OpenPageFn;
 }) {
   const topics = subject.topics.filter((topic) =>
     topicMatchesQuery(topic, searchQuery)
@@ -209,6 +233,7 @@ function CollectionBranch({
     <div>
       <BrowseFolderLink
         path={{ areaId, subjectSlug: subject.slug }}
+        preventNav={lockFolders}
         className={clsx(
           "explore-side-row",
           collectionActive && "explore-side-row-active"
@@ -237,6 +262,8 @@ function CollectionBranch({
               expanded={activeTopic === topic.slug}
               activeArticle={activeArticle}
               searchQuery={searchQuery}
+              lockFolders={lockFolders}
+              onOpenPage={onOpenPage}
             />
           ))}
         </div>
@@ -252,6 +279,8 @@ function TopicBranch({
   expanded,
   activeArticle,
   searchQuery,
+  lockFolders,
+  onOpenPage,
 }: {
   topic: Topic;
   areaId: ExploreAreaId;
@@ -259,6 +288,8 @@ function TopicBranch({
   expanded: boolean;
   activeArticle?: string | null;
   searchQuery: string;
+  lockFolders?: boolean;
+  onOpenPage?: OpenPageFn;
 }) {
   const { user } = useAuth();
   const isPremium = isPremiumUser(user);
@@ -273,6 +304,7 @@ function TopicBranch({
       <BrowseFolderLink
         path={{ areaId, subjectSlug, topicSlug: topic.slug }}
         href={topicHref(subjectSlug, topic.slug)}
+        preventNav={lockFolders}
         className={clsx(
           "explore-side-row",
           topicActive && "explore-side-row-active"
@@ -305,6 +337,25 @@ function TopicBranch({
                   articleSlug: article.slug,
                 }}
                 href={learnHref(subjectSlug, topic.slug, article.slug)}
+                onOpen={
+                  onOpenPage
+                    ? () =>
+                        onOpenPage({
+                          href: learnHref(
+                            subjectSlug,
+                            topic.slug,
+                            article.slug
+                          ),
+                          title: article.title,
+                          pageId: article.id,
+                          scope: learnScope(
+                            subjectSlug,
+                            topic.slug,
+                            article.slug
+                          ),
+                        })
+                    : undefined
+                }
                 className={clsx(
                   "explore-side-row",
                   isActive && "explore-side-row-active"

@@ -40,11 +40,11 @@ describe("preloadedExplorerMode", () => {
     expect(preloadedExplorerMode({ workspaceMode: false })).toBe("home");
   });
 
-  it("scopes the reader sidebar to the open collection", () => {
+  it("never swaps the left pane to a scoped collection or workspace tree", () => {
     expect(
       preloadedExplorerMode({ workspaceMode: true, activeSubject: "upsc-polity" })
-    ).toBe("collection");
-    expect(preloadedExplorerMode({ workspaceMode: true })).toBe("tree");
+    ).toBe("home");
+    expect(preloadedExplorerMode({ workspaceMode: true })).toBe("home");
   });
 });
 

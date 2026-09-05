@@ -15,13 +15,11 @@ export type PreloadedBrowsePath = {
   articleSlug?: string;
 };
 
-/** Which left-pane chrome to show for Preloaded (browse vs reader). */
-export function preloadedExplorerMode(opts: {
-  workspaceMode: boolean;
+/** Left pane always stays the Explore tree — only expand/collapse. */
+export function preloadedExplorerMode(_opts?: {
+  workspaceMode?: boolean;
   activeSubject?: string | null;
 }): "home" | "collection" | "tree" {
-  if (opts.workspaceMode && opts.activeSubject) return "collection";
-  if (opts.workspaceMode) return "tree";
   return "home";
 }
 

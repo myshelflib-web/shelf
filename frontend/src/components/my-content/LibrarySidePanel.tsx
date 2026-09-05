@@ -59,9 +59,12 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
   const { user, loading: authLoading } = useAuth();
   const { mode, setMode, showPreloaded, goal, isGuest } = useLibraryMode();
   const browse = useOptionalPreloadedBrowse();
-  const resolvedHref =
-    currentHref ?? (browse ? browseHref(browse.path) : undefined);
-  const resolvedExploreArea = exploreArea ?? browse?.path.areaId ?? null;
+  const resolvedHref = browse?.interceptFolderNav
+    ? browseHref(browse.path)
+    : currentHref ?? (browse ? browseHref(browse.path) : undefined);
+  const resolvedExploreArea = browse?.interceptFolderNav
+    ? browse.path.areaId ?? null
+    : exploreArea ?? browse?.path.areaId ?? null;
   const [signInFeature, setSignInFeature] = useState<string | null>(null);
 
   const handleModeChange = useCallback(

@@ -22,14 +22,16 @@ type PreloadedBrowseContextValue = {
 const PreloadedBrowseContext =
   createContext<PreloadedBrowseContextValue | null>(null);
 
-/** Shared Preloaded folder selection on Library home (left tree ↔ middle pane). */
+/** Shared Preloaded folder selection (left tree ↔ middle pane). */
 export function PreloadedBrowseProvider({
   children,
+  initialPath,
 }: {
   children: React.ReactNode;
+  initialPath?: PreloadedBrowsePath;
 }) {
   const { subjects } = useLearnSubjects();
-  const [raw, setRaw] = useState<PreloadedBrowsePath>({});
+  const [raw, setRaw] = useState<PreloadedBrowsePath>(initialPath ?? {});
 
   const setPath = useCallback((next: PreloadedBrowsePath) => {
     setRaw(next);

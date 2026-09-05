@@ -1,5 +1,5 @@
 import { pageHref } from "@/lib/myContentTree";
-import { learnHref } from "@/lib/learnContent";
+import { isLearnReaderHref, learnHref } from "@/lib/learnContent";
 
 export type PersonalPageReaderScope =
   | { kind: "topic"; notebookSlug: string; topicSlug: string; pageSlug: string }
@@ -143,9 +143,12 @@ export function writeOwnedWorkspace(state: ReaderWorkspaceState) {
   }
 }
 
-/** Library nav target: focused open tab, or empty library home. */
+/** Library nav target: focused personal tab, or empty library home.
+ *  Preloaded articles stay on Library — never bounce to /learn. */
 export function getLibraryHref(): string {
-  return getFocusedWorkspaceHref() ?? "/my-content";
+  const href = getFocusedWorkspaceHref();
+  if (!href || isLearnReaderHref(href)) return "/my-content";
+  return href;
 }
 
 export function notifyWorkspaceChanged() {

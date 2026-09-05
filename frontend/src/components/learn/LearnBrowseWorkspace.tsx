@@ -7,8 +7,8 @@ import { Header } from "@/components/Header";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { LibrarySidePanel } from "@/components/my-content/LibrarySidePanel";
 import { LibraryCenterPane } from "@/components/my-content/LibraryCenterPane";
+import { PreloadedBrowseProvider } from "@/components/learn/PreloadedBrowseContext";
 import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
-import { LearnReaderPaneSkeleton } from "@/components/learn/LearnReaderSkeleton";
 import { SignInPromptModal } from "@/components/learn/SignInPromptModal";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { ShelfExplorerFab } from "@/components/ShelfExplorerFab";
@@ -53,8 +53,7 @@ function LearnBrowseWorkspaceInner({
   const isPhone = useIsPhone();
   const searchParams = useSearchParams();
   const { setGuestGoal, showGoalPicker } = useLearnStudyGoal(initialGoal);
-  const { openingReader, returningToBrowse, completeBrowseReturn } =
-    useLearnNavigation();
+  const { returningToBrowse, completeBrowseReturn } = useLearnNavigation();
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [signInFeature, setSignInFeature] = useState<string | null>(null);
 
@@ -97,6 +96,13 @@ function LearnBrowseWorkspaceInner({
   );
 
   return (
+    <PreloadedBrowseProvider
+      initialPath={{
+        areaId: areaFromQuery,
+        subjectSlug,
+        topicSlug,
+      }}
+    >
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
       <div className="flex flex-1 overflow-hidden min-h-0">
@@ -113,21 +119,15 @@ function LearnBrowseWorkspaceInner({
           {compactPortrait && !explorerOpen ? (
             <ShelfExplorerFab onClick={() => setExplorerOpen(true)} />
           ) : null}
-          {openingReader ? (
-            <LibraryCenterPane
-              readerOverlay={<LearnReaderPaneSkeleton />}
-            />
-          ) : (
-            <LibraryCenterPane
-              explore={{
-                subjectSlug,
-                topicSlug,
-                areaId: mainPaneAreaId,
-                sidebarAreaId: sidebarExploreArea,
-                returnTo: currentHref,
-              }}
-            />
-          )}
+          <LibraryCenterPane
+            explore={{
+              subjectSlug,
+              topicSlug,
+              areaId: mainPaneAreaId,
+              sidebarAreaId: sidebarExploreArea,
+              returnTo: currentHref,
+            }}
+          />
         </main>
       </div>
 
@@ -148,5 +148,6 @@ function LearnBrowseWorkspaceInner({
         />
       )}
     </div>
+    </PreloadedBrowseProvider>
   );
 }

@@ -16,6 +16,7 @@ import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { api } from "@/lib/api";
 import { consumeGuestLearnImport } from "@/lib/consumeGuestLearnImport";
 import { getFocusedWorkspaceHref } from "@/components/my-content/reader/types";
+import { isLearnReaderHref } from "@/lib/learnContent";
 
 function MyContentDashboard() {
   const router = useRouter();
@@ -43,12 +44,12 @@ function MyContentDashboard() {
     let cancelled = false;
     void consumeGuestLearnImport().then((href) => {
       if (cancelled) return;
-      if (href) {
+      if (href && !isLearnReaderHref(href)) {
         router.replace(href);
         return;
       }
       const tabHref = getFocusedWorkspaceHref();
-      if (tabHref) {
+      if (tabHref && !isLearnReaderHref(tabHref)) {
         router.replace(tabHref);
         return;
       }

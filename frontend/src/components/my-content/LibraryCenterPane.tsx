@@ -28,7 +28,19 @@ export function LibraryCenterPane({
   const { mode, showPreloaded } = useLibraryMode();
   const browse = useOptionalPreloadedBrowse();
   const preloadedActive = showPreloaded && mode === "preloaded";
-  const resolvedExplore = explore ??
+  const fromBrowse =
+    browse?.interceptFolderNav
+      ? {
+          subjectSlug: browse.path.subjectSlug,
+          topicSlug: browse.path.topicSlug,
+          areaId: browse.path.subjectSlug ? null : browse.path.areaId,
+          sidebarAreaId: browse.path.areaId,
+          returnTo: explore?.returnTo ?? "/my-content",
+        }
+      : null;
+  const resolvedExplore =
+    fromBrowse ??
+    explore ??
     (browse
       ? {
           subjectSlug: browse.path.subjectSlug,
