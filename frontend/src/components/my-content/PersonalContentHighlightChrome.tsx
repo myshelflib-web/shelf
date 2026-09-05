@@ -96,9 +96,10 @@ export function PersonalContentHighlightChrome({
               : undefined
           }
           onClose={() => {
+            // Do not clear native ranges here — HighlightToolbar's capture
+            // dismiss used to race new selects and wipe them via this path.
             selectionRef.current = null;
             setSelection(null);
-            window.getSelection()?.removeAllRanges();
           }}
         />
       )}

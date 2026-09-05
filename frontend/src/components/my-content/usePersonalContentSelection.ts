@@ -32,15 +32,20 @@ export function usePersonalContentSelection(opts: {
 
   const handleMouseUp = useCallback(() => {
     if (editing || readOnly || clipMode || eraseMode || highlightMode) return;
-    const root = contentRootRef.current;
-    const origin = originRef.current;
-    if (!root || !origin) return;
-    const next = captureHtmlTextSelection(root, origin);
-    if (!next) {
-      onClearPick();
-      return;
-    }
-    onTextPick(next);
+    // Defer past capture-phase toolbar dismiss handlers so a just-finished
+    // selection is still present when we open the color menu.
+    window.requestAnimationFrame(() => {
+      if (editing || readOnly || clipMode || eraseMode || highlightMode) return;
+      const root = contentRootRef.current;
+      const origin = originRef.current;
+      if (!root || !origin) return;
+      const next = captureHtmlTextSelection(root, origin);
+      if (!next) {
+        onClearPick();
+        return;
+      }
+      onTextPick(next);
+    });
   }, [
     editing,
     readOnly,

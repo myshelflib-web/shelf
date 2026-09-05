@@ -56,26 +56,22 @@ export function HighlightToolbar({
     }, 120);
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onCloseRef.current();
+      if (e.key !== "Escape") return;
+      window.getSelection()?.removeAllRanges();
+      onCloseRef.current();
     };
 
-    // Dismiss only for true chrome/backdrop clicks. Never touch article/PDF
-    // text layers here — capture-phase pointerup races the browser selection
-    // and removeAllRanges() was cancelling new selects.
+    // Capture-phase pointerup runs before the reader's mouseup. If a live
+    // selection exists (including one just finished in page padding outside
+    // .personal-content), do not dismiss — onClose used to clear ranges and
+    // made HTML selection feel broken after the first highlight.
     const onUp = (e: Event) => {
       if (!armed) return;
       const target = e.target;
       if (!(target instanceof Element)) return;
       if (rootRef.current?.contains(target)) return;
       const sel = window.getSelection();
-      if (
-        sel &&
-        !sel.isCollapsed &&
-        (sel.toString().trim().length ?? 0) >= 1 &&
-        target.closest(
-          ".personal-content, .prose-content, .pdf-text-layer, .textLayer, .pdf-page-wrap"
-        )
-      ) {
+      if (sel && !sel.isCollapsed && sel.toString().trim().length >= 1) {
         return;
       }
       onCloseRef.current();
@@ -225,7 +221,10 @@ export function HighlightToolbar({
       <button
         type="button"
         onMouseDown={(e) => e.preventDefault()}
-        onClick={onClose}
+        onClick={() => {
+          window.getSelection()?.removeAllRanges();
+          onClose();
+        }}
         className="flex items-center justify-center w-7 h-7 -mr-0.5 rounded-lg text-white/55 hover:text-white hover:bg-white/10"
         title="Close"
         aria-label="Close"

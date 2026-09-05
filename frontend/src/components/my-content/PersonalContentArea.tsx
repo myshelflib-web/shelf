@@ -384,6 +384,7 @@ export function PersonalContentArea({
       )}
       <div
         ref={containerRef}
+        data-shelf-doc-surface=""
         data-shelf-hotkeys={clipMode ? "off" : undefined}
         className={`h-full overflow-auto relative select-text${
           fragment.includes("shelf-blank-canvas") ||

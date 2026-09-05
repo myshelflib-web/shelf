@@ -75,10 +75,16 @@ export function ToolPopover({
       const target = e.target as Node;
       if (panelRef.current?.contains(target)) return;
       if (anchorEl?.contains(target)) return;
-      // Closing here re-renders and kills an in-progress article selection.
+      // Keep open while the user is selecting article text (incl. page padding).
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && sel.toString().trim().length >= 1) {
+        return;
+      }
       if (
         target instanceof Element &&
-        target.closest(".personal-content, .prose-content, .highlight-menu")
+        target.closest(
+          "[data-shelf-doc-surface], .personal-content, .prose-content, .highlight-menu"
+        )
       ) {
         return;
       }
