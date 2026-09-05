@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   CheckCircle2,
   Sparkles,
@@ -7,6 +8,8 @@ import {
   Save,
   X,
   CalendarDays,
+  LogIn,
+  UserPlus,
 } from "lucide-react";
 import clsx from "clsx";
 import { withShortcut } from "@/lib/hotkeys";
@@ -27,6 +30,8 @@ interface ReaderBottomBarProps {
   /** Account-only controls stay visible but muted for guests. */
   guestLocked?: boolean;
   onGuestLockedClick?: (feature: string) => void;
+  /** When set, guests get Sign in / Sign up in this bar. */
+  returnTo?: string;
 }
 
 export function ReaderBottomBar({
@@ -44,6 +49,7 @@ export function ReaderBottomBar({
   showStudyAI = true,
   guestLocked = false,
   onGuestLockedClick,
+  returnTo,
 }: ReaderBottomBarProps) {
   const guard = (action: () => void, feature: string) => {
     if (guestLocked) {
@@ -58,8 +64,14 @@ export function ReaderBottomBar({
   const pillBtn =
     "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-medium whitespace-nowrap transition";
 
+  const next = returnTo ? encodeURIComponent(returnTo) : "";
+  const loginHref = next ? `/login?next=${next}` : "/login";
+  const registerHref = next
+    ? `/login?register=1&next=${next}`
+    : "/login?register=1";
+
   return (
-    <div className="reader-bottom-bar pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-3">
+    <div className="reader-bottom-bar pointer-events-none absolute inset-x-0 bottom-3 z-30 flex justify-center px-3">
       <div className="pointer-events-auto flex items-center gap-0.5 sm:gap-1 px-1.5 py-1 rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] shadow-[0_8px_28px_rgba(0,0,0,0.14)] max-w-full overflow-x-auto">
         {editing ? (
           autosave ? (
@@ -106,6 +118,45 @@ export function ReaderBottomBar({
               </button>
             </>
           )
+        ) : guestLocked ? (
+          <>
+            <Link
+              href={registerHref}
+              className={clsx(
+                pillBtn,
+                "text-[var(--accent)] bg-[var(--accent-light)] hover:opacity-90"
+              )}
+            >
+              <UserPlus className="w-4 h-4" />
+              Sign up
+            </Link>
+            <Link
+              href={loginHref}
+              className={clsx(
+                pillBtn,
+                "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+              )}
+            >
+              <LogIn className="w-4 h-4" />
+              Sign in
+            </Link>
+            {showStudyAI && (
+              <button
+                type="button"
+                onClick={() => guard(onOpenStudyAI, "Use Study AI")}
+                title="Sign in to use Study AI"
+                aria-disabled
+                className={clsx(
+                  pillBtn,
+                  "text-[var(--text-secondary)]",
+                  lockedBtn
+                )}
+              >
+                <Sparkles className="w-4 h-4" />
+                Study AI
+              </button>
+            )}
+          </>
         ) : (
           <>
             {onEdit && (
@@ -126,19 +177,13 @@ export function ReaderBottomBar({
               <button
                 type="button"
                 onClick={() => guard(onOpenStudyAI, "Use Study AI")}
-                title={
-                  guestLocked
-                    ? "Sign in to use Study AI"
-                    : withShortcut(
-                        "Ask Study AI — uses selected text if any",
-                        "mod+l"
-                      )
-                }
-                aria-disabled={guestLocked}
+                title={withShortcut(
+                  "Ask Study AI — uses selected text if any",
+                  "mod+l"
+                )}
                 className={clsx(
                   pillBtn,
-                  "text-[var(--accent)] bg-[var(--accent-light)] hover:opacity-90",
-                  lockedBtn
+                  "text-[var(--accent)] bg-[var(--accent-light)] hover:opacity-90"
                 )}
               >
                 <Sparkles className="w-4 h-4" />
@@ -169,25 +214,16 @@ export function ReaderBottomBar({
             <button
               type="button"
               onClick={() => guard(onToggleComplete, "Mark as complete")}
-              aria-disabled={guestLocked}
               className={clsx(
                 pillBtn,
-                lockedBtn,
-                !guestLocked &&
-                  (completed
-                    ? "text-[var(--accent)] bg-[var(--accent-light)]"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]")
+                completed
+                  ? "text-[var(--accent)] bg-[var(--accent-light)]"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
               )}
-              title={
-                guestLocked
-                  ? "Sign in to track progress"
-                  : withShortcut(
-                      completed
-                        ? "Mark as not done"
-                        : "Mark this page as done",
-                      "x"
-                    )
-              }
+              title={withShortcut(
+                completed ? "Mark as not done" : "Mark this page as done",
+                "x"
+              )}
             >
               <CheckCircle2 className="w-4 h-4" />
               {completed ? "Done" : "Mark done"}
