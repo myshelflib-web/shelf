@@ -25,8 +25,6 @@ import {
   ListChecks,
   NotebookPen,
   Sparkles,
-  FolderPlus,
-  BookOpen,
 } from "lucide-react";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 
@@ -74,11 +72,9 @@ export function HomePageClient() {
               </p>
               <div className="landing-hero-actions">
                 <Link href="/login" className="landing-btn landing-btn-primary">
-                  <FolderPlus className="w-[15px] h-[15px] shrink-0" strokeWidth={2.2} />
                   Create your library
                 </Link>
                 <Link href="/learn" className="landing-btn">
-                  <BookOpen className="w-[15px] h-[15px] shrink-0" strokeWidth={2.2} />
                   Browse free library
                 </Link>
               </div>

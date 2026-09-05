@@ -22,6 +22,7 @@ import { Header } from "@/components/Header";
 import { LibrarySidePanel } from "@/components/my-content/LibrarySidePanel";
 import { ReaderBottomBar } from "@/components/ReaderBottomBar";
 import { StudyPanel } from "@/components/StudyPanel";
+import { GuestAuthStickyBar } from "@/components/learn/GuestAuthStickyBar";
 import { SignInPromptModal } from "@/components/learn/SignInPromptModal";
 import {
   DocumentPane,
@@ -605,20 +606,23 @@ export function LearnReaderWorkspace({
                 })}
               </div>
 
-              {pageData && focusedHandlers && (
-                <ReaderBottomBar
-                  completed={pageData.completed}
-                  onToggleComplete={() =>
-                    void focusedHandlers.handleToggleComplete()
-                  }
-                  onOpenStudyAI={() => {
-                    openStudyAIPanel();
-                    askWithSelection();
-                  }}
-                  showStudyAI
-                  guestLocked={guestLocked}
-                  onGuestLockedClick={promptSignIn}
-                />
+              {guestLocked ? (
+                <GuestAuthStickyBar returnTo={returnTo} />
+              ) : (
+                pageData &&
+                focusedHandlers && (
+                  <ReaderBottomBar
+                    completed={pageData.completed}
+                    onToggleComplete={() =>
+                      void focusedHandlers.handleToggleComplete()
+                    }
+                    onOpenStudyAI={() => {
+                      openStudyAIPanel();
+                      askWithSelection();
+                    }}
+                    showStudyAI
+                  />
+                )
               )}
             </div>
           </Panel>

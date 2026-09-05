@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FolderPlus, BookOpen } from "lucide-react";
 
 export function LandingStickyCta() {
   const [visible, setVisible] = useState(false);
@@ -66,7 +65,6 @@ export function LandingStickyCta() {
           className="landing-btn landing-btn-primary"
           tabIndex={visible ? 0 : -1}
         >
-          <FolderPlus className="w-[15px] h-[15px] shrink-0" strokeWidth={2.2} />
           Create your library
         </Link>
         <Link
@@ -74,7 +72,6 @@ export function LandingStickyCta() {
           className="landing-btn"
           tabIndex={visible ? 0 : -1}
         >
-          <BookOpen className="w-[15px] h-[15px] shrink-0" strokeWidth={2.2} />
           Browse free library
         </Link>
       </div>
