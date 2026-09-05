@@ -19,7 +19,8 @@ import { useIsPhone } from "@/hooks/useIsPhone";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { lockedFeatureLabel } from "@/lib/preloadedReadOnly";
 import type { UserContentHighlight } from "@/types";
-import { HIGHLIGHT_COLORS } from "@/components/HighlightToolbar";
+import { DEFAULT_PEN_WIDTH } from "@/lib/straightenStroke";
+import { highlightHex } from "./pdfViewerHelpers";
 import {
   EditorToolbarShell,
   ToolBtn,
@@ -27,8 +28,9 @@ import {
   ToolMuted,
   ToolSep,
 } from "./EditorToolbarChrome";
-import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
+import { ToolPopover } from "./ToolPopover";
 import { HighlightsToolbarPopover } from "./HighlightsToolbarPopover";
+import { PenSettingsPanel } from "./PenSettingsPanel";
 
 export type HtmlDocToolMode = "text" | "highlight" | "erase" | "clip";
 export type HtmlReadingWidth = "comfortable" | "wide";
@@ -45,6 +47,10 @@ type Props = {
   onHighlightSelect?: (highlight: UserContentHighlight) => void;
   highlightColorId?: string;
   onHighlightColorIdChange?: (colorId: string) => void;
+  highlightWidth?: number;
+  onHighlightWidthChange?: (width: number) => void;
+  highlightOpacity?: number;
+  onHighlightOpacityChange?: (opacity: number) => void;
   onDownload?: () => void;
   readingWidth?: HtmlReadingWidth;
   onReadingWidthChange?: (w: HtmlReadingWidth) => void;
@@ -66,6 +72,10 @@ export function HtmlDocToolbar({
   onHighlightSelect,
   highlightColorId = "yellow",
   onHighlightColorIdChange,
+  highlightWidth = DEFAULT_PEN_WIDTH,
+  onHighlightWidthChange,
+  highlightOpacity = 0.72,
+  onHighlightOpacityChange,
   onDownload,
   readingWidth = "comfortable",
   onReadingWidthChange,
@@ -140,8 +150,7 @@ export function HtmlDocToolbar({
               return;
             }
             setMode("highlight");
-            // Don't auto-open the color sheet — its pointerup listener
-            // used to re-render mid-selection. Open it on a second click.
+            setHighlightOpen(true);
           }}
         >
           <Highlighter className="w-[17px] h-[17px]" />
@@ -271,31 +280,19 @@ export function HtmlDocToolbar({
         </ToolGroup>
       ) : null}
 
-      <ToolPopover
-        open={highlightOpen && mode === "highlight" && !guestLocked}
-        onClose={() => setHighlightOpen(false)}
-        anchorEl={highlightAnchor ?? highlightBtnRef.current}
-        title="Highlight color"
-      >
-        <p className="text-[11px] text-[var(--text-muted)] mb-2.5 leading-relaxed">
-          Pick a color, then drag across the page like a PDF highlighter.
-          Use the pointer tool to select text for Note / Ask AI.
-        </p>
-        <ColorSwatchGrid>
-          {HIGHLIGHT_COLORS.map((c) => (
-            <ColorSwatch
-              key={c.id}
-              color={c.hex}
-              label={`Highlight ${c.id}`}
-              selected={highlightColorId === c.id}
-              onClick={() => {
-                onHighlightColorIdChange?.(c.id);
-                setHighlightOpen(false);
-              }}
-            />
-          ))}
-        </ColorSwatchGrid>
-      </ToolPopover>
+      {highlightOpen && mode === "highlight" && !guestLocked ? (
+        <PenSettingsPanel
+          width={highlightWidth}
+          opacity={highlightOpacity}
+          colorId={highlightColorId}
+          colorHex={highlightHex(highlightColorId)}
+          anchorEl={highlightAnchor ?? highlightBtnRef.current}
+          onWidthChange={(w) => onHighlightWidthChange?.(w)}
+          onOpacityChange={(o) => onHighlightOpacityChange?.(o)}
+          onColorChange={(id) => onHighlightColorIdChange?.(id)}
+          onClose={() => setHighlightOpen(false)}
+        />
+      ) : null}
 
       <ToolPopover
         open={eraseOpen && mode === "erase" && !guestLocked}

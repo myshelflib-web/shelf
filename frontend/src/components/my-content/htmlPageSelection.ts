@@ -81,3 +81,18 @@ export function captureHtmlTextSelection(
     position: { rects },
   };
 }
+
+/** Mid-line strokes so a text selection paints like the PDF highlighter. */
+export function strokePointsFromRects(
+  rects: HtmlNormRect[]
+): Array<Array<{ x: number; y: number }>> {
+  return rects
+    .filter((r) => r.w > 0.002 && r.h > 0)
+    .map((r) => {
+      const y = r.y + r.h / 2;
+      return [
+        { x: r.x, y },
+        { x: r.x + r.w, y },
+      ];
+    });
+}

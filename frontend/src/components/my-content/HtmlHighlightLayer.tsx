@@ -8,6 +8,7 @@ import {
   penStrokeWidthPx,
 } from "@/lib/straightenStroke";
 import { overlayBoxesForHighlights, type OverlayBox } from "./htmlHighlightGeometry";
+import { strokePointsFromRects } from "./htmlPageSelection";
 import { isInkHighlight, penStroke, pointsToPath } from "./pdfViewerHelpers";
 
 /** PDF-style marks: percent rects + pen strokes. Never wraps article text. */
@@ -18,6 +19,8 @@ export function HtmlHighlightLayer({
   drawLocked,
   draftPoints,
   draftColor,
+  draftWidth = DEFAULT_PEN_WIDTH,
+  draftOpacity = 0.72,
   onActivate,
 }: {
   contentEl: HTMLElement | null;
@@ -26,6 +29,8 @@ export function HtmlHighlightLayer({
   drawLocked: boolean;
   draftPoints?: Array<{ x: number; y: number }>;
   draftColor: string;
+  draftWidth?: number;
+  draftOpacity?: number;
   onActivate: (
     highlight: UserContentHighlight,
     clientX: number,
@@ -59,8 +64,18 @@ export function HtmlHighlightLayer({
     );
   }, [contentEl, originEl, highlights]);
 
-  const strokes = highlights.filter((h) => h.position?.points?.length);
-  const rectMarks = highlights.filter((h) => h.position?.rects?.length);
+  const pointStrokes = highlights.filter((h) => h.position?.points?.length);
+  const rectStrokes = highlights.filter(
+    (h) =>
+      h.position?.tool === "highlight" &&
+      h.position.rects?.length &&
+      !h.position.points?.length
+  );
+  const rectMarks = highlights.filter(
+    (h) =>
+      h.position?.rects?.length &&
+      h.position.tool !== "highlight"
+  );
 
   return (
     <>
@@ -122,54 +137,87 @@ export function HtmlHighlightLayer({
         preserveAspectRatio="none"
         style={{ pointerEvents: "none" }}
       >
-        {strokes.map((h) => (
-          <g
+        {pointStrokes.map((h) => (
+          <StrokeMark
             key={h.id}
-            style={{ cursor: "pointer" }}
-            onClick={(e) => {
-              if (drawLocked) return;
-              e.stopPropagation();
-              onActivate(h, e.clientX, e.clientY);
-            }}
-          >
-            <path
-              d={pointsToPath(h.position!.points!)}
-              fill="none"
-              stroke="transparent"
-              strokeWidth={penHitWidthPx(h.position?.width ?? DEFAULT_PEN_WIDTH)}
-              strokeLinecap="round"
-              vectorEffect="nonScalingStroke"
-              style={{ pointerEvents: drawLocked ? "none" : "stroke" }}
-            />
-            <path
-              className={
-                isInkHighlight(h) ? "pdf-ink-stroke" : "pdf-pen-stroke"
-              }
-              d={pointsToPath(h.position!.points!)}
-              stroke={
-                isInkHighlight(h)
-                  ? h.position?.color || h.color
-                  : penStroke(h.color, h.position?.opacity ?? 0.72)
-              }
-              strokeWidth={penStrokeWidthPx(
-                h.position?.width ?? DEFAULT_PEN_WIDTH
-              )}
-              vectorEffect="nonScalingStroke"
-              style={{ pointerEvents: "none" }}
-            />
-          </g>
+            highlight={h}
+            points={h.position!.points!}
+            drawLocked={drawLocked}
+            onActivate={onActivate}
+          />
         ))}
+        {rectStrokes.flatMap((h) =>
+          strokePointsFromRects(h.position!.rects ?? []).map((pts, i) => (
+            <StrokeMark
+              key={`${h.id}-r${i}`}
+              highlight={h}
+              points={pts}
+              drawLocked={drawLocked}
+              onActivate={onActivate}
+            />
+          ))
+        )}
         {draftPoints && draftPoints.length > 1 ? (
           <path
             className="pdf-pen-stroke"
             d={pointsToPath(draftPoints)}
-            stroke={penStroke(draftColor, 0.72)}
-            strokeWidth={penStrokeWidthPx(DEFAULT_PEN_WIDTH)}
+            stroke={penStroke(draftColor, draftOpacity)}
+            strokeWidth={penStrokeWidthPx(draftWidth)}
             vectorEffect="nonScalingStroke"
             style={{ pointerEvents: "none" }}
           />
         ) : null}
       </svg>
     </>
+  );
+}
+
+function StrokeMark({
+  highlight,
+  points,
+  drawLocked,
+  onActivate,
+}: {
+  highlight: UserContentHighlight;
+  points: Array<{ x: number; y: number }>;
+  drawLocked: boolean;
+  onActivate: (
+    highlight: UserContentHighlight,
+    clientX: number,
+    clientY: number
+  ) => void;
+}) {
+  const width = highlight.position?.width ?? DEFAULT_PEN_WIDTH;
+  return (
+    <g
+      style={{ cursor: "pointer" }}
+      onClick={(e) => {
+        if (drawLocked) return;
+        e.stopPropagation();
+        onActivate(highlight, e.clientX, e.clientY);
+      }}
+    >
+      <path
+        d={pointsToPath(points)}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={penHitWidthPx(width)}
+        strokeLinecap="round"
+        vectorEffect="nonScalingStroke"
+        style={{ pointerEvents: drawLocked ? "none" : "stroke" }}
+      />
+      <path
+        className={isInkHighlight(highlight) ? "pdf-ink-stroke" : "pdf-pen-stroke"}
+        d={pointsToPath(points)}
+        stroke={
+          isInkHighlight(highlight)
+            ? highlight.position?.color || highlight.color
+            : penStroke(highlight.color, highlight.position?.opacity ?? 0.72)
+        }
+        strokeWidth={penStrokeWidthPx(width)}
+        vectorEffect="nonScalingStroke"
+        style={{ pointerEvents: "none" }}
+      />
+    </g>
   );
 }

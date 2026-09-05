@@ -18,9 +18,11 @@ export type PersonalContentAreaProps = {
   onContentChange?: (html: string) => void;
   clipMode?: boolean;
   eraseMode?: boolean;
-  /** When true, selecting text auto-applies preferredHighlightColorId. */
+  /** When true, drag draws a highlighter stroke. */
   highlightMode?: boolean;
   preferredHighlightColorId?: string;
+  highlightWidth?: number;
+  highlightOpacity?: number;
   readingWidth?: HtmlReadingWidth;
   contentScale?: number;
   annotationGate?: AnnotationGate | null;

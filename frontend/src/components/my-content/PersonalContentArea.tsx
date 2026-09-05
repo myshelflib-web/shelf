@@ -14,7 +14,11 @@ import type { PersonalContentAreaProps } from "./personalContentAreaTypes";
 import { usePersonalContentSelection } from "./usePersonalContentSelection";
 import { useHtmlHighlightStroke } from "./useHtmlHighlightStroke";
 import type { HtmlTextPick } from "./htmlPageSelection";
-import { persistHtmlHighlight } from "./persistHtmlHighlight";
+import {
+  persistHtmlHighlight,
+  strokeHighlightDraft,
+  textHighlightDraft,
+} from "./persistHtmlHighlight";
 
 export function PersonalContentArea({
   content,
@@ -28,6 +32,8 @@ export function PersonalContentArea({
   eraseMode = false,
   highlightMode = false,
   preferredHighlightColorId = "yellow",
+  highlightWidth = DEFAULT_PEN_WIDTH,
+  highlightOpacity = 0.72,
   readingWidth = "comfortable",
   contentScale = 1,
   annotationGate = null,
@@ -242,18 +248,26 @@ export function PersonalContentArea({
     }
     const sel = selectionRef.current ?? selection;
     if (!sel) return;
-    const tempId = `tmp-${crypto.randomUUID()}`;
-    const optimistic: UserContentHighlight = {
-      id: tempId,
+    const already = highlightsRef.current.find(
+      (h) =>
+        !note &&
+        h.startOffset === sel.startOffset &&
+        h.endOffset === sel.endOffset &&
+        h.endOffset > h.startOffset
+    );
+    if (already) {
+      selectionRef.current = null;
+      setSelection(null);
+      return already;
+    }
+    const optimistic = textHighlightDraft(
       userTopicId,
-      text: sel.text,
-      startOffset: sel.startOffset,
-      endOffset: sel.endOffset,
+      sel,
       color,
-      note: note ?? null,
-      kind: "TEXT",
-      position: sel.position ?? null,
-    };
+      note,
+      highlightWidth,
+      highlightOpacity
+    );
     persistHtmlHighlight({
       optimistic,
       payload: {
@@ -264,7 +278,7 @@ export function PersonalContentArea({
         color,
         note,
         kind: "TEXT",
-        position: sel.position,
+        position: optimistic.position,
       },
       commit: commitHighlights,
       current: () => highlightsRef.current,
@@ -283,23 +297,13 @@ export function PersonalContentArea({
       return;
     }
     if (points.length < 2) return;
-    const tempId = `tmp-${crypto.randomUUID()}`;
-    const optimistic: UserContentHighlight = {
-      id: tempId,
+    const optimistic = strokeHighlightDraft(
       userTopicId,
-      text: "Highlighted region",
-      startOffset: 0,
-      endOffset: 0,
-      color: preferredHighlightColorId,
-      kind: "REGION",
-      position: {
-        type: "pen",
-        tool: "highlight",
-        points,
-        width: DEFAULT_PEN_WIDTH,
-        opacity: 0.72,
-      },
-    };
+      preferredHighlightColorId,
+      points,
+      highlightWidth,
+      highlightOpacity
+    );
     persistHtmlHighlight({
       optimistic,
       payload: {
@@ -320,6 +324,14 @@ export function PersonalContentArea({
   const { draft, onPointerDown: onStrokeDown, onPointerMove: onStrokeMove, onPointerUp: onStrokeUp } =
     useHtmlHighlightStroke(originRef, highlightMode && !clipMode && !editing, saveStroke);
 
+  const onTextPick = (pick: HtmlTextPick) => {
+    selectionRef.current = pick;
+    const created = saveHighlight(preferredHighlightColorId);
+    setActiveHighlight(null);
+    setSelection(pick);
+    if (created) selectionRef.current = pick;
+  };
+
   const { handleMouseUp } = usePersonalContentSelection({
     editing,
     readOnly,
@@ -328,9 +340,7 @@ export function PersonalContentArea({
     highlightMode,
     contentRootRef,
     originRef,
-    selectionRef,
-    setSelection,
-    setActiveHighlight,
+    onTextPick,
   });
 
   const onMarkActivate = (
@@ -437,6 +447,8 @@ export function PersonalContentArea({
             drawLocked={highlightMode || clipMode}
             draftPoints={draft}
             draftColor={preferredHighlightColorId}
+            draftWidth={highlightWidth}
+            draftOpacity={highlightOpacity}
             onActivate={onMarkActivate}
           />
         </div>

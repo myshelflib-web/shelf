@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normRectsFromClient } from "./htmlPageSelection";
+import { normRectsFromClient, strokePointsFromRects } from "./htmlPageSelection";
 
 describe("normRectsFromClient", () => {
   it("converts client boxes to wrap fractions like a PDF page", () => {
@@ -19,5 +19,19 @@ describe("normRectsFromClient", () => {
     expect(rects).toHaveLength(1);
     expect(rects[0]!.x).toBeCloseTo(0.1);
     expect(rects[0]!.w).toBeCloseTo(0.4);
+  });
+});
+
+describe("strokePointsFromRects", () => {
+  it("draws a horizontal stroke through each line box", () => {
+    const strokes = strokePointsFromRects([
+      { x: 0.1, y: 0.2, w: 0.4, h: 0.04 },
+    ]);
+    expect(strokes).toEqual([
+      [
+        { x: 0.1, y: 0.22 },
+        { x: 0.5, y: 0.22 },
+      ],
+    ]);
   });
 });

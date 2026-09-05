@@ -1,6 +1,59 @@
 import type { UserContentHighlight } from "@/types";
 import { createHighlight, deleteHighlight } from "@/lib/offline/highlights";
 import type { HighlightWriteInput } from "@/lib/offline/highlights";
+import type { HtmlTextPick } from "./htmlPageSelection";
+
+export function textHighlightDraft(
+  userTopicId: string,
+  sel: HtmlTextPick,
+  color: string,
+  note: string | undefined,
+  width: number,
+  opacity: number
+): UserContentHighlight {
+  return {
+    id: `tmp-${crypto.randomUUID()}`,
+    userTopicId,
+    text: sel.text,
+    startOffset: sel.startOffset,
+    endOffset: sel.endOffset,
+    color,
+    note: note ?? null,
+    kind: "TEXT",
+    position: {
+      type: "pen",
+      tool: "highlight",
+      rects: sel.position.rects,
+      width,
+      opacity,
+    },
+  };
+}
+
+export function strokeHighlightDraft(
+  userTopicId: string,
+  color: string,
+  points: Array<{ x: number; y: number }>,
+  width: number,
+  opacity: number
+): UserContentHighlight {
+  return {
+    id: `tmp-${crypto.randomUUID()}`,
+    userTopicId,
+    text: "Highlighted region",
+    startOffset: 0,
+    endOffset: 0,
+    color,
+    kind: "REGION",
+    position: {
+      type: "pen",
+      tool: "highlight",
+      points,
+      width,
+      opacity,
+    },
+  };
+}
 
 export function persistHtmlHighlight(opts: {
   optimistic: UserContentHighlight;
