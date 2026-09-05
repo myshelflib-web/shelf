@@ -1,4 +1,5 @@
 import { learnHref } from "@/lib/learnContent";
+import { isOfficialSyllabusSubject } from "@/lib/officialSyllabus";
 import { LEARN_CATALOG_GOAL_LABELS } from "@/lib/studyGoal";
 import { Subject, StudyGoal } from "@/types";
 
@@ -35,6 +36,7 @@ export function subjectsForCatalogGoal(
 ): Subject[] {
   return subjects.filter((s) => {
     if (isCrossGoalLearnSubject(s)) return true;
+    if (isOfficialSyllabusSubject(s)) return true;
     if (goal === "GENERAL") return subjectGoal(s) === "GENERAL";
     return subjectGoal(s) === goal;
   });

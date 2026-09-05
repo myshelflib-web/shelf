@@ -18,6 +18,8 @@ import {
   isPublicLearnSubject,
   publicLearnSubjectWhere,
 } from "../services/contentGen/publicLearnSubject.js";
+import { ensureOfficialSyllabusFromS3 } from "../services/officialSyllabus/sync.js";
+import { isOfficialSyllabusSubjectSlug } from "../services/officialSyllabus/slugs.js";
 
 const router = Router();
 
@@ -70,6 +72,7 @@ const topicWithArticlesSelect = {
 } as const;
 
 router.get("/", async (req: Request, res: Response) => {
+  await ensureOfficialSyllabusFromS3();
   const rawGoal = typeof req.query.studyGoal === "string" ? req.query.studyGoal : null;
   const where = {
     AND: [
@@ -100,6 +103,7 @@ router.get("/", async (req: Request, res: Response) => {
 
 router.get("/:slug", async (req: Request, res: Response) => {
   const slug = param(req, "slug");
+  if (isOfficialSyllabusSubjectSlug(slug)) await ensureOfficialSyllabusFromS3();
   if (rejectNonPublicSubject(slug, res)) return;
 
   const subject = await prisma.subject.findUnique({
@@ -172,6 +176,9 @@ router.get(
     const subjectSlug = param(req, "subjectSlug");
     const topicSlug = param(req, "topicSlug");
     const articleSlug = param(req, "articleSlug");
+    if (isOfficialSyllabusSubjectSlug(subjectSlug)) {
+      await ensureOfficialSyllabusFromS3();
+    }
     if (rejectNonPublicSubject(subjectSlug, res)) return;
 
     const subject = await prisma.subject.findUnique({

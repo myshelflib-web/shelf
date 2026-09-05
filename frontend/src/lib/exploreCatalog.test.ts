@@ -123,6 +123,7 @@ describe("exploreCatalog", () => {
 
   it("validates explore area ids", () => {
     expect(isExploreAreaId("law")).toBe(true);
+    expect(isExploreAreaId("syllabus")).toBe(true);
     expect(isExploreAreaId("unknown")).toBe(false);
   });
 
@@ -167,6 +168,42 @@ describe("exploreCatalog", () => {
     const featured = featuredExploreCollectionsForGoal(sampleSubjects, "GENERAL");
     expect(featured.every((s) => s.studyGoal === "GENERAL")).toBe(true);
     expect(featured.some((s) => s.slug === "study-skills-learning")).toBe(true);
+  });
+
+  it("keeps official syllabus PDFs in the Syllabus section only", () => {
+    const withSyllabus = [
+      ...sampleSubjects,
+      {
+        id: "syl",
+        slug: "official-syllabus-upsc",
+        name: "UPSC CSE",
+        studyGoal: "UPSC",
+        order: 0,
+        topics: [
+          {
+            id: "ot",
+            slug: "official",
+            title: "Official PDFs",
+            order: 0,
+            articles: [
+              { id: "oa", slug: "cse-2026", title: "CSE 2026", order: 0 },
+            ],
+          },
+        ],
+      },
+    ] as Subject[];
+    expect(subjectsForArea(withSyllabus, "syllabus").map((s) => s.slug)).toEqual([
+      "official-syllabus-upsc",
+    ]);
+    expect(
+      subjectsForArea(withSyllabus, "upsc").map((s) => s.slug)
+    ).toEqual(["upsc-official"]);
+    expect(
+      visibleExploreAreasForGoal(withSyllabus, "UPSC").map((a) => a.id)
+    ).toEqual(["syllabus", "upsc", "books"]);
+    expect(
+      visibleExploreAreasForGoal(withSyllabus, "GENERAL").map((a) => a.id)
+    ).toEqual(["syllabus", "books"]);
   });
 
   it("includes Learning Science in featured collections for every track", () => {

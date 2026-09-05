@@ -4,11 +4,13 @@ import {
   FlaskConical,
   GraduationCap,
   Scale,
+  ScrollText,
   Wrench,
 } from "lucide-react";
 import type { ExploreAreaTone } from "@/lib/exploreCatalog";
 
 const TONE_CLASS: Record<ExploreAreaTone, string> = {
+  syllabus: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
   exam: "bg-[var(--accent-subtle)] text-[var(--accent)]",
   law: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
   med: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
@@ -31,17 +33,19 @@ export function ExploreAreaIcon({
   const icon = size === "sm" ? "w-3 h-3" : "w-4 h-4";
 
   const Icon =
-    tone === "law"
-      ? Scale
-      : tone === "med"
-        ? FlaskConical
-        : tone === "eng"
-          ? Wrench
-          : tone === "policy"
-            ? Building2
-            : tone === "books"
-              ? BookOpen
-              : GraduationCap;
+    tone === "syllabus"
+      ? ScrollText
+      : tone === "law"
+        ? Scale
+        : tone === "med"
+          ? FlaskConical
+          : tone === "eng"
+            ? Wrench
+            : tone === "policy"
+              ? Building2
+              : tone === "books"
+                ? BookOpen
+                : GraduationCap;
 
   return (
     <span

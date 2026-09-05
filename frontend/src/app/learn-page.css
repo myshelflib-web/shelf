@@ -1100,6 +1100,26 @@ button.explore-side-collection {
   animation: explore-folder-in 0.2s ease both;
 }
 
+.preloaded-center-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.preloaded-center-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  transition: opacity 0.22s ease;
+}
+
+.preloaded-center-layer-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 @keyframes explore-folder-in {
   from {
     opacity: 0;
@@ -1142,5 +1162,9 @@ button.explore-side-collection {
   .learn-browse-pane-enter,
   .library-center-pane-swap.explore-folder-swap {
     animation: none;
+  }
+
+  .preloaded-center-layer {
+    transition: none;
   }
 }

@@ -339,6 +339,7 @@ function TopicBranch({
             return (
               <BrowseFolderLink
                 key={article.id}
+                title={article.title}
                 path={{
                   areaId,
                   subjectSlug,

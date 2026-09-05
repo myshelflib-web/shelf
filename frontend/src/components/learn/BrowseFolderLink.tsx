@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
+import { useOptionalPreloadedOpenFiles } from "@/components/learn/PreloadedOpenFilesContext";
 import {
   PreloadedBrowsePath,
   browseHref,
@@ -13,11 +14,16 @@ import {
 /** Folder and article hrefs stay on Library when the browse context is mounted. */
 export function useOpenBrowseHref() {
   const browse = useOptionalPreloadedBrowse();
+  const openFiles = useOptionalPreloadedOpenFiles();
   const router = useRouter();
 
-  return (href: string) => {
+  return (href: string, title?: string, pageId?: string) => {
     const path = browsePathFromHref(href);
     if (browse?.interceptFolderNav) {
+      if (path.articleSlug) {
+        openFiles?.openFromHref(href, title, pageId);
+        return;
+      }
       browse.setPath(path);
       return;
     }
@@ -35,6 +41,7 @@ export function BrowseFolderLink({
   onOpen,
   expanded,
   collapseTo,
+  title,
 }: {
   path: PreloadedBrowsePath;
   href?: string;
@@ -46,8 +53,11 @@ export function BrowseFolderLink({
   expanded?: boolean;
   /** Clicking an already-open folder collapses to this parent path. */
   collapseTo?: PreloadedBrowsePath;
+  /** Tab title when this link opens a preloaded article. */
+  title?: string;
 }) {
   const browse = useOptionalPreloadedBrowse();
+  const openFiles = useOptionalPreloadedOpenFiles();
   const resolvedHref = href ?? browseHref(path);
 
   if (browse?.interceptFolderNav) {
@@ -57,7 +67,11 @@ export function BrowseFolderLink({
         className={className}
         aria-expanded={expanded}
         onClick={() => {
-          onOpen?.();
+          if (path.articleSlug) {
+            onOpen?.();
+            openFiles?.openFromHref(resolvedHref, title);
+            return;
+          }
           if (
             collapseTo !== undefined &&
             isSameBrowseFolder(browse.path, path)

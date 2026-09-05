@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
 import { LibrarySidePanel } from "@/components/my-content/LibrarySidePanel";
 import { LibraryCenterPane } from "@/components/my-content/LibraryCenterPane";
-import { PreloadedBrowseProvider } from "@/components/learn/PreloadedBrowseContext";
+import { PreloadedBrowseShell } from "@/components/learn/PreloadedOpenFilesContext";
 import { useAddContent } from "@/components/my-content/MyContentAddProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
@@ -97,7 +97,7 @@ function MyContentDashboard() {
   }
 
   return (
-    <PreloadedBrowseProvider>
+    <PreloadedBrowseShell>
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
       <div className="flex flex-1 overflow-hidden min-h-0">
@@ -119,7 +119,7 @@ function MyContentDashboard() {
         <LibrarySidePanel className="w-full border-r-0" />
       </ShelfDrawer>
     </div>
-    </PreloadedBrowseProvider>
+    </PreloadedBrowseShell>
   );
 }
 

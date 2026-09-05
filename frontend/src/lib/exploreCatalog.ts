@@ -1,5 +1,6 @@
 import {
   LEARNING_SCIENCE_SUBJECT_SLUG,
+  LEARN_TRACK_ORDER,
   countArticles,
   groupSubjectsByGoal,
   subjectGoal,
@@ -7,9 +8,11 @@ import {
   topicHref,
 } from "@/lib/learnCatalog";
 import { learnHref } from "@/lib/learnContent";
+import { isOfficialSyllabusSubject } from "@/lib/officialSyllabus";
 import { StudyGoal, Subject } from "@/types";
 
 export type ExploreAreaId =
+  | "syllabus"
   | "upsc"
   | "exams"
   | "law"
@@ -19,6 +22,7 @@ export type ExploreAreaId =
   | "books";
 
 export type ExploreAreaTone =
+  | "syllabus"
   | "exam"
   | "law"
   | "med"
@@ -35,6 +39,21 @@ export type ExploreAreaDef = {
 };
 
 export const EXPLORE_AREAS: ExploreAreaDef[] = [
+  {
+    id: "syllabus",
+    title: "Syllabus",
+    description: "Official exam syllabus PDFs in the reader.",
+    tone: "syllabus",
+    goals: [
+      "UPSC",
+      "STATE_PCS",
+      "JUDICIARY",
+      "CA",
+      "NEET_PG",
+      "GATE",
+      "GENERAL",
+    ],
+  },
   {
     id: "upsc",
     title: "UPSC CSE",
@@ -108,13 +127,32 @@ export function areaForGoal(goal: StudyGoal): ExploreAreaId {
   return "exams";
 }
 
+/** Browse area for an opened collection — official syllabi stay in Syllabus. */
+export function areaForSubject(subject: Subject): ExploreAreaId {
+  if (isOfficialSyllabusSubject(subject)) return "syllabus";
+  return areaForGoal(subjectGoal(subject));
+}
+
 export function subjectsForArea(
   subjects: Subject[],
   areaId: ExploreAreaId
 ): Subject[] {
+  if (areaId === "syllabus") {
+    return subjects
+      .filter((s) => isOfficialSyllabusSubject(s))
+      .sort(
+        (a, b) =>
+          LEARN_TRACK_ORDER.indexOf(subjectGoal(a)) -
+            LEARN_TRACK_ORDER.indexOf(subjectGoal(b)) ||
+          (a.order ?? 0) - (b.order ?? 0) ||
+          a.name.localeCompare(b.name)
+      );
+  }
   const goals = new Set(getExploreArea(areaId).goals);
   return subjects
-    .filter((s) => goals.has(subjectGoal(s)))
+    .filter(
+      (s) => goals.has(subjectGoal(s)) && !isOfficialSyllabusSubject(s)
+    )
     .sort(
       (a, b) =>
         (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name)
@@ -127,6 +165,11 @@ export function areaGroupsSection(areaId: ExploreAreaId): {
   copy: string;
 } {
   switch (areaId) {
+    case "syllabus":
+      return {
+        title: "Exam syllabi",
+        copy: "Official syllabus PDFs — open one in the same reader as other public files.",
+      };
     case "upsc":
       return {
         title: "Paper collections",
@@ -203,7 +246,7 @@ export function catalogGoalAllowsArea(
   areaId: ExploreAreaId,
   goal: StudyGoal
 ): boolean {
-  if (areaId === "books") return true;
+  if (areaId === "books" || areaId === "syllabus") return true;
   const area = getExploreArea(areaId);
   if (goal === "GENERAL") return area.goals.includes("GENERAL");
   return area.goals.includes(goal);
@@ -301,7 +344,9 @@ export function areaSidebarRows(
 /** Featured collections for the home grid — prefer track-backed subjects with content. */
 export function featuredExploreCollections(subjects: Subject[]): Subject[] {
   const withArticles = subjects.filter(
-    (s) => s.topics.some((t) => (t.articles?.length ?? 0) > 0)
+    (s) =>
+      !isOfficialSyllabusSubject(s) &&
+      s.topics.some((t) => (t.articles?.length ?? 0) > 0)
   );
   const preferredGoals: StudyGoal[] = [
     "UPSC",

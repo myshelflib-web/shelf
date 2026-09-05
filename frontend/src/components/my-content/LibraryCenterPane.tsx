@@ -1,11 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
+import clsx from "clsx";
 import { useLibraryMode } from "@/hooks/useLibraryMode";
 import { LibraryEmptyWorkspace } from "@/components/my-content/LibraryEmptyWorkspace";
 import { ExploreMainPane } from "@/components/learn/explore/ExploreMainPane";
-import { PreloadedInlineReader } from "@/components/learn/PreloadedInlineReader";
+import { PreloadedTabbedReader } from "@/components/learn/PreloadedTabbedReader";
 import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
+import { useOptionalPreloadedOpenFiles } from "@/components/learn/PreloadedOpenFilesContext";
 import type { ExploreAreaId } from "@/lib/exploreCatalog";
 
 type LibraryCenterPaneProps = {
@@ -27,7 +29,9 @@ export function LibraryCenterPane({
 }: LibraryCenterPaneProps = {}) {
   const { mode, showPreloaded } = useLibraryMode();
   const browse = useOptionalPreloadedBrowse();
+  const openFiles = useOptionalPreloadedOpenFiles();
   const preloadedActive = showPreloaded && mode === "preloaded";
+  const hasOpenFiles = Boolean(openFiles?.hasOpenFiles);
   const fromBrowse =
     browse?.interceptFolderNav
       ? {
@@ -69,32 +73,40 @@ export function LibraryCenterPane({
           </div>
         </>
       ) : (
-        <div
-          key={[
-            resolvedExplore?.areaId ?? "",
-            resolvedExplore?.subjectSlug ?? "",
-            resolvedExplore?.topicSlug ?? "",
-            browse?.path.articleSlug ?? "",
-          ].join("/")}
-          className="library-center-pane-swap explore-folder-swap flex-1 min-h-0 overflow-hidden"
-        >
-          {browse?.path.articleSlug &&
-          browse.path.subjectSlug &&
-          browse.path.topicSlug ? (
-            <PreloadedInlineReader
-              subjectSlug={browse.path.subjectSlug}
-              topicSlug={browse.path.topicSlug}
-              articleSlug={browse.path.articleSlug}
-            />
-          ) : (
-            <ExploreMainPane
-              subjectSlug={resolvedExplore?.subjectSlug}
-              topicSlug={resolvedExplore?.topicSlug}
-              areaId={resolvedExplore?.areaId}
-              sidebarAreaId={resolvedExplore?.sidebarAreaId}
-              returnTo={resolvedExplore?.returnTo ?? "/my-content"}
-            />
-          )}
+        <div className="preloaded-center-stage">
+          <div
+            className={clsx(
+              "preloaded-center-layer",
+              hasOpenFiles && "preloaded-center-layer-hidden"
+            )}
+            aria-hidden={hasOpenFiles || undefined}
+          >
+            <div
+              key={[
+                resolvedExplore?.areaId ?? "",
+                resolvedExplore?.subjectSlug ?? "",
+                resolvedExplore?.topicSlug ?? "",
+              ].join("/")}
+              className="explore-folder-swap flex h-full min-h-0 flex-col overflow-hidden"
+            >
+              <ExploreMainPane
+                subjectSlug={resolvedExplore?.subjectSlug}
+                topicSlug={resolvedExplore?.topicSlug}
+                areaId={resolvedExplore?.areaId}
+                sidebarAreaId={resolvedExplore?.sidebarAreaId}
+                returnTo={resolvedExplore?.returnTo ?? "/my-content"}
+              />
+            </div>
+          </div>
+          <div
+            className={clsx(
+              "preloaded-center-layer",
+              !hasOpenFiles && "preloaded-center-layer-hidden"
+            )}
+            aria-hidden={!hasOpenFiles || undefined}
+          >
+            {hasOpenFiles ? <PreloadedTabbedReader /> : null}
+          </div>
         </div>
       )}
     </div>

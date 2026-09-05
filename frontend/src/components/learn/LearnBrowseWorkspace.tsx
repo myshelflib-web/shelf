@@ -7,7 +7,7 @@ import { Header } from "@/components/Header";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { LibrarySidePanel } from "@/components/my-content/LibrarySidePanel";
 import { LibraryCenterPane } from "@/components/my-content/LibraryCenterPane";
-import { PreloadedBrowseProvider } from "@/components/learn/PreloadedBrowseContext";
+import { PreloadedBrowseShell } from "@/components/learn/PreloadedOpenFilesContext";
 import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
 import { SignInPromptModal } from "@/components/learn/SignInPromptModal";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
@@ -15,8 +15,8 @@ import { ShelfExplorerFab } from "@/components/ShelfExplorerFab";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
 import { useIsPhone } from "@/hooks/useIsPhone";
 import { useLearnStudyGoal } from "@/hooks/useLearnStudyGoal";
-import { subjectGoal, subjectHref, topicHref } from "@/lib/learnCatalog";
-import { areaForGoal } from "@/lib/exploreCatalog";
+import { subjectHref, topicHref } from "@/lib/learnCatalog";
+import { areaForSubject } from "@/lib/exploreCatalog";
 import { parseExploreAreaFromSearch } from "@/components/learn/explore/ExploreSidebarBrowse";
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { StudyGoal } from "@/types";
@@ -70,7 +70,7 @@ function LearnBrowseWorkspaceInner({
     : undefined;
   const sidebarExploreArea =
     areaFromQuery ??
-    (browseSubject ? areaForGoal(subjectGoal(browseSubject)) : null);
+    (browseSubject ? areaForSubject(browseSubject) : null);
   const mainPaneAreaId = areaFromQuery;
 
   const currentHref =
@@ -96,7 +96,7 @@ function LearnBrowseWorkspaceInner({
   );
 
   return (
-    <PreloadedBrowseProvider
+    <PreloadedBrowseShell
       initialPath={{
         areaId: areaFromQuery,
         subjectSlug,
@@ -148,6 +148,6 @@ function LearnBrowseWorkspaceInner({
         />
       )}
     </div>
-    </PreloadedBrowseProvider>
+    </PreloadedBrowseShell>
   );
 }

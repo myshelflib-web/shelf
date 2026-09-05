@@ -91,6 +91,19 @@ describe("learnCatalog", () => {
     );
   });
 
+  it("keeps official exam syllabi available on every study track", () => {
+    const catalog = [
+      subject("official-syllabus-upsc", "UPSC", "UPSC CSE"),
+      subject("gate-info", "GATE"),
+    ];
+    expect(
+      subjectsForCatalogGoal(catalog, "GATE").map((s) => s.slug)
+    ).toEqual(["official-syllabus-upsc", "gate-info"]);
+    expect(
+      subjectsForCatalogGoal(catalog, "GENERAL").map((s) => s.slug)
+    ).toEqual(["official-syllabus-upsc"]);
+  });
+
   it("keeps Learning Science available on every study track", () => {
     const catalog = [
       subject("study-skills-learning", "GENERAL"),

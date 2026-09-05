@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useLearnNavigation } from "@/components/learn/LearnNavigationProvider";
+import { useOpenBrowseHref } from "@/components/learn/BrowseFolderLink";
 import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
 import { formatArticleUpdatedAt } from "@/lib/exploreCatalog";
-import { browsePathFromHref } from "@/lib/preloadedBrowse";
 
 export function ExploreResourceCard({
   title,
@@ -26,6 +26,7 @@ export function ExploreResourceCard({
 }) {
   const { startReaderOpen } = useLearnNavigation();
   const browse = useOptionalPreloadedBrowse();
+  const openBrowseHref = useOpenBrowseHref();
   const mark = title.trim().charAt(0).toUpperCase() || "•";
   const updatedLabel = formatArticleUpdatedAt(updatedAt);
   const body = (
@@ -59,7 +60,7 @@ export function ExploreResourceCard({
       <button
         type="button"
         className="explore-resource-card"
-        onClick={() => browse.setPath(browsePathFromHref(href))}
+        onClick={() => openBrowseHref(href, title)}
       >
         {body}
       </button>

@@ -1,10 +1,10 @@
 import {
   ExploreAreaId,
-  areaForGoal,
+  areaForSubject,
   isExploreAreaId,
   learnAreaHref,
 } from "@/lib/exploreCatalog";
-import { parseLearnPath, subjectGoal, subjectHref, topicHref } from "@/lib/learnCatalog";
+import { parseLearnPath, subjectHref, topicHref } from "@/lib/learnCatalog";
 import { learnHref } from "@/lib/learnContent";
 import { Subject } from "@/types";
 
@@ -58,7 +58,7 @@ export function resolveBrowseArea(
   if (path.areaId) return path.areaId;
   if (!path.subjectSlug) return null;
   const subject = subjects.find((s) => s.slug === path.subjectSlug);
-  return subject ? areaForGoal(subjectGoal(subject)) : null;
+  return subject ? areaForSubject(subject) : null;
 }
 
 export function withResolvedArea(

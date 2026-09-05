@@ -14,7 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { isPremiumUser } from "@/lib/premium";
 import {
   ExploreAreaId,
-  areaForGoal,
+  areaForSubject,
   collectionMeta,
   countAreaItems,
   featuredExploreCollectionsForGoal,
@@ -29,7 +29,6 @@ import {
 } from "@/lib/exploreCatalog";
 import {
   searchLearnCatalog,
-  subjectGoal,
   subjectsForCatalogGoal,
 } from "@/lib/learnCatalog";
 import { BrowseFolderLink, useOpenBrowseHref } from "@/components/learn/BrowseFolderLink";
@@ -97,7 +96,7 @@ export function ExploreMainPane({
   const resolvedAreaId =
     sidebarAreaId ??
     areaId ??
-    (subject ? areaForGoal(subjectGoal(subject)) : null);
+    (subject ? areaForSubject(subject) : null);
 
   const openHit = (href: string) => {
     if (isLearnReaderHref(href) && !browse?.interceptFolderNav) {
@@ -129,7 +128,7 @@ export function ExploreMainPane({
       return listAreaResources(subjects, areaId, { query });
     }
     if (subject) {
-      const items = listAreaResources(subjects, areaForGoal(subjectGoal(subject)), {
+      const items = listAreaResources(subjects, areaForSubject(subject), {
         subjectSlug: subject.slug,
         topicSlug: topic?.slug,
         query,

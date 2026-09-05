@@ -119,4 +119,18 @@ describe("resolveBrowseArea", () => {
     );
     expect(resolveBrowseArea({}, [polity])).toBeNull();
   });
+
+  it("keeps official syllabus collections in the Syllabus section", () => {
+    const syllabus: Subject = {
+      id: "syl",
+      name: "UPSC CSE",
+      slug: "official-syllabus-upsc",
+      order: 0,
+      studyGoal: "UPSC",
+      topics: [],
+    };
+    expect(resolveBrowseArea({ subjectSlug: syllabus.slug }, [syllabus])).toBe(
+      "syllabus"
+    );
+  });
 });

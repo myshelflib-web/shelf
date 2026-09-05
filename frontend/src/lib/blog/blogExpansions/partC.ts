@@ -124,4 +124,34 @@ export const BLOG_EXPANSIONS_C: Record<string, BlogSection[]> = {
       ],
     },
   ],
+  "official-exam-syllabus-pdfs": [
+    {
+      heading: "Where to find it",
+      paragraphs: [
+        "Signed-in: Library → Preloaded → Browse → Syllabus. Guests: the same explorer on /learn. The row sits with Current affairs and your exam track — it does not replace generated starter packs.",
+        "If your study goal is UPSC, you still see UPSC collections. Syllabus is extra, so you can open a GATE or CA official PDF without changing Settings.",
+      ],
+    },
+    {
+      heading: "How files get there",
+      paragraphs: [
+        "Shelf lists official syllabus objects already stored for each exam and publishes them as normal Learn articles with a PDF. There is no separate viewer and no new URL scheme beyond /learn/{exam-syllabus}/…",
+        "When an exam has no official file in storage yet, that exam is omitted. The section appears only when at least one PDF is available.",
+      ],
+    },
+    {
+      heading: "Reading and saving",
+      paragraphs: [
+        "Open a syllabus PDF the same way you open any public article: middle pane in Library browse, or a workspace tab if you already have files open. Highlights and Study AI work on the official file just as they do on other public PDFs.",
+        "Save to Library when you want a personal copy for notes. That uses the existing save-to-library path — it does not rewrite your collections or starter-pack pages.",
+      ],
+    },
+    {
+      heading: "What did not change",
+      paragraphs: [
+        "Tab close, last-PDF-returns-to-browse, guest scroll, Study skills on every track, and Current affairs are the same. Syllabus is an additive Browse section only.",
+        "Generated starter-pack pages remain HTML study notes mapped to syllabus headings. Official PDFs are the source documents; packs are the teaching layer.",
+      ],
+    },
+  ],
 };

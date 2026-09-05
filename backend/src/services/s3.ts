@@ -4,6 +4,7 @@ import {
   DeleteObjectCommand,
   HeadObjectCommand,
   PutBucketCorsCommand,
+  ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { Readable } from "node:stream";
@@ -349,6 +350,51 @@ export async function getPresignedPutUrl(
     }),
     { expiresIn }
   );
+}
+
+/** List object keys under a prefix. Empty when the prefix is missing. */
+export async function listObjectKeys(
+  prefix: string,
+  opts?: { max?: number; bucket?: string }
+): Promise<string[]> {
+  const bucket = opts?.bucket ?? getS3Bucket();
+  const max = opts?.max ?? 500;
+  const keys: string[] = [];
+  let token: string | undefined;
+  do {
+    const out = await s3.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: prefix,
+        ContinuationToken: token,
+        MaxKeys: Math.min(200, max - keys.length),
+      })
+    );
+    for (const obj of out.Contents ?? []) {
+      if (obj.Key) keys.push(obj.Key);
+      if (keys.length >= max) return keys;
+    }
+    token = out.IsTruncated ? out.NextContinuationToken : undefined;
+  } while (token);
+  return keys;
+}
+
+/** Immediate child prefixes (folders) under a prefix. */
+export async function listCommonPrefixes(
+  prefix: string,
+  bucket = getS3Bucket()
+): Promise<string[]> {
+  const out = await s3.send(
+    new ListObjectsV2Command({
+      Bucket: bucket,
+      Prefix: prefix,
+      Delimiter: "/",
+      MaxKeys: 300,
+    })
+  );
+  return (out.CommonPrefixes ?? [])
+    .map((p) => p.Prefix)
+    .filter((p): p is string => Boolean(p));
 }
 
 export async function getObjectPrefix(

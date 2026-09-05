@@ -14,6 +14,7 @@ import { StudyGoal, UserSubject } from "@/types";
 import { inferLibraryModeFromHref, LibraryMode } from "@/lib/libraryMode";
 import type { ExploreAreaId } from "@/lib/exploreCatalog";
 import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
+import { useOptionalPreloadedOpenFiles } from "@/components/learn/PreloadedOpenFilesContext";
 import { browseHref } from "@/lib/preloadedBrowse";
 
 interface LibrarySidePanelProps {
@@ -59,8 +60,9 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
   const { user, loading: authLoading } = useAuth();
   const { mode, setMode, showPreloaded, goal, isGuest } = useLibraryMode();
   const browse = useOptionalPreloadedBrowse();
+  const openFiles = useOptionalPreloadedOpenFiles();
   const resolvedHref = browse?.interceptFolderNav
-    ? browseHref(browse.path)
+    ? openFiles?.activeTab?.href ?? browseHref(browse.path)
     : currentHref ?? (browse ? browseHref(browse.path) : undefined);
   const resolvedExploreArea = browse?.interceptFolderNav
     ? browse.path.areaId ?? null
