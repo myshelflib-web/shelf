@@ -16,6 +16,7 @@ export function usePersonalContentSelection(opts: {
   contentRootRef: MutableRefObject<HTMLElement | null>;
   originRef: MutableRefObject<HTMLElement | null>;
   onTextPick: (pick: HtmlTextPick) => void;
+  onClearPick: () => void;
 }) {
   const {
     editing,
@@ -26,6 +27,7 @@ export function usePersonalContentSelection(opts: {
     contentRootRef,
     originRef,
     onTextPick,
+    onClearPick,
   } = opts;
 
   const handleMouseUp = useCallback(() => {
@@ -34,7 +36,12 @@ export function usePersonalContentSelection(opts: {
     const origin = originRef.current;
     if (!root || !origin) return;
     const next = captureHtmlTextSelection(root, origin);
-    if (!next) return;
+    if (!next) {
+      // Collapsed click / failed capture — drop a stale menu so the next
+      // drag can start cleanly.
+      onClearPick();
+      return;
+    }
     onTextPick(next);
   }, [
     editing,
@@ -45,6 +52,7 @@ export function usePersonalContentSelection(opts: {
     contentRootRef,
     originRef,
     onTextPick,
+    onClearPick,
   ]);
 
   return { handleMouseUp };

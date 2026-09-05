@@ -8,7 +8,7 @@ import { blankCanvasScrollTarget } from "@/lib/blankCanvas";
 import { LiveEditorRouter } from "./LiveEditorRouter";
 import { usePersonalContentClip } from "./usePersonalContentClip";
 import { PersonalContentHighlightChrome } from "./PersonalContentHighlightChrome";
-import { hasHtmlStrokes, HtmlHighlightLayer } from "./HtmlHighlightLayer";
+import { HtmlHighlightLayer } from "./HtmlHighlightLayer";
 import { deleteHighlight } from "@/lib/offline/highlights";
 import type { PersonalContentAreaProps } from "./personalContentAreaTypes";
 import { usePersonalContentSelection } from "./usePersonalContentSelection";
@@ -315,6 +315,11 @@ export function PersonalContentArea({
     setSelection(pick);
   };
 
+  const onClearPick = useCallback(() => {
+    selectionRef.current = null;
+    setSelection(null);
+  }, []);
+
   const { handleMouseUp } = usePersonalContentSelection({
     editing,
     readOnly,
@@ -324,6 +329,7 @@ export function PersonalContentArea({
     contentRootRef,
     originRef,
     onTextPick,
+    onClearPick,
   });
 
   const onMarkActivate = (
@@ -418,23 +424,25 @@ export function PersonalContentArea({
           onPointerMove={highlightMode ? onStrokeMove : undefined}
           onPointerUp={highlightMode ? onStrokeUp : undefined}
         >
-          {hasHtmlStrokes(highlights) || draft.length > 1 || highlightMode ? (
-            <HtmlHighlightLayer
-              originRef={originRef}
-              highlights={highlights}
-              eraseMode={eraseMode}
-              draftPoints={draft}
-              draftColor={preferredHighlightColorId}
-              draftWidth={highlightWidth}
-              draftOpacity={highlightOpacity}
-              onActivate={onMarkActivate}
-            />
-          ) : null}
+          {/* Always mounted so adding the first stroke does not remount article HTML. */}
+          <HtmlHighlightLayer
+            originRef={originRef}
+            highlights={highlights}
+            eraseMode={eraseMode}
+            draftPoints={draft}
+            draftColor={preferredHighlightColorId}
+            draftWidth={highlightWidth}
+            draftOpacity={highlightOpacity}
+            onActivate={onMarkActivate}
+          />
           <div
             ref={setContentRoot}
             className="prose-content personal-content select-text relative z-[1] bg-transparent"
             onClick={(e) => {
               if (clipMode || highlightMode || editing) return;
+              // Don't steal a just-finished drag-select.
+              const live = window.getSelection();
+              if (live && !live.isCollapsed) return;
               const root = contentRootRef.current;
               const origin = originRef.current;
               if (!root || !origin) return;

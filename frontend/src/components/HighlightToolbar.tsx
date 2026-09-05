@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { FileText, Sparkles, X } from "lucide-react";
+import { FileText, Sparkles, Trash2, X } from "lucide-react";
 import { withShortcut } from "@/lib/hotkeys";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { lockedFeatureLabel } from "@/lib/preloadedReadOnly";
@@ -21,7 +21,7 @@ interface HighlightToolbarProps {
   onHighlight: (color: string) => void;
   onAsk?: () => void;
   onNote?: () => void;
-  /** When set, shows X to delete the highlight */
+  /** When set, shows trash to delete the highlight */
   onRemove?: () => void;
   onClose: () => void;
   showColors?: boolean;
@@ -49,11 +49,47 @@ export function HighlightToolbar({
   onCloseRef.current = onClose;
 
   useEffect(() => {
+    // Arm after mount so the opening gesture's pointerup cannot instantly dismiss.
+    let armed = false;
+    const armTimer = window.setTimeout(() => {
+      armed = true;
+    }, 120);
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onCloseRef.current();
     };
+
+    // pointerup (not pointerdown): closing on pointerdown cancels an
+    // in-progress text selection drag.
+    const onUp = (e: Event) => {
+      if (!armed) return;
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      if (rootRef.current?.contains(target)) return;
+      // Finishing a new selection in the article: keep the menu and let
+      // the reader mouseup handler replace the draft. Collapsed clicks
+      // (backdrop) dismiss.
+      if (
+        target.closest(
+          ".personal-content, .prose-content, .pdf-text-layer, .textLayer"
+        )
+      ) {
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed && (sel.toString().trim().length ?? 0) >= 2) {
+          return;
+        }
+      }
+      onCloseRef.current();
+      window.getSelection()?.removeAllRanges();
+    };
+
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    document.addEventListener("pointerup", onUp, true);
+    return () => {
+      window.clearTimeout(armTimer);
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerup", onUp, true);
+    };
   }, []);
 
   const guard = (action: () => void, feature: string) => {
@@ -175,14 +211,32 @@ export function HighlightToolbar({
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={onRemove}
-            className="flex items-center justify-center w-7 h-7 -mr-0.5 rounded-lg text-[#f87171] hover:bg-red-500/15"
+            className="flex items-center justify-center w-7 h-7 rounded-lg text-[#f87171] hover:bg-red-500/15"
             title="Remove highlight"
             aria-label="Remove highlight"
           >
-            <X className="w-4 h-4" strokeWidth={2.5} />
+            <Trash2 className="w-3.5 h-3.5" strokeWidth={2.5} />
           </button>
         </>
       )}
+
+      <div
+        className="w-px self-stretch min-h-[1.25rem]"
+        style={{ background: "rgba(255,255,255,0.12)" }}
+      />
+      <button
+        type="button"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => {
+          onClose();
+          window.getSelection()?.removeAllRanges();
+        }}
+        className="flex items-center justify-center w-7 h-7 -mr-0.5 rounded-lg text-white/55 hover:text-white hover:bg-white/10"
+        title="Close"
+        aria-label="Close"
+      >
+        <X className="w-4 h-4" strokeWidth={2.5} />
+      </button>
     </div>
   );
 

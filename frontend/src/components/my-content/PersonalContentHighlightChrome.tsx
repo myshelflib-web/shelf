@@ -95,7 +95,11 @@ export function PersonalContentHighlightChrome({
                 }
               : undefined
           }
-          onClose={() => setSelection(null)}
+          onClose={() => {
+            selectionRef.current = null;
+            setSelection(null);
+            window.getSelection()?.removeAllRanges();
+          }}
         />
       )}
       {activeHighlight && (

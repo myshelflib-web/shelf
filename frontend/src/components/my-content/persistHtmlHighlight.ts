@@ -1,3 +1,4 @@
+import { startTransition } from "react";
 import type { UserContentHighlight } from "@/types";
 import { createHighlight, deleteHighlight } from "@/lib/offline/highlights";
 import type { HighlightWriteInput } from "@/lib/offline/highlights";
@@ -58,6 +59,31 @@ export function strokeHighlightDraft(
   };
 }
 
+/** Keep optimistic geometry if the API omits position fields. */
+function mergeSavedHighlight(
+  optimistic: UserContentHighlight,
+  saved: UserContentHighlight
+): UserContentHighlight {
+  return {
+    ...saved,
+    text: saved.text || optimistic.text,
+    startOffset: saved.endOffset > saved.startOffset
+      ? saved.startOffset
+      : optimistic.startOffset,
+    endOffset: saved.endOffset > saved.startOffset
+      ? saved.endOffset
+      : optimistic.endOffset,
+    position: saved.position ?? optimistic.position,
+    note: saved.note ?? optimistic.note,
+    color: saved.color || optimistic.color,
+    kind: saved.kind ?? optimistic.kind,
+  };
+}
+
+/**
+ * Paint immediately; persist in the background.
+ * Server id swap is deferred so it never cancels an in-progress selection.
+ */
 export function persistHtmlHighlight(opts: {
   optimistic: UserContentHighlight;
   payload: HighlightWriteInput;
@@ -76,9 +102,16 @@ export function persistHtmlHighlight(opts: {
         );
         return;
       }
-      commit(current().map((h) => (h.id === optimistic.id ? highlight : h)));
+      const merged = mergeSavedHighlight(optimistic, highlight);
+      startTransition(() => {
+        commit(
+          current().map((h) => (h.id === optimistic.id ? merged : h))
+        );
+      });
     })
     .catch(() => {
-      commit(current().filter((h) => h.id !== optimistic.id));
+      startTransition(() => {
+        commit(current().filter((h) => h.id !== optimistic.id));
+      });
     });
 }

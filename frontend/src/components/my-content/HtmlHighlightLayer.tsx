@@ -38,6 +38,21 @@ export function hasHtmlStrokes(highlights: UserContentHighlight[]): boolean {
   return highlights.some(isStrokeHighlight);
 }
 
+/** Stable across tmp→server id swaps so remounts do not interrupt selection. */
+function strokeReactKey(h: UserContentHighlight, suffix = ""): string {
+  const rect = h.position?.rects?.[0];
+  if (rect) {
+    return `r:${h.startOffset}:${h.endOffset}:${rect.x.toFixed(4)}:${rect.y.toFixed(4)}:${rect.w.toFixed(4)}:${h.color}${suffix}`;
+  }
+  const pts = h.position?.points;
+  if (pts?.length) {
+    const a = pts[0]!;
+    const b = pts[pts.length - 1]!;
+    return `p:${a.x.toFixed(4)}:${a.y.toFixed(4)}:${b.x.toFixed(4)}:${b.y.toFixed(4)}:${h.color}${suffix}`;
+  }
+  return `${h.id}${suffix}`;
+}
+
 /** Pixel-space SVG behind the article — never a covering hit target. */
 export function HtmlHighlightLayer({
   originRef,
@@ -95,7 +110,7 @@ export function HtmlHighlightLayer({
     >
       {pointStrokes.map((hl) => (
         <StrokeMark
-          key={hl.id}
+          key={strokeReactKey(hl)}
           highlight={hl}
           d={pathFromNorm(hl.position!.points!, w, h)}
           width={hl.position?.width ?? DEFAULT_PEN_WIDTH}
@@ -106,7 +121,7 @@ export function HtmlHighlightLayer({
       {rectStrokes.flatMap((hl) =>
         strokePointsFromRects(hl.position!.rects ?? []).map((pts, i) => (
           <StrokeMark
-            key={`${hl.id}-r${i}`}
+            key={strokeReactKey(hl, `-r${i}`)}
             highlight={hl}
             d={pathFromNorm(pts, w, h)}
             width={hl.position?.width ?? XS_WIDTH}
