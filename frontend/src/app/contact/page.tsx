@@ -42,36 +42,44 @@ export default function ContactPage() {
           </p>
         </RevealOnScroll>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10">
-          <RevealOnScroll delay={60}>
-            <div className="feature-card p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
-              <Mail className="w-5 h-5 text-[var(--accent)] mb-2" />
-              <p className="font-medium mb-1">Email</p>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-10 items-stretch">
+          <RevealOnScroll delay={60} className="h-full">
+            <div className="feature-card h-full p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] flex flex-col">
+              <div className="flex items-center gap-2.5 mb-2">
+                <Mail className="w-5 h-5 text-[var(--accent)] shrink-0" aria-hidden />
+                <p className="font-medium">Email</p>
+              </div>
               <a
-                href="mailto:hello@shelf.study"
-                className="text-sm text-[var(--accent)] hover:underline"
+                href="mailto:myshelflib@gmail.com"
+                className="text-sm text-[var(--accent)] hover:underline mt-auto"
               >
                 myshelflib@gmail.com
               </a>
             </div>
           </RevealOnScroll>
-          <RevealOnScroll delay={120}>
-            <div className="feature-card p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
-              <MessageSquare className="w-5 h-5 text-[var(--accent)] mb-2" />
-              <p className="font-medium mb-1">Support</p>
-              <p className="text-sm text-[var(--text-secondary)]">
+          <RevealOnScroll delay={120} className="h-full">
+            <div className="feature-card h-full p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] flex flex-col">
+              <div className="flex items-center gap-2.5 mb-2">
+                <MessageSquare className="w-5 h-5 text-[var(--accent)] shrink-0" aria-hidden />
+                <p className="font-medium">Support</p>
+              </div>
+              <p className="text-sm text-[var(--text-secondary)] mt-auto">
                 Account, uploads, and Study AI help — usually within 1–2 business days.
               </p>
             </div>
           </RevealOnScroll>
-          <RevealOnScroll delay={180}>
-            <div className="feature-card p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
-              <Share2 className="w-5 h-5 text-[var(--accent)] mb-2" />
-              <p className="font-medium mb-1">Follow</p>
+          <RevealOnScroll delay={180} className="h-full">
+            <div className="feature-card h-full p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] flex flex-col">
+              <div className="flex items-center gap-2.5 mb-2">
+                <Share2 className="w-5 h-5 text-[var(--accent)] shrink-0" aria-hidden />
+                <p className="font-medium">Follow</p>
+              </div>
               <p className="text-sm text-[var(--text-secondary)] mb-3">
                 Instagram, YouTube, and LinkedIn.
               </p>
-              <SocialLinks />
+              <div className="mt-auto">
+                <SocialLinks />
+              </div>
             </div>
           </RevealOnScroll>
         </div>
