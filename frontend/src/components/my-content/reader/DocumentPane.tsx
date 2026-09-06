@@ -291,6 +291,8 @@ export type DocumentPaneHandlers = {
     imageBase64?: string,
     onAttachNote?: (note: string) => Promise<void>
   ) => void;
+  /** Last HTML selection/highlight quote for mod+l when native sel is empty. */
+  getAskQuote: () => string | null;
   setHtmlClip: (v: boolean | ((prev: boolean) => boolean)) => void;
   navHref: (pageSlug: string) => string;
   reloadPage: () => void;
@@ -384,6 +386,7 @@ export function DocumentPane({
   const [draftUrl, setDraftUrl] = useState("");
   editingRef.current = editing;
   const [htmlClip, setHtmlClip] = useState(false);
+  const askQuoteRef = useRef<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [dropActive, setDropActive] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
@@ -1106,6 +1109,7 @@ export function DocumentPane({
       handleToggleStar,
       handleDelete,
       openStudyAI,
+      getAskQuote: () => askQuoteRef.current,
       setHtmlClip,
       navHref: (pageSlug: string) => navHref(scope, pageSlug),
       reloadPage,
@@ -1632,6 +1636,9 @@ export function DocumentPane({
                   onAskSelection={(text, _image, attach) =>
                     openStudyAI(text, undefined, attach)
                   }
+                  onAskQuoteChange={(quote) => {
+                    askQuoteRef.current = quote;
+                  }}
                   editing={!isPreloadedDoc && editing}
                   onContentChange={(html) => {
                     draftContentRef.current = html;

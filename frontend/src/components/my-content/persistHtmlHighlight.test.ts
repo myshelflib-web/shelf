@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { PEN_WIDTHS } from "@/lib/straightenStroke";
 import { textHighlightDraft } from "./persistHtmlHighlight";
 
 describe("textHighlightDraft", () => {
-  it("saves an XS horizontal highlighter stroke from the selection", () => {
+  it("saves TEXT wash geometry (rects for hit-test, not pen stroke)", () => {
     const draft = textHighlightDraft(
       "page-1",
       {
@@ -16,10 +15,9 @@ describe("textHighlightDraft", () => {
       "yellow"
     );
     expect(draft.kind).toBe("TEXT");
-    expect(draft.position?.tool).toBe("highlight");
-    expect(draft.position?.width).toBe(
-      PEN_WIDTHS.find((s) => s.id === "xs")?.width
-    );
+    expect(draft.position?.type).toBeUndefined();
+    expect(draft.position?.tool).toBeUndefined();
+    expect(draft.position?.width).toBeUndefined();
     expect(draft.position?.rects).toEqual([
       { x: 0.1, y: 0.2, w: 0.4, h: 0.04 },
     ]);

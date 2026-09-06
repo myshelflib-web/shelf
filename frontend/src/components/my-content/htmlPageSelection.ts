@@ -60,8 +60,8 @@ export function captureHtmlTextSelection(
   );
   if (!rects.length) return null;
 
-  let startOffset = 0;
-  let endOffset = startOffset + text.length;
+  let startOffset: number;
+  let endOffset: number;
   try {
     startOffset = textOffsetInRoot(
       contentRoot,
@@ -74,13 +74,11 @@ export function captureHtmlTextSelection(
       range.endOffset
     );
   } catch {
-    startOffset = 0;
-    endOffset = text.length;
+    // Fail closed — bad offsets paint at the document start and look like
+    // "highlight did nothing."
+    return null;
   }
-  if (endOffset <= startOffset) {
-    startOffset = 0;
-    endOffset = text.length;
-  }
+  if (endOffset <= startOffset) return null;
 
   return {
     text,
