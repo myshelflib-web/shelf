@@ -1,6 +1,7 @@
 import prisma from "../utils/prisma.js";
 import { truncateText } from "../utils/htmlText.js";
 import { isPremiumUser } from "../utils/paywall.js";
+import { getWebOriginalityProvider } from "./webOriginalityProvider.js";
 import { retrieveLibrary, type Excerpt } from "./ragRetrieve.js";
 import { isVectorConfigured } from "./vectorStore.js";
 
@@ -211,11 +212,13 @@ export async function webOriginalityStub(
       upgradeUrl: "/settings",
     };
   }
+  const provider = getWebOriginalityProvider();
+  const result = await provider.scan(userId, "");
   return {
     kind: "web",
     status: "coming_soon",
-    message:
-      "Web originality (public-web match) is reserved for Premium. No third-party scan is wired yet — use library and syllabus checks for now.",
+    message: result.message,
+    upgradeUrl: result.upgradeUrl,
   };
 }
 

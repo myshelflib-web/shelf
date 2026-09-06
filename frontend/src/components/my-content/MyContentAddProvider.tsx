@@ -23,6 +23,8 @@ import {
   submitBulkFolderImport,
 } from "./myContentAddPageSubmit";
 import { useMyContentAddDrop } from "./useMyContentAddDrop";
+import type { DocTemplateId } from "@/lib/docTemplates";
+import type { SketchTemplate } from "@/lib/sketchNotebook";
 import { SHELF_OPEN_ADD } from "@/lib/hotkeys";
 import {
   emitContentChanged,
@@ -36,7 +38,6 @@ import {
 } from "@/lib/analytics";
 import { isReaderHref } from "@/lib/softNavigate";
 import { scopeFromHref } from "@/components/my-content/reader/types";
-import type { SketchTemplate } from "@/lib/sketchNotebook";
 import { findCachedSubject } from "@/lib/offline/library";
 import {
   addContextFromPath,
@@ -140,6 +141,7 @@ export function MyContentAddProvider({
   const [pageLink, setPageLink] = useState("");
   const [sketchTemplate, setSketchTemplate] = useState<SketchTemplate>("ruled");
   const [sketchBg, setSketchBg] = useState("#ffffff");
+  const [docTemplate, setDocTemplate] = useState<DocTemplateId>("blank");
 
   const reset = () => {
     setNotebookName("");
@@ -153,6 +155,7 @@ export function MyContentAddProvider({
     setAddMode("file");
     setSketchTemplate("ruled");
     setSketchBg("#ffffff");
+    setDocTemplate("blank");
     setMessage("");
     setSubmitting(false);
     setUploadProgress(null);
@@ -364,6 +367,7 @@ export function MyContentAddProvider({
         topic: target?.topic,
         sketchTemplate,
         sketchBg,
+        docTemplate,
         reportUploadProgress,
       });
       close();
@@ -449,6 +453,8 @@ export function MyContentAddProvider({
           sketchBg={sketchBg}
           onSketchTemplateChange={setSketchTemplate}
           onSketchBgChange={setSketchBg}
+          docTemplate={docTemplate}
+          onDocTemplateChange={setDocTemplate}
           onSubmitNotebook={handleCreateNotebook}
           onSubmitTopic={handleCreateTopic}
           onSubmitPage={handleAddPage}
