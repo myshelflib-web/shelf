@@ -1926,6 +1926,10 @@ export const api = {
           body: JSON.stringify(data),
         }
       ),
+    originalityWebScan: (scanId: string) =>
+      request<{
+        web: import("@/lib/writingAssistTypes").OriginalityReport["web"];
+      }>(`/api/study/originality/web/${encodeURIComponent(scanId)}`),
     researchAssist: (data: {
       text: string;
       kind: "tighten_abstract" | "check_claims";

@@ -132,6 +132,34 @@ export function WritingAssistModal({ payload, onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run on open
   }, [payload]);
 
+  useEffect(() => {
+    if (payload.mode !== "originality") return;
+    const scanId = report?.web.scanId;
+    if (!scanId || report?.web.status !== "pending") return;
+    let cancelled = false;
+    let tries = 0;
+    const tick = window.setInterval(() => {
+      tries += 1;
+      void api.study
+        .originalityWebScan(scanId)
+        .then((r) => {
+          if (cancelled) return;
+          if (r.web.status !== "pending") {
+            setReport((prev) => (prev ? { ...prev, web: r.web } : prev));
+            window.clearInterval(tick);
+          }
+        })
+        .catch(() => {
+          /* ignore transient poll errors */
+        });
+      if (tries >= 20) window.clearInterval(tick);
+    }, 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(tick);
+    };
+  }, [payload.mode, report?.web.scanId, report?.web.status]);
+
   const modal = (
     <div className="fixed inset-0 z-[210] flex items-center justify-center p-4">
       <button
@@ -369,6 +397,38 @@ function OriginalityBody({ report }: { report: OriginalityReport }) {
           Web originality
         </h3>
         <p className="text-xs text-[var(--text-secondary)]">{report.web.message}</p>
+        {report.web.scorePercent != null && report.web.status === "ok" && (
+          <p className="text-[12px] text-[var(--text-muted)] mt-1">
+            Aggregate match score: {Math.round(report.web.scorePercent)}%
+          </p>
+        )}
+        {report.web.matches && report.web.matches.length > 0 && (
+          <ul className="mt-2 space-y-1.5">
+            {report.web.matches.map((m) => (
+              <li
+                key={m.url}
+                className="rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] p-2.5"
+              >
+                <a
+                  href={m.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[13px] font-medium text-[var(--accent)] hover:underline break-all"
+                >
+                  {m.url}
+                </a>
+                <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                  ~{Math.round(m.score * 100)}% overlap
+                </p>
+                {m.excerpt && (
+                  <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-3">
+                    {m.excerpt}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
         {report.web.upgradeUrl && (
           <Link
             href={report.web.upgradeUrl}

@@ -16,9 +16,10 @@ export function LandingFeatureGrid({
           <LandingKicker index="05">Full feature set</LandingKicker>
           <div className="landing-value-title">{title}</div>
           <p className="landing-value-copy mt-2">
-            Reader workspace, YouTube lectures, Study AI, quiz, planner, Telegram
-            import and send, Spotify focus audio, sharing, and offline PWA — one
-            calm surface for your own material.
+            Research Docs with citations, reader workspace, YouTube lectures,
+            Study AI, originality checks, quiz, planner, Telegram import and
+            send, Spotify focus audio, sharing, and offline PWA — one calm
+            surface for your own material.
           </p>
         </RevealOnScroll>
         <div className="landing-feature-grid">

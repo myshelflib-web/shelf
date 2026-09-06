@@ -39,8 +39,11 @@ export type SyllabusOriginalityResult = {
 
 export type WebOriginalityResult = {
   kind: "web";
-  status: "premium_required" | "coming_soon";
+  status: "premium_required" | "coming_soon" | "ok" | "error" | "pending";
   message: string;
+  matches?: Array<{ url: string; score: number; excerpt?: string }>;
+  scorePercent?: number | null;
+  scanId?: string;
   upgradeUrl?: string;
 };
 
@@ -196,8 +199,9 @@ export async function checkSyllabusOverlap(
   };
 }
 
-export async function webOriginalityStub(
-  userId: string
+export async function checkWebOriginality(
+  userId: string,
+  text: string
 ): Promise<WebOriginalityResult> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -208,18 +212,29 @@ export async function webOriginalityStub(
       kind: "web",
       status: "premium_required",
       message:
-        "Web originality scanning is a Premium feature (vendor API not connected yet).",
+        "Web originality scanning is a Premium feature. Upgrade to run public-web plagiarism checks when a vendor key is configured.",
       upgradeUrl: "/settings",
     };
   }
   const provider = getWebOriginalityProvider();
-  const result = await provider.scan(userId, "");
+  const result = await provider.scan(userId, text);
   return {
     kind: "web",
-    status: "coming_soon",
+    status: result.status,
     message: result.message,
+    matches: result.matches,
+    scorePercent: result.scorePercent,
+    scanId: result.scanId,
     upgradeUrl: result.upgradeUrl,
   };
+}
+
+/** @deprecated use checkWebOriginality */
+export async function webOriginalityStub(
+  userId: string,
+  text = ""
+): Promise<WebOriginalityResult> {
+  return checkWebOriginality(userId, text);
 }
 
 export type AiWritingHeuristic = {

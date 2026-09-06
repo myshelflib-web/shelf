@@ -4,9 +4,11 @@ import { STUDY_AI_FEATURES } from "./studyAiFeatures";
 import { PRACTICE_FEATURES } from "./practiceFeatures";
 import { INTEGRATION_FEATURES } from "./integrationFeatures";
 import { PLATFORM_FEATURES } from "./platformFeatures";
+import { WRITING_FEATURES } from "./writingFeatures";
 
 export const SHELF_FEATURES: ShelfFeature[] = [
   ...LIBRARY_FEATURES,
+  ...WRITING_FEATURES,
   ...STUDY_AI_FEATURES,
   ...PRACTICE_FEATURES,
   ...INTEGRATION_FEATURES,

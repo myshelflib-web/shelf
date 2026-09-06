@@ -18,6 +18,7 @@ import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
 import { LandingPointerTorch } from "@/components/landing/LandingPointerTorch";
 import { useAuth } from "@/hooks/useAuth";
 import {
+  BookMarked,
   CalendarDays,
   FolderOpen,
   Layers,
@@ -64,10 +65,11 @@ export function HomePageClient() {
                 <span className="landing-em">In one Shelf.</span>
               </h1>
               <p className="landing-lead">
-                Upload PDFs, YouTube lectures, sketch notebooks, and doc pages
+                Upload PDFs, YouTube lectures, sketch notebooks, and research Docs
                 into collections you control. Read in tabs or split view, highlight
-                as you go, ask Study AI from your files, sit exam-style quizzes,
-                and plan revision on one calendar.
+                as you go, cite sources while you write, ask Study AI from your files,
+                check originality, sit exam-style quizzes, and plan revision on one
+                calendar.
               </p>
               <div className="landing-hero-actions">
                 <Link href="/login" className="landing-btn landing-btn-primary">
@@ -89,6 +91,10 @@ export function HomePageClient() {
                 <li>
                   <NotebookPen strokeWidth={1.75} aria-hidden />
                   Notebooks
+                </li>
+                <li>
+                  <BookMarked strokeWidth={1.75} aria-hidden />
+                  Research Docs
                 </li>
                 <li>
                   <Layers strokeWidth={1.75} aria-hidden />
@@ -127,8 +133,8 @@ export function HomePageClient() {
 
         <section className="landing-features-link">
           <Link href="/features">
-            See all features — reader workspace, YouTube lectures, Telegram
-            import and send, sharing, offline PWA, Premium &amp; more →
+            See all features — research Docs &amp; citations, YouTube lectures,
+            Telegram import and send, sharing, offline PWA, Premium &amp; more →
           </Link>
         </section>
 

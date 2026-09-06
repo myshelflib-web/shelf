@@ -5,13 +5,13 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
     id: "library",
     label: "Library & reader",
     description:
-      "Organize PDFs, YouTube lectures, highlight as you read, and work in a multi-tab reader workspace.",
+      "Organize PDFs, YouTube lectures, highlight as you read, write research Docs with citations, and work in a multi-tab reader workspace.",
   },
   {
     id: "study-ai",
     label: "Study AI",
     description:
-      "Ask questions grounded in your uploads — from a highlight, a page, or your whole library.",
+      "Ask questions grounded in your uploads — from a highlight, a page, or your whole library. Paraphrase and originality checks included.",
   },
   {
     id: "practice",

@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  BookMarked,
   BookOpen,
   CalendarDays,
   Columns2,
@@ -10,6 +11,7 @@ import {
   Map,
   MessageSquareText,
   NotebookPen,
+  ScanSearch,
   Send,
   Target,
   Youtube,
@@ -34,8 +36,18 @@ export const MARKETING_FEATURES: MarketingFeature[] = [
   },
   {
     icon: NotebookPen,
-    title: "Sketch notebooks & doc pages",
-    body: "Create multi-sheet sketch notebooks or typed doc pages in the same collection as your PDFs — not a separate notes app.",
+    title: "Sketch notebooks & research Docs",
+    body: "Create multi-sheet sketch notebooks or typed Docs in the same collection as your PDFs — with citations, outlines, and export for research writing.",
+  },
+  {
+    icon: BookMarked,
+    title: "Citations & bibliography",
+    body: "Cite in APA, MLA, Chicago, or IEEE. Import BibTeX, cite from library highlights, and refresh a References block as you draft.",
+  },
+  {
+    icon: ScanSearch,
+    title: "Paraphrase & originality",
+    body: "Rewrite selections in your own words and check overlap with your library and syllabus. Premium can run web plagiarism when a vendor key is set.",
   },
   {
     icon: Youtube,

@@ -6,7 +6,7 @@ import { reqLog } from "../utils/flowLog.js";
 import {
   checkLibraryOverlap,
   checkSyllabusOverlap,
-  webOriginalityStub,
+  checkWebOriginality,
   type OriginalityReport,
 } from "../services/originalityCheck.js";
 import {
@@ -18,6 +18,7 @@ import {
   researchAssist,
   type ResearchAssistKind,
 } from "../services/researchAssist.js";
+import { getScanResult } from "../services/webOriginalityProvider.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -96,7 +97,7 @@ router.post("/originality", async (req: Request, res: Response) => {
     const [library, syllabus, web] = await Promise.all([
       checkLibraryOverlap(userId, text, { excludePageId }),
       checkSyllabusOverlap(userId, text),
-      webOriginalityStub(userId),
+      checkWebOriginality(userId, text),
     ]);
 
     const report: OriginalityReport = { library, syllabus, web };
@@ -133,6 +134,23 @@ router.post("/originality", async (req: Request, res: Response) => {
           : "Originality check failed. Try again.",
     });
   }
+});
+
+router.get("/originality/web/:scanId", async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const scanId = String(req.params.scanId || "").trim();
+  if (scanId.length < 8) {
+    res.status(400).json({ error: "bad scanId" });
+    return;
+  }
+  const result = getScanResult(scanId);
+  if (!result) {
+    res.status(404).json({ error: "Scan not found or expired" });
+    return;
+  }
+  // Pending scans are user-scoped in memory; allow poll if present.
+  void userId;
+  res.json({ web: result });
 });
 
 router.post("/research-assist", async (req: Request, res: Response) => {

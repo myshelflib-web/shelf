@@ -8,6 +8,8 @@ export const SEO_KEYWORDS = {
   product: [
     "personal study library",
     "PDF reader with highlights",
+    "research paper writing app",
+    "APA MLA citation tool",
     "AI study assistant",
     "chat with PDF",
     "PDF annotation app",
@@ -53,6 +55,8 @@ export const SEO_KEYWORDS = {
 export const DEFAULT_KEYWORDS: string[] = [
   "personal study library",
   "PDF reader with highlights",
+  "research paper writing",
+  "APA MLA citations",
   "Study AI",
   "AI study assistant",
   "PDF annotation",
@@ -143,6 +147,21 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "digital notebook for students",
     "sketch notes app",
     "typed notes beside PDF",
+  ],
+  "research-doc-writing-suite": [
+    "research paper writing app",
+    "citation manager with PDF library",
+    "APA MLA citation tool students",
+    "export notes to LaTeX",
+    "IMRaD paper template",
+    "BibTeX import study app",
+  ],
+  "paraphrase-and-library-originality": [
+    "paraphrase PDF selection",
+    "library originality check",
+    "plagiarism check own notes",
+    "rewrite study notes AI",
+    "web plagiarism checker students",
   ],
   "free-exam-curriculum-learn": [
     "GATE syllabus",
@@ -306,18 +325,21 @@ export const HOME_PAGE_KEYWORDS: string[] = [
 ];
 
 export const FEATURES_HUB_TITLE =
-  "Shelf Features — PDF Library, YouTube Lectures, Study AI, Quiz & More";
+  "Shelf Features — PDF Library, Research Docs, Study AI, Quiz & More";
 
 export const FEATURES_HUB_DESCRIPTION =
-  "Explore every Shelf feature: personal PDF library, Share Shelf, YouTube lectures, highlights, Study AI, exam quizzes, Telegram, Spotify, teacher lesson prep, planner, and offline PWA.";
+  "Explore every Shelf feature: personal PDF library, research Doc writing with citations, Share Shelf, YouTube lectures, highlights, Study AI, paraphrase & originality, exam quizzes, Telegram, Spotify, teacher lesson prep, planner, and offline PWA.";
 
 export const FEATURES_HUB_KEYWORDS = [
   "Shelf features",
   "personal study library",
+  "research doc writing",
+  "APA MLA citation tool",
   "share shelf",
   "chat with PDF",
   "PDF reader with highlights",
   "Study AI features",
+  "paraphrase and originality",
   "exam quiz from notes",
   "study planner app",
   "YouTube lecture notes",
@@ -330,7 +352,7 @@ export const LEARN_DESCRIPTION =
   "Browse free curriculum packs for GATE, UPSC, State PCS, Judiciary, CA, and NEET PG — official PDFs, previous papers, bare acts, and open textbooks. Open without signing up; sign in for highlights and a private library.";
 
 export const BLOG_INDEX_DESCRIPTION =
-  "Long-form guides to Shelf: personal PDF libraries, YouTube lectures, highlights, Study AI, Share Shelf, planner, reader workspace, and workflows for students, teachers, researchers, and professionals.";
+  "Long-form guides to Shelf: personal PDF libraries, research Doc writing, YouTube lectures, highlights, Study AI, paraphrase & originality, Share Shelf, planner, reader workspace, and workflows for students, teachers, researchers, and professionals.";
 
 export const QUIZ_TITLE =
   "Exam-Style Quiz from Your Notes — MCQ, Written & PYQ Practice | Shelf";

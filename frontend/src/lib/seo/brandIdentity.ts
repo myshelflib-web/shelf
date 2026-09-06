@@ -138,16 +138,16 @@ export const BRAND_TAGLINE =
   "Shelf (myshelflib) is your personal study library for PDFs, highlights, Study AI, and planning.";
 
 export const BRAND_HOME_TITLE =
-  "Shelf (myshelflib) — Personal Study Library | PDFs, Study AI & Planner";
+  "Shelf (myshelflib) — Personal Study Library | PDFs, Research Docs & Study AI";
 
 export const BRAND_HOME_DESCRIPTION =
-  "Shelf — also called My Shelf Lib / myshelflib — is a personal study library: upload PDFs and YouTube lectures, highlight as you read, ask Study AI from your notes, Share Shelf with classmates, and plan on one calendar.";
+  "Shelf — also called My Shelf Lib / myshelflib — is a personal study library: upload PDFs and YouTube lectures, write research Docs with citations, highlight as you read, ask Study AI from your notes, Share Shelf with classmates, and plan on one calendar.";
 
 export const BRAND_FAQS = [
   {
     question: "What is Shelf / myshelflib?",
     answer:
-      "Shelf (website myshelflib.com, also searched as My Shelf Lib, my shelf, shelflib, or myshelf) is a personal study library app. Upload PDFs, highlight notes, ask Study AI from your material, share documents, and plan revision — your private library at /my-content.",
+      "Shelf (website myshelflib.com, also searched as My Shelf Lib, my shelf, shelflib, or myshelf) is a personal study library app. Upload PDFs, write research Docs with citations, highlight notes, ask Study AI from your material, share documents, and plan revision — your private library at /my-content.",
   },
   {
     question: "Is My Shelf Lib the same as Shelf?",
