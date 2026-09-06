@@ -23,6 +23,7 @@ import {
   ToolSep,
 } from "./EditorToolbarChrome";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
+import { ShelfTooltip } from "@/components/ShelfTooltip";
 import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
 
 const FONTS = [
@@ -323,24 +324,34 @@ export function DocToolbar({
           <ToolSep compact={compact} />
           <ToolGroup>
             {onParaphrase && (
-              <ToolBtn
-                compact={compact}
-                label="Paraphrase selection or document"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={onParaphrase}
-              >
-                <Wand2 className={icon} />
-              </ToolBtn>
+              <ShelfTooltip text="Paraphrase selection or the whole doc">
+                <ToolBtn
+                  compact={compact}
+                  label="Paraphrase selection or document"
+                  hideNativeTitle
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onParaphrase();
+                  }}
+                >
+                  <Wand2 className={icon} />
+                </ToolBtn>
+              </ShelfTooltip>
             )}
             {onOriginality && (
-              <ToolBtn
-                compact={compact}
-                label="Check originality (library + syllabus)"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={onOriginality}
-              >
-                <ScanSearch className={icon} />
-              </ToolBtn>
+              <ShelfTooltip text="Check originality against your library and syllabus">
+                <ToolBtn
+                  compact={compact}
+                  label="Check originality (library + syllabus)"
+                  hideNativeTitle
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onOriginality();
+                  }}
+                >
+                  <ScanSearch className={icon} />
+                </ToolBtn>
+              </ShelfTooltip>
             )}
           </ToolGroup>
         </>

@@ -6,6 +6,7 @@ import { FileText, ScanSearch, Sparkles, Trash2, Wand2, X } from "lucide-react";
 import { withShortcut } from "@/lib/hotkeys";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { lockedFeatureLabel } from "@/lib/preloadedReadOnly";
+import { ShelfTooltip } from "@/components/ShelfTooltip";
 
 /** Soft pastels matching the highlight menu reference */
 export const HIGHLIGHT_COLORS = [
@@ -203,49 +204,64 @@ export function HighlightToolbar({
       )}
 
       {onParaphrase && (
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() =>
-            onParaphrase && guard(onParaphrase, "Use Study AI")
-          }
-          className={`flex items-center gap-1.5 text-[13px] font-medium leading-none ${
-            locked ? "cursor-not-allowed opacity-70" : "hover:opacity-90"
-          }`}
-          style={{ color: "#7dd3c0" }}
-          title={
-            locked
-              ? lockedFeatureLabel(lockedGate, "paraphrase")
-              : "Paraphrase selection"
-          }
-          aria-disabled={locked}
-        >
-          <Wand2 className="w-3.5 h-3.5" strokeWidth={2} />
-          Paraphrase
-        </button>
+        <ShelfTooltip text="Rewrite in your own words" side="top">
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              if (locked) {
+                onLockedClick?.("Use Study AI");
+                return;
+              }
+              onParaphrase();
+            }}
+            className={`flex items-center gap-1.5 text-[13px] font-medium leading-none ${
+              locked ? "cursor-not-allowed opacity-70" : "hover:opacity-90"
+            }`}
+            style={{ color: "#7dd3c0" }}
+            aria-label={
+              locked
+                ? lockedFeatureLabel(lockedGate, "paraphrase")
+                : "Paraphrase selection"
+            }
+            aria-disabled={locked}
+          >
+            <Wand2 className="w-3.5 h-3.5" strokeWidth={2} />
+            Paraphrase
+          </button>
+        </ShelfTooltip>
       )}
 
       {onOriginality && (
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={() =>
-            onOriginality && guard(onOriginality, "Use Study AI")
-          }
-          className={`flex items-center gap-1.5 text-[13px] font-medium leading-none ${
-            locked ? "cursor-not-allowed opacity-70" : "hover:opacity-90"
-          }`}
-          style={{ color: "#9ec5e8" }}
-          title={
-            locked
-              ? lockedFeatureLabel(lockedGate, "check originality")
-              : "Check originality (library + syllabus)"
-          }
-          aria-disabled={locked}
+        <ShelfTooltip
+          text="Check overlap with your library and syllabus"
+          side="top"
         >
-          <ScanSearch className="w-3.5 h-3.5" strokeWidth={2} />
-          Originality
-        </button>
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              if (locked) {
+                onLockedClick?.("Use Study AI");
+                return;
+              }
+              onOriginality();
+            }}
+            className={`flex items-center gap-1.5 text-[13px] font-medium leading-none ${
+              locked ? "cursor-not-allowed opacity-70" : "hover:opacity-90"
+            }`}
+            style={{ color: "#9ec5e8" }}
+            aria-label={
+              locked
+                ? lockedFeatureLabel(lockedGate, "check originality")
+                : "Check originality (library + syllabus)"
+            }
+            aria-disabled={locked}
+          >
+            <ScanSearch className="w-3.5 h-3.5" strokeWidth={2} />
+            Originality
+          </button>
+        </ShelfTooltip>
       )}
 
       {onRemove && (

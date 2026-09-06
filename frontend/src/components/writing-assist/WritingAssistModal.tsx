@@ -41,6 +41,21 @@ export function WritingAssistModal({ payload, onClose }: Props) {
   const [includeAi, setIncludeAi] = useState(
     payload.mode === "originality" ? Boolean(payload.includeAiHeuristic) : true
   );
+  const [portalEl, setPortalEl] = useState<HTMLElement | null>(() => {
+    if (typeof document === "undefined") return null;
+    const fs = document.fullscreenElement;
+    return fs instanceof HTMLElement ? fs : document.body;
+  });
+
+  useEffect(() => {
+    const syncPortal = () => {
+      const fs = document.fullscreenElement;
+      setPortalEl(fs instanceof HTMLElement ? fs : document.body);
+    };
+    syncPortal();
+    document.addEventListener("fullscreenchange", syncPortal);
+    return () => document.removeEventListener("fullscreenchange", syncPortal);
+  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -54,6 +69,19 @@ export function WritingAssistModal({ payload, onClose }: Props) {
     nextStyle?: ParaphraseStyle,
     aiOverride?: boolean
   ) {
+    const minLen = payload.mode === "paraphrase" ? 12 : 24;
+    if (payload.text.trim().length < minLen) {
+      setLoading(false);
+      setVariants([]);
+      setReport(null);
+      setError(
+        payload.mode === "paraphrase"
+          ? "Select or write a bit more text to paraphrase (at least a short sentence)."
+          : "Select or write a longer passage to check (about a sentence or more)."
+      );
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -254,8 +282,8 @@ export function WritingAssistModal({ payload, onClose }: Props) {
     </div>
   );
 
-  if (typeof document === "undefined") return null;
-  return createPortal(modal, document.body);
+  if (!portalEl) return null;
+  return createPortal(modal, portalEl);
 }
 
 function OriginalityBody({ report }: { report: OriginalityReport }) {
