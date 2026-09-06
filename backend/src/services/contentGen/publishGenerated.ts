@@ -3,6 +3,7 @@ import prisma from "../../utils/prisma.js";
 import { logger } from "../../utils/logger.js";
 import { uploadToS3 } from "../s3.js";
 import { adminDocPrefix, contentHtmlKey } from "../../utils/docPaths.js";
+import { submitIndexNow } from "../indexNow.js";
 
 export type PublishInput = {
   studyGoal: StudyGoal;
@@ -100,6 +101,12 @@ export async function publishGeneratedArticle(
     subjectSlug: input.subjectSlug,
     created: !existing,
   });
+
+  void submitIndexNow([
+    `/learn/${input.subjectSlug}`,
+    `/learn/${input.subjectSlug}/${input.topicSlug}`,
+    `/learn/${input.subjectSlug}/${input.topicSlug}/${input.slug}`,
+  ]).catch(() => {});
 
   return { articleId: article.id, contentUrl };
 }

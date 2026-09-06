@@ -4,11 +4,21 @@ const API_URL =
 
 const FETCH_MS = 8_000;
 
+export type LearnNavLink = {
+  title: string;
+  slug: string;
+};
+
 type LearnSubject = {
   name: string;
   slug: string;
   description?: string | null;
   studyGoal?: string | null;
+  topics?: Array<{
+    title: string;
+    slug: string;
+    articles?: LearnNavLink[];
+  }>;
 };
 
 type LearnTopic = {
@@ -16,6 +26,7 @@ type LearnTopic = {
   slug: string;
   description?: string | null;
   subject?: { name: string; slug: string; studyGoal?: string | null };
+  articles?: LearnNavLink[];
 };
 
 type LearnArticle = {

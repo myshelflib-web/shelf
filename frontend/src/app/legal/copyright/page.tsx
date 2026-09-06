@@ -1,14 +1,7 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { Header } from "@/components/Header";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
-
-export const metadata: Metadata = {
-  title: "Copyright & takedown",
-  description:
-    "How Shelf handles official Learn content, user uploads, and copyright complaints under Indian law.",
-};
 
 export default function CopyrightLegalPage() {
   return (

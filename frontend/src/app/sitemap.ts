@@ -13,55 +13,31 @@ const API_URL =
   "http://localhost:4000";
 
 /** Keep sitemap generation fast so Googlebot does not time out. */
-const FETCH_MS = 4_000;
+const FETCH_MS = 6_000;
 
-type SubjectList = {
-  subjects: Array<{
-    slug: string;
-    updatedAt?: string;
-    topics: Array<{
-      slug: string;
-      updatedAt?: string;
-      articles?: Array<{ slug: string; updatedAt?: string }>;
-    }>;
-  }>;
+type SitemapSlugList = {
+  routes?: Array<{ path: string; lastModified?: string }>;
 };
 
 async function fetchLearnRoutes(siteUrl: string): Promise<MetadataRoute.Sitemap> {
   try {
-    const res = await fetch(`${API_URL}/api/subjects`, {
+    const res = await fetch(`${API_URL}/api/subjects/sitemap-slugs`, {
       next: { revalidate: 3600 },
       signal: AbortSignal.timeout(FETCH_MS),
     });
     if (!res.ok) return [];
-    const data = (await res.json()) as SubjectList;
-    const learnRoutes: MetadataRoute.Sitemap = [];
-
-    for (const subject of data.subjects ?? []) {
-      learnRoutes.push({
-        url: `${siteUrl}/learn/${subject.slug}`,
-        changeFrequency: "weekly",
-        priority: 0.8,
-        ...(subject.updatedAt ? { lastModified: subject.updatedAt } : {}),
-      });
-      for (const topic of subject.topics ?? []) {
-        learnRoutes.push({
-          url: `${siteUrl}/learn/${subject.slug}/${topic.slug}`,
-          changeFrequency: "weekly",
-          priority: 0.7,
-          ...(topic.updatedAt ? { lastModified: topic.updatedAt } : {}),
-        });
-        for (const article of topic.articles ?? []) {
-          learnRoutes.push({
-            url: `${siteUrl}/learn/${subject.slug}/${topic.slug}/${article.slug}`,
-            changeFrequency: "weekly",
-            priority: 0.85,
-            ...(article.updatedAt ? { lastModified: article.updatedAt } : {}),
-          });
-        }
-      }
-    }
-    return learnRoutes;
+    const data = (await res.json()) as SitemapSlugList;
+    return (data.routes ?? []).map((route) => {
+      const depth = route.path.split("/").filter(Boolean).length;
+      const priority =
+        depth >= 4 ? 0.85 : depth === 3 ? 0.7 : depth === 2 ? 0.8 : 0.75;
+      return {
+        url: `${siteUrl}${route.path}`,
+        changeFrequency: "weekly" as const,
+        priority,
+        ...(route.lastModified ? { lastModified: route.lastModified } : {}),
+      };
+    });
   } catch {
     return [];
   }
@@ -89,13 +65,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}/features`, changeFrequency: "weekly", priority: 0.88 },
     { url: `${siteUrl}/blog`, changeFrequency: "weekly", priority: 0.85 },
     { url: `${siteUrl}/learn`, changeFrequency: "daily", priority: 0.9 },
-    { url: `${siteUrl}/learn/current-affairs`, changeFrequency: "hourly", priority: 0.9 },
+    {
+      url: `${siteUrl}/learn/current-affairs`,
+      changeFrequency: "hourly",
+      priority: 0.9,
+    },
     { url: `${siteUrl}/subscribe`, changeFrequency: "monthly", priority: 0.8 },
     { url: `${siteUrl}/login`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${siteUrl}/about`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${siteUrl}/quiz`, changeFrequency: "weekly", priority: 0.75 },
     { url: `${siteUrl}/contact`, changeFrequency: "monthly", priority: 0.4 },
-    { url: `${siteUrl}/legal/copyright`, changeFrequency: "yearly", priority: 0.3 },
+    {
+      url: `${siteUrl}/legal/copyright`,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
     ...blogSlugs.map((slug) => ({
       url: `${siteUrl}/blog/${slug}`,
       changeFrequency: "monthly" as const,
@@ -113,5 +97,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.88,
     })
   );
-  return [...staticRoutes, ...trackRoutes, ...learnRoutes, ...currentAffairsRoutes];
+  return [
+    ...staticRoutes,
+    ...trackRoutes,
+    ...learnRoutes,
+    ...currentAffairsRoutes,
+  ];
 }

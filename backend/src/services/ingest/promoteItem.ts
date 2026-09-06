@@ -2,6 +2,7 @@ import prisma from "../../utils/prisma.js";
 import { logger } from "../../utils/logger.js";
 import { slugify } from "../../utils/slugify.js";
 import { isStudyGoal } from "../../studyGoal.js";
+import { submitIndexNow } from "../indexNow.js";
 
 async function ensureSubjectTopic(
   subjectSlug: string,
@@ -52,6 +53,7 @@ export async function promoteIngestItem(itemId: string): Promise<{ articleId: st
       where: { id: itemId },
       data: { status: "APPROVED", publishedAtShelf: new Date() },
     });
+    void submitIndexNow([`/learn/current-affairs/${item.slug}`]).catch(() => {});
     return { articleId: null };
   }
 
@@ -98,5 +100,9 @@ export async function promoteIngestItem(itemId: string): Promise<{ articleId: st
   });
 
   logger.info("ingest.promote.ok", { itemId, articleId: article.id, slug });
+  void submitIndexNow([
+    `/learn/current-affairs/${item.slug}`,
+    `/learn/${subjectSlug}/${topicSlug}/${slug}`,
+  ]).catch(() => {});
   return { articleId: article.id };
 }

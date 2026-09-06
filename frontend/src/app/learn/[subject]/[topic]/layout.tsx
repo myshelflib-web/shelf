@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LearnBreadcrumbJsonLd } from "@/components/seo/LearnBreadcrumbJsonLd";
+import { LearnCatalogSeoIntro } from "@/components/seo/LearnCatalogSeoIntro";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { fetchLearnTopic } from "@/lib/seo/learnFetch";
 import {
@@ -60,6 +61,19 @@ export default async function LearnTopicLayout({
   if (!data) return children;
 
   const subjectName = data.subject?.name ?? subject;
+  const goal = isStudyGoal(data.subject?.studyGoal)
+    ? data.subject.studyGoal
+    : null;
+  const description = learnTopicDescription(
+    data.title,
+    subjectName,
+    goal,
+    data.description
+  );
+  const articleLinks = (data.articles ?? []).map((a) => ({
+    name: a.title,
+    href: `/learn/${subject}/${topic}/${a.slug}`,
+  }));
 
   return (
     <>
@@ -69,6 +83,17 @@ export default async function LearnTopicLayout({
           { name: subjectName, path: `/learn/${subject}` },
           { name: data.title, path: `/learn/${subject}/${topic}` },
         ]}
+      />
+      <LearnCatalogSeoIntro
+        title={data.title}
+        description={description}
+        crumbs={[
+          { name: "Learn", href: "/learn" },
+          { name: subjectName, href: `/learn/${subject}` },
+          { name: data.title },
+        ]}
+        childrenLinks={articleLinks}
+        childrenLabel="Articles"
       />
       {children}
     </>

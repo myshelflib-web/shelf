@@ -3,13 +3,26 @@ import {
   SHELF_EMAIL_LOGO_CID,
 } from "./logoDataUri.js";
 
-/** Public app URL for email links. */
+/** Prefer www for myshelflib.com — apex 308s to www on Vercel. */
+function preferWwwCanonical(origin: string): string {
+  try {
+    const url = new URL(origin);
+    if (url.hostname === "myshelflib.com") {
+      url.hostname = "www.myshelflib.com";
+    }
+    return url.origin;
+  } catch {
+    return origin.replace(/\/$/, "");
+  }
+}
+
+/** Public app URL for email links, IndexNow, and share URLs. */
 export function getAppUrl(): string {
   const fromEnv = process.env.APP_URL?.trim();
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
+  if (fromEnv) return preferWwwCanonical(fromEnv);
 
   const cors = process.env.CORS_ORIGIN?.split(",")[0]?.trim();
-  if (cors) return cors.replace(/\/$/, "");
+  if (cors) return preferWwwCanonical(cors);
 
   return "http://localhost:3000";
 }

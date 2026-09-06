@@ -56,6 +56,11 @@ export const SITE_NAV_LINKS = [
     path: "/legal/copyright",
   },
   {
+    name: "Contact",
+    description: "Contact Shelf support about your study library or Premium.",
+    path: "/contact",
+  },
+  {
     name: "Exam-style quiz",
     description: "Practice MCQs and written answers from your Shelf library.",
     path: "/quiz",

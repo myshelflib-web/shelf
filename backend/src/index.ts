@@ -8,6 +8,7 @@ import highlightRoutes from "./routes/highlights.js";
 import progressRoutes from "./routes/progress.js";
 import adminRoutes from "./routes/admin.js";
 import internalRoutes from "./routes/internal.js";
+import internalIndexNowRoutes from "./routes/internalIndexNow.js";
 import ingestInternalRoutes from "./routes/ingestInternal.js";
 import subscriptionRoutes from "./routes/subscription.js";
 import subscriptionRecurringRoutes, {
@@ -189,6 +190,7 @@ app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/subscription", subscriptionRecurringRoutes);
 app.use("/api/affiliate", affiliateRoutes);
 app.use("/api/internal", internalRoutes);
+app.use("/api/internal", internalIndexNowRoutes);
 app.use("/api/internal", ingestInternalRoutes);
 
 app.use(
