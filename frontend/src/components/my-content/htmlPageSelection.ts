@@ -65,9 +65,11 @@ export function captureHtmlTextSelection(
   if (!rects.length) return null;
 
   // Prefer measuring inside the Doc body when present (read-only curriculum).
-  const offsetRoot =
-    (contentRoot.querySelector(".shelf-doc-body") as HTMLElement | null) ??
-    contentRoot;
+  // contentRoot may already be `.shelf-doc-body` (Doc-like select surface).
+  const offsetRoot = contentRoot.matches(".shelf-doc-body")
+    ? contentRoot
+    : ((contentRoot.querySelector(".shelf-doc-body") as HTMLElement | null) ??
+      contentRoot);
 
   let startOffset = 0;
   let endOffset = 0;
