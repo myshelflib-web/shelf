@@ -81,6 +81,8 @@ import {
 } from "./documentPaneFetch";
 import clsx from "clsx";
 import { isLiveEditorHtml } from "@/lib/pageKinds";
+import { isReadOnlyDocHtml } from "@/lib/docEditor";
+import { curriculumHighlightToUser } from "@/components/my-content/persistHtmlHighlight";
 import { linkEmbedHint, shouldUseLinkEmbed } from "@/lib/linkEmbedPolicy";
 import { formatOfficialSourceAttribution } from "@/lib/officialSourceAttribution";
 import { useDocumentPaneFlags } from "./useDocumentPaneFlags";
@@ -494,6 +496,28 @@ export function DocumentPane({
         // Show the document immediately; hydrate highlights in the background.
         setLoading(false);
         if (isPreloaded) {
+          if (loaded.contentType === "HTML") {
+            setHighlightsHydrating(true);
+            void api.highlights
+              .list(page.id)
+              .then(({ highlights: rows }) => {
+                if (gen !== pageLoadGen.current) return;
+                setHighlights(
+                  keepOptimisticHighlights(
+                    [],
+                    rows.map((h) => curriculumHighlightToUser(page.id, h))
+                  )
+                );
+              })
+              .catch(() => {
+                if (gen !== pageLoadGen.current) return;
+                setHighlights((prev) => keepOptimisticHighlights(prev, []));
+              })
+              .finally(() => {
+                if (gen === pageLoadGen.current) setHighlightsHydrating(false);
+              });
+            return;
+          }
           setHighlightsHydrating(false);
           return;
         }
@@ -702,6 +726,7 @@ export function DocumentPane({
 
   const startEditing = useCallback(() => {
     if (!pageData || pageData.isPreloaded) return;
+    if (isReadOnlyDocHtml(pageData.content)) return;
     if (pageData.contentType === "PDF") return;
     if (pageData.contentType === "VIDEO") return;
     if (pageData.contentType === "LINK") {
@@ -916,6 +941,9 @@ export function DocumentPane({
   );
 
   const isPreloadedDoc = Boolean(pageData?.isPreloaded);
+  const isReadOnlyDoc = Boolean(
+    pageData?.content && isReadOnlyDocHtml(pageData.content)
+  );
   const isSharedRecipient = Boolean(
     pageData?.access && !pageData.access.isOwner
   );
@@ -935,11 +963,12 @@ export function DocumentPane({
   const guestLocked =
     Boolean(signInGate?.active) ||
     Boolean(pageData?.access && !pageData.access.canAnnotate) ||
-    isPreloadedDoc;
+    // Learn HTML Docs annotate via curriculum highlights; PDF still needs save.
+    (isPreloadedDoc && pageData?.contentType !== "HTML");
   const { gate: annotationGate } = resolveAnnotationLock({
     signInGateActive: Boolean(signInGate?.active),
     canAnnotate: pageData?.access?.canAnnotate,
-    isPreloaded: isPreloadedDoc,
+    isPreloaded: isPreloadedDoc && pageData?.contentType !== "HTML",
   });
   const onGuestLockedClick = signInGate?.active
     ? (feature: string) => signInGate.prompt(feature)
@@ -1289,6 +1318,14 @@ export function DocumentPane({
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 bg-[rgba(110,121,214,0.18)] text-[var(--accent)]">
                     YouTube
                   </span>
+                ) : isPreloadedDoc && !isPdf && !isLink && !isVideo ? (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 bg-[var(--bg-secondary)] text-[var(--text-muted)]">
+                    Doc
+                  </span>
+                ) : isReadOnlyDoc ? (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 bg-[var(--bg-secondary)] text-[var(--text-muted)]">
+                    Doc
+                  </span>
                 ) : isPreloadedDoc ? (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 bg-[var(--bg-secondary)] text-[var(--text-muted)]">
                     Preloaded
@@ -1512,7 +1549,12 @@ export function DocumentPane({
                   onAskQuoteChange={(quote) => {
                     askQuoteRef.current = quote;
                   }}
-                  editing={!isPreloadedDoc && editing}
+                  editing={!isPreloadedDoc && !isReadOnlyDoc && editing}
+                  curriculumArticleId={
+                    isPreloadedDoc && pageData.contentType === "HTML"
+                      ? pageData.id
+                      : undefined
+                  }
                   onContentChange={(html) => {
                     draftContentRef.current = html;
                     if (editorSeed) {
