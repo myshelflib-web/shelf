@@ -35,3 +35,17 @@ export async function recompressS3ObjectIfSmaller(
     return currentLength;
   }
 }
+
+/**
+ * Same as recompressS3ObjectIfSmaller, but no-ops when the client already
+ * lossless-packed before PUT (avoids a full GetObject on complete).
+ */
+export async function recompressS3ObjectUnlessClientPacked(
+  key: string,
+  contentType: string,
+  currentLength: number,
+  clientPacked?: boolean
+): Promise<number> {
+  if (clientPacked) return currentLength;
+  return recompressS3ObjectIfSmaller(key, contentType, currentLength);
+}

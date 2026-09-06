@@ -54,7 +54,7 @@ export function QuizScopeFields({
 
   useEffect(() => {
     void api.myContent
-      .listSubjects({ pageSize: 100, sort: "name" })
+      .listSubjects({ pageSize: 100, sort: "name", tree: true })
       .then(({ subjects }) => setNotebooks(subjects))
       .catch(() => {});
   }, []);

@@ -205,7 +205,8 @@ async function uploadLibraryFile(
   scope: { subjectId?: string; topicGroupId?: string },
   onProgress?: UploadProgressHandler
 ) {
-  if (shouldCompressUpload(file)) {
+  const clientPacked = shouldCompressUpload(file);
+  if (clientPacked) {
     onProgress?.({
       loaded: 0,
       total: file.size,
@@ -227,6 +228,7 @@ async function uploadLibraryFile(
       size: toUpload.size,
       subjectId: scope.subjectId,
       topicGroupId: scope.topicGroupId,
+      clientPacked,
     }),
   });
   await putToUrl(
@@ -1143,6 +1145,7 @@ export const api = {
       q?: string;
       sort?: string;
       filter?: string;
+      tree?: boolean;
     }) => {
       const sp = new URLSearchParams();
       if (opts?.page) sp.set("page", String(opts.page));
@@ -1150,6 +1153,7 @@ export const api = {
       if (opts?.q) sp.set("q", opts.q);
       if (opts?.sort) sp.set("sort", opts.sort);
       if (opts?.filter) sp.set("filter", opts.filter);
+      if (opts?.tree) sp.set("tree", "1");
       const qs = sp.toString();
       return request<{
         subjects: import("@/types").UserSubject[];

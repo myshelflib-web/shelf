@@ -4,7 +4,11 @@ import { UserContentType } from "@prisma/client";
 import prisma from "../utils/prisma.js";
 import { uploadToS3, getFromS3, deleteFromS3, headObjectMeta, getObjectStream, getPresignedPutUrl, getPresignedPdfGetUrl, PDF_PRESIGN_EXPIRES_SEC, getObjectPrefix, getObjectBuffer } from "../services/s3.js";
 import { losslessCompressBuffer } from "../utils/losslessCompress.js";
-import { recompressS3ObjectIfSmaller } from "../utils/s3ObjectCompress.js";
+import { recompressS3ObjectUnlessClientPacked } from "../utils/s3ObjectCompress.js";
+import {
+  listSubjectsIncludeTree,
+  summarySubjectsForIds,
+} from "../services/librarySummarySubjects.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { param } from "../utils/param.js";
 import { QuotaError, assertStorageRoom } from "../utils/quotas.js";
@@ -29,6 +33,7 @@ import {
 import {
   browseNotebooks,
   NOTEBOOK_PAGE_SIZE,
+  NOTEBOOK_PAGE_SIZE_MAX,
   parseNotebookFilter,
   parseNotebookSort,
 } from "../utils/notebookBrowse.js";
@@ -734,6 +739,7 @@ router.post("/uploads/init", async (req: Request, res: Response) => {
     kind,
     size,
     contentType: putType,
+    clientPacked: Boolean(req.body?.clientPacked),
     ...fileParentFields(parent),
   });
 
@@ -835,10 +841,11 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
         res.status(400).json({ error: invalid });
         return;
       }
-      const storedBytes = await recompressS3ObjectIfSmaller(
+      const storedBytes = await recompressS3ObjectUnlessClientPacked(
         claims.key,
         "application/pdf",
-        meta.contentLength
+        meta.contentLength,
+        claims.clientPacked
       );
       await chargeStorage(parent.userId, storedBytes);
       chargedBytes = storedBytes;
@@ -1012,7 +1019,7 @@ router.get("/subjects", async (req: Request, res: Response) => {
     const sort = parseNotebookSort(req.query.sort);
     const filter = parseNotebookFilter(req.query.filter);
     const pageSize = Math.min(
-      NOTEBOOK_PAGE_SIZE,
+      NOTEBOOK_PAGE_SIZE_MAX,
       Math.max(1, Number(req.query.pageSize) || NOTEBOOK_PAGE_SIZE)
     );
     const requestedPage = Math.max(1, Number(req.query.page) || 1);
@@ -1026,7 +1033,13 @@ router.get("/subjects", async (req: Request, res: Response) => {
       page: requestedPage,
       pageSize,
     });
-    const subjects = await loadLegacySubjectsForUser(userId, ids);
+    const includeTree = listSubjectsIncludeTree({
+      tree: req.query.tree,
+      q,
+    });
+    const subjects = includeTree
+      ? await loadLegacySubjectsForUser(userId, ids)
+      : await summarySubjectsForIds(userId, ids);
     const rootPages = await prisma.userTopic.findMany({
       where: {
         userId,

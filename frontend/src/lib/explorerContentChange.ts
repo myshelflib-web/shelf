@@ -12,6 +12,7 @@ import {
   pageSelectionKey,
 } from "@/lib/explorerSelection";
 import { applyBulkDeleteToTree } from "@/lib/explorerBulkDeleteTree";
+import { syncLibraryCacheContentChange } from "@/lib/offline/library";
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 
@@ -55,6 +56,7 @@ export function applyExplorerContentChange(
       ...prev,
       [change.subject.slug]: true,
     }));
+    syncLibraryCacheContentChange(change);
     return true;
   }
 
@@ -76,6 +78,7 @@ export function applyExplorerContentChange(
       const tKey = `${change.notebookSlug}:${change.parentTopicSlug}`;
       ctx.setExpandedTopics((prev) => ({ ...prev, [tKey]: true }));
     }
+    syncLibraryCacheContentChange(change);
     return true;
   }
 
@@ -109,6 +112,7 @@ export function applyExplorerContentChange(
         [`${change.notebookSlug}:${change.topicSlug}`]: true,
       }));
     }
+    syncLibraryCacheContentChange(change);
     return true;
   }
 
@@ -117,6 +121,7 @@ export function applyExplorerContentChange(
     ctx.setRootPages((prev) => syncRootPages(prev, change.pageId, patch));
     ctx.setSubjects((prev) => syncPageInTree(prev, change.pageId, patch));
     ctx.setPinnedExtra((prev) => syncPageInTree(prev, change.pageId, patch));
+    syncLibraryCacheContentChange(change);
     return true;
   }
 
@@ -125,6 +130,7 @@ export function applyExplorerContentChange(
     ctx.setRootPages((prev) => syncRootPages(prev, change.pageId, patch));
     ctx.setSubjects((prev) => syncPageInTree(prev, change.pageId, patch));
     ctx.setPinnedExtra((prev) => syncPageInTree(prev, change.pageId, patch));
+    syncLibraryCacheContentChange(change);
     return true;
   }
 
@@ -135,6 +141,7 @@ export function applyExplorerContentChange(
     ctx.setSubjects((s) => applyBulkDeleteToTree(payload, s, []).subjects);
     ctx.setPinnedExtra((p) => applyBulkDeleteToTree(payload, p, []).subjects);
     ctx.setRootPages((r) => applyBulkDeleteToTree(payload, [], r).rootPages);
+    syncLibraryCacheContentChange(change);
     return true;
   }
 

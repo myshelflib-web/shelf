@@ -1,20 +1,7 @@
 "use client";
 
-import { NotebookSort, UserSubject, UserPageSummary } from "@/types";
-import {
-  ChevronLeft,
-  ChevronRight,
-  FolderOpen,
-  Trash2,
-  FilePlus,
-  FolderPlus,
-  RefreshCw,
-  FoldVertical,
-  Search,
-  ArrowDownWideNarrow,
-  CheckSquare,
-  XSquare,
-} from "lucide-react";
+import { UserSubject, UserPageSummary } from "@/types";
+import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { SharedWithMeSection } from "@/components/my-content/SharedWithMeSection";
 import { SharePageModal } from "@/components/my-content/SharePageModal";
 import { MyContentExplorerTree } from "@/components/my-content/MyContentExplorerTree";
@@ -23,20 +10,13 @@ import {
   buildSelectionLabels,
   type ExplorerSelectionKey,
 } from "@/lib/explorerSelection";
-import {
-  mergeExplorerTreeWithPending,
-  applyPendingDeletesToSubjects,
-} from "@/lib/pendingExplorerDeletes";
-import { applyExplorerContentChange } from "@/lib/explorerContentChange";
+import { applyPendingDeletesToSubjects } from "@/lib/pendingExplorerDeletes";
 import { useExplorerMoves } from "@/components/my-content/useExplorerMoves";
 import { useAddContent } from "@/components/my-content/MyContentAddProvider";
 import { useExplorerDeletes } from "@/components/my-content/useExplorerDeletes";
-import { listSubjects } from "@/lib/offline/library";
 import { api } from "@/lib/api";
-import { listTasks } from "@/lib/offline/tasks";
 import { useScheduledPageHrefs } from "@/hooks/useScheduledPageHrefs";
 import clsx from "clsx";
-import { withShortcut } from "@/lib/hotkeys";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
@@ -46,84 +26,29 @@ import {
 import { NotebookEditModal } from "@/components/my-content/NotebookEditModal";
 import { getNotebookLastRead, hydrateLastReads } from "@/lib/tabViewState";
 import {
-  SHELF_CONTENT_CHANGED,
-  contentChangeFromEvent,
   emitContentChanged,
   emitPageRenamed,
 } from "@/lib/contentEvents";
-import { ShelfSelect } from "@/components/ui/ShelfSelect";
-import { shelfSelectSidebarClass } from "@/lib/ui/fieldClasses";
-
-const SIDEBAR_NOTEBOOK_PAGE_SIZE = 15;
-const PINNED_KEY = "shelf:explorer-pinned";
-const SORT_KEY = "shelf:explorer-sort";
-const MAX_PINNED = 5;
-
-type SortCriterion = "activity" | "name";
-
-const SORT_CRITERIA: { id: SortCriterion; label: string }[] = [
-  { id: "activity", label: "Last activity" },
-  { id: "name", label: "Name" },
-];
-
-function notebookSortFor(
-  criterion: SortCriterion,
-  ascending: boolean
-): NotebookSort {
-  if (criterion === "name") return ascending ? "name" : "nameDesc";
-  return ascending ? "oldest" : "recent";
-}
-
-function directionTitle(criterion: SortCriterion, ascending: boolean): string {
-  if (criterion === "name") {
-    return ascending ? "Ascending — A to Z" : "Descending — Z to A";
-  }
-  return ascending
-    ? "Ascending — least recent first"
-    : "Descending — most recent first";
-}
-
-function readSortCriterion(): SortCriterion {
-  if (typeof window === "undefined") return "activity";
-  try {
-    const raw = localStorage.getItem(SORT_KEY);
-    if (raw === "activity" || raw === "name") return raw;
-    if (raw === "manual") return "activity";
-  } catch {
-    /* ignore */
-  }
-  return "activity";
-}
-
-function readPinnedSlugs(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(PINNED_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed)
-      ? parsed.filter((s): s is string => typeof s === "string")
-      : [];
-  } catch {
-    return [];
-  }
-}
-
-function pushPinnedSlug(slug: string) {
-  const next = [slug, ...readPinnedSlugs().filter((s) => s !== slug)].slice(
-    0,
-    MAX_PINNED
-  );
-  try {
-    localStorage.setItem(PINNED_KEY, JSON.stringify(next));
-  } catch {
-    /* ignore */
-  }
-  return next;
-}
+import {
+  SIDEBAR_NOTEBOOK_PAGE_SIZE,
+  useMyContentSidebarLibrary,
+} from "@/components/my-content/useMyContentSidebarLibrary";
+import { MyContentSidebarTools } from "@/components/my-content/MyContentSidebarTools";
+import { mergeExplorerSubjectsForDisplay } from "@/lib/mergeExplorerSubjectsForDisplay";
+import {
+  SIDEBAR_MAX_PINNED,
+  SIDEBAR_SORT_KEY,
+  directionTitle,
+  notebookSortFor,
+  pushPinnedSlug,
+  readPinnedSlugs,
+  readSortAscending,
+  readSortCriterion,
+  writeSortAscending,
+  type SortCriterion,
+} from "@/lib/myContentSidebarPrefs";
 
 interface MyContentSidebarProps {
-  /** Extra notebook detail (e.g. currently open) merged into the tree when present. */
   notebook?: UserSubject;
   notebookSlug?: string;
   currentTopicSlug?: string;
@@ -138,7 +63,6 @@ interface MyContentSidebarProps {
     scope: PersonalPageReaderScope;
   }) => void;
   className?: string;
-  /** Optional Personal / Preloaded tab strip above the explorer tools. */
   libraryModeTabs?: ReactNode;
 }
 
@@ -158,18 +82,12 @@ export function MyContentSidebar({
   const router = useRouter();
 
   const [sortCriterion, setSortCriterion] = useState<SortCriterion>(readSortCriterion);
-  const [sortAscending, setSortAscending] = useState(false);
+  const [sortAscending, setSortAscending] = useState(readSortAscending);
   const sort = notebookSortFor(sortCriterion, sortAscending);
   const [query, setQuery] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [notebookPage, setNotebookPage] = useState(1);
   const [rootPage, setRootPage] = useState(1);
-  const [subjects, setSubjects] = useState<UserSubject[]>([]);
-  const [rootPages, setRootPages] = useState<UserPageSummary[]>([]);
-  const [pinnedExtra, setPinnedExtra] = useState<UserSubject[]>([]);
-  const [totalNotebooks, setTotalNotebooks] = useState(0);
-  const [totalNotebookPages, setTotalNotebookPages] = useState(1);
-  const [loading, setLoading] = useState(true);
   const [editNotebook, setEditNotebook] = useState<UserSubject | null>(null);
   const [shareTarget, setShareTarget] = useState<{
     id: string;
@@ -178,10 +96,52 @@ export function MyContentSidebar({
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<ExplorerSelectionKey>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [expandedNotebooks, setExpandedNotebooks] = useState<
+    Record<string, boolean>
+  >(() => {
+    const init: Record<string, boolean> = {};
+    if (notebookSlug) init[notebookSlug] = true;
+    return init;
+  });
+  const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>(
+    () => {
+      const init: Record<string, boolean> = {};
+      if (notebookSlug && currentTopicSlug) {
+        init[`${notebookSlug}:${currentTopicSlug}`] = true;
+      }
+      return init;
+    }
+  );
 
   const searching = debouncedQ.length > 0;
   const libraryMoveEnabled = !searching && !selectionMode;
   const scheduledHrefs = useScheduledPageHrefs(true);
+
+  const {
+    subjects,
+    setSubjects,
+    rootPages,
+    setRootPages,
+    pinnedExtra,
+    setPinnedExtra,
+    totalNotebooks,
+    setTotalNotebooks,
+    totalNotebookPages,
+    loading,
+    load,
+    hydrateSubject,
+    hydratingSlugs,
+    isSubjectHydrated,
+    markHydrated,
+  } = useMyContentSidebarLibrary({
+    notebookPage,
+    sort,
+    searching,
+    debouncedQ,
+    notebookSlug,
+    setExpandedNotebooks,
+    setExpandedTopics,
+  });
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedQ(query.trim()), 220);
@@ -190,11 +150,12 @@ export function MyContentSidebar({
 
   useEffect(() => {
     try {
-      localStorage.setItem(SORT_KEY, sortCriterion);
+      localStorage.setItem(SIDEBAR_SORT_KEY, sortCriterion);
     } catch {
       /* ignore */
     }
-  }, [sortCriterion]);
+    writeSortAscending(sortAscending);
+  }, [sortCriterion, sortAscending]);
 
   useEffect(() => {
     setNotebookPage(1);
@@ -205,53 +166,6 @@ export function MyContentSidebar({
     if (!notebookSlug) return;
     pushPinnedSlug(notebookSlug);
   }, [notebookSlug]);
-
-  const load = useCallback((opts?: { silent?: boolean }) => {
-    if (!opts?.silent) setLoading(true);
-    const pageSize = SIDEBAR_NOTEBOOK_PAGE_SIZE;
-    listSubjects({
-        page: searching ? 1 : notebookPage,
-        pageSize,
-        sort,
-        q: searching ? debouncedQ : undefined,
-      })
-      .then((res) => {
-        const merged = mergeExplorerTreeWithPending(
-          res.subjects,
-          res.rootPages ?? []
-        );
-        setSubjects(merged.subjects);
-        setRootPages(merged.rootPages);
-        setTotalNotebooks(res.total);
-        setTotalNotebookPages(Math.max(1, res.totalPages));
-      })
-      .catch(() => {
-        if (!opts?.silent) {
-          setSubjects([]);
-          setRootPages([]);
-          setTotalNotebooks(0);
-          setTotalNotebookPages(1);
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [notebookPage, sort, searching, debouncedQ]);
-
-  useEffect(() => {
-    load();
-    const onChange = (e: Event) => {
-      applyExplorerContentChange(contentChangeFromEvent(e), {
-        setSubjects,
-        setPinnedExtra,
-        setRootPages,
-        setExpandedNotebooks,
-        setExpandedTopics,
-        setTotalNotebooks,
-        reloadSilent: () => load({ silent: true }),
-      });
-    };
-    window.addEventListener(SHELF_CONTENT_CHANGED, onChange);
-    return () => window.removeEventListener(SHELF_CONTENT_CHANGED, onChange);
-  }, [load]);
 
   useEffect(() => {
     api.myContent
@@ -274,7 +188,7 @@ export function MyContentSidebar({
     }
     let cancelled = false;
     Promise.all(
-      slugs.slice(0, MAX_PINNED).map((slug) =>
+      slugs.slice(0, SIDEBAR_MAX_PINNED).map((slug) =>
         api.myContent
           .getSubject(slug)
           .then((r) => r.subject)
@@ -282,56 +196,31 @@ export function MyContentSidebar({
       )
     ).then((rows) => {
       if (cancelled) return;
-      setPinnedExtra(
-        applyPendingDeletesToSubjects(
-          rows.filter((r): r is UserSubject => r != null)
-        )
+      const kept = applyPendingDeletesToSubjects(
+        rows.filter((r): r is UserSubject => r != null)
       );
+      for (const s of kept) markHydrated(s.id, s.slug);
+      setPinnedExtra(kept);
     });
     return () => {
       cancelled = true;
     };
-  }, [subjects, notebook]);
+  }, [subjects, notebook, markHydrated, setPinnedExtra]);
 
   useEffect(() => {
     setRootPage(1);
   }, [rootPages.length, debouncedQ]);
 
-  const treeSubjects = useMemo(() => {
-    const byId = new Map<string, UserSubject>();
-    const pendingMerged = applyPendingDeletesToSubjects([
-      ...pinnedExtra,
-      ...subjects,
-      ...(notebook ? [notebook] : []),
-    ]);
-    for (const nb of pendingMerged) {
-      if (!byId.has(nb.id)) byId.set(nb.id, nb);
-    }
-    return [...byId.values()];
-  }, [subjects, pinnedExtra, notebook]);
+  const treeSubjects = useMemo(
+    () => mergeExplorerSubjectsForDisplay(subjects, pinnedExtra, notebook),
+    [subjects, pinnedExtra, notebook]
+  );
 
   const filteredRootPages = useMemo(() => {
     if (!searching) return rootPages;
     const q = debouncedQ.toLowerCase();
     return rootPages.filter((p) => p.title.toLowerCase().includes(q));
   }, [rootPages, searching, debouncedQ]);
-
-  const [expandedNotebooks, setExpandedNotebooks] = useState<
-    Record<string, boolean>
-  >(() => {
-    const init: Record<string, boolean> = {};
-    if (notebookSlug) init[notebookSlug] = true;
-    return init;
-  });
-  const [expandedTopics, setExpandedTopics] = useState<Record<string, boolean>>(
-    () => {
-      const init: Record<string, boolean> = {};
-      if (notebookSlug && currentTopicSlug) {
-        init[`${notebookSlug}:${currentTopicSlug}`] = true;
-      }
-      return init;
-    }
-  );
 
   useEffect(() => {
     if (!notebookSlug) return;
@@ -349,9 +238,14 @@ export function MyContentSidebar({
   const toggleNotebook = (slug: string) => {
     const willOpen = !expandedNotebooks[slug];
     setExpandedNotebooks((prev) => ({ ...prev, [slug]: !prev[slug] }));
-    if (willOpen && !workspaceMode) {
-      const last = getNotebookLastRead(slug);
-      if (last?.href) router.push(last.href);
+    if (willOpen) {
+      if (!isSubjectHydrated(slug)) {
+        void hydrateSubject(slug);
+      }
+      if (!workspaceMode) {
+        const last = getNotebookLastRead(slug);
+        if (last?.href) router.push(last.href);
+      }
     }
   };
 
@@ -426,17 +320,8 @@ export function MyContentSidebar({
     setExpandedTopics,
   });
 
-  const handleReorderSubjects = (_orderedIds: string[]) => {
-    /* Top-level folder order is controlled by Sort by only — no manual reorder. */
-  };
-
-  const handleReorderTopics = (_subjectId: string, _orderedIds: string[]) => {
-    /* Nested folder order within a parent is not user-sorted — use move between folders. */
-  };
-
   const isEmpty =
     !loading && treeSubjects.length === 0 && filteredRootPages.length === 0;
-
   const sortDirTitle = directionTitle(sortCriterion, sortAscending);
 
   return (
@@ -447,120 +332,27 @@ export function MyContentSidebar({
         className
       )}
     >
-      <div className="p-2 border-b border-[var(--border)] space-y-2">
-        {libraryModeTabs}
-        <div className="flex items-center gap-1 min-w-0 px-1">
-          <FolderOpen className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
-          <h2 className="font-semibold text-sm truncate flex-1 min-w-0">
-            Explorer
-          </h2>
-          <div className="flex items-center shrink-0">
-            <button
-              type="button"
-              title={selectionMode ? "Exit selection mode" : "Select items to delete"}
-              aria-label={selectionMode ? "Exit selection mode" : "Select items"}
-              onClick={() =>
-                selectionMode ? exitSelectionMode() : setSelectionMode(true)
-              }
-              className={clsx(
-                "p-1.5 rounded-md hover:bg-[var(--bg-elevated)]",
-                selectionMode
-                  ? "text-[var(--accent)]"
-                  : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
-              )}
-            >
-              {selectionMode ? (
-                <XSquare className="w-4 h-4" />
-              ) : (
-                <CheckSquare className="w-4 h-4" />
-              )}
-            </button>
-            <button
-              type="button"
-              title={withShortcut("Add a file to your library", "c p")}
-              aria-label="Add file"
-              onClick={() => openAdd({ kind: "page" })}
-              className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
-            >
-              <FilePlus className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              title={withShortcut("Create a new folder", "c n")}
-              aria-label="New folder"
-              onClick={() => openAdd({ kind: "notebook" })}
-              className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
-            >
-              <FolderPlus className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              title="Refresh library list"
-              aria-label="Refresh"
-              onClick={() => load()}
-              className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
-            >
-              <RefreshCw className={clsx("w-4 h-4", loading && "animate-spin")} />
-            </button>
-            <button
-              type="button"
-              title="Collapse all folders"
-              aria-label="Collapse all"
-              onClick={collapseAll}
-              className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
-            >
-              <FoldVertical className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {workspaceMode && (
-          <div className="relative px-0.5">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search folders…"
-              className="w-full pl-8 pr-3 py-1.5 rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] text-xs text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
-            />
-          </div>
-        )}
-
-        <div className="px-0.5 pt-0.5">
-          <p className="text-[9.5px] uppercase tracking-[0.05em] font-bold text-[var(--text-muted)] px-1 mb-1.5">
-            Sort by
-          </p>
-          <div className="flex items-center gap-1.5">
-            <ShelfSelect
-              compact
-              className={`flex-1 min-w-0 ${shelfSelectSidebarClass}`}
-              value={sortCriterion}
-              aria-label="Sort folders"
-              options={SORT_CRITERIA.map((s) => ({ value: s.id, label: s.label }))}
-              onChange={(v) => setSortCriterion(v as SortCriterion)}
-            />
-            <button
-              type="button"
-              title={sortDirTitle}
-              aria-label={sortDirTitle}
-              onClick={() => setSortAscending((v) => !v)}
-              className="w-[34px] h-[34px] shrink-0 grid place-items-center rounded-lg border border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:border-[var(--accent)]/40 hover:bg-[var(--accent-subtle)] hover:text-[var(--accent)] transition-colors"
-            >
-              <ArrowDownWideNarrow
-                className={clsx(
-                  "w-4 h-4 transition-transform duration-150",
-                  sortAscending && "scale-y-[-1]"
-                )}
-              />
-            </button>
-          </div>
-          {libraryMoveEnabled && (
-            <p className="text-[10px] text-[var(--text-muted)] px-1 mt-1.5 leading-snug">
-              Drag a file or folder to move it into another folder.
-            </p>
-          )}
-        </div>
-      </div>
+      <MyContentSidebarTools
+        libraryModeTabs={libraryModeTabs}
+        selectionMode={selectionMode}
+        onToggleSelection={() =>
+          selectionMode ? exitSelectionMode() : setSelectionMode(true)
+        }
+        onAddPage={() => openAdd({ kind: "page" })}
+        onAddNotebook={() => openAdd({ kind: "notebook" })}
+        onRefresh={() => load()}
+        loading={loading}
+        onCollapseAll={collapseAll}
+        workspaceMode={workspaceMode}
+        query={query}
+        onQueryChange={setQuery}
+        sortCriterion={sortCriterion}
+        onSortCriterionChange={setSortCriterion}
+        sortDirTitle={sortDirTitle}
+        sortAscending={sortAscending}
+        onToggleSortDirection={() => setSortAscending((v) => !v)}
+        libraryMoveEnabled={libraryMoveEnabled}
+      />
 
       <nav className="flex-1 overflow-y-auto px-1.5 py-2">
         <MyContentExplorerTree
@@ -581,6 +373,7 @@ export function MyContentSidebar({
           currentHref={currentHref}
           expandedNotebooks={expandedNotebooks}
           expandedTopics={expandedTopics}
+          hydratingSlugs={hydratingSlugs}
           toggleNotebook={toggleNotebook}
           toggleTopic={toggleTopic}
           enablePageDrag={enablePageDrag}
@@ -591,8 +384,8 @@ export function MyContentSidebar({
           selected={selected}
           onSelectionChange={setSelected}
           libraryMoveEnabled={libraryMoveEnabled}
-          onReorderSubjects={handleReorderSubjects}
-          onReorderTopics={handleReorderTopics}
+          onReorderSubjects={() => undefined}
+          onReorderTopics={() => undefined}
           onMovePage={handleMovePage}
           onMoveTopic={handleMoveTopic}
           onEditNotebook={setEditNotebook}
@@ -652,8 +445,8 @@ export function MyContentSidebar({
           <p className="text-[10px] text-[var(--text-muted)] tabular-nums">
             {notebookPage} / {totalNotebookPages}
           </p>
-            <button
-              type="button"
+          <button
+            type="button"
             disabled={notebookPage >= totalNotebookPages || loading}
             onClick={() =>
               setNotebookPage((p) => Math.min(totalNotebookPages, p + 1))
@@ -662,7 +455,7 @@ export function MyContentSidebar({
             aria-label="Next folders"
           >
             <ChevronRight className="w-3.5 h-3.5" />
-            </button>
+          </button>
         </div>
       )}
     </aside>

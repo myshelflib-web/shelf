@@ -76,7 +76,7 @@ import {
   scopeHref,
 } from "./types";
 import { shouldSkipLibraryNav } from "@/hooks/useLibraryHref";
-import { CircleLoader } from "@/components/CircleLoader";
+import { DocumentPaneLoadingShell } from "./DocumentPaneLoadingShell";
 import clsx from "clsx";
 import { isLiveEditorHtml } from "@/lib/pageKinds";
 import { linkEmbedHint, shouldUseLinkEmbed } from "@/lib/linkEmbedPolicy";
@@ -421,6 +421,10 @@ export function DocumentPane({
   const pageIdRef = useRef<string | null>(null);
   const pageLoadGen = useRef(0);
   const loadedHrefRef = useRef<string | null>(null);
+  const pdfSourcePrefetchRef = useRef<Promise<{
+    url: string;
+    version: string;
+  } | null> | null>(null);
 
   const currentHref = scopeHref(scope);
   const [savedView, setSavedView] = useState<TabViewState | undefined>(() =>
@@ -486,6 +490,23 @@ export function DocumentPane({
       setHighlights([]);
       setHighlightsHydrating(true);
     }
+
+    const knownPageId = tab.pageId;
+    if (
+      knownPageId &&
+      scope.kind !== "learn" &&
+      !(scope.kind === "shared" && !scope.linkToken)
+    ) {
+      pdfSourcePrefetchRef.current = api.myContent
+        .getPdfUrl(
+          knownPageId,
+          scope.kind === "shared" ? scope.linkToken : undefined
+        )
+        .catch(() => null);
+    } else {
+      pdfSourcePrefetchRef.current = null;
+    }
+
     fetchPage(scope)
       .then((result) => {
         if (gen !== pageLoadGen.current) return;
@@ -659,7 +680,7 @@ export function DocumentPane({
         setLiveReadPercent(0);
         setLoading(false);
       });
-  }, [scope, currentHref]);
+  }, [scope, currentHref, tab.pageId]);
 
   useEffect(() => {
     reloadPage();
@@ -1304,9 +1325,10 @@ export function DocumentPane({
       data-pane-id={paneId}
     >
       {loading ? (
-        <div className="flex-1 flex items-center justify-center">
-          <CircleLoader size="lg" label="Loading page" />
-        </div>
+        <DocumentPaneLoadingShell
+          title={tab.title}
+          showChrome={Boolean(showChrome)}
+        />
       ) : pageData?.accessDenied ? (
         <AccessDeniedState />
       ) : pageData ? (
@@ -1523,6 +1545,7 @@ export function DocumentPane({
                 <PdfViewer
                   userTopicId={pageData.id}
                   getPdfSource={curriculumPdfSource ?? sharedPdfSource}
+                  prefetchedPdfSource={pdfSourcePrefetchRef.current}
                   canEditPdf={
                     !curriculumPdfSource &&
                     !guestLocked &&

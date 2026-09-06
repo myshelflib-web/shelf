@@ -110,7 +110,7 @@ export function StudyCalendar({
 
   useEffect(() => {
     if (libraryProp) return;
-    listSubjects()
+    listSubjects({ tree: true, pageSize: 100 })
       .then(({ subjects }) => setFetchedLibrary(subjects))
       .catch(() => {});
   }, [libraryProp]);

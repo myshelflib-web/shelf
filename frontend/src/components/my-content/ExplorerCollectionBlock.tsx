@@ -11,6 +11,7 @@ import {
   ChevronRight,
   FilePlus,
   FolderPlus,
+  Loader2,
   Pencil,
 } from "lucide-react";
 import { FolderMark } from "@/components/FolderMark";
@@ -42,6 +43,7 @@ interface ExplorerCollectionBlockProps {
   currentPageSlug?: string;
   currentHref?: string;
   expandedTopics: Record<string, boolean>;
+  treeLoading?: boolean;
   selectionMode: boolean;
   selected: Set<ExplorerSelectionKey>;
   onSelectionChange: (next: Set<ExplorerSelectionKey>) => void;
@@ -97,6 +99,7 @@ export function ExplorerCollectionBlock({
   currentPageSlug,
   currentHref,
   expandedTopics,
+  treeLoading = false,
   selectionMode,
   selected,
   onSelectionChange,
@@ -248,6 +251,12 @@ export function ExplorerCollectionBlock({
 
       {open && (
         <div className="ml-6 pl-3 border-l border-[var(--border)] space-y-0.5 mt-0.5">
+          {treeLoading && loose.length === 0 && groups.length === 0 && (
+            <div className="flex items-center gap-1.5 px-1.5 py-1 text-[11px] text-[var(--text-muted)]">
+              <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+              Loading…
+            </div>
+          )}
           {loose.map((page) => {
             const href = pageHref(nb.slug, null, page.slug);
             const isActive =
