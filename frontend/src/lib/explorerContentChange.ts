@@ -145,6 +145,14 @@ export function applyExplorerContentChange(
     return true;
   }
 
+  if (change.type === "page-moved") {
+    const patch = { slug: change.slug, title: change.title };
+    ctx.setRootPages((prev) => syncRootPages(prev, change.pageId, patch));
+    ctx.setSubjects((prev) => syncPageInTree(prev, change.pageId, patch));
+    ctx.setPinnedExtra((prev) => syncPageInTree(prev, change.pageId, patch));
+    return true;
+  }
+
   ctx.reloadSilent();
   return true;
 }

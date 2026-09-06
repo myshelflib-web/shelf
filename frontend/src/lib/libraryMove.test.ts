@@ -49,6 +49,30 @@ describe("movePageInTree", () => {
       "p1",
     ]);
   });
+
+  it("drops the page when the destination topic is missing from a slim stub", () => {
+    const subjects: UserSubject[] = [
+      {
+        id: "s1",
+        name: "Math",
+        slug: "math",
+        icon: "📁",
+        order: 1,
+        topicGroups: [],
+        pages: [page("p1", "One")],
+      },
+    ];
+
+    const result = movePageInTree(subjects, [], "p1", {
+      subjectId: "s1",
+      topicGroupId: "g1",
+      beforePageId: null,
+      page: page("p1", "One"),
+    });
+
+    expect(result.subjects[0].pages).toEqual([]);
+    expect(result.subjects[0].topicGroups).toEqual([]);
+  });
 });
 
 describe("moveTopicInTree", () => {

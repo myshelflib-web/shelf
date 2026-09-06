@@ -307,6 +307,24 @@ export function patchLibraryCachePageFlags(
   );
 }
 
+/** Patch cached subject trees + root pages after an explorer move. */
+export function syncLibraryCacheTrees(
+  subjects: UserSubject[],
+  rootPages: UserPageSummary[]
+): void {
+  if (!memoryLibrary) return;
+  const byId = new Map(subjects.map((s) => [s.id, s]));
+  writeSnapshot(
+    {
+      ...memoryLibrary,
+      subjects: memoryLibrary.subjects.map((s) => byId.get(s.id) ?? s),
+      rootPages,
+    },
+    memoryLibrary.cachedAt,
+    { sort: memoryLibrary.listSort, page: memoryLibrary.listPage }
+  );
+}
+
 /** Keep offline cache aligned with explorer content events (rename, create, …). */
 export function syncLibraryCacheContentChange(change: ContentChange): void {
   if (!memoryLibrary) return;

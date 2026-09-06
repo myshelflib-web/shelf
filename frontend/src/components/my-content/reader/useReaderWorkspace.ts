@@ -328,6 +328,47 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
     });
   }, []);
 
+  /** After explorer move: retarget open tabs (key === href) to the new path. */
+  const relocateTabsByPageId = useCallback(
+    (
+      pageId: string,
+      next: {
+        title: string;
+        href: string;
+        scope: PersonalPageReaderScope;
+      }
+    ) => {
+      setState((prev) => {
+        let changed = false;
+        const panes = prev.panes.map((p) => {
+          let activeTabKey = p.activeTabKey;
+          const tabs = p.tabs.map((t) => {
+            if (t.pageId !== pageId) return t;
+            if (
+              t.href === next.href &&
+              t.title === next.title &&
+              t.key === next.href
+            ) {
+              return t;
+            }
+            changed = true;
+            if (p.activeTabKey === t.key) activeTabKey = next.href;
+            return {
+              ...t,
+              key: next.href,
+              href: next.href,
+              title: next.title,
+              scope: next.scope,
+            };
+          });
+          return { ...p, tabs, activeTabKey };
+        });
+        return changed ? { ...prev, panes } : prev;
+      });
+    },
+    []
+  );
+
   const openInPane = useCallback(
     (paneId: string, tab: OpenTab, opts?: { activate?: boolean; replace?: boolean }) => {
       const activate = opts?.activate !== false;
@@ -720,6 +761,7 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
     reorderTabs,
     updateTabMeta,
     updateTabsByPageId,
+    relocateTabsByPageId,
     openInPane,
     openInFocused,
     closeTab,

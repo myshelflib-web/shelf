@@ -16,7 +16,7 @@ import { ClipSaveModal } from "@/components/my-content/ClipSaveModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useReadingTimer } from "@/hooks/useReadingTimer";
 import { useScheduledPageHrefs } from "@/hooks/useScheduledPageHrefs";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import {
   getTopicGroups,
   insertPageInTree,
@@ -107,6 +107,7 @@ export function ReaderWorkspace({
     reorderTabs,
     updateTabMeta,
     updateTabsByPageId,
+    relocateTabsByPageId,
     openInPane,
     closeTab,
     closeTabsForPageId,
@@ -166,7 +167,13 @@ export function ReaderWorkspace({
       api.myContent
         .getSubject(slug)
         .then(({ subject }) => setNotebook(subject))
-        .catch(() => setNotebook((prev) => (prev?.slug === slug ? prev : null)));
+        .catch((err) => {
+          if (err instanceof ApiError && err.status === 404) {
+            setNotebook(null);
+            return;
+          }
+          setNotebook((prev) => (prev?.slug === slug ? prev : null));
+        });
     load();
     const onChange = (e: Event) => {
       const change = contentChangeFromEvent(e);
@@ -206,6 +213,8 @@ export function ReaderWorkspace({
         setNotebook((prev) =>
           prev ? syncPageInTree([prev], change.pageId, patch)[0] : prev
         );
+      } else if (change?.type === "page-moved") {
+        // Tabs relocate separately; avoid getSubject storm on every move.
       } else {
         load();
       }
@@ -223,6 +232,20 @@ export function ReaderWorkspace({
     window.addEventListener(SHELF_CONTENT_CHANGED, onRenamed);
     return () => window.removeEventListener(SHELF_CONTENT_CHANGED, onRenamed);
   }, [updateTabsByPageId]);
+
+  useEffect(() => {
+    const onMoved = (e: Event) => {
+      const change = contentChangeFromEvent(e);
+      if (change?.type !== "page-moved") return;
+      relocateTabsByPageId(change.pageId, {
+        title: change.title,
+        href: change.href,
+        scope: change.scope,
+      });
+    };
+    window.addEventListener(SHELF_CONTENT_CHANGED, onMoved);
+    return () => window.removeEventListener(SHELF_CONTENT_CHANGED, onMoved);
+  }, [relocateTabsByPageId]);
 
   useEffect(() => {
     if (!focusedTab) return;
