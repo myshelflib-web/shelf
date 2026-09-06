@@ -76,6 +76,8 @@ type ToolBtnProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   label: string;
   compact?: boolean;
   phone?: boolean;
+  /** Prefer ShelfTooltip; skip the native browser title bubble. */
+  hideNativeTitle?: boolean;
 };
 
 export const ToolBtn = forwardRef<HTMLButtonElement, ToolBtnProps>(
@@ -85,6 +87,7 @@ export const ToolBtn = forwardRef<HTMLButtonElement, ToolBtnProps>(
       label,
       compact = false,
       phone = false,
+      hideNativeTitle = false,
       className,
       children,
       type = "button",
@@ -96,7 +99,7 @@ export const ToolBtn = forwardRef<HTMLButtonElement, ToolBtnProps>(
       <button
         ref={ref}
         type={type}
-        title={label}
+        title={hideNativeTitle ? undefined : label}
         aria-label={label}
         aria-pressed={active}
         className={clsx(
