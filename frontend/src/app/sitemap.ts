@@ -19,7 +19,39 @@ type SitemapSlugList = {
   routes?: Array<{ path: string; lastModified?: string }>;
 };
 
-async function fetchLearnRoutes(siteUrl: string): Promise<MetadataRoute.Sitemap> {
+type SubjectList = {
+  subjects: Array<{
+    slug: string;
+    updatedAt?: string;
+    topics: Array<{
+      slug: string;
+      updatedAt?: string;
+      articles?: Array<{ slug: string; updatedAt?: string }>;
+    }>;
+  }>;
+};
+
+function mapSlugRoutes(
+  siteUrl: string,
+  routes: Array<{ path: string; lastModified?: string }>
+): MetadataRoute.Sitemap {
+  return routes.map((route) => {
+    const depth = route.path.split("/").filter(Boolean).length;
+    const priority =
+      depth >= 4 ? 0.85 : depth === 3 ? 0.7 : depth === 2 ? 0.8 : 0.75;
+    return {
+      url: `${siteUrl}${route.path}`,
+      changeFrequency: "weekly" as const,
+      priority,
+      ...(route.lastModified ? { lastModified: route.lastModified } : {}),
+    };
+  });
+}
+
+/** Preferred lightweight endpoint (backend ≥ IndexNow deploy). */
+async function fetchLearnRoutesFromSitemapSlugs(
+  siteUrl: string
+): Promise<MetadataRoute.Sitemap> {
   try {
     const res = await fetch(`${API_URL}/api/subjects/sitemap-slugs`, {
       next: { revalidate: 3600 },
@@ -27,20 +59,53 @@ async function fetchLearnRoutes(siteUrl: string): Promise<MetadataRoute.Sitemap>
     });
     if (!res.ok) return [];
     const data = (await res.json()) as SitemapSlugList;
-    return (data.routes ?? []).map((route) => {
-      const depth = route.path.split("/").filter(Boolean).length;
-      const priority =
-        depth >= 4 ? 0.85 : depth === 3 ? 0.7 : depth === 2 ? 0.8 : 0.75;
-      return {
-        url: `${siteUrl}${route.path}`,
-        changeFrequency: "weekly" as const,
-        priority,
-        ...(route.lastModified ? { lastModified: route.lastModified } : {}),
-      };
-    });
+    return mapSlugRoutes(siteUrl, data.routes ?? []);
   } catch {
     return [];
   }
+}
+
+/** Fallback when sitemap-slugs is not deployed yet on the API. */
+async function fetchLearnRoutesFromSubjects(
+  siteUrl: string
+): Promise<MetadataRoute.Sitemap> {
+  try {
+    const res = await fetch(`${API_URL}/api/subjects`, {
+      next: { revalidate: 3600 },
+      signal: AbortSignal.timeout(FETCH_MS),
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as SubjectList;
+    const routes: Array<{ path: string; lastModified?: string }> = [];
+
+    for (const subject of data.subjects ?? []) {
+      routes.push({
+        path: `/learn/${subject.slug}`,
+        ...(subject.updatedAt ? { lastModified: subject.updatedAt } : {}),
+      });
+      for (const topic of subject.topics ?? []) {
+        routes.push({
+          path: `/learn/${subject.slug}/${topic.slug}`,
+          ...(topic.updatedAt ? { lastModified: topic.updatedAt } : {}),
+        });
+        for (const article of topic.articles ?? []) {
+          routes.push({
+            path: `/learn/${subject.slug}/${topic.slug}/${article.slug}`,
+            ...(article.updatedAt ? { lastModified: article.updatedAt } : {}),
+          });
+        }
+      }
+    }
+    return mapSlugRoutes(siteUrl, routes);
+  } catch {
+    return [];
+  }
+}
+
+async function fetchLearnRoutes(siteUrl: string): Promise<MetadataRoute.Sitemap> {
+  const preferred = await fetchLearnRoutesFromSitemapSlugs(siteUrl);
+  if (preferred.length > 0) return preferred;
+  return fetchLearnRoutesFromSubjects(siteUrl);
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
