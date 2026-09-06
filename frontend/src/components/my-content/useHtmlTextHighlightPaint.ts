@@ -28,8 +28,12 @@ export function useHtmlTextHighlightPaint(
     if (live && !live.isCollapsed) return;
 
     // Match captureHtmlTextSelection offset root for read-only Docs.
+    // When contentRoot is already `.shelf-doc-body`, querySelector misses self.
     const paintRoot =
-      (root.querySelector(".shelf-doc-body") as HTMLElement | null) ?? root;
+      root.matches?.(".shelf-doc-body")
+        ? root
+        : ((root.querySelector(".shelf-doc-body") as HTMLElement | null) ??
+          root);
 
     const textHs = highlightsRef.current.filter(isWrappedTextHighlight);
     applyHighlightsToElement(paintRoot, textHs);

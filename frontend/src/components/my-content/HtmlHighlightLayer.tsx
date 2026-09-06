@@ -29,17 +29,6 @@ function pathFromNorm(
     .join(" ");
 }
 
-function isStrokeHighlight(h: UserContentHighlight): boolean {
-  return Boolean(h.position?.points?.length);
-}
-
-export function hasHtmlStrokes(highlights: UserContentHighlight[]): boolean {
-  return (
-    highlights.some(isStrokeHighlight) ||
-    highlights.some((h) => isRectTextHighlight(h) && !isHtmlTextHighlight(h))
-  );
-}
-
 /** Stable across tmp→server id swaps so remounts do not interrupt selection. */
 function strokeReactKey(h: UserContentHighlight): string {
   const pts = h.position?.points;
@@ -62,6 +51,9 @@ function rectReactKey(
 /**
  * Freehand SVG + fallback text boxes when <mark> offsets are unavailable.
  * Popup TEXT with offsets paints via useHtmlTextHighlightPaint.
+ *
+ * Must never cover the article for hit-testing — native selection dies under a
+ * full-size SVG even with CSS pointer-events:none on some browsers.
  */
 export function HtmlHighlightLayer({
   originRef,
@@ -109,70 +101,72 @@ export function HtmlHighlightLayer({
   if (w < 1 || h < 1) return null;
 
   const hasDraft = Boolean(draftPoints && draftPoints.length > 1);
-  // Never mount an empty full-size SVG over the article — it sits above the
-  // text and can block native selection (double-click / drag) even with
-  // pointer-events: none on some browsers. Live Docs don't use this overlay.
-  if (!pointStrokes.length && !rectHighlights.length && !hasDraft) {
-    return null;
-  }
+  const showRects = rectHighlights.length > 0;
+  const showSvg = pointStrokes.length > 0 || hasDraft;
+  if (!showRects && !showSvg) return null;
 
   return (
     <>
-      <div
-        aria-hidden
-        className="absolute top-0 left-0 z-[1] overflow-visible"
-        style={{ width: w, height: h, pointerEvents: "none" }}
-      >
-        {rectHighlights.flatMap((hl) =>
-          (hl.position?.rects ?? []).map((r, idx) => (
-            <div
-              key={rectReactKey(hl, r, idx)}
-              className={`html-hl-box highlight-${hl.color || "yellow"}${
-                hl.note?.trim() ? " has-note" : ""
-              }`}
-              style={{
-                position: "absolute",
-                left: `${r.x * 100}%`,
-                top: `${r.y * 100}%`,
-                width: `${r.w * 100}%`,
-                height: `${Math.max(r.h, 0.012) * 100}%`,
-              }}
+      {showRects ? (
+        <div
+          aria-hidden
+          className="absolute top-0 left-0 z-0 overflow-visible"
+          style={{ width: w, height: h, pointerEvents: "none" }}
+        >
+          {rectHighlights.flatMap((hl) =>
+            (hl.position?.rects ?? []).map((r, idx) => (
+              <div
+                key={rectReactKey(hl, r, idx)}
+                className={`html-hl-box highlight-${hl.color || "yellow"}${
+                  hl.note?.trim() ? " has-note" : ""
+                }`}
+                style={{
+                  position: "absolute",
+                  left: `${r.x * 100}%`,
+                  top: `${r.y * 100}%`,
+                  width: `${r.w * 100}%`,
+                  height: `${Math.max(r.h, 0.012) * 100}%`,
+                }}
+              />
+            ))
+          )}
+        </div>
+      ) : null}
+      {showSvg ? (
+        <svg
+          aria-hidden
+          width={w}
+          height={h}
+          viewBox={`0 0 ${w} ${h}`}
+          pointerEvents="none"
+          className={`absolute top-0 left-0 ${
+            eraseMode || hasDraft ? "z-[3]" : "z-0"
+          }`}
+          style={{ pointerEvents: "none", overflow: "visible" }}
+        >
+          {pointStrokes.map((hl) => (
+            <StrokeMark
+              key={strokeReactKey(hl)}
+              highlight={hl}
+              d={pathFromNorm(hl.position!.points!, w, h)}
+              width={hl.position?.width ?? DEFAULT_PEN_WIDTH}
+              eraseMode={eraseMode}
+              onActivate={onActivate}
             />
-          ))
-        )}
-      </div>
-      <svg
-        aria-hidden
-        width={w}
-        height={h}
-        viewBox={`0 0 ${w} ${h}`}
-        className={`absolute top-0 left-0 ${
-          eraseMode || hasDraft ? "z-[3]" : "z-[1]"
-        }`}
-        style={{ pointerEvents: "none", overflow: "visible" }}
-      >
-        {pointStrokes.map((hl) => (
-          <StrokeMark
-            key={strokeReactKey(hl)}
-            highlight={hl}
-            d={pathFromNorm(hl.position!.points!, w, h)}
-            width={hl.position?.width ?? DEFAULT_PEN_WIDTH}
-            eraseMode={eraseMode}
-            onActivate={onActivate}
-          />
-        ))}
-        {hasDraft ? (
-          <path
-            d={pathFromNorm(draftPoints!, w, h)}
-            fill="none"
-            stroke={penStroke(draftColor, draftOpacity)}
-            strokeWidth={htmlStrokePx(draftWidth)}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="html-pen-stroke"
-          />
-        ) : null}
-      </svg>
+          ))}
+          {hasDraft ? (
+            <path
+              d={pathFromNorm(draftPoints!, w, h)}
+              fill="none"
+              stroke={penStroke(draftColor, draftOpacity)}
+              strokeWidth={htmlStrokePx(draftWidth)}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="html-pen-stroke"
+            />
+          ) : null}
+        </svg>
+      ) : null}
     </>
   );
 }
