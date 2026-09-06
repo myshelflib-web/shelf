@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, type MutableRefObject } from "react";
+import { useCallback, useEffect, useRef, type MutableRefObject } from "react";
 import {
   captureHtmlTextSelection,
   type HtmlTextPick,
@@ -24,6 +24,8 @@ export function usePersonalContentSelection(opts: {
   highlightMode?: boolean;
   contentRootRef: MutableRefObject<HTMLElement | null>;
   originRef: MutableRefObject<HTMLElement | null>;
+  /** Armed pick while the popup is open — empty captures must not wipe this. */
+  selectionRef: MutableRefObject<HtmlTextPick | null>;
   onTextPick: (pick: HtmlTextPick) => void;
   onClearPick: () => void;
 }) {
@@ -35,11 +37,17 @@ export function usePersonalContentSelection(opts: {
     highlightMode = false,
     contentRootRef,
     originRef,
+    selectionRef,
     onTextPick,
     onClearPick,
   } = opts;
 
   const enabled = !editing && !readOnly && !clipMode && !eraseMode && !highlightMode;
+
+  const onTextPickRef = useRef(onTextPick);
+  onTextPickRef.current = onTextPick;
+  const onClearPickRef = useRef(onClearPick);
+  onClearPickRef.current = onClearPick;
 
   const capturePick = useCallback(() => {
     if (!enabled) return;
@@ -48,11 +56,13 @@ export function usePersonalContentSelection(opts: {
     if (!root || !origin) return;
     const next = captureHtmlTextSelection(root, origin);
     if (!next) {
-      onClearPick();
+      // Sticky: keep an armed popup pick until explicit close/save/ask/note.
+      if (selectionRef.current) return;
+      onClearPickRef.current();
       return;
     }
-    onTextPick(next);
-  }, [enabled, contentRootRef, originRef, onTextPick, onClearPick]);
+    onTextPickRef.current(next);
+  }, [enabled, contentRootRef, originRef, selectionRef]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -65,6 +75,29 @@ export function usePersonalContentSelection(opts: {
     document.addEventListener("pointerup", onUp);
     return () => document.removeEventListener("pointerup", onUp);
   }, [enabled, capturePick]);
+
+  // Keyboard / slow-drag selections: open the menu when the range settles.
+  useEffect(() => {
+    if (!enabled) return;
+    let timer: number | null = null;
+    const onChange = () => {
+      if (timer != null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        const root = contentRootRef.current;
+        const sel = window.getSelection();
+        if (!root || !sel || sel.isCollapsed || sel.rangeCount < 1) return;
+        const node = sel.anchorNode;
+        if (!node || !root.contains(node)) return;
+        capturePick();
+      }, 120);
+    };
+    document.addEventListener("selectionchange", onChange);
+    return () => {
+      if (timer != null) window.clearTimeout(timer);
+      document.removeEventListener("selectionchange", onChange);
+    };
+  }, [enabled, capturePick, contentRootRef]);
 
   return { handleMouseUp: capturePick };
 }

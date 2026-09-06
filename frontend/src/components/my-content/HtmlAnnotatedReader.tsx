@@ -7,7 +7,6 @@ import {
   type HtmlDocToolMode,
   type HtmlReadingWidth,
 } from "./HtmlDocToolbar";
-import { DEFAULT_PEN_WIDTH } from "@/lib/straightenStroke";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import type { UserContentHighlight } from "@/types";
 
@@ -36,7 +35,7 @@ function downloadHtmlPage(title: string, html: string) {
   URL.revokeObjectURL(url);
 }
 
-/** HTML library reader: PDF-style annotation toolbar + content (or live editor). */
+/** HTML library reader: select → popup highlight (no freehand pen). */
 export function HtmlAnnotatedReader({
   showToolbar = true,
   annotationGate = null,
@@ -56,9 +55,6 @@ export function HtmlAnnotatedReader({
   const [mode, setMode] = useState<HtmlDocToolMode>(
     clipModeProp ? "clip" : "text"
   );
-  const [highlightColorId, setHighlightColorId] = useState("yellow");
-  const [highlightWidth, setHighlightWidth] = useState(DEFAULT_PEN_WIDTH);
-  const [highlightOpacity, setHighlightOpacity] = useState(0.72);
   const [readingWidth, setReadingWidth] =
     useState<HtmlReadingWidth>("comfortable");
   const [scale, setScale] = useState(1);
@@ -104,12 +100,6 @@ export function HtmlAnnotatedReader({
           highlights={highlights}
           highlightsHydrating={highlightsHydrating}
           onHighlightSelect={onHighlightSelect}
-          highlightColorId={highlightColorId}
-          onHighlightColorIdChange={setHighlightColorId}
-          highlightWidth={highlightWidth}
-          onHighlightWidthChange={setHighlightWidth}
-          highlightOpacity={highlightOpacity}
-          onHighlightOpacityChange={setHighlightOpacity}
           onDownload={() =>
             downloadHtmlPage(pageTitle || "page", content || "")
           }
@@ -131,10 +121,6 @@ export function HtmlAnnotatedReader({
         annotationGate={annotationGate}
         clipMode={!editing && mode === "clip"}
         eraseMode={!editing && mode === "erase"}
-        highlightMode={!editing && mode === "highlight"}
-        preferredHighlightColorId={highlightColorId}
-        highlightWidth={highlightWidth}
-        highlightOpacity={highlightOpacity}
         readingWidth={readingWidth}
         contentScale={scale}
       />

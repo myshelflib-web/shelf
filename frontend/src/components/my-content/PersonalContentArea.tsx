@@ -51,6 +51,7 @@ export function PersonalContentArea({
   guestLocked = false,
   onGuestLockedClick,
   compactEditor = false,
+  onAskQuoteChange,
 }: PersonalContentAreaProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -64,8 +65,7 @@ export function PersonalContentArea({
   const [noteTarget, setNoteTarget] = useState<{
     quote: string;
     highlight?: UserContentHighlight;
-    startOffset?: number;
-    endOffset?: number;
+    pick?: HtmlTextPick;
   } | null>(null);
   const { clipBox, onPointerDown, onPointerMove, onPointerUp } =
     usePersonalContentClip(clipMode, onClip);
@@ -241,12 +241,16 @@ export function PersonalContentArea({
     void deleteHighlight(id, userTopicId).catch(() => undefined);
   };
 
-  const saveHighlight = (color: string, note?: string) => {
+  const saveHighlight = (
+    color: string,
+    note?: string,
+    from?: HtmlTextPick
+  ) => {
     if (guestLocked) {
       onGuestLockedClick?.("Highlight and annotate");
       return;
     }
-    const sel = selectionRef.current ?? selection;
+    const sel = from ?? selectionRef.current ?? selection;
     if (!sel) return;
     const optimistic = textHighlightDraft(userTopicId, sel, color, note);
     persistHtmlHighlight({
@@ -305,11 +309,11 @@ export function PersonalContentArea({
   const { draft, onPointerDown: onStrokeDown, onPointerMove: onStrokeMove, onPointerUp: onStrokeUp } =
     useHtmlHighlightStroke(originRef, highlightMode && !clipMode && !editing, saveStroke);
 
-  const onTextPick = (pick: HtmlTextPick) => {
+  const onTextPick = useCallback((pick: HtmlTextPick) => {
     selectionRef.current = pick;
     setActiveHighlight(null);
     setSelection(pick);
-  };
+  }, []);
 
   const onClearPick = useCallback(() => {
     selectionRef.current = null;
@@ -324,9 +328,19 @@ export function PersonalContentArea({
     highlightMode,
     contentRootRef,
     originRef,
+    selectionRef,
     onTextPick,
     onClearPick,
   });
+
+  useEffect(() => {
+    const quote =
+      selection?.text ??
+      activeHighlight?.highlight.text ??
+      selectionRef.current?.text ??
+      null;
+    onAskQuoteChange?.(quote);
+  }, [selection, activeHighlight, onAskQuoteChange]);
 
   const onMarkActivate = (
     highlight: UserContentHighlight,

@@ -444,7 +444,7 @@ export function ReaderWorkspace({
       embedMode?: boolean
     ) => {
       void pageId;
-      if (selection) setAskSelection(selection);
+      setAskSelection(selection ?? null);
       setAskImage(imageBase64);
       setAttachNote(() => onAttachNote);
       setStudyEmbed(Boolean(embedMode));
@@ -547,8 +547,9 @@ export function ReaderWorkspace({
   }, [focusedPane, unsplit]);
 
   const askWithSelection = useCallback(() => {
-    const text = getSelectedText();
-    focusedHandlers?.openStudyAI(text || undefined);
+    const live = getSelectedText();
+    const quote = live || focusedHandlers?.getAskQuote?.() || undefined;
+    focusedHandlers?.openStudyAI(quote);
     openStudyAIPanel();
   }, [focusedHandlers, openStudyAIPanel]);
 

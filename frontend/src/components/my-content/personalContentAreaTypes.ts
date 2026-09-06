@@ -43,4 +43,6 @@ export type PersonalContentAreaProps = {
   guestLocked?: boolean;
   onGuestLockedClick?: (feature: string) => void;
   compactEditor?: boolean;
+  /** Live quote for mod+l / Study AI when the native selection was cleared. */
+  onAskQuoteChange?: (quote: string | null) => void;
 };

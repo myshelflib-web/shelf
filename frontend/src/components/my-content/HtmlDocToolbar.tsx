@@ -7,7 +7,6 @@ import {
   Download,
   Eraser,
   File,
-  Highlighter,
   Moon,
   MousePointer2,
   Sun,
@@ -19,8 +18,6 @@ import { useIsPhone } from "@/hooks/useIsPhone";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { lockedFeatureLabel } from "@/lib/preloadedReadOnly";
 import type { UserContentHighlight } from "@/types";
-import { DEFAULT_PEN_WIDTH } from "@/lib/straightenStroke";
-import { highlightHex } from "./pdfViewerHelpers";
 import {
   EditorToolbarShell,
   ToolBtn,
@@ -30,9 +27,8 @@ import {
 } from "./EditorToolbarChrome";
 import { ToolPopover } from "./ToolPopover";
 import { HighlightsToolbarPopover } from "./HighlightsToolbarPopover";
-import { PenSettingsPanel } from "./PenSettingsPanel";
 
-export type HtmlDocToolMode = "text" | "highlight" | "erase" | "clip";
+export type HtmlDocToolMode = "text" | "erase" | "clip";
 export type HtmlReadingWidth = "comfortable" | "wide";
 
 type Props = {
@@ -45,12 +41,6 @@ type Props = {
   highlights?: UserContentHighlight[];
   highlightsHydrating?: boolean;
   onHighlightSelect?: (highlight: UserContentHighlight) => void;
-  highlightColorId?: string;
-  onHighlightColorIdChange?: (colorId: string) => void;
-  highlightWidth?: number;
-  onHighlightWidthChange?: (width: number) => void;
-  highlightOpacity?: number;
-  onHighlightOpacityChange?: (opacity: number) => void;
   onDownload?: () => void;
   readingWidth?: HtmlReadingWidth;
   onReadingWidthChange?: (w: HtmlReadingWidth) => void;
@@ -70,12 +60,6 @@ export function HtmlDocToolbar({
   highlights = [],
   highlightsHydrating = false,
   onHighlightSelect,
-  highlightColorId = "yellow",
-  onHighlightColorIdChange,
-  highlightWidth = DEFAULT_PEN_WIDTH,
-  onHighlightWidthChange,
-  highlightOpacity = 0.72,
-  onHighlightOpacityChange,
   onDownload,
   readingWidth = "comfortable",
   onReadingWidthChange,
@@ -85,13 +69,8 @@ export function HtmlDocToolbar({
   onToggleDarkReading,
 }: Props) {
   const isPhone = useIsPhone();
-  const highlightBtnRef = useRef<HTMLButtonElement>(null);
   const eraseBtnRef = useRef<HTMLButtonElement>(null);
-  const [highlightOpen, setHighlightOpen] = useState(false);
   const [eraseOpen, setEraseOpen] = useState(false);
-  const [highlightAnchor, setHighlightAnchor] = useState<HTMLElement | null>(
-    null
-  );
   const [eraseAnchor, setEraseAnchor] = useState<HTMLElement | null>(null);
 
   const lockedTool = guestLocked
@@ -104,11 +83,6 @@ export function HtmlDocToolbar({
     if (!guestLocked) return false;
     onLockedClick?.(feature);
     return true;
-  };
-
-  const closeExtras = () => {
-    setHighlightOpen(false);
-    setEraseOpen(false);
   };
 
   return (
@@ -124,36 +98,10 @@ export function HtmlDocToolbar({
           active={mode === "text"}
           onClick={() => {
             setMode("text");
-            closeExtras();
+            setEraseOpen(false);
           }}
         >
           <MousePointer2 className="w-[17px] h-[17px]" />
-        </ToolBtn>
-        <ToolBtn
-          {...btn}
-          ref={highlightBtnRef}
-          label={
-            guestLocked
-              ? lockedFeatureLabel(annotationGate, "highlight with pen")
-              : "Highlighter — drag on the page like a PDF highlighter"
-          }
-          active={mode === "highlight"}
-          className={lockedTool}
-          aria-disabled={guestLocked}
-          onClick={(e) => {
-            if (blocked("Highlight and annotate")) return;
-            const anchor = e.currentTarget;
-            setHighlightAnchor(anchor);
-            setEraseOpen(false);
-            if (mode === "highlight") {
-              setHighlightOpen((v) => !v);
-              return;
-            }
-            setMode("highlight");
-            setHighlightOpen(true);
-          }}
-        >
-          <Highlighter className="w-[17px] h-[17px]" />
         </ToolBtn>
         <ToolBtn
           {...btn}
@@ -169,7 +117,6 @@ export function HtmlDocToolbar({
           onClick={(e) => {
             if (blocked("Highlight and annotate")) return;
             setEraseAnchor(e.currentTarget);
-            setHighlightOpen(false);
             if (mode === "erase") {
               setEraseOpen((v) => !v);
               return;
@@ -202,7 +149,7 @@ export function HtmlDocToolbar({
             aria-disabled={guestLocked}
             onClick={() => {
               if (blocked("Save clips")) return;
-              closeExtras();
+              setEraseOpen(false);
               setMode(mode === "clip" ? "text" : "clip");
             }}
           >
@@ -278,20 +225,6 @@ export function HtmlDocToolbar({
             </ToolBtn>
           ) : null}
         </ToolGroup>
-      ) : null}
-
-      {highlightOpen && mode === "highlight" && !guestLocked ? (
-        <PenSettingsPanel
-          width={highlightWidth}
-          opacity={highlightOpacity}
-          colorId={highlightColorId}
-          colorHex={highlightHex(highlightColorId)}
-          anchorEl={highlightAnchor ?? highlightBtnRef.current}
-          onWidthChange={(w) => onHighlightWidthChange?.(w)}
-          onOpacityChange={(o) => onHighlightOpacityChange?.(o)}
-          onColorChange={(id) => onHighlightColorIdChange?.(id)}
-          onClose={() => setHighlightOpen(false)}
-        />
       ) : null}
 
       <ToolPopover

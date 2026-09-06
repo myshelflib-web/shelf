@@ -9,10 +9,9 @@ export function isHtmlTextHighlight(h: UserContentHighlight): boolean {
   return h.endOffset > h.startOffset;
 }
 
-/** Offset-only fallback. Rect / stroke highlights stay out of the article DOM. */
+/** TEXT with offsets → CSS/mark wash. Freehand strokes stay in the SVG layer. */
 export function isWrappedTextHighlight(h: UserContentHighlight): boolean {
   if (h.position?.points?.length) return false;
-  if (h.position?.rects?.length) return false;
   return isHtmlTextHighlight(h);
 }
 

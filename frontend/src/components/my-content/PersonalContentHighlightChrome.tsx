@@ -2,10 +2,7 @@
 
 import type { MutableRefObject } from "react";
 import type { UserContentHighlight } from "@/types";
-import {
-  createHighlight,
-  updateHighlight,
-} from "@/lib/offline/highlights";
+import { updateHighlight } from "@/lib/offline/highlights";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { HighlightToolbar } from "../HighlightToolbar";
 import { HighlightNoteModal } from "../HighlightNoteModal";
@@ -16,8 +13,7 @@ type SelectionState = HtmlTextPick;
 type NoteTarget = {
   quote: string;
   highlight?: UserContentHighlight;
-  startOffset?: number;
-  endOffset?: number;
+  pick?: HtmlTextPick;
 };
 
 type Props = {
@@ -33,7 +29,11 @@ type Props = {
   ) => void;
   noteTarget: NoteTarget | null;
   setNoteTarget: (v: NoteTarget | null) => void;
-  saveHighlight: (color: string, note?: string) => UserContentHighlight | void;
+  saveHighlight: (
+    color: string,
+    note?: string,
+    from?: HtmlTextPick
+  ) => UserContentHighlight | void;
   removeHighlightNow: (id: string) => void;
   guestLocked?: boolean;
   annotationGate?: AnnotationGate | null;
@@ -76,28 +76,28 @@ export function PersonalContentHighlightChrome({
           onLockedClick={onGuestLockedClick}
           onHighlight={(color) => void saveHighlight(color)}
           onNote={() => {
+            const draft = selectionRef.current ?? selection;
             setNoteTarget({
-              quote: selection.text,
-              startOffset: selection.startOffset,
-              endOffset: selection.endOffset,
+              quote: draft.text,
+              pick: draft,
             });
+            // Close toolbar; keep selectionRef armed until note save/cancel.
             setSelection(null);
           }}
           onAsk={
             onAskSelection
               ? () => {
-                  const draft = { ...selection };
+                  const draft = { ...(selectionRef.current ?? selection) };
                   selectionRef.current = draft;
                   onAskSelection(draft.text, undefined, async (note) => {
-                    await saveHighlight(preferredHighlightColorId, note);
+                    void saveHighlight(preferredHighlightColorId, note, draft);
                   });
                   setSelection(null);
+                  window.getSelection()?.removeAllRanges();
                 }
               : undefined
           }
           onClose={() => {
-            // Do not clear native ranges here — HighlightToolbar's capture
-            // dismiss used to race new selects and wipe them via this path.
             selectionRef.current = null;
             setSelection(null);
           }}
@@ -128,7 +128,20 @@ export function PersonalContentHighlightChrome({
           onAsk={
             onAskSelection
               ? () => {
-                  onAskSelection(activeHighlight.highlight.text);
+                  const text = activeHighlight.highlight.text;
+                  onAskSelection(text, undefined, async (note) => {
+                    const h = activeHighlight.highlight;
+                    const updated = await updateHighlight(
+                      h.id,
+                      { note },
+                      userTopicId
+                    );
+                    onHighlightsChange(
+                      highlights.map((item) =>
+                        item.id === updated.id ? { ...item, ...updated } : item
+                      )
+                    );
+                  });
                   setActiveHighlight(null);
                 }
               : undefined
@@ -143,7 +156,10 @@ export function PersonalContentHighlightChrome({
         <HighlightNoteModal
           quote={noteTarget.quote}
           initialNote={noteTarget.highlight?.note ?? ""}
-          onClose={() => setNoteTarget(null)}
+          onClose={() => {
+            selectionRef.current = null;
+            setNoteTarget(null);
+          }}
           onSave={async (note) => {
             if (noteTarget.highlight) {
               const highlight = await updateHighlight(
@@ -158,21 +174,9 @@ export function PersonalContentHighlightChrome({
               );
               return;
             }
-            if (
-              noteTarget.startOffset == null ||
-              noteTarget.endOffset == null
-            ) {
-              return;
-            }
-            const highlight = await createHighlight({
-              userTopicId,
-              text: noteTarget.quote,
-              startOffset: noteTarget.startOffset,
-              endOffset: noteTarget.endOffset,
-              color: "yellow",
-              note,
-            });
-            onHighlightsChange([...highlights, highlight]);
+            const pick = noteTarget.pick ?? selectionRef.current;
+            if (!pick) return;
+            void saveHighlight(preferredHighlightColorId, note, pick);
           }}
           onDeleteNote={
             noteTarget.highlight?.note

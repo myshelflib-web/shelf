@@ -3,10 +3,7 @@
 import { useLayoutEffect, useState, type MutableRefObject } from "react";
 import type { UserContentHighlight } from "@/types";
 import { DEFAULT_PEN_WIDTH, PEN_WIDTHS } from "@/lib/straightenStroke";
-import { strokePointsFromRects } from "./htmlPageSelection";
 import { isInkHighlight, penStroke } from "./pdfViewerHelpers";
-
-const XS_WIDTH = PEN_WIDTHS.find((s) => s.id === "xs")?.width ?? 0.0016;
 
 /** Vertical thickness in CSS px — covers most of a body-text line, not a thin underline. */
 const HTML_STROKE_PX = { xs: 16, s: 18, m: 20, l: 22 } as const;
@@ -29,9 +26,7 @@ function pathFromNorm(
 }
 
 function isStrokeHighlight(h: UserContentHighlight): boolean {
-  return (
-    Boolean(h.position?.points?.length) || Boolean(h.position?.rects?.length)
-  );
+  return Boolean(h.position?.points?.length);
 }
 
 export function hasHtmlStrokes(highlights: UserContentHighlight[]): boolean {
@@ -39,24 +34,19 @@ export function hasHtmlStrokes(highlights: UserContentHighlight[]): boolean {
 }
 
 /** Stable across tmp→server id swaps so remounts do not interrupt selection. */
-function strokeReactKey(h: UserContentHighlight, suffix = ""): string {
-  const rect = h.position?.rects?.[0];
-  if (rect) {
-    return `r:${h.startOffset}:${h.endOffset}:${rect.x.toFixed(4)}:${rect.y.toFixed(4)}:${rect.w.toFixed(4)}:${h.color}${suffix}`;
-  }
+function strokeReactKey(h: UserContentHighlight): string {
   const pts = h.position?.points;
   if (pts?.length) {
     const a = pts[0]!;
     const b = pts[pts.length - 1]!;
-    return `p:${a.x.toFixed(4)}:${a.y.toFixed(4)}:${b.x.toFixed(4)}:${b.y.toFixed(4)}:${h.color}${suffix}`;
+    return `p:${a.x.toFixed(4)}:${a.y.toFixed(4)}:${b.x.toFixed(4)}:${b.y.toFixed(4)}:${h.color}`;
   }
-  return `${h.id}${suffix}`;
+  return h.id;
 }
 
 /**
- * Pixel-space SVG behind the article — never a covering hit target in text mode.
- * TEXT + REGION rects paint as mid-line strokes (PDF highlighter look) without
- * stealing pointer events from the prose (unlike .pdf-highlight-overlay).
+ * Pixel-space SVG behind the article — freehand pen/ink only.
+ * Popup TEXT highlights paint via CSS/mark (useHtmlTextHighlightPaint).
  */
 export function HtmlHighlightLayer({
   originRef,
@@ -97,9 +87,6 @@ export function HtmlHighlightLayer({
   }, [originRef]);
 
   const pointStrokes = highlights.filter((h) => h.position?.points?.length);
-  const rectStrokes = highlights.filter(
-    (h) => Boolean(h.position?.rects?.length) && !h.position?.points?.length
-  );
   const { w, h } = size;
   if (w < 1 || h < 1) return null;
 
@@ -124,18 +111,6 @@ export function HtmlHighlightLayer({
           onActivate={onActivate}
         />
       ))}
-      {rectStrokes.flatMap((hl) =>
-        strokePointsFromRects(hl.position!.rects ?? []).map((pts, i) => (
-          <StrokeMark
-            key={strokeReactKey(hl, `-r${i}`)}
-            highlight={hl}
-            d={pathFromNorm(pts, w, h)}
-            width={hl.position?.width ?? XS_WIDTH}
-            eraseMode={eraseMode}
-            onActivate={onActivate}
-          />
-        ))
-      )}
       {draftPoints && draftPoints.length > 1 ? (
         <path
           d={pathFromNorm(draftPoints, w, h)}
