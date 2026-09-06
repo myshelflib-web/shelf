@@ -1,6 +1,6 @@
-import { ensureReadOnlyDocHtml } from "./docEditor";
-
 /** Make stored HTML safe to inject into the reader. */
+
+import { ensureReadOnlyDocHtml } from "./docEditor";
 
 const KILL_SELECTOR =
   "script, noscript, iframe, style, link, meta, object, embed, form, input, button, textarea, select, math, base, template, video, audio, applet, frame, frameset, canvas";
@@ -102,7 +102,7 @@ export function formatImportedHtml(html: string): string {
   if (/shelf-doc-editor/.test(s)) return s;
   if (/preloaded-official-fallback/.test(s)) return s;
 
-  // Generated Learn pages → read-only Doc shell (annotate / Ask AI; no edit).
+  // Generated Learn pages → read-only Doc shell (annotate; no edit).
   if (/shelf-generated/.test(s) || /shelf-doc-masthead/.test(s)) {
     return ensureReadOnlyDocHtml(s);
   }

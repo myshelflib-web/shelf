@@ -59,7 +59,7 @@ export function resolvePreloadedLearnPage(
 
   return {
     contentType: "HTML",
-    // Present curriculum HTML as a read-only Shelf Doc (annotate / Ask AI; no edit).
+    // Read-only Doc shell — annotate / Ask AI; never Edit.
     content: ensureReadOnlyDocHtml(content),
     sourceUrl,
     useLinkEmbed: false,

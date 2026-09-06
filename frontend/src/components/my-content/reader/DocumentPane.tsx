@@ -81,7 +81,7 @@ import {
 } from "./documentPaneFetch";
 import clsx from "clsx";
 import { isLiveEditorHtml } from "@/lib/pageKinds";
-import { isReadOnlyDocHtml } from "@/lib/docEditor";
+import { isCurriculumReadOnlyHtml } from "@/lib/docEditor";
 import { curriculumHighlightToUser } from "@/components/my-content/persistHtmlHighlight";
 import { linkEmbedHint, shouldUseLinkEmbed } from "@/lib/linkEmbedPolicy";
 import { formatOfficialSourceAttribution } from "@/lib/officialSourceAttribution";
@@ -117,6 +117,8 @@ export type DocumentPaneSnapshot = {
   editing: boolean;
   /** Blank canvas is always in the editor — no Edit/Done chrome. */
   liveEdit: boolean;
+  /** Preloaded / generated curriculum — never show Edit. */
+  readOnlyCurriculum: boolean;
   saving: boolean;
   htmlClip: boolean;
   scope: PersonalPageReaderScope;
@@ -478,7 +480,8 @@ export function DocumentPane({
         if (
           !isPreloaded &&
           loaded.contentType === "HTML" &&
-          isLiveEditorHtml(loaded.content)
+          isLiveEditorHtml(loaded.content) &&
+          !isCurriculumReadOnlyHtml(loaded.content)
         ) {
           draftContentRef.current = loaded.content;
           setDraftContent(loaded.content);
@@ -726,7 +729,7 @@ export function DocumentPane({
 
   const startEditing = useCallback(() => {
     if (!pageData || pageData.isPreloaded) return;
-    if (isReadOnlyDocHtml(pageData.content)) return;
+    if (isCurriculumReadOnlyHtml(pageData.content)) return;
     if (pageData.contentType === "PDF") return;
     if (pageData.contentType === "VIDEO") return;
     if (pageData.contentType === "LINK") {
@@ -941,8 +944,9 @@ export function DocumentPane({
   );
 
   const isPreloadedDoc = Boolean(pageData?.isPreloaded);
-  const isReadOnlyDoc = Boolean(
-    pageData?.content && isReadOnlyDocHtml(pageData.content)
+  const isReadOnlyCurriculum = Boolean(
+    pageData?.isPreloaded ||
+      (pageData?.content && isCurriculumReadOnlyHtml(pageData.content))
   );
   const isSharedRecipient = Boolean(
     pageData?.access && !pageData.access.isOwner
@@ -975,6 +979,10 @@ export function DocumentPane({
     : annotationGate === "save-to-library"
       ? () => promptPreloadedSave()
       : undefined;
+
+  useEffect(() => {
+    if (editing && isReadOnlyCurriculum) setEditing(false);
+  }, [editing, isReadOnlyCurriculum]);
 
   useEffect(() => {
     if (editing) setHtmlClip(false);
@@ -1055,11 +1063,12 @@ export function DocumentPane({
       tabKey: tab.key,
       pageData,
       loading,
-      editing,
+      editing: isReadOnlyCurriculum ? false : editing,
       liveEdit:
         Boolean(
           pageData &&
             !pageData.isPreloaded &&
+            !isReadOnlyCurriculum &&
             ((pageData.contentType === "HTML" &&
               editing &&
               isLiveEditorHtml(
@@ -1067,6 +1076,7 @@ export function DocumentPane({
               )) ||
               pageData.contentType === "VIDEO")
         ),
+      readOnlyCurriculum: isReadOnlyCurriculum,
       saving,
       htmlClip,
       scope,
@@ -1087,6 +1097,7 @@ export function DocumentPane({
     loading,
     editing,
     editorSeed,
+    isReadOnlyCurriculum,
     saving,
     htmlClip,
     scope,
@@ -1318,17 +1329,9 @@ export function DocumentPane({
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 bg-[rgba(110,121,214,0.18)] text-[var(--accent)]">
                     YouTube
                   </span>
-                ) : isPreloadedDoc && !isPdf && !isLink && !isVideo ? (
+                ) : isReadOnlyCurriculum || isPreloadedDoc ? (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 bg-[var(--bg-secondary)] text-[var(--text-muted)]">
                     Doc
-                  </span>
-                ) : isReadOnlyDoc ? (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 bg-[var(--bg-secondary)] text-[var(--text-muted)]">
-                    Doc
-                  </span>
-                ) : isPreloadedDoc ? (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0 bg-[var(--bg-secondary)] text-[var(--text-muted)]">
-                    Preloaded
                   </span>
                 ) : pageData.access && !pageData.access.isOwner ? (
                   <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--accent-light)] text-[var(--accent)] shrink-0">
@@ -1549,7 +1552,7 @@ export function DocumentPane({
                   onAskQuoteChange={(quote) => {
                     askQuoteRef.current = quote;
                   }}
-                  editing={!isPreloadedDoc && !isReadOnlyDoc && editing}
+                  editing={!isReadOnlyCurriculum && editing}
                   curriculumArticleId={
                     isPreloadedDoc && pageData.contentType === "HTML"
                       ? pageData.id

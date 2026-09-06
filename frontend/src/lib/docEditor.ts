@@ -14,6 +14,16 @@ export function isLiveDocEditorHtml(html: string): boolean {
   return isDocEditorHtml(html) && !isReadOnlyDocHtml(html);
 }
 
+/** Generated / preloaded curriculum HTML that must never enter Edit. */
+export function isCurriculumReadOnlyHtml(html: string): boolean {
+  if (!html) return false;
+  if (isReadOnlyDocHtml(html)) return true;
+  if (isLiveDocEditorHtml(html)) return false;
+  return /shelf-generated|shelf-doc-masthead|preloaded-official-fallback/.test(
+    html
+  );
+}
+
 export function createDocHtml(title: string): string {
   const safe = title
     .trim()
@@ -78,14 +88,9 @@ export function wrapAsReadOnlyDocHtml(html: string): string {
   return `<div class="shelf-doc-editor shelf-doc-readonly" data-shelf-readonly="1"><div class="shelf-doc-body">${inner}</div></div>`;
 }
 
-/** Generated Learn pages (and copies) that should render as read-only Docs. */
-export function shouldPresentAsReadOnlyDoc(html: string): boolean {
-  if (isReadOnlyDocHtml(html)) return true;
-  if (isLiveDocEditorHtml(html)) return false;
-  return /shelf-generated|shelf-doc-masthead|doc-masthead/.test(html);
-}
-
 export function ensureReadOnlyDocHtml(html: string): string {
-  if (!shouldPresentAsReadOnlyDoc(html)) return html;
+  if (isReadOnlyDocHtml(html)) return html;
+  if (isLiveDocEditorHtml(html)) return html;
+  if (!isCurriculumReadOnlyHtml(html)) return html;
   return wrapAsReadOnlyDocHtml(html);
 }

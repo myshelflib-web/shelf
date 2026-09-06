@@ -69,7 +69,7 @@ export function PersonalContentArticle({
     >
       <div
         ref={setContentRoot}
-        className="prose-content personal-content select-text relative z-0 bg-transparent"
+        className="prose-content personal-content select-text relative z-[2] bg-transparent"
         onClick={(e) => {
           if (clipMode || highlightMode || editing) return;
           const live = window.getSelection();
@@ -88,7 +88,7 @@ export function PersonalContentArticle({
         }}
         dangerouslySetInnerHTML={{ __html: fragment }}
       />
-      {/* Above prose so fallback boxes are visible; pointer-events none keeps selection. */}
+      {/* Above prose visually when present; pointer-events none. Omitted when empty. */}
       <HtmlHighlightLayer
         originRef={originRef}
         highlights={highlights}
@@ -101,7 +101,7 @@ export function PersonalContentArticle({
       />
       {highlightMode ? (
         <div
-          className="absolute inset-0 z-[2] touch-none"
+          className="absolute inset-0 z-[3] touch-none"
           style={{ cursor: "crosshair" }}
           onPointerDown={onStrokeDown}
           onPointerMove={onStrokeMove}

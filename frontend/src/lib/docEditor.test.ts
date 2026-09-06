@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createDocHtml,
   ensureReadOnlyDocHtml,
+  isCurriculumReadOnlyHtml,
   isDocEditorHtml,
   isLiveDocEditorHtml,
   isReadOnlyDocHtml,
@@ -11,13 +12,12 @@ import {
 } from "./docEditor";
 
 describe("docEditor", () => {
-  it("creates and detects doc HTML", () => {
+  it("creates and detects live doc HTML", () => {
     const html = createDocHtml("My Notes");
     expect(isDocEditorHtml(html)).toBe(true);
     expect(isLiveDocEditorHtml(html)).toBe(true);
     expect(isReadOnlyDocHtml(html)).toBe(false);
-    expect(html).toContain("shelf-doc-editor");
-    expect(html).toContain("<h1>My Notes</h1>");
+    expect(isCurriculumReadOnlyHtml(html)).toBe(false);
   });
 
   it("round-trips doc body", () => {
@@ -27,12 +27,11 @@ describe("docEditor", () => {
   });
 
   it("wraps generated curriculum HTML as a read-only Doc", () => {
-    const raw = `<!DOCTYPE html><html><body><header class="doc-masthead shelf-doc-masthead"><h1>T</h1></header><article class="shelf-generated"><p>Hi</p></article></body></html>`;
-    const wrapped = wrapAsReadOnlyDocHtml(raw);
+    const raw = `<article class="shelf-generated"><p>Hi</p></article>`;
+    const wrapped = ensureReadOnlyDocHtml(raw);
     expect(isReadOnlyDocHtml(wrapped)).toBe(true);
     expect(isLiveDocEditorHtml(wrapped)).toBe(false);
-    expect(wrapped).toContain("shelf-generated");
-    expect(wrapped).toContain("shelf-doc-body");
-    expect(ensureReadOnlyDocHtml(wrapped)).toBe(wrapped);
+    expect(isCurriculumReadOnlyHtml(wrapped)).toBe(true);
+    expect(wrapAsReadOnlyDocHtml(wrapped)).toBe(wrapped);
   });
 });

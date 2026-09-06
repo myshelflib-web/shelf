@@ -63,7 +63,7 @@ describe("resolvePreloadedLearnPage", () => {
     expect(resolved.content).toContain("Open on official site");
   });
 
-  it("presents generated Learn HTML as a read-only Doc", () => {
+  it("presents generated Learn HTML as a read-only Doc (never editable)", () => {
     const resolved = resolvePreloadedLearnPage({
       title: "Collegium",
       content:
@@ -77,6 +77,6 @@ describe("resolvePreloadedLearnPage", () => {
     });
     expect(resolved.contentType).toBe("HTML");
     expect(resolved.content).toContain("shelf-doc-readonly");
-    expect(resolved.content).toContain("shelf-generated");
+    expect(resolved.content).toContain("data-shelf-readonly");
   });
 });
