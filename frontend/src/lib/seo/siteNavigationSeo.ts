@@ -12,7 +12,7 @@ export const SITE_NAV_LINKS = [
   },
   {
     name: "Features",
-    description: "Explore Shelf features — PDF library, Study AI, quiz, and more.",
+    description: "Explore Shelf features — PDF library, research Docs, Study AI, quiz, and more.",
     path: "/features",
   },
   {

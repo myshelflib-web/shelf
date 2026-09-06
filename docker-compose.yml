@@ -1,6 +1,8 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    # pgvector required: migration 20260101000020 creates EXTENSION vector
+    # (plain postgres:16-alpine breaks `prisma migrate dev` shadow DB).
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: upsc
       POSTGRES_PASSWORD: upsc_secret

@@ -19,8 +19,8 @@ const STEPS = [
   {
     icon: FolderOpen,
     title: "Organize",
-    body: "Build collections and topics, add YouTube playlists, sketch notebooks and doc pages beside PDFs, and place pages at library or collection level.",
-    mini: "PDFs, notebooks, and docs together",
+    body: "Build collections and topics, add YouTube playlists, sketch notebooks and research Docs with citations beside PDFs, and place pages at library or collection level.",
+    mini: "PDFs, notebooks, and research Docs together",
   },
   {
     icon: Sparkles,

@@ -1,6 +1,7 @@
 import prisma from "../utils/prisma.js";
 import { truncateText } from "../utils/htmlText.js";
 import { isPremiumUser } from "../utils/paywall.js";
+import { getWebOriginalityProvider } from "./webOriginalityProvider.js";
 import { retrieveLibrary, type Excerpt } from "./ragRetrieve.js";
 import { isVectorConfigured } from "./vectorStore.js";
 
@@ -38,8 +39,11 @@ export type SyllabusOriginalityResult = {
 
 export type WebOriginalityResult = {
   kind: "web";
-  status: "premium_required" | "coming_soon";
+  status: "premium_required" | "coming_soon" | "ok" | "error" | "pending";
   message: string;
+  matches?: Array<{ url: string; score: number; excerpt?: string }>;
+  scorePercent?: number | null;
+  scanId?: string;
   upgradeUrl?: string;
 };
 
@@ -195,8 +199,9 @@ export async function checkSyllabusOverlap(
   };
 }
 
-export async function webOriginalityStub(
-  userId: string
+export async function checkWebOriginality(
+  userId: string,
+  text: string
 ): Promise<WebOriginalityResult> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -207,16 +212,29 @@ export async function webOriginalityStub(
       kind: "web",
       status: "premium_required",
       message:
-        "Web originality scanning is a Premium feature (vendor API not connected yet).",
+        "Web originality scanning is a Premium feature. Upgrade to run public-web plagiarism checks when a vendor key is configured.",
       upgradeUrl: "/settings",
     };
   }
+  const provider = getWebOriginalityProvider();
+  const result = await provider.scan(userId, text);
   return {
     kind: "web",
-    status: "coming_soon",
-    message:
-      "Web originality (public-web match) is reserved for Premium. No third-party scan is wired yet — use library and syllabus checks for now.",
+    status: result.status,
+    message: result.message,
+    matches: result.matches,
+    scorePercent: result.scorePercent,
+    scanId: result.scanId,
+    upgradeUrl: result.upgradeUrl,
   };
+}
+
+/** @deprecated use checkWebOriginality */
+export async function webOriginalityStub(
+  userId: string,
+  text = ""
+): Promise<WebOriginalityResult> {
+  return checkWebOriginality(userId, text);
 }
 
 export type AiWritingHeuristic = {

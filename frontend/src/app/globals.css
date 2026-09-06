@@ -8,6 +8,7 @@
 @import "./generated-content.css";
 @import "./onboarding-page.css";
 @import "./plans-page.css";
+@import "../components/my-content/doc-research/shelf-doc-research.css";
 
 :root {
   --bg-primary: #f7f7f5;

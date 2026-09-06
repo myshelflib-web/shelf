@@ -1,0 +1,87 @@
+/* Doc research markers — scoped to .shelf-doc-body */
+
+.shelf-doc-body .shelf-cite {
+  display: inline;
+  color: var(--accent);
+  font-weight: 500;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.shelf-doc-body .shelf-footnote a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.75em;
+}
+
+.shelf-doc-body ol.shelf-endnotes {
+  margin-top: 1.5rem;
+  padding-left: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.shelf-doc-body .shelf-figure,
+.shelf-doc-body .shelf-table {
+  margin: 1.25rem 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+
+.shelf-doc-body .shelf-figure figcaption,
+.shelf-doc-body .shelf-table figcaption {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.shelf-doc-body .shelf-eq {
+  display: inline-block;
+  padding: 0 0.15em;
+  vertical-align: middle;
+}
+
+.shelf-doc-body .shelf-xref {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.shelf-doc-body .shelf-bibliography {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.shelf-doc-body .shelf-bib-entries p,
+.shelf-doc-body .shelf-bib-entries .csl-entry {
+  margin: 0.35rem 0;
+  padding-left: 1.5rem;
+  text-indent: -1.5rem;
+  font-size: 0.9rem;
+}
+
+.shelf-doc-body .shelf-glossary {
+  margin: 1rem 0;
+}
+
+.shelf-doc-body .shelf-glossary dt {
+  font-weight: 600;
+}
+
+.shelf-doc-body .shelf-glossary dd {
+  margin: 0 0 0.5rem 1rem;
+  color: var(--text-secondary);
+}
+
+.shelf-doc-body mark.shelf-suggest[data-op="ins"] {
+  background: color-mix(in srgb, #22c55e 28%, transparent);
+  text-decoration: none;
+}
+
+.shelf-doc-body mark.shelf-suggest[data-op="del"] {
+  background: color-mix(in srgb, #ef4444 22%, transparent);
+  text-decoration: line-through;
+}

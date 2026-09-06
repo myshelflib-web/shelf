@@ -10,6 +10,7 @@ import {
   openOriginalityFromSelection,
   openParaphraseFromSelection,
 } from "@/lib/openWritingAssistFromSelection";
+import { citeInOpenDoc } from "@/lib/citeInOpenDoc";
 import type { HtmlTextPick } from "./htmlPageSelection";
 
 type SelectionState = HtmlTextPick;
@@ -113,6 +114,16 @@ export function PersonalContentHighlightChrome({
             setSelection(null);
             window.getSelection()?.removeAllRanges();
           }}
+          onCiteInDoc={() => {
+            const draft = selectionRef.current ?? selection;
+            citeInOpenDoc({
+              quote: draft.text,
+              sourcePageId: userTopicId,
+              pageNumber: null,
+            });
+            setSelection(null);
+            window.getSelection()?.removeAllRanges();
+          }}
           onClose={() => {
             selectionRef.current = null;
             setSelection(null);
@@ -171,6 +182,14 @@ export function PersonalContentHighlightChrome({
           onOriginality={() => {
             openOriginalityFromSelection(activeHighlight.highlight.text, {
               pageId: userTopicId,
+            });
+            setActiveHighlight(null);
+          }}
+          onCiteInDoc={() => {
+            citeInOpenDoc({
+              quote: activeHighlight.highlight.text,
+              sourcePageId: userTopicId,
+              pageNumber: activeHighlight.highlight.pageNumber,
             });
             setActiveHighlight(null);
           }}

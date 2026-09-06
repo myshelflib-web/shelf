@@ -1,6 +1,6 @@
 import { api, type UploadProgressHandler } from "@/lib/api";
 import { pageHref } from "@/lib/myContentTree";
-import { createDocHtml } from "@/lib/docEditor";
+import { htmlForDocTemplate, type DocTemplateId } from "@/lib/docTemplates";
 import {
   createSketchNotebookHtml,
   type SketchTemplate,
@@ -70,6 +70,7 @@ export async function submitAddPage(input: {
   topic?: UserTopicGroup;
   sketchTemplate: SketchTemplate;
   sketchBg: string;
+  docTemplate?: DocTemplateId;
   reportUploadProgress: UploadProgressHandler;
 }): Promise<{ page: UserPageSummary; href: string }> {
   const { notebook, topic } = input;
@@ -150,7 +151,10 @@ export async function submitAddPage(input: {
   } else if (input.addMode === "doc") {
     const body = {
       title: input.pageTitle,
-      htmlContent: createDocHtml(input.pageTitle),
+      htmlContent: htmlForDocTemplate(
+        input.docTemplate || "blank",
+        input.pageTitle
+      ),
     };
     if (notebook && topic) {
       ({ page } = await api.myContent.createPage(notebook.id, topic.id, body));

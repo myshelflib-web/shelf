@@ -12,6 +12,7 @@ import {
   WorkspaceMockup,
 } from "./LandingShowcaseMockups";
 import { YoutubeLectureMockup } from "./LandingYoutubeMockup";
+import { ResearchDocMockup } from "./LandingResearchDocMockup";
 import { LandingKicker } from "@/components/landing/LandingKicker";
 
 const ROTATE_MS = 6500;
@@ -31,6 +32,13 @@ const SLIDES: ShowcaseSlide[] = [
     linkHref: "/login",
     linkLabel: "Start uploading",
     visual: <UploadMockup />,
+  },
+  {
+    title: "Write research Docs with citations",
+    body: "Draft papers beside your PDFs. Cite in APA, MLA, Chicago, or IEEE, import BibTeX, rebuild References, and export Markdown, Word, or LaTeX.",
+    linkHref: "/features/research-doc-writing",
+    linkLabel: "Research Doc suite",
+    visual: <ResearchDocMockup />,
   },
   {
     title: "Create sketch notebooks and doc pages",

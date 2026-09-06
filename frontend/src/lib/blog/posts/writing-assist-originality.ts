@@ -24,7 +24,7 @@ export const writingAssistOriginality = buildPost(
       heading: "Originality that fits a personal library",
       paragraphs: [
         "Check originality runs three layers. Library self-check finds close matches in your own uploads via the same vector index Study AI uses — useful when you reuse notes across pages. Syllabus overlap compares wording to relevancy docs you attached in Study AI sources.",
-        "Web originality is reserved for Premium and is not connected to a third-party scanner yet. The report says so clearly instead of faking a web scan.",
+        "Web originality is reserved for Premium. When COPYLEAKS_EMAIL and COPYLEAKS_API_KEY are set (plus a public webhook base URL), Premium scans run through Copyleaks. Until then the report says so clearly instead of faking a web scan.",
       ],
     },
     {

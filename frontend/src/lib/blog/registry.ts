@@ -27,10 +27,12 @@ import { currentAffairsIngest } from "./posts/current-affairs-ingest";
 import { examStarterPacks } from "./posts/exam-starter-packs";
 import { officialExamSyllabus } from "./posts/official-exam-syllabus";
 import { writingAssistOriginality } from "./posts/writing-assist-originality";
+import { researchDocWritingSuite } from "./posts/research-doc-writing-suite";
 import { EXTRA_BLOG_POSTS } from "./posts/extra";
 
 const ALL_POSTS: BlogPost[] = [
   ...EXTRA_BLOG_POSTS,
+  researchDocWritingSuite,
   writingAssistOriginality,
   officialExamSyllabus,
   examStarterPacks,

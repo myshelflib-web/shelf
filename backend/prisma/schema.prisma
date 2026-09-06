@@ -57,6 +57,9 @@ model User {
   recurringSubscriptions  RecurringSubscription[]
   pageSharesOwned         PageShare[]         @relation("PageShareOwner")
   pageSharesReceived      PageShare[]         @relation("PageShareGrantee")
+  citationSources         CitationSource[]
+  pageRevisions           PageRevision[]
+  pageComments            PageComment[]
 }
 
 enum Plan {
@@ -834,6 +837,9 @@ model UserTopic {
   highlights     UserContentHighlight[]
   vectorIndex    PageVectorIndex?
   shares         PageShare[]
+  sourceLinks    DocSourceLink[]
+  revisions      PageRevision[]
+  comments       PageComment[]
 
   // Slug uniqueness: partial indexes in migration (root / notebook / topic).
   @@index([userId])
@@ -898,6 +904,84 @@ model UserContentHighlight {
   userTopic UserTopic @relation(fields: [userTopicId], references: [id], onDelete: Cascade)
 
   @@index([userId, userTopicId])
+}
+
+/** User reference library for research Docs (APA/MLA/Chicago/IEEE cites). */
+model CitationSource {
+  id         String   @id @default(uuid())
+  userId     String
+  title      String
+  authors    Json     @default("[]")
+  year       String?
+  doi        String?
+  url        String?
+  container  String?
+  pages      String?
+  type       String   @default("article")
+  bibtexKey  String?
+  rawCsl     Json?
+  pageId     String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links DocSourceLink[]
+
+  @@index([userId])
+  @@index([userId, bibtexKey])
+  @@index([userId, title])
+}
+
+model DocSourceLink {
+  id       String @id @default(uuid())
+  pageId   String
+  sourceId String
+
+  page   UserTopic      @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  source CitationSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, sourceId])
+  @@index([pageId])
+  @@index([sourceId])
+}
+
+/** Periodic Doc HTML snapshots for history / compare. */
+model PageRevision {
+  id        String   @id @default(uuid())
+  pageId    String
+  userId    String
+  html      String   @db.Text
+  label     String?
+  createdAt DateTime @default(now())
+
+  page UserTopic @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, createdAt])
+  @@index([userId])
+}
+
+/** Anchored comments on Docs (and optionally other HTML pages). */
+model PageComment {
+  id          String    @id @default(uuid())
+  pageId      String
+  userId      String
+  parentId    String?
+  body        String    @db.Text
+  anchorQuote String?   @db.Text
+  anchorJson  Json?
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  page    UserTopic     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  PageComment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies PageComment[] @relation("CommentThread")
+
+  @@index([pageId, createdAt])
+  @@index([userId])
+  @@index([parentId])
 }
 
 model PageVectorIndex {

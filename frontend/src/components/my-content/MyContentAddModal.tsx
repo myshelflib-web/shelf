@@ -10,6 +10,7 @@ import {
   SKETCH_TEMPLATES,
   type SketchTemplate,
 } from "@/lib/sketchNotebook";
+import { DOC_TEMPLATES, type DocTemplateId } from "@/lib/docTemplates";
 import {
   AddUploadProgressBar,
   PAGE_ADD_MODES,
@@ -40,6 +41,7 @@ interface MyContentAddModalProps {
   message: string;
   sketchTemplate: SketchTemplate;
   sketchBg: string;
+  docTemplate: DocTemplateId;
   onNotebookNameChange: (v: string) => void;
   onNotebookDescChange: (v: string) => void;
   onTopicTitleChange: (v: string) => void;
@@ -50,6 +52,7 @@ interface MyContentAddModalProps {
   onBulkFilesChange: (files: File[]) => void;
   onSketchTemplateChange: (t: SketchTemplate) => void;
   onSketchBgChange: (c: string) => void;
+  onDocTemplateChange: (t: DocTemplateId) => void;
   onSubmitNotebook: (e: React.FormEvent) => void;
   onSubmitTopic: (e: React.FormEvent) => void;
   onSubmitPage: (e: React.FormEvent) => void;
@@ -85,6 +88,8 @@ export function MyContentAddModal({
   sketchBg,
   onSketchTemplateChange,
   onSketchBgChange,
+  docTemplate,
+  onDocTemplateChange,
   onSubmitNotebook,
   onSubmitTopic,
   onSubmitPage,
@@ -398,9 +403,32 @@ export function MyContentAddModal({
               </div>
             )}
             {addMode === "doc" && (
-              <p className="text-xs text-[var(--text-muted)] rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2">
-                A typed document with headings, lists, fonts, and colors — no drawing canvas.
-              </p>
+              <div className="space-y-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2">
+                <p className="text-xs text-[var(--text-muted)]">
+                  Choose a research template — blank stays empty except for the title.
+                </p>
+                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+                  {DOC_TEMPLATES.map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => onDocTemplateChange(t.id)}
+                      className={`rounded-md border px-2 py-1.5 text-left transition-colors ${
+                        docTemplate === t.id
+                          ? "border-[var(--accent)] bg-[var(--accent-light)]"
+                          : "border-[var(--border)] bg-[var(--bg-elevated)]"
+                      }`}
+                    >
+                      <span className="block text-[11px] font-semibold text-[var(--text-primary)]">
+                        {t.name}
+                      </span>
+                      <span className="block text-[10px] text-[var(--text-muted)] line-clamp-2">
+                        {t.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
             {message && <p className="text-sm text-red-500">{message}</p>}
             <button

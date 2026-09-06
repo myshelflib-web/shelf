@@ -124,28 +124,32 @@ export const LIBRARY_FEATURES: ShelfFeature[] = [
     category: "library",
     title: "Sketch Notebook & Typed Doc Pages | Shelf",
     metaDescription:
-      "Add sketch pages and typed doc pages beside PDFs in Shelf. Draw diagrams, jot formulas, and keep revision notes in the same collection as your source material.",
+      "Add sketch pages and typed research Docs beside PDFs in Shelf. Draw diagrams, write papers with citations, and keep revision notes in the same collection as your sources.",
     keywords: [
       "digital sketch notes",
       "typed notes beside PDF",
       "diagram notebook students",
       "handwritten notes app",
+      "research doc writing",
     ],
     headline: "Sketch and type beside PDFs",
     subhead:
-      "Not every page is a PDF. Shelf supports sketch canvases and rich doc pages in the same collections as your uploaded files.",
+      "Not every page is a PDF. Shelf supports sketch canvases and rich Doc pages — including a research writing suite with citations and export — in the same collections as your uploads.",
     bullets: [
       "Sketch pages for diagrams and handwriting — pinch or Ctrl+scroll to zoom",
-      "Doc pages for structured typed notes",
+      "Doc pages for structured typed notes and research drafts",
+      "Citations, outlines, and export on research Docs",
       "Live in collections alongside PDFs",
       "Open in the same tabbed reader workspace",
     ],
     paragraphs: [
-      "When a concept needs a quick diagram or a worked example you type yourself, you do not need a separate notes app. Shelf keeps notes one click from the PDF they annotate.",
+      "When a concept needs a quick diagram or a paper draft you type yourself, you do not need a separate notes app. Shelf keeps notes and research Docs one click from the PDFs they cite.",
     ],
     relatedBlogSlug: "sketch-notebook-and-doc-pages",
     ctaHref: "/login",
     ctaLabel: "Add a notes page",
+    secondaryCtaHref: "/features/research-doc-writing",
+    secondaryCtaLabel: "Research Doc suite",
   },
   {
     slug: "pin-continue-reading",

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { FileText, ScanSearch, Sparkles, Trash2, Wand2, X } from "lucide-react";
+import { BookMarked, FileText, ScanSearch, Sparkles, Trash2, Wand2, X } from "lucide-react";
 import { withShortcut } from "@/lib/hotkeys";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { lockedFeatureLabel } from "@/lib/preloadedReadOnly";
@@ -23,6 +23,8 @@ interface HighlightToolbarProps {
   onAsk?: () => void;
   onParaphrase?: () => void;
   onOriginality?: () => void;
+  /** Cite selection into an open Doc (quote + reference). */
+  onCiteInDoc?: () => void;
   onNote?: () => void;
   /** When set, shows trash to delete the highlight */
   onRemove?: () => void;
@@ -40,6 +42,7 @@ export function HighlightToolbar({
   onAsk,
   onParaphrase,
   onOriginality,
+  onCiteInDoc,
   onNote,
   onRemove,
   onClose,
@@ -99,7 +102,7 @@ export function HighlightToolbar({
     action();
   };
 
-  const hasWriting = Boolean(onParaphrase || onOriginality);
+  const hasWriting = Boolean(onParaphrase || onOriginality || onCiteInDoc);
   const hasActions = Boolean(onNote || onAsk || hasWriting || onRemove);
 
   const menu = (
@@ -260,6 +263,35 @@ export function HighlightToolbar({
           >
             <ScanSearch className="w-3.5 h-3.5" strokeWidth={2} />
             Originality
+          </button>
+        </ShelfTooltip>
+      )}
+
+      {onCiteInDoc && (
+        <ShelfTooltip text="Cite this quote in an open Doc" side="top">
+          <button
+            type="button"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              if (locked) {
+                onLockedClick?.("Highlight and annotate");
+                return;
+              }
+              onCiteInDoc();
+            }}
+            className={`flex items-center gap-1.5 text-[13px] font-medium leading-none ${
+              locked ? "cursor-not-allowed opacity-70" : "hover:opacity-90"
+            }`}
+            style={{ color: "#e8c547" }}
+            aria-label={
+              locked
+                ? lockedFeatureLabel(lockedGate, "cite in Doc")
+                : "Cite in open Doc"
+            }
+            aria-disabled={locked}
+          >
+            <BookMarked className="w-3.5 h-3.5" strokeWidth={2} />
+            Cite
           </button>
         </ShelfTooltip>
       )}

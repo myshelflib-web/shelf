@@ -181,15 +181,17 @@ export const INTENT_CLUSTERS_MORE: IntentCluster[] = [
   },
   {
     id: "research",
-    label: "Research paper highlighter and notes",
+    label: "Research paper highlighter, citations, and notes",
     answer:
-      "Researchers highlight papers, keep literature notes beside PDFs, and ask Study AI across a private corpus of articles.",
+      "Researchers highlight papers, write literature Docs with APA/MLA citations beside PDFs, export to LaTeX, and ask Study AI across a private corpus of articles.",
     queries: [
       "research paper highlighter",
       "literature review PDF tool",
       "annotate research papers",
+      "research paper writing app",
+      "citation manager with PDF library",
     ],
-    path: "/blog/research-papers-literature-notes",
+    path: "/features/research-doc-writing",
   },
   {
     id: "professionals",

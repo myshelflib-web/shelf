@@ -75,6 +75,35 @@ export const INTENT_CLUSTERS_CORE: IntentCluster[] = [
     path: "/features/sketch-notes",
   },
   {
+    id: "research-doc-writing",
+    label: "Write research papers with citations in Shelf Docs",
+    answer:
+      "Shelf Docs include a research writing suite: APA/MLA/Chicago/IEEE citations, BibTeX import, outlines, footnotes, equations, version history, and export to Markdown, PDF, Word, or LaTeX — beside the PDFs you cite.",
+    queries: [
+      "research paper writing app",
+      "citation manager with PDF library",
+      "APA MLA citation tool students",
+      "export notes to LaTeX",
+      "IMRaD paper template",
+      "BibTeX import study app",
+    ],
+    path: "/features/research-doc-writing",
+  },
+  {
+    id: "writing-assist-originality",
+    label: "Paraphrase selections and check library originality",
+    answer:
+      "Paraphrase PDF or Doc selections with Study AI, then check originality against your Shelf library and syllabus. Premium can run web plagiarism checks when a vendor key is configured.",
+    queries: [
+      "paraphrase PDF selection",
+      "library originality check",
+      "plagiarism check own notes",
+      "rewrite study notes AI",
+      "web plagiarism checker students",
+    ],
+    path: "/features/writing-assist-originality",
+  },
+  {
     id: "continue-reading",
     label: "Resume reading where you left off",
     answer:

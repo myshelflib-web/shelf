@@ -37,8 +37,11 @@ export type OriginalityReport = {
   };
   web: {
     kind: "web";
-    status: "premium_required" | "coming_soon";
+    status: "premium_required" | "coming_soon" | "ok" | "error" | "pending";
     message: string;
+    matches?: Array<{ url: string; score: number; excerpt?: string }>;
+    scorePercent?: number | null;
+    scanId?: string;
     upgradeUrl?: string;
   };
   aiHeuristic?: {

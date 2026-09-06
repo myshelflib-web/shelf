@@ -24,8 +24,9 @@ export default function AboutPage() {
             </h1>
             <p className="text-base sm:text-lg text-[var(--text-secondary)] leading-relaxed max-w-2xl mx-auto">
               Shelf is a personal study workspace — not a content catalog. Upload
-              your own PDFs and notes, highlight as you read, ask Study AI from
-              your material, and keep tasks on one calendar.
+              your own PDFs and notes, write research Docs with citations,
+              highlight as you read, ask Study AI from your material, and keep
+              tasks on one calendar.
             </p>
           </RevealOnScroll>
         </section>

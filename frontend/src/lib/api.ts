@@ -1713,6 +1713,114 @@ export const api = {
       request<{ success: boolean }>(`/api/my-content/highlights/${id}`, {
         method: "DELETE",
       }),
+    listCitations: (q?: string) =>
+      request<{ sources: import("@/lib/researchDocTypes").CitationSource[] }>(
+        q
+          ? `/api/my-content/citations?q=${encodeURIComponent(q)}`
+          : "/api/my-content/citations"
+      ),
+    createCitation: (data: import("@/lib/researchDocTypes").CitationInput) =>
+      request<{ source: import("@/lib/researchDocTypes").CitationSource }>(
+        "/api/my-content/citations",
+        { method: "POST", body: JSON.stringify(data) }
+      ),
+    importCitations: (data: { text: string; format?: "bibtex" | "csl-json" }) =>
+      request<{
+        sources: import("@/lib/researchDocTypes").CitationSource[];
+        count: number;
+      }>("/api/my-content/citations/import", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    formatCitations: (data: {
+      style: import("@/lib/researchDocTypes").CiteStyle;
+      cites: Array<{ sourceId: string; locator?: string }>;
+    }) =>
+      request<{
+        style: string;
+        inText: string;
+        bibliography: string;
+      }>("/api/my-content/citations/format", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    deleteCitation: (id: string) =>
+      request<{ success: boolean }>(`/api/my-content/citations/${id}`, {
+        method: "DELETE",
+      }),
+    linkPageSource: (pageId: string, sourceId: string) =>
+      request<{ link: { id: string } }>(
+        `/api/my-content/pages/${pageId}/sources/${sourceId}`,
+        { method: "POST" }
+      ),
+    listPageSources: (pageId: string) =>
+      request<{ sources: import("@/lib/researchDocTypes").CitationSource[] }>(
+        `/api/my-content/pages/${pageId}/sources`
+      ),
+    listRevisions: (pageId: string) =>
+      request<{
+        revisions: Array<{ id: string; label: string | null; createdAt: string }>;
+      }>(`/api/my-content/pages/${pageId}/revisions`),
+    getRevision: (pageId: string, revisionId: string) =>
+      request<{
+        revision: {
+          id: string;
+          html: string;
+          label: string | null;
+          createdAt: string;
+        };
+      }>(`/api/my-content/pages/${pageId}/revisions/${revisionId}`),
+    createRevision: (pageId: string, html: string, label?: string) =>
+      request<{
+        revision?: { id: string };
+        skipped?: boolean;
+      }>(`/api/my-content/pages/${pageId}/revisions`, {
+        method: "POST",
+        body: JSON.stringify({ html, label }),
+      }),
+    restoreRevision: (
+      pageId: string,
+      revisionId: string,
+      currentHtml?: string
+    ) =>
+      request<{ html: string }>(
+        `/api/my-content/pages/${pageId}/revisions/${revisionId}/restore`,
+        {
+          method: "POST",
+          body: JSON.stringify({ currentHtml }),
+        }
+      ),
+    listComments: (pageId: string) =>
+      request<{
+        comments: import("@/lib/researchDocTypes").PageComment[];
+        canWrite: boolean;
+      }>(`/api/my-content/pages/${pageId}/comments`),
+    createComment: (
+      pageId: string,
+      data: {
+        body: string;
+        parentId?: string;
+        anchorQuote?: string;
+      }
+    ) =>
+      request<{ comment: import("@/lib/researchDocTypes").PageComment }>(
+        `/api/my-content/pages/${pageId}/comments`,
+        { method: "POST", body: JSON.stringify(data) }
+      ),
+    updateComment: (
+      pageId: string,
+      commentId: string,
+      data: { body?: string; resolved?: boolean }
+    ) =>
+      request<{ comment: import("@/lib/researchDocTypes").PageComment }>(
+        `/api/my-content/pages/${pageId}/comments/${commentId}`,
+        { method: "PATCH", body: JSON.stringify(data) }
+      ),
+    deleteComment: (pageId: string, commentId: string) =>
+      request<{ success: boolean }>(
+        `/api/my-content/pages/${pageId}/comments/${commentId}`,
+        { method: "DELETE" }
+      ),
   },
 
   study: {
@@ -1818,6 +1926,24 @@ export const api = {
           body: JSON.stringify(data),
         }
       ),
+    originalityWebScan: (scanId: string) =>
+      request<{
+        web: import("@/lib/writingAssistTypes").OriginalityReport["web"];
+      }>(`/api/study/originality/web/${encodeURIComponent(scanId)}`),
+    researchAssist: (data: {
+      text: string;
+      kind: "tighten_abstract" | "check_claims";
+      maxWords?: number;
+      bibKeys?: string[];
+    }) =>
+      request<{
+        kind: string;
+        text: string;
+        tokens: number;
+      }>("/api/study/research-assist", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
     listChats: (opts?: { pageId?: string }) =>
       request<{ threads: import("@/types").ChatThreadSummary[] }>(
         opts?.pageId

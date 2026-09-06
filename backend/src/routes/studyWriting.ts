@@ -6,7 +6,7 @@ import { reqLog } from "../utils/flowLog.js";
 import {
   checkLibraryOverlap,
   checkSyllabusOverlap,
-  webOriginalityStub,
+  checkWebOriginality,
   type OriginalityReport,
 } from "../services/originalityCheck.js";
 import {
@@ -14,6 +14,11 @@ import {
   paraphraseText,
   type ParaphraseStyle,
 } from "../services/writingAssist.js";
+import {
+  researchAssist,
+  type ResearchAssistKind,
+} from "../services/researchAssist.js";
+import { getScanResult } from "../services/webOriginalityProvider.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -23,6 +28,11 @@ const STYLES = new Set<ParaphraseStyle>([
   "simplify",
   "formal",
   "shorten",
+]);
+
+const RESEARCH_KINDS = new Set<ResearchAssistKind>([
+  "tighten_abstract",
+  "check_claims",
 ]);
 
 function readText(body: unknown): string {
@@ -87,7 +97,7 @@ router.post("/originality", async (req: Request, res: Response) => {
     const [library, syllabus, web] = await Promise.all([
       checkLibraryOverlap(userId, text, { excludePageId }),
       checkSyllabusOverlap(userId, text),
-      webOriginalityStub(userId),
+      checkWebOriginality(userId, text),
     ]);
 
     const report: OriginalityReport = { library, syllabus, web };
@@ -122,6 +132,69 @@ router.post("/originality", async (req: Request, res: Response) => {
         err instanceof Error
           ? err.message
           : "Originality check failed. Try again.",
+    });
+  }
+});
+
+router.get("/originality/web/:scanId", async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const scanId = String(req.params.scanId || "").trim();
+  if (scanId.length < 8) {
+    res.status(400).json({ error: "bad scanId" });
+    return;
+  }
+  const result = getScanResult(scanId);
+  if (!result) {
+    res.status(404).json({ error: "Scan not found or expired" });
+    return;
+  }
+  // Pending scans are user-scoped in memory; allow poll if present.
+  void userId;
+  res.json({ web: result });
+});
+
+router.post("/research-assist", async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const text = readText(req.body);
+  const kindRaw = String(
+    (req.body as { kind?: string }).kind ?? "tighten_abstract"
+  ).trim() as ResearchAssistKind;
+  const kind = RESEARCH_KINDS.has(kindRaw) ? kindRaw : "tighten_abstract";
+  const maxWords = Number((req.body as { maxWords?: number }).maxWords) || 150;
+  const bibKeys = Array.isArray((req.body as { bibKeys?: unknown }).bibKeys)
+    ? ((req.body as { bibKeys: unknown[] }).bibKeys.map((k) => String(k)))
+    : [];
+
+  if (text.length < 20) {
+    res.status(400).json({ error: "text too short" });
+    return;
+  }
+
+  try {
+    await assertLlmBudget(userId, 1);
+    const result = await researchAssist(userId, kind, text, {
+      maxWords,
+      bibKeys,
+    });
+    await chargeLlmTokens(userId, result.tokens);
+    reqLog(req).info("study.research_assist.ok", {
+      kind: result.kind,
+      tokens: result.tokens,
+    });
+    res.json(result);
+  } catch (err) {
+    if (err instanceof QuotaError) {
+      res.status(err.status).json({ error: err.message });
+      return;
+    }
+    reqLog(req).error("study.research_assist.failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    res.status(500).json({
+      error:
+        err instanceof Error
+          ? err.message
+          : "Research assist failed. Try again.",
     });
   }
 });

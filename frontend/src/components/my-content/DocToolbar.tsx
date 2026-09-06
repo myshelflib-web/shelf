@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import {
   AlignLeft,
   Bold,
@@ -64,6 +64,8 @@ interface DocToolbarProps {
   compact?: boolean;
   onParaphrase?: () => void;
   onOriginality?: () => void;
+  /** Research suite controls (Docs only). */
+  researchSlot?: ReactNode;
 }
 
 export function DocToolbar({
@@ -71,6 +73,7 @@ export function DocToolbar({
   compact = false,
   onParaphrase,
   onOriginality,
+  researchSlot,
 }: DocToolbarProps) {
   const [fontValue, setFontValue] = useState("");
   const [fontSize, setFontSize] = useState("16px");
@@ -356,6 +359,7 @@ export function DocToolbar({
           </ToolGroup>
         </>
       )}
+      {researchSlot}
     </EditorToolbarShell>
   );
 }
