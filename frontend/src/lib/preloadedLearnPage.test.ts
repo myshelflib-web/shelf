@@ -62,4 +62,21 @@ describe("resolvePreloadedLearnPage", () => {
     expect(resolved).toMatchObject({ contentType: "HTML", useLinkEmbed: false });
     expect(resolved.content).toContain("Open on official site");
   });
+
+  it("presents generated Learn HTML as a read-only Doc (never editable)", () => {
+    const resolved = resolvePreloadedLearnPage({
+      title: "Collegium",
+      content:
+        '<article class="shelf-generated"><p class="shelf-doc-intro">Body</p></article>',
+      hasPdf: false,
+      sourceUrl: null,
+      summary: null,
+      embeddable: null,
+      linkStatus: null,
+      sourceLicense: null,
+    });
+    expect(resolved.contentType).toBe("HTML");
+    expect(resolved.content).toContain("shelf-doc-readonly");
+    expect(resolved.content).toContain("data-shelf-readonly");
+  });
 });

@@ -238,7 +238,7 @@ export function PreloadedSaveBanner({
   let message = saveAllowed
     ? saveReason ??
       (saveMode === "download_remote" || saveMode === "copy_admin"
-        ? "Tap Save for a personal copy you can highlight, annotate, and edit."
+        ? "Tap Save for a personal copy you can highlight and annotate."
         : "Tap Save to bookmark this official link in your library.")
     : saveReason ?? "Read-only official preview.";
   if (phase === "saving") {

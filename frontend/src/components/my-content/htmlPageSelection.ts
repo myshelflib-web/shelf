@@ -37,6 +37,8 @@ export function normRectsFromClient(
 /**
  * Native selection → highlight geometry.
  * Offsets drive <mark> paint; rects are fallback hit-test / overlay geometry.
+ * Prefer returning a pick whenever the user has a visible selection — never
+ * drop the popup just because offset math failed on complex curriculum HTML.
  */
 export function captureHtmlTextSelection(
   contentRoot: HTMLElement,
@@ -58,11 +60,14 @@ export function captureHtmlTextSelection(
   const clientRects = range.getClientRects();
   const rects = normRectsFromClient(
     origin.getBoundingClientRect(),
-    clientRects.length
-      ? clientRects
-      : [range.getBoundingClientRect()]
+    clientRects.length ? clientRects : [range.getBoundingClientRect()]
   );
   if (!rects.length) return null;
+
+  // Prefer measuring inside the Doc body when present (read-only curriculum).
+  const offsetRoot =
+    (contentRoot.querySelector(".shelf-doc-body") as HTMLElement | null) ??
+    contentRoot;
 
   let startOffset = 0;
   let endOffset = 0;
@@ -70,26 +75,27 @@ export function captureHtmlTextSelection(
     const startNode = range.startContainer;
     const endNode = range.endContainer;
     const startOk =
-      contentRoot.contains(startNode) || startNode === contentRoot;
-    const endOk = contentRoot.contains(endNode) || endNode === contentRoot;
-    if (!startOk || !endOk) return null;
-    startOffset = textOffsetInRoot(
-      contentRoot,
-      startNode,
-      range.startOffset
-    );
-    endOffset = textOffsetInRoot(contentRoot, endNode, range.endOffset);
-    // Align offsets with trimmed quote (leading/trailing whitespace in the range).
-    if (endOffset > startOffset && raw !== text) {
-      const lead = raw.length - raw.trimStart().length;
-      const trail = raw.length - raw.trimEnd().length;
-      startOffset += lead;
-      endOffset -= trail;
+      offsetRoot.contains(startNode) || startNode === offsetRoot;
+    const endOk = offsetRoot.contains(endNode) || endNode === offsetRoot;
+    if (startOk && endOk) {
+      startOffset = textOffsetInRoot(offsetRoot, startNode, range.startOffset);
+      endOffset = textOffsetInRoot(offsetRoot, endNode, range.endOffset);
+      // Align offsets with trimmed quote (leading/trailing whitespace in the range).
+      if (endOffset > startOffset && raw !== text) {
+        const lead = raw.length - raw.trimStart().length;
+        const trail = raw.length - raw.trimEnd().length;
+        startOffset += lead;
+        endOffset -= trail;
+      }
     }
   } catch {
-    return null;
+    startOffset = 0;
+    endOffset = 0;
   }
-  if (endOffset <= startOffset) return null;
+  if (endOffset <= startOffset) {
+    startOffset = 0;
+    endOffset = 0;
+  }
 
   return {
     text,

@@ -27,9 +27,13 @@ export function useHtmlTextHighlightPaint(
     const live = window.getSelection();
     if (live && !live.isCollapsed) return;
 
+    // Match captureHtmlTextSelection offset root for read-only Docs.
+    const paintRoot =
+      (root.querySelector(".shelf-doc-body") as HTMLElement | null) ?? root;
+
     const textHs = highlightsRef.current.filter(isWrappedTextHighlight);
-    applyHighlightsToElement(root, textHs);
-    return () => unwrapHighlightMarks(root);
+    applyHighlightsToElement(paintRoot, textHs);
+    return () => unwrapHighlightMarks(paintRoot);
     // paintKey is the visual signature; skip array-identity churn mid-drag.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- highlights via paintKey
   }, [root, paintKey]);

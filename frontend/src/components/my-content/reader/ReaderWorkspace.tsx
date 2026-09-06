@@ -527,6 +527,9 @@ export function ReaderWorkspace({
   const readerReady = Boolean(user && !authLoading && focusedPane);
   const isPdf = focusedSnap?.pageData?.contentType === "PDF";
   const isPreloaded = focusedSnap?.pageData?.isPreloaded ?? false;
+  const readOnlyCurriculum = focusedSnap?.readOnlyCurriculum ?? false;
+  const canEditPage =
+    !isPdf && !liveEdit && !isPreloaded && !readOnlyCurriculum;
 
   const toggleLibrary = useCallback(() => {
     const next = !state.libraryCollapsed;
@@ -596,7 +599,7 @@ export function ReaderWorkspace({
   useHotkey("}", () => cycleTab(1), { enabled: readerReady && !modalEditing });
   useHotkey("w", closeFocusedTab, { enabled: readerReady && !modalEditing });
   useHotkey("e", () => focusedHandlers?.startEditing(), {
-    enabled: readerReady && !modalEditing && !isPdf && !liveEdit && !isPreloaded,
+    enabled: readerReady && !modalEditing && canEditPage,
   });
   useHotkey("mod+s", () => {
     if (focusedSnap?.pageData?.contentType === "HTML") {
@@ -935,6 +938,8 @@ export function ReaderWorkspace({
                                       old.loading === snap.loading &&
                                       old.editing === snap.editing &&
                                       old.liveEdit === snap.liveEdit &&
+                                      old.readOnlyCurriculum ===
+                                        snap.readOnlyCurriculum &&
                                       old.saving === snap.saving &&
                                       old.htmlClip === snap.htmlClip &&
                                       old.pageData?.id === snap.pageData?.id &&
@@ -1000,9 +1005,7 @@ export function ReaderWorkspace({
                     pageData.contentType === "HTML" && !liveEdit
                   }
                   onEdit={
-                    isPdf || liveEdit || isPreloaded
-                      ? undefined
-                      : focusedHandlers.startEditing
+                    canEditPage ? focusedHandlers.startEditing : undefined
                   }
                   onSave={focusedHandlers.saveEditing}
                   onCancelEdit={focusedHandlers.cancelEditing}

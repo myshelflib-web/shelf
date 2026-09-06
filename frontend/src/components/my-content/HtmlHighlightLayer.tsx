@@ -108,6 +108,14 @@ export function HtmlHighlightLayer({
   const { w, h } = size;
   if (w < 1 || h < 1) return null;
 
+  const hasDraft = Boolean(draftPoints && draftPoints.length > 1);
+  // Never mount an empty full-size SVG over the article — it sits above the
+  // text and can block native selection (double-click / drag) even with
+  // pointer-events: none on some browsers. Live Docs don't use this overlay.
+  if (!pointStrokes.length && !rectHighlights.length && !hasDraft) {
+    return null;
+  }
+
   return (
     <>
       <div
@@ -139,7 +147,7 @@ export function HtmlHighlightLayer({
         height={h}
         viewBox={`0 0 ${w} ${h}`}
         className={`absolute top-0 left-0 ${
-          eraseMode || (draftPoints && draftPoints.length > 1) ? "z-[3]" : "z-[1]"
+          eraseMode || hasDraft ? "z-[3]" : "z-[1]"
         }`}
         style={{ pointerEvents: "none", overflow: "visible" }}
       >
@@ -153,9 +161,9 @@ export function HtmlHighlightLayer({
             onActivate={onActivate}
           />
         ))}
-        {draftPoints && draftPoints.length > 1 ? (
+        {hasDraft ? (
           <path
-            d={pathFromNorm(draftPoints, w, h)}
+            d={pathFromNorm(draftPoints!, w, h)}
             fill="none"
             stroke={penStroke(draftColor, draftOpacity)}
             strokeWidth={htmlStrokePx(draftWidth)}

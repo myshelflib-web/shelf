@@ -1,4 +1,5 @@
 import type { ArticleDetail, UserContentType } from "@/types";
+import { ensureReadOnlyDocHtml } from "@/lib/docEditor";
 import { isPdfSourceUrl, shouldUseLinkEmbed } from "@/lib/linkEmbedPolicy";
 import { buildPreloadedSummaryHtml } from "@/lib/preloadedSummaryHtml";
 
@@ -58,7 +59,8 @@ export function resolvePreloadedLearnPage(
 
   return {
     contentType: "HTML",
-    content,
+    // Read-only Doc shell — annotate / Ask AI; never Edit.
+    content: ensureReadOnlyDocHtml(content),
     sourceUrl,
     useLinkEmbed: false,
   };
