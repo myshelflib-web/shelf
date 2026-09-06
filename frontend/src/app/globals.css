@@ -1655,9 +1655,11 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 
+/* App dark theme (not only the per-doc moon toggle) — multiply vanishes on near-black. */
+.dark .html-hl-box,
 .html-reader-dark .html-hl-box {
   mix-blend-mode: screen;
-  opacity: 0.65;
+  opacity: 0.7;
 }
 
 /* Sketch notebook — GoodNotes-style fixed pages */

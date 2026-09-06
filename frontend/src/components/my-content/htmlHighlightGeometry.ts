@@ -9,19 +9,18 @@ export function isHtmlTextHighlight(h: UserContentHighlight): boolean {
   return h.endOffset > h.startOffset;
 }
 
-/** Popup TEXT with geometry — paint as absolute boxes (PDF-style), not CSS/mark. */
+/** Popup TEXT with geometry — fallback boxes when offsets are missing. */
 export function isRectTextHighlight(h: UserContentHighlight): boolean {
   if (h.position?.points?.length) return false;
   return Boolean(h.position?.rects?.length);
 }
 
 /**
- * Offset-only TEXT → CSS/mark wash.
- * Rect highlights paint via HtmlTextHighlightBoxes; freehand via SVG.
+ * TEXT with offsets → <mark> wash.
+ * Freehand strokes stay in the SVG layer. Rects may coexist for hit-testing.
  */
 export function isWrappedTextHighlight(h: UserContentHighlight): boolean {
   if (h.position?.points?.length) return false;
-  if (h.position?.rects?.length) return false;
   return isHtmlTextHighlight(h);
 }
 

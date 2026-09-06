@@ -3,7 +3,10 @@
 import { useLayoutEffect, useState, type MutableRefObject } from "react";
 import type { UserContentHighlight } from "@/types";
 import { DEFAULT_PEN_WIDTH, PEN_WIDTHS } from "@/lib/straightenStroke";
-import { isRectTextHighlight } from "./htmlHighlightGeometry";
+import {
+  isHtmlTextHighlight,
+  isRectTextHighlight,
+} from "./htmlHighlightGeometry";
 import { isInkHighlight, penStroke } from "./pdfViewerHelpers";
 
 /** Vertical thickness in CSS px — covers most of a body-text line, not a thin underline. */
@@ -31,7 +34,10 @@ function isStrokeHighlight(h: UserContentHighlight): boolean {
 }
 
 export function hasHtmlStrokes(highlights: UserContentHighlight[]): boolean {
-  return highlights.some(isStrokeHighlight) || highlights.some(isRectTextHighlight);
+  return (
+    highlights.some(isStrokeHighlight) ||
+    highlights.some((h) => isRectTextHighlight(h) && !isHtmlTextHighlight(h))
+  );
 }
 
 /** Stable across tmp→server id swaps so remounts do not interrupt selection. */
@@ -54,9 +60,8 @@ function rectReactKey(
 }
 
 /**
- * Behind the article: freehand SVG + PDF-style text highlight boxes.
- * Boxes use pointer-events:none so selection stays reliable; click hit-tests
- * go through PersonalContentArticle.
+ * Freehand SVG + fallback text boxes when <mark> offsets are unavailable.
+ * Popup TEXT with offsets paints via useHtmlTextHighlightPaint.
  */
 export function HtmlHighlightLayer({
   originRef,
@@ -97,7 +102,9 @@ export function HtmlHighlightLayer({
   }, [originRef]);
 
   const pointStrokes = highlights.filter((h) => h.position?.points?.length);
-  const rectHighlights = highlights.filter(isRectTextHighlight);
+  const rectHighlights = highlights.filter(
+    (h) => isRectTextHighlight(h) && !isHtmlTextHighlight(h)
+  );
   const { w, h } = size;
   if (w < 1 || h < 1) return null;
 

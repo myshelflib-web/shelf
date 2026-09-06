@@ -36,7 +36,7 @@ export function normRectsFromClient(
 
 /**
  * Native selection → highlight geometry.
- * Rects are required for paint. Offsets are best-effort for reload/Ask AI.
+ * Offsets drive <mark> paint; rects are fallback hit-test / overlay geometry.
  */
 export function captureHtmlTextSelection(
   contentRoot: HTMLElement,
@@ -44,7 +44,8 @@ export function captureHtmlTextSelection(
 ): HtmlTextPick | null {
   const sel = window.getSelection();
   if (!sel || sel.isCollapsed || sel.rangeCount < 1) return null;
-  const text = sel.toString().trim();
+  const raw = sel.toString();
+  const text = raw.trim();
   if (text.length < 1) return null;
   const range = sel.getRangeAt(0);
 
@@ -66,29 +67,29 @@ export function captureHtmlTextSelection(
   let startOffset = 0;
   let endOffset = 0;
   try {
-    if (
-      contentRoot.contains(range.startContainer) &&
-      contentRoot.contains(range.endContainer)
-    ) {
-      startOffset = textOffsetInRoot(
-        contentRoot,
-        range.startContainer,
-        range.startOffset
-      );
-      endOffset = textOffsetInRoot(
-        contentRoot,
-        range.endContainer,
-        range.endOffset
-      );
-      if (endOffset <= startOffset) {
-        startOffset = 0;
-        endOffset = 0;
-      }
+    const startNode = range.startContainer;
+    const endNode = range.endContainer;
+    const startOk =
+      contentRoot.contains(startNode) || startNode === contentRoot;
+    const endOk = contentRoot.contains(endNode) || endNode === contentRoot;
+    if (!startOk || !endOk) return null;
+    startOffset = textOffsetInRoot(
+      contentRoot,
+      startNode,
+      range.startOffset
+    );
+    endOffset = textOffsetInRoot(contentRoot, endNode, range.endOffset);
+    // Align offsets with trimmed quote (leading/trailing whitespace in the range).
+    if (endOffset > startOffset && raw !== text) {
+      const lead = raw.length - raw.trimStart().length;
+      const trail = raw.length - raw.trimEnd().length;
+      startOffset += lead;
+      endOffset -= trail;
     }
   } catch {
-    startOffset = 0;
-    endOffset = 0;
+    return null;
   }
+  if (endOffset <= startOffset) return null;
 
   return {
     text,

@@ -4,7 +4,7 @@ import { createHighlight, deleteHighlight } from "@/lib/offline/highlights";
 import type { HighlightWriteInput } from "@/lib/offline/highlights";
 import type { HtmlTextPick } from "./htmlPageSelection";
 
-/** Select → color: TEXT with rects for PDF-style overlay paint. */
+/** Select → color: TEXT wash (CSS/mark) with rects for hit-testing. */
 export function textHighlightDraft(
   userTopicId: string,
   sel: HtmlTextPick,

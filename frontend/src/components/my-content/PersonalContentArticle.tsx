@@ -88,7 +88,7 @@ export function PersonalContentArticle({
         }}
         dangerouslySetInnerHTML={{ __html: fragment }}
       />
-      {/* Above prose so the wash is visible; pointer-events none keeps selection. */}
+      {/* Above prose so fallback boxes are visible; pointer-events none keeps selection. */}
       <HtmlHighlightLayer
         originRef={originRef}
         highlights={highlights}
