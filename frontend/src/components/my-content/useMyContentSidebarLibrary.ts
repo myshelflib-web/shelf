@@ -22,6 +22,7 @@ import {
   SHELF_CONTENT_CHANGED,
   contentChangeFromEvent,
 } from "@/lib/contentEvents";
+import { removePinnedSlug } from "@/lib/myContentSidebarPrefs";
 
 const SIDEBAR_NOTEBOOK_PAGE_SIZE = 15;
 
@@ -58,6 +59,9 @@ export function useMyContentSidebarLibrary({
   const hydrateGen = useRef(new Map<string, number>());
   const hydratedIdsRef = useRef(new Set<string>());
   const hydratedSlugsRef = useRef(new Set<string>());
+  /** Slugs that 404'd — do not re-request until navigation clears them. */
+  const missingSlugsRef = useRef(new Set<string>());
+  const hydratingSlugsRef = useRef(new Set<string>());
   const subjectsRef = useRef(subjects);
   subjectsRef.current = subjects;
 
@@ -155,17 +159,22 @@ export function useMyContentSidebarLibrary({
 
   const hydrateSubject = useCallback(async (slug: string) => {
     if (!slug) return;
+    if (missingSlugsRef.current.has(slug)) return;
+    if (hydratingSlugsRef.current.has(slug)) return;
     const gen = (hydrateGen.current.get(slug) ?? 0) + 1;
     hydrateGen.current.set(slug, gen);
+    hydratingSlugsRef.current.add(slug);
     setHydratingSlugs((prev) => new Set(prev).add(slug));
     try {
       const { subject } = await api.myContent.getSubject(slug);
       if (hydrateGen.current.get(slug) !== gen) return;
+      missingSlugsRef.current.delete(slug);
       hydratedIdsRef.current.add(subject.id);
       hydratedSlugsRef.current.add(subject.slug);
       const patch = (prev: UserSubject[]) => {
         const merged = mergeExplorerTreeWithPending([subject], []).subjects[0];
         if (!merged) {
+          if (!prev.some((s) => s.slug === slug)) return prev;
           return prev.filter((s) => s.slug !== slug);
         }
         const idx = prev.findIndex((s) => s.id === merged.id || s.slug === slug);
@@ -179,8 +188,16 @@ export function useMyContentSidebarLibrary({
     } catch (err) {
       if (hydrateGen.current.get(slug) !== gen) return;
       if (err instanceof ApiError && err.status === 404) {
-        setSubjects((prev) => prev.filter((s) => s.slug !== slug));
-        setPinnedExtra((prev) => prev.filter((s) => s.slug !== slug));
+        missingSlugsRef.current.add(slug);
+        removePinnedSlug(slug);
+        setSubjects((prev) => {
+          if (!prev.some((s) => s.slug === slug)) return prev;
+          return prev.filter((s) => s.slug !== slug);
+        });
+        setPinnedExtra((prev) => {
+          if (!prev.some((s) => s.slug === slug)) return prev;
+          return prev.filter((s) => s.slug !== slug);
+        });
         setExpandedNotebooks((prev) => {
           if (!prev[slug]) return prev;
           const next = { ...prev };
@@ -189,8 +206,10 @@ export function useMyContentSidebarLibrary({
         });
       }
     } finally {
+      hydratingSlugsRef.current.delete(slug);
       if (hydrateGen.current.get(slug) === gen) {
         setHydratingSlugs((prev) => {
+          if (!prev.has(slug)) return prev;
           const next = new Set(prev);
           next.delete(slug);
           return next;
@@ -216,9 +235,17 @@ export function useMyContentSidebarLibrary({
     return () => window.removeEventListener(SHELF_CONTENT_CHANGED, onChange);
   }, [load, setExpandedNotebooks, setExpandedTopics]);
 
+  /** Clear missing-slug block when the route notebook changes. */
+  useEffect(() => {
+    if (!notebookSlug) return;
+    missingSlugsRef.current.delete(notebookSlug);
+  }, [notebookSlug]);
+
   /** Auto-expand current notebook: ensure its tree is loaded. */
   useEffect(() => {
     if (!notebookSlug) return;
+    if (missingSlugsRef.current.has(notebookSlug)) return;
+    if (hydratingSlugsRef.current.has(notebookSlug)) return;
     const nb =
       subjectsRef.current.find((s) => s.slug === notebookSlug) ??
       pinnedExtra.find((s) => s.slug === notebookSlug);
@@ -235,6 +262,26 @@ export function useMyContentSidebarLibrary({
     }
   }, [notebookSlug, subjects, pinnedExtra, hydrateSubject]);
 
+  const markHydrated = useCallback((id: string, slug?: string) => {
+    hydratedIdsRef.current.add(id);
+    if (slug) {
+      hydratedSlugsRef.current.add(slug);
+      missingSlugsRef.current.delete(slug);
+    }
+  }, []);
+
+  const invalidateHydrate = useCallback((slug: string) => {
+    if (!slug) return;
+    hydrateGen.current.set(slug, (hydrateGen.current.get(slug) ?? 0) + 1);
+    hydratingSlugsRef.current.delete(slug);
+  }, []);
+
+  const isSubjectHydrated = useCallback((slug: string) => {
+    if (hydratedSlugsRef.current.has(slug)) return true;
+    const nb = subjectsRef.current.find((s) => s.slug === slug);
+    return Boolean(nb && subjectTreeLoaded(nb));
+  }, []);
+
   return {
     subjects,
     setSubjects,
@@ -249,15 +296,9 @@ export function useMyContentSidebarLibrary({
     load,
     hydrateSubject,
     hydratingSlugs,
-    markHydrated: (id: string, slug?: string) => {
-      hydratedIdsRef.current.add(id);
-      if (slug) hydratedSlugsRef.current.add(slug);
-    },
-    isSubjectHydrated: (slug: string) => {
-      if (hydratedSlugsRef.current.has(slug)) return true;
-      const nb = subjectsRef.current.find((s) => s.slug === slug);
-      return Boolean(nb && subjectTreeLoaded(nb));
-    },
+    markHydrated,
+    invalidateHydrate,
+    isSubjectHydrated,
   };
 }
 

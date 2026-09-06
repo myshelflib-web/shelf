@@ -43,6 +43,14 @@ export type ContentChange =
   | {
       type: "page-deleted";
       pageId: string;
+    }
+  | {
+      type: "page-moved";
+      pageId: string;
+      title: string;
+      slug: string;
+      href: string;
+      scope: PersonalPageReaderScope;
     };
 
 export type OpenPageDetail = {
@@ -75,6 +83,16 @@ export function emitPageDeleted(pageId: string) {
     buildBulkDeletePayload(new Set([pageSelectionKey(pageId)]))
   );
   emitContentChanged({ type: "page-deleted", pageId });
+}
+
+export function emitPageMoved(detail: {
+  pageId: string;
+  title: string;
+  slug: string;
+  href: string;
+  scope: PersonalPageReaderScope;
+}) {
+  emitContentChanged({ type: "page-moved", ...detail });
 }
 
 export function emitOpenPage(detail: OpenPageDetail) {

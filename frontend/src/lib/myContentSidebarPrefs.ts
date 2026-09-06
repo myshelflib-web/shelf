@@ -82,3 +82,13 @@ export function pushPinnedSlug(slug: string) {
   }
   return next;
 }
+
+export function removePinnedSlug(slug: string) {
+  const next = readPinnedSlugs().filter((s) => s !== slug);
+  try {
+    localStorage.setItem(SIDEBAR_PINNED_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore */
+  }
+  return next;
+}

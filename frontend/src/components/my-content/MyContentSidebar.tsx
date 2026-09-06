@@ -10,15 +10,22 @@ import {
   buildSelectionLabels,
   type ExplorerSelectionKey,
 } from "@/lib/explorerSelection";
-import { applyPendingDeletesToSubjects } from "@/lib/pendingExplorerDeletes";
 import { useExplorerMoves } from "@/components/my-content/useExplorerMoves";
+import { usePinnedExplorerSubjects } from "@/components/my-content/usePinnedExplorerSubjects";
 import { useAddContent } from "@/components/my-content/MyContentAddProvider";
 import { useExplorerDeletes } from "@/components/my-content/useExplorerDeletes";
 import { api } from "@/lib/api";
 import { useScheduledPageHrefs } from "@/hooks/useScheduledPageHrefs";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   PersonalPageReaderScope,
   scopeFromHref,
@@ -36,12 +43,9 @@ import {
 import { MyContentSidebarTools } from "@/components/my-content/MyContentSidebarTools";
 import { mergeExplorerSubjectsForDisplay } from "@/lib/mergeExplorerSubjectsForDisplay";
 import {
-  SIDEBAR_MAX_PINNED,
   SIDEBAR_SORT_KEY,
   directionTitle,
   notebookSortFor,
-  pushPinnedSlug,
-  readPinnedSlugs,
   readSortAscending,
   readSortCriterion,
   writeSortAscending,
@@ -133,6 +137,7 @@ export function MyContentSidebar({
     hydratingSlugs,
     isSubjectHydrated,
     markHydrated,
+    invalidateHydrate,
   } = useMyContentSidebarLibrary({
     notebookPage,
     sort,
@@ -161,12 +166,6 @@ export function MyContentSidebar({
     setNotebookPage(1);
   }, [sort, debouncedQ]);
 
-  /** Remember notebooks the user opens so they stay visible across paginated lists. */
-  useEffect(() => {
-    if (!notebookSlug) return;
-    pushPinnedSlug(notebookSlug);
-  }, [notebookSlug]);
-
   useEffect(() => {
     api.myContent
       .getLastRead()
@@ -174,38 +173,16 @@ export function MyContentSidebar({
       .catch(() => undefined);
   }, []);
 
-  /** Hydrate pinned notebooks that aren't on the current page. */
-  useEffect(() => {
-    const slugs = readPinnedSlugs().filter(
-      (s) => !subjects.some((nb) => nb.slug === s)
-    );
-    if (notebook && !subjects.some((s) => s.id === notebook.id)) {
-      if (!slugs.includes(notebook.slug)) slugs.unshift(notebook.slug);
-    }
-    if (!slugs.length) {
-      setPinnedExtra([]);
-      return;
-    }
-    let cancelled = false;
-    Promise.all(
-      slugs.slice(0, SIDEBAR_MAX_PINNED).map((slug) =>
-        api.myContent
-          .getSubject(slug)
-          .then((r) => r.subject)
-          .catch(() => null)
-      )
-    ).then((rows) => {
-      if (cancelled) return;
-      const kept = applyPendingDeletesToSubjects(
-        rows.filter((r): r is UserSubject => r != null)
-      );
-      for (const s of kept) markHydrated(s.id, s.slug);
-      setPinnedExtra(kept);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [subjects, notebook, markHydrated, setPinnedExtra]);
+  /** Skip pinned refetch while a move is in flight (avoids clobbering optimistic trees). */
+  const treeMutationInFlightRef = useRef(false);
+
+  usePinnedExplorerSubjects({
+    subjects,
+    notebookSlug,
+    setPinnedExtra,
+    markHydrated,
+    treeMutationInFlightRef,
+  });
 
   useEffect(() => {
     setRootPage(1);
@@ -318,6 +295,9 @@ export function MyContentSidebar({
     setRootPages,
     setExpandedNotebooks,
     setExpandedTopics,
+    markHydrated,
+    invalidateHydrate,
+    treeMutationInFlightRef,
   });
 
   const isEmpty =
