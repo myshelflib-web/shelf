@@ -84,4 +84,30 @@ describe("browseNotebooks", () => {
     const { ids } = browseNotebooks(items, { sort: "nameDesc" });
     expect(ids).toEqual(["a", "b", "c"]);
   });
+
+  it("sorts by activity ascending (least recent first)", () => {
+    const { ids } = browseNotebooks(items, { sort: "oldest" });
+    expect(ids).toEqual(["c", "a", "b"]);
+  });
+
+  it("sorts by activity descending (most recent first)", () => {
+    const { ids } = browseNotebooks(items, { sort: "recent" });
+    expect(ids).toEqual(["b", "a", "c"]);
+  });
+
+  it("honours pageSize above the default eight", () => {
+    const many = Array.from({ length: 12 }, (_, i) =>
+      nb({
+        id: `n${i}`,
+        name: `N${i}`,
+        updatedAt: new Date(2026, 0, i + 1),
+      })
+    );
+    const { ids, totalPages } = browseNotebooks(many, {
+      sort: "oldest",
+      pageSize: 15,
+    });
+    expect(ids).toHaveLength(12);
+    expect(totalPages).toBe(1);
+  });
 });

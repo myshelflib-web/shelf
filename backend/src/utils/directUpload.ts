@@ -18,6 +18,8 @@ export type DirectUploadClaims = {
   userSubjectId: string | null;
   userTopicGroupId: string | null;
   folderId: string | null;
+  /** Client already lossless-packed; skip server GetObject recompress. */
+  clientPacked?: boolean;
 };
 
 export function contentTypeForKind(kind: DetectedFileKind): string {

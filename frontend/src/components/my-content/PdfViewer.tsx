@@ -111,6 +111,11 @@ interface PdfViewerProps {
   userTopicId: string;
   /** Curriculum (or other) source — default is the user's library PDF. */
   getPdfSource?: () => Promise<{ url: string; version: string }>;
+  /**
+   * Optional in-flight / resolved pdf-url from the parent (started in parallel
+   * with page metadata). Ignored when `getPdfSource` is set.
+   */
+  prefetchedPdfSource?: Promise<{ url: string; version: string } | null> | null;
   fileName?: string;
   highlights: UserContentHighlight[];
   onHighlightsChange: (highlights: UserContentHighlight[]) => void;
@@ -157,6 +162,7 @@ type ToolbarState = {
 export function PdfViewer({
   userTopicId,
   getPdfSource,
+  prefetchedPdfSource,
   fileName,
   highlights,
   onHighlightsChange,
@@ -347,6 +353,8 @@ export function PdfViewer({
   const sourceUrlRef = useRef<string | null>(null);
   const getPdfSourceRef = useRef(getPdfSource);
   getPdfSourceRef.current = getPdfSource;
+  const prefetchedPdfSourceRef = useRef(prefetchedPdfSource);
+  prefetchedPdfSourceRef.current = prefetchedPdfSource;
 
   useEffect(() => {
     currentPageRef.current = currentPage;
@@ -399,9 +407,15 @@ export function PdfViewer({
         if (cancelled) return;
 
         const openFromPresign = async (): Promise<pdfjs.PDFDocumentProxy | null> => {
-          const source = getPdfSourceRef.current
-            ? await getPdfSourceRef.current()
-            : await api.myContent.getPdfUrl(userTopicId);
+          let source: { url: string; version: string } | null = null;
+          if (getPdfSourceRef.current) {
+            source = await getPdfSourceRef.current();
+          } else if (prefetchedPdfSourceRef.current) {
+            source = await prefetchedPdfSourceRef.current;
+          }
+          if (!source) {
+            source = await api.myContent.getPdfUrl(userTopicId);
+          }
           if (cancelled) return null;
           sourceUrlRef.current = source.url;
           const version = source.version;

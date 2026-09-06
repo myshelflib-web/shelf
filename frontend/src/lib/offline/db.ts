@@ -17,6 +17,13 @@ export type LibraryCache = {
   subjects: import("@/types").UserSubject[];
   rootPages: import("@/types").UserPageSummary[];
   cachedAt: number;
+  /** Sort/page used when this snapshot was written — skip paint if mismatched. */
+  sort?: string;
+  page?: number;
+  pageSize?: number;
+  /** Server totals for this sort (not subjects.length — list may be one page). */
+  total?: number;
+  totalPages?: number;
 };
 
 export type LocalTask = StudyTask & {

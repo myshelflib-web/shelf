@@ -74,11 +74,7 @@ export function PersonalContentHighlightChrome({
           locked={guestLocked}
           lockedGate={annotationGate}
           onLockedClick={onGuestLockedClick}
-          onHighlight={(color) => {
-            const pick = selectionRef.current ?? selection;
-            if (!pick) return;
-            void saveHighlight(color, undefined, pick);
-          }}
+          onHighlight={(color) => void saveHighlight(color)}
           onNote={() => {
             const draft = selectionRef.current ?? selection;
             setNoteTarget({

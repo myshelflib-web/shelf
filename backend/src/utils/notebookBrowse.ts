@@ -1,4 +1,6 @@
 export const NOTEBOOK_PAGE_SIZE = 8;
+/** Upper bound for `pageSize` query (explorer may request more than the default). */
+export const NOTEBOOK_PAGE_SIZE_MAX = 50;
 
 export type NotebookSort =
   | "recent"
@@ -136,7 +138,8 @@ export function matchesFilter(nb: SlimNotebook, filter: NotebookFilter): boolean
 function compareSort(a: SlimNotebook, b: SlimNotebook, sort: NotebookSort): number {
   switch (sort) {
     case "oldest":
-      return a.createdAt.getTime() - b.createdAt.getTime();
+      // "Least recent activity first" (pairs with `recent` = most recent activity).
+      return a.updatedAt.getTime() - b.updatedAt.getTime();
     case "name":
       return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
     case "nameDesc":
@@ -161,7 +164,7 @@ export function browseNotebooks(
   }
 ): { ids: string[]; total: number; page: number; totalPages: number } {
   const pageSize = Math.min(
-    NOTEBOOK_PAGE_SIZE,
+    NOTEBOOK_PAGE_SIZE_MAX,
     Math.max(1, opts.pageSize ?? NOTEBOOK_PAGE_SIZE)
   );
   const filter = opts.filter ?? "all";

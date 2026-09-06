@@ -35,6 +35,7 @@ interface MyContentExplorerTreeProps {
   currentHref?: string;
   expandedNotebooks: Record<string, boolean>;
   expandedTopics: Record<string, boolean>;
+  hydratingSlugs?: ReadonlySet<string>;
   toggleNotebook: (slug: string) => void;
   toggleTopic: (notebookSlugKey: string, topicSlug: string) => void;
   enablePageDrag: boolean;
@@ -103,6 +104,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
     currentHref,
     expandedNotebooks,
     expandedTopics,
+    hydratingSlugs,
     toggleNotebook,
     toggleTopic,
     enablePageDrag,
@@ -296,6 +298,7 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
               currentPageSlug={currentPageSlug}
               currentHref={currentHref}
               expandedTopics={expandedTopics}
+              treeLoading={hydratingSlugs?.has(nb.slug) ?? false}
               selectionMode={selectionMode}
               selected={selected}
               onSelectionChange={onSelectionChange}

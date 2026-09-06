@@ -63,7 +63,7 @@ function PlannerInner() {
 
   useEffect(() => {
     if (!sessionUser) return;
-    listSubjects()
+    listSubjects({ tree: true, pageSize: 100 })
       .then(({ subjects }) => setLibrary(subjects))
       .catch(() => {});
   }, [sessionUser]);

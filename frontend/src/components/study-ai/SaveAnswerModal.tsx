@@ -53,7 +53,7 @@ export function SaveAnswerModal({
   const loadSubjects = useCallback(() => {
     setSubjectsLoading(true);
     api.myContent
-      .listSubjects({ pageSize: 100, sort: "name" })
+      .listSubjects({ pageSize: 100, sort: "name", tree: true })
       .then(({ subjects: list }) => setSubjects(list))
       .catch(() => setError("Could not load folders"))
       .finally(() => setSubjectsLoading(false));

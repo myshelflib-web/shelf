@@ -1,9 +1,18 @@
 import { api, isNetworkError } from "@/lib/api";
 import { getStoredUserId } from "@/lib/accountLocalState";
 import { isCacheFresh } from "@/lib/cacheTtl";
+import type { ContentChange } from "@/lib/contentEvents";
 import { applyBulkDeleteToTree } from "@/lib/explorerBulkDeleteTree";
-import type { buildBulkDeletePayload } from "@/lib/explorerSelection";
-import { syncPageInTree, syncRootPages } from "@/lib/myContentTree";
+import {
+  buildBulkDeletePayload,
+  pageSelectionKey,
+} from "@/lib/explorerSelection";
+import {
+  insertPageInTree,
+  insertTopicInTree,
+  syncPageInTree,
+  syncRootPages,
+} from "@/lib/myContentTree";
 import type { UserPageSummary, UserSubject } from "@/types";
 import { type LibraryCache, OFFLINE_STORES, withStore } from "./db";
 import { isOnline } from "./network";
@@ -19,16 +28,34 @@ export type ListSubjectsResult = {
 
 type DeletePayload = ReturnType<typeof buildBulkDeletePayload>;
 
-type MemoryLibrary = ListSubjectsResult & { cachedAt: number };
+type MemoryLibrary = ListSubjectsResult & {
+  cachedAt: number;
+  listSort?: string;
+  listPage?: number;
+};
 
 let memoryLibrary: MemoryLibrary | null = null;
 
-export function peekCachedLibrary(): ListSubjectsResult | null {
+export function peekCachedLibrary(opts?: {
+  sort?: string;
+  page?: number;
+}): ListSubjectsResult | null {
   if (!memoryLibrary || !isCacheFresh(memoryLibrary.cachedAt)) {
     memoryLibrary = null;
     return null;
   }
-  const { cachedAt: _cachedAt, ...rest } = memoryLibrary;
+  if (opts) {
+    const sort = opts.sort ?? "recent";
+    const page = opts.page ?? 1;
+    if ((memoryLibrary.listSort ?? "recent") !== sort) return null;
+    if ((memoryLibrary.listPage ?? 1) !== page) return null;
+  }
+  const {
+    cachedAt: _cachedAt,
+    listSort: _ls,
+    listPage: _lp,
+    ...rest
+  } = memoryLibrary;
   return rest;
 }
 
@@ -37,8 +64,30 @@ export function findCachedSubject(slug: string): UserSubject | null {
   return peekCachedLibrary()?.subjects.find((s) => s.slug === slug) ?? null;
 }
 
-function rememberLibrary(res: ListSubjectsResult, cachedAt = Date.now()) {
-  memoryLibrary = { ...res, cachedAt };
+function rememberLibrary(
+  res: ListSubjectsResult,
+  cachedAt = Date.now(),
+  meta?: { sort?: string; page?: number }
+) {
+  memoryLibrary = {
+    ...res,
+    cachedAt,
+    listSort: meta?.sort ?? memoryLibrary?.listSort,
+    listPage: meta?.page ?? memoryLibrary?.listPage,
+  };
+}
+
+function cacheMetaFromMemory(): Pick<
+  LibraryCache,
+  "sort" | "page" | "pageSize" | "total" | "totalPages"
+> {
+  return {
+    sort: memoryLibrary?.listSort,
+    page: memoryLibrary?.listPage ?? memoryLibrary?.page,
+    pageSize: memoryLibrary?.pageSize,
+    total: memoryLibrary?.total,
+    totalPages: memoryLibrary?.totalPages,
+  };
 }
 
 async function getLibraryCache(userId: string): Promise<LibraryCache | null> {
@@ -81,20 +130,41 @@ async function readFreshLibraryCache(userId: string): Promise<LibraryCache | nul
   return null;
 }
 
-function cacheAsListResult(cache: LibraryCache, opts?: {
-  page?: number;
-  pageSize?: number;
-}): ListSubjectsResult {
-  const pageSize = opts?.pageSize ?? (cache.subjects.length || 1);
-  const page = opts?.page ?? 1;
+function cacheAsListResult(cache: LibraryCache): ListSubjectsResult {
+  const pageSize = cache.pageSize ?? (cache.subjects.length || 1);
+  const page = cache.page ?? 1;
+  const total = cache.total ?? cache.subjects.length;
+  const totalPages =
+    cache.totalPages ?? Math.max(1, Math.ceil(total / pageSize));
   return {
     subjects: cache.subjects,
     rootPages: cache.rootPages,
     page,
     pageSize,
-    total: cache.subjects.length,
-    totalPages: Math.max(1, Math.ceil(cache.subjects.length / pageSize)),
+    total,
+    totalPages,
   };
+}
+
+function writeSnapshot(
+  res: ListSubjectsResult,
+  cachedAt: number,
+  meta?: { sort?: string; page?: number }
+) {
+  rememberLibrary(res, cachedAt, meta);
+  const userId = getStoredUserId();
+  if (!userId) return;
+  void putLibraryCache({
+    userId,
+    subjects: res.subjects,
+    rootPages: res.rootPages ?? [],
+    cachedAt,
+    sort: meta?.sort ?? memoryLibrary?.listSort,
+    page: meta?.page ?? memoryLibrary?.listPage ?? res.page,
+    pageSize: res.pageSize,
+    total: res.total,
+    totalPages: res.totalPages,
+  });
 }
 
 export async function listSubjects(opts?: {
@@ -103,6 +173,7 @@ export async function listSubjects(opts?: {
   q?: string;
   sort?: string;
   filter?: string;
+  tree?: boolean;
 }): Promise<ListSubjectsResult> {
   const userId = getStoredUserId();
   if (!userId) {
@@ -114,12 +185,9 @@ export async function listSubjects(opts?: {
       const res = await api.myContent.listSubjects(opts);
       const cachedAt = Date.now();
       if (!opts?.q) {
-        if (res.subjects.length >= res.total) rememberLibrary(res, cachedAt);
-        await putLibraryCache({
-          userId,
-          subjects: res.subjects,
-          rootPages: res.rootPages ?? [],
-          cachedAt,
+        writeSnapshot(res, cachedAt, {
+          sort: opts?.sort,
+          page: opts?.page ?? 1,
         });
       }
       return res;
@@ -144,20 +212,47 @@ export async function listSubjects(opts?: {
     );
   }
 
-  const result = cacheAsListResult(
-    { ...cache, subjects },
-    { page: opts?.page, pageSize: opts?.pageSize },
-  );
-  if (!opts?.q && result.subjects.length >= result.total) {
-    rememberLibrary(result, cache.cachedAt);
+  const base = cacheAsListResult({ ...cache, subjects });
+  const result = {
+    ...base,
+    page: opts?.page ?? cache.page ?? 1,
+    pageSize: opts?.pageSize ?? cache.pageSize ?? base.pageSize,
+  };
+  if (!opts?.q) {
+    rememberLibrary(result, cache.cachedAt, {
+      sort: opts?.sort ?? cache.sort,
+      page: opts?.page ?? cache.page ?? 1,
+    });
   }
   return result;
 }
 
-/**
- * Drop deleted ids from memory + IndexedDB so offline/reload fallback
- * cannot resurrect items the API already removed.
- */
+export async function loadCachedLibraryForPaint(opts?: {
+  sort?: string;
+  page?: number;
+}): Promise<ListSubjectsResult | null> {
+  const mem = peekCachedLibrary(opts);
+  if (mem) return mem;
+  const userId = getStoredUserId();
+  if (!userId) return null;
+  try {
+    const cache = await readFreshLibraryCache(userId);
+    if (!cache) return null;
+    const sort = opts?.sort ?? "recent";
+    const page = opts?.page ?? 1;
+    if ((cache.sort ?? "recent") !== sort) return null;
+    if ((cache.page ?? 1) !== page) return null;
+    const result = cacheAsListResult(cache);
+    rememberLibrary(result, cache.cachedAt, {
+      sort: cache.sort,
+      page: cache.page,
+    });
+    return result;
+  } catch {
+    return null;
+  }
+}
+
 export async function patchLibraryCacheAfterDelete(
   payload: DeletePayload
 ): Promise<void> {
@@ -166,35 +261,38 @@ export async function patchLibraryCacheAfterDelete(
 
   let subjects = memoryLibrary?.subjects;
   let rootPages = memoryLibrary?.rootPages;
+  const meta = cacheMetaFromMemory();
   if (!subjects || !rootPages) {
     const cached = await readFreshLibraryCache(userId);
     if (!cached) return;
     subjects = cached.subjects;
     rootPages = cached.rootPages;
+    meta.sort = cached.sort;
+    meta.page = cached.page;
+    meta.pageSize = cached.pageSize;
+    meta.total = cached.total;
+    meta.totalPages = cached.totalPages;
   }
 
   const next = applyBulkDeleteToTree(payload, subjects, rootPages);
+  const removedSubjects = payload.subjectIds.length;
   const nextCachedAt = Date.now();
-  rememberLibrary(
+  const total = Math.max(0, (meta.total ?? next.subjects.length) - removedSubjects);
+  const pageSize = meta.pageSize ?? Math.max(next.subjects.length, 1);
+  writeSnapshot(
     {
       subjects: next.subjects,
       rootPages: next.rootPages,
-      page: 1,
-      pageSize: Math.max(next.subjects.length, 1),
-      total: next.subjects.length,
-      totalPages: 1,
+      page: meta.page ?? 1,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize) || 1),
     },
     nextCachedAt,
+    { sort: meta.sort, page: meta.page ?? 1 }
   );
-  await putLibraryCache({
-    userId,
-    subjects: next.subjects,
-    rootPages: next.rootPages,
-    cachedAt: nextCachedAt,
-  });
 }
 
-/** Keep memory + IDB library rows in sync after optimistic star / mark-done. */
 export function patchLibraryCachePageFlags(
   pageId: string,
   flags: { completed?: boolean; starred?: boolean }
@@ -202,22 +300,106 @@ export function patchLibraryCachePageFlags(
   if (!memoryLibrary) return;
   const subjects = syncPageInTree(memoryLibrary.subjects, pageId, flags);
   const rootPages = syncRootPages(memoryLibrary.rootPages, pageId, flags);
-  rememberLibrary(
-    {
-      ...memoryLibrary,
-      subjects,
-      rootPages,
-    },
-    memoryLibrary.cachedAt
+  writeSnapshot(
+    { ...memoryLibrary, subjects, rootPages },
+    memoryLibrary.cachedAt,
+    { sort: memoryLibrary.listSort, page: memoryLibrary.listPage }
   );
-  const userId = getStoredUserId();
-  if (!userId) return;
-  void putLibraryCache({
-    userId,
-    subjects,
-    rootPages,
-    cachedAt: memoryLibrary.cachedAt,
-  });
+}
+
+/** Keep offline cache aligned with explorer content events (rename, create, …). */
+export function syncLibraryCacheContentChange(change: ContentChange): void {
+  if (!memoryLibrary) return;
+  const cachedAt = Date.now();
+  const meta = {
+    sort: memoryLibrary.listSort,
+    page: memoryLibrary.listPage,
+  };
+
+  if (change.type === "notebook-created") {
+    const subjects = memoryLibrary.subjects.some((s) => s.id === change.subject.id)
+      ? memoryLibrary.subjects
+      : [change.subject, ...memoryLibrary.subjects];
+    writeSnapshot(
+      {
+        ...memoryLibrary,
+        subjects,
+        total: (memoryLibrary.total ?? memoryLibrary.subjects.length) + 1,
+      },
+      cachedAt,
+      meta
+    );
+    return;
+  }
+
+  if (change.type === "topic-created") {
+    writeSnapshot(
+      {
+        ...memoryLibrary,
+        subjects: insertTopicInTree(
+          memoryLibrary.subjects,
+          change.notebookId,
+          change.topicGroup,
+          change.parentTopicId
+        ),
+      },
+      cachedAt,
+      meta
+    );
+    return;
+  }
+
+  if (change.type === "page-created") {
+    if (change.notebookId) {
+      writeSnapshot(
+        {
+          ...memoryLibrary,
+          subjects: insertPageInTree(
+            memoryLibrary.subjects,
+            change.page,
+            change.notebookId,
+            change.topicId
+          ),
+        },
+        cachedAt,
+        meta
+      );
+    } else {
+      const rootPages = memoryLibrary.rootPages.some((p) => p.id === change.page.id)
+        ? memoryLibrary.rootPages
+        : [change.page, ...memoryLibrary.rootPages];
+      writeSnapshot({ ...memoryLibrary, rootPages }, cachedAt, meta);
+    }
+    return;
+  }
+
+  if (change.type === "page-renamed") {
+    const patch = { title: change.title };
+    writeSnapshot(
+      {
+        ...memoryLibrary,
+        subjects: syncPageInTree(memoryLibrary.subjects, change.pageId, patch),
+        rootPages: syncRootPages(memoryLibrary.rootPages, change.pageId, patch),
+      },
+      cachedAt,
+      meta
+    );
+    return;
+  }
+
+  if (change.type === "page-flags") {
+    patchLibraryCachePageFlags(change.pageId, {
+      completed: change.completed,
+      starred: change.starred,
+    });
+    return;
+  }
+
+  if (change.type === "page-deleted") {
+    void patchLibraryCacheAfterDelete(
+      buildBulkDeletePayload(new Set([pageSelectionKey(change.pageId)]))
+    );
+  }
 }
 
 export async function hasCachedLibrary(): Promise<boolean> {

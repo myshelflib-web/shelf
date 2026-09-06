@@ -56,7 +56,7 @@ export function SearchModal({
     } else {
       setLibraryLoading(true);
     }
-    void listSubjects()
+    void listSubjects({ tree: true, pageSize: 100 })
       .then((res) => {
         setSections(res.subjects);
         setRootPages(res.rootPages ?? []);

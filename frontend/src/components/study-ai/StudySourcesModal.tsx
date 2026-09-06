@@ -162,7 +162,7 @@ export function StudySourcesModal({
   useEffect(() => {
     setNotebooksLoading(true);
     api.myContent
-      .listSubjects({ pageSize: 100, sort: "name" })
+      .listSubjects({ pageSize: 100, sort: "name", tree: true })
       .then(({ subjects }) => setNotebooks(subjects))
       .catch(() => setNotebooks([]))
       .finally(() => setNotebooksLoading(false));
