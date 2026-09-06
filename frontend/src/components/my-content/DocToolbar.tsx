@@ -3,6 +3,9 @@
 import { useRef, useState, type ReactNode } from "react";
 import {
   AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
   Bold,
   Highlighter,
   Italic,
@@ -80,9 +83,11 @@ export function DocToolbar({
   const [sizeOpen, setSizeOpen] = useState(false);
   const [colorOpen, setColorOpen] = useState(false);
   const [highlightOpen, setHighlightOpen] = useState(false);
+  const [alignOpen, setAlignOpen] = useState(false);
   const sizeBtnRef = useRef<HTMLButtonElement>(null);
   const colorBtnRef = useRef<HTMLButtonElement>(null);
   const highlightBtnRef = useRef<HTMLButtonElement>(null);
+  const alignBtnRef = useRef<HTMLButtonElement>(null);
   const icon = compact ? "w-3.5 h-3.5" : "w-[17px] h-[17px]";
   const labelBtn = compact
     ? "!min-w-7 px-1.5 text-[10px] font-semibold"
@@ -145,24 +150,84 @@ export function DocToolbar({
           <Strikethrough className={icon} />
         </ToolBtn>
         <ToolBtn
+          ref={alignBtnRef}
           compact={compact}
-          label="Align left"
+          label="Alignment"
+          active={alignOpen}
           onMouseDown={(e) => e.preventDefault()}
-          onClick={() => onCommand("justifyLeft")}
+          onClick={() => {
+            setSizeOpen(false);
+            setColorOpen(false);
+            setHighlightOpen(false);
+            setAlignOpen((v) => !v);
+          }}
         >
           <AlignLeft className={icon} />
         </ToolBtn>
       </ToolGroup>
 
+      <ToolPopover
+        open={alignOpen}
+        onClose={() => setAlignOpen(false)}
+        anchorEl={alignBtnRef.current}
+        title="Alignment"
+      >
+        <div className="flex items-center gap-1.5">
+          <ToolBtn
+            compact={compact}
+            label="Align left"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setAlignOpen(false);
+              onCommand("justifyLeft");
+            }}
+          >
+            <AlignLeft className={icon} />
+          </ToolBtn>
+          <ToolBtn
+            compact={compact}
+            label="Align center"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setAlignOpen(false);
+              onCommand("justifyCenter");
+            }}
+          >
+            <AlignCenter className={icon} />
+          </ToolBtn>
+          <ToolBtn
+            compact={compact}
+            label="Align right"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setAlignOpen(false);
+              onCommand("justifyRight");
+            }}
+          >
+            <AlignRight className={icon} />
+          </ToolBtn>
+          <ToolBtn
+            compact={compact}
+            label="Justify"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              setAlignOpen(false);
+              onCommand("justifyFull");
+            }}
+          >
+            <AlignJustify className={icon} />
+          </ToolBtn>
+        </div>
+      </ToolPopover>
+
       <ToolSep compact={compact} />
 
       <ToolGroup>
         <ShelfSelect
-          compact
           className={
             compact
-              ? "h-7 max-w-[5.5rem] px-1.5 rounded-md text-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
-              : "h-[34px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+              ? "h-7 max-w-[8rem] px-1.5 rounded-md text-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+              : "h-[34px] min-w-[6rem] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
           }
           value={fontValue}
           options={FONTS.map((f) => ({ value: f.value, label: f.label }))}
