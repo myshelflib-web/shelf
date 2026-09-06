@@ -2,6 +2,10 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { parseDocBody, serializeDocBody } from "@/lib/docEditor";
+import {
+  openOriginalityFromSelection,
+  openParaphraseFromSelection,
+} from "@/lib/openWritingAssistFromSelection";
 import { DocToolbar, runDocCommand } from "./DocToolbar";
 
 interface DocEditorProps {
@@ -10,6 +14,22 @@ interface DocEditorProps {
   onViewStateChange?: (state: { scrollTop: number; scrollLeft: number }) => void;
   /** Side panel notes — flush surface, compact toolbar, no footer tip. */
   compact?: boolean;
+  pageId?: string;
+}
+
+function selectedOrBodyText(body: HTMLElement | null): string {
+  const sel = window.getSelection();
+  if (
+    sel &&
+    !sel.isCollapsed &&
+    body &&
+    sel.anchorNode &&
+    body.contains(sel.anchorNode)
+  ) {
+    const t = sel.toString().trim();
+    if (t) return t;
+  }
+  return (body?.innerText ?? "").replace(/\s+/g, " ").trim();
 }
 
 export function DocEditor({
@@ -17,6 +37,7 @@ export function DocEditor({
   onChange,
   onViewStateChange,
   compact = false,
+  pageId,
 }: DocEditorProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -72,9 +93,35 @@ export function DocEditor({
     emit();
   };
 
+  const insertRewrite = (text: string) => {
+    bodyRef.current?.focus();
+    const sel = window.getSelection();
+    if (sel && !sel.isCollapsed && bodyRef.current?.contains(sel.anchorNode)) {
+      document.execCommand("insertText", false, text);
+    } else if (bodyRef.current) {
+      document.execCommand("selectAll");
+      document.execCommand("insertText", false, text);
+    }
+    emit();
+  };
+
   return (
     <div className="relative flex-1 flex flex-col overflow-hidden bg-[var(--bg-primary)] min-h-0">
-      <DocToolbar onCommand={runCommand} compact={compact} />
+      <DocToolbar
+        onCommand={runCommand}
+        compact={compact}
+        onParaphrase={() => {
+          openParaphraseFromSelection(selectedOrBodyText(bodyRef.current), {
+            pageId,
+            onInsert: insertRewrite,
+          });
+        }}
+        onOriginality={() => {
+          openOriginalityFromSelection(selectedOrBodyText(bodyRef.current), {
+            pageId,
+          });
+        }}
+      />
       <div
         ref={viewportRef}
         className="flex-1 overflow-auto doc-editor-viewport min-h-0"

@@ -23,6 +23,9 @@ Tools (read):
 - lookup_collection: pages inside one named collection.
 - lookup_recent_pages / lookup_starred / lookup_highlights: recents, stars, and quotes they marked.
 - lookup_relevancy: saved syllabus / exam outline docs — use when the question should follow official headings or PYQ coverage.
+- paraphrase_text: rewrite a passage (paraphrase / simplify / formal / shorten) when the learner asks to rephrase.
+- check_library_overlap: flag close matches against their own Shelf library (self-check, not web plagiarism).
+- check_syllabus_overlap: compare wording to their saved syllabus / relevancy docs.
 - lookup_planner: upcoming tasks and events on their planner.
 - current_time: UTC date before answering "today/tomorrow" planner questions.
 - web_search: public web (Google, Medium, Quora, Wikipedia, plus track-specific sites for their study goal). Use sourceScope track for exam sites, general for Medium/Quora only, all (default) for both.

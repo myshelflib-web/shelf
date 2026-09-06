@@ -12,6 +12,8 @@ export type LlmFlow =
   | "pdf_ocr"
   | "web_grounding"
   | "embedding"
+  | "writing_paraphrase"
+  | "writing_ai_heuristic"
   | "other";
 
 export type EmbeddingTask = "document" | "query" | "unknown";

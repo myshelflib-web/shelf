@@ -8,10 +8,12 @@ import {
   Italic,
   Palette,
   Redo2,
+  ScanSearch,
   Strikethrough,
   Type,
   Underline,
   Undo2,
+  Wand2,
 } from "lucide-react";
 import {
   EditorToolbarShell,
@@ -59,9 +61,16 @@ interface DocToolbarProps {
   onCommand: (cmd: string, value?: string) => void;
   /** Narrow side panels — wrap + smaller controls. */
   compact?: boolean;
+  onParaphrase?: () => void;
+  onOriginality?: () => void;
 }
 
-export function DocToolbar({ onCommand, compact = false }: DocToolbarProps) {
+export function DocToolbar({
+  onCommand,
+  compact = false,
+  onParaphrase,
+  onOriginality,
+}: DocToolbarProps) {
   const [fontValue, setFontValue] = useState("");
   const [fontSize, setFontSize] = useState("16px");
   const [sizeOpen, setSizeOpen] = useState(false);
@@ -308,6 +317,34 @@ export function DocToolbar({ onCommand, compact = false }: DocToolbarProps) {
           ))}
         </ColorSwatchGrid>
       </ToolPopover>
+
+      {(onParaphrase || onOriginality) && (
+        <>
+          <ToolSep compact={compact} />
+          <ToolGroup>
+            {onParaphrase && (
+              <ToolBtn
+                compact={compact}
+                label="Paraphrase selection or document"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={onParaphrase}
+              >
+                <Wand2 className={icon} />
+              </ToolBtn>
+            )}
+            {onOriginality && (
+              <ToolBtn
+                compact={compact}
+                label="Check originality (library + syllabus)"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={onOriginality}
+              >
+                <ScanSearch className={icon} />
+              </ToolBtn>
+            )}
+          </ToolGroup>
+        </>
+      )}
     </EditorToolbarShell>
   );
 }

@@ -93,6 +93,7 @@ export function LiveEditorRouter({
         onChange={(html) => onContentChange?.(html)}
         onViewStateChange={onViewStateChange}
         compact={compact}
+        pageId={userTopicId}
       />
     );
   }

@@ -22,6 +22,11 @@ import {
   actionToolStatusDetail,
   executeStudyActionTool,
 } from "./studyActionTools.js";
+import {
+  STUDY_WRITING_TOOLS,
+  executeStudyWritingTool,
+  writingToolStatusDetail,
+} from "./studyWritingTools.js";
 import type { StudyToolContext, StudyToolResult } from "./studyToolTypes.js";
 
 export type { StudyToolContext, StudyToolResult };
@@ -187,6 +192,7 @@ const STUDY_LOOKUP_TOOLS: ChatToolDef[] = [
 
 export const STUDY_TOOLS: ChatToolDef[] = [
   ...STUDY_LOOKUP_TOOLS,
+  ...STUDY_WRITING_TOOLS,
   ...STUDY_ACTION_TOOLS,
 ];
 
@@ -409,6 +415,8 @@ export async function executeStudyTool(
     return fetchPublicUrl(args);
   }
   if (name === "current_time") return currentTimeLookup();
+  const writing = await executeStudyWritingTool(name, args, ctx);
+  if (writing) return writing;
   const action = await executeStudyActionTool(name, rawArgs, ctx);
   if (action) return action;
   return { text: `Unknown tool: ${name}` };
@@ -417,6 +425,8 @@ export async function executeStudyTool(
 export function toolStatusDetail(name: string): string {
   const action = actionToolStatusDetail(name);
   if (action) return action;
+  const writing = writingToolStatusDetail(name, {});
+  if (writing) return writing;
   switch (name) {
     case "library_search":
       return "Exploring library";

@@ -6,6 +6,10 @@ import { updateHighlight } from "@/lib/offline/highlights";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { HighlightToolbar } from "../HighlightToolbar";
 import { HighlightNoteModal } from "../HighlightNoteModal";
+import {
+  openOriginalityFromSelection,
+  openParaphraseFromSelection,
+} from "@/lib/openWritingAssistFromSelection";
 import type { HtmlTextPick } from "./htmlPageSelection";
 
 type SelectionState = HtmlTextPick;
@@ -97,6 +101,18 @@ export function PersonalContentHighlightChrome({
                 }
               : undefined
           }
+          onParaphrase={() => {
+            const draft = selectionRef.current ?? selection;
+            openParaphraseFromSelection(draft.text, { pageId: userTopicId });
+            setSelection(null);
+            window.getSelection()?.removeAllRanges();
+          }}
+          onOriginality={() => {
+            const draft = selectionRef.current ?? selection;
+            openOriginalityFromSelection(draft.text, { pageId: userTopicId });
+            setSelection(null);
+            window.getSelection()?.removeAllRanges();
+          }}
           onClose={() => {
             selectionRef.current = null;
             setSelection(null);
@@ -146,6 +162,18 @@ export function PersonalContentHighlightChrome({
                 }
               : undefined
           }
+          onParaphrase={() => {
+            openParaphraseFromSelection(activeHighlight.highlight.text, {
+              pageId: userTopicId,
+            });
+            setActiveHighlight(null);
+          }}
+          onOriginality={() => {
+            openOriginalityFromSelection(activeHighlight.highlight.text, {
+              pageId: userTopicId,
+            });
+            setActiveHighlight(null);
+          }}
           onRemove={() => {
             removeHighlightNow(activeHighlight.highlight.id);
           }}
