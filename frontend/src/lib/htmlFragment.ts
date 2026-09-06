@@ -1,3 +1,5 @@
+import { ensureReadOnlyDocHtml } from "./docEditor";
+
 /** Make stored HTML safe to inject into the reader. */
 
 const KILL_SELECTOR =
@@ -96,8 +98,16 @@ export function formatImportedHtml(html: string): string {
   if (!s || s.startsWith("<p>This file had no readable HTML body.")) return s;
   // Endless blank notes — keep structure as stored
   if (/shelf-blank-canvas/.test(s)) return s;
-  if (/class=["']doc-masthead["']/.test(s)) return s;
+  // Already a Shelf Doc (live or read-only curriculum).
+  if (/shelf-doc-editor/.test(s)) return s;
   if (/preloaded-official-fallback/.test(s)) return s;
+
+  // Generated Learn pages → read-only Doc shell (annotate / Ask AI; no edit).
+  if (/shelf-generated/.test(s) || /shelf-doc-masthead/.test(s)) {
+    return ensureReadOnlyDocHtml(s);
+  }
+
+  if (/class=["']doc-masthead["']/.test(s)) return s;
 
   if (!/<h1[\s>]/i.test(s)) {
     s = s.replace(

@@ -1,5 +1,6 @@
 import { startTransition } from "react";
-import type { UserContentHighlight } from "@/types";
+import { api } from "@/lib/api";
+import type { Highlight, UserContentHighlight } from "@/types";
 import { createHighlight, deleteHighlight } from "@/lib/offline/highlights";
 import type { HighlightWriteInput } from "@/lib/offline/highlights";
 import type { HtmlTextPick } from "./htmlPageSelection";
@@ -51,6 +52,22 @@ export function strokeHighlightDraft(
   };
 }
 
+export function curriculumHighlightToUser(
+  articleId: string,
+  h: Highlight
+): UserContentHighlight {
+  return {
+    id: h.id,
+    userTopicId: articleId,
+    text: h.text,
+    startOffset: h.startOffset,
+    endOffset: h.endOffset,
+    color: h.color || "yellow",
+    note: h.note ?? null,
+    kind: "TEXT",
+  };
+}
+
 /** Keep optimistic geometry if the API omits position fields. */
 function mergeSavedHighlight(
   optimistic: UserContentHighlight,
@@ -59,12 +76,14 @@ function mergeSavedHighlight(
   return {
     ...saved,
     text: saved.text || optimistic.text,
-    startOffset: saved.endOffset > saved.startOffset
-      ? saved.startOffset
-      : optimistic.startOffset,
-    endOffset: saved.endOffset > saved.startOffset
-      ? saved.endOffset
-      : optimistic.endOffset,
+    startOffset:
+      saved.endOffset > saved.startOffset
+        ? saved.startOffset
+        : optimistic.startOffset,
+    endOffset:
+      saved.endOffset > saved.startOffset
+        ? saved.endOffset
+        : optimistic.endOffset,
     position: saved.position ?? optimistic.position,
     note: saved.note ?? optimistic.note,
     color: saved.color || optimistic.color,
@@ -82,23 +101,44 @@ export function persistHtmlHighlight(opts: {
   commit: (next: UserContentHighlight[]) => void;
   current: () => UserContentHighlight[];
   dropped: Set<string>;
+  /** Learn article id — uses curriculum highlight API instead of library. */
+  curriculumArticleId?: string;
 }) {
-  const { optimistic, payload, commit, current, dropped } = opts;
+  const { optimistic, payload, commit, current, dropped, curriculumArticleId } =
+    opts;
   commit([...current(), optimistic]);
-  void createHighlight(payload)
+
+  const persist = curriculumArticleId
+    ? api.highlights
+        .create({
+          articleId: curriculumArticleId,
+          text: payload.text,
+          startOffset: payload.startOffset ?? 0,
+          endOffset: payload.endOffset ?? 0,
+          color: payload.color,
+          note: payload.note,
+        })
+        .then(({ highlight }) =>
+          curriculumHighlightToUser(curriculumArticleId, highlight)
+        )
+    : createHighlight(payload);
+
+  void persist
     .then((highlight) => {
       if (dropped.has(optimistic.id)) {
         dropped.delete(optimistic.id);
-        void deleteHighlight(highlight.id, optimistic.userTopicId).catch(
-          () => undefined
-        );
+        if (curriculumArticleId) {
+          void api.highlights.delete(highlight.id).catch(() => undefined);
+        } else {
+          void deleteHighlight(highlight.id, optimistic.userTopicId).catch(
+            () => undefined
+          );
+        }
         return;
       }
       const merged = mergeSavedHighlight(optimistic, highlight);
       startTransition(() => {
-        commit(
-          current().map((h) => (h.id === optimistic.id ? merged : h))
-        );
+        commit(current().map((h) => (h.id === optimistic.id ? merged : h)));
       });
     })
     .catch(() => {
@@ -106,4 +146,15 @@ export function persistHtmlHighlight(opts: {
         commit(current().filter((h) => h.id !== optimistic.id));
       });
     });
+}
+
+export function removePersistedHtmlHighlight(
+  id: string,
+  userTopicId: string,
+  curriculumArticleId?: string
+) {
+  if (curriculumArticleId) {
+    return api.highlights.delete(id);
+  }
+  return deleteHighlight(id, userTopicId);
 }

@@ -7,6 +7,7 @@ import { assertStorageRoom, QuotaError, type QuotaUser } from "../utils/quotas.j
 import type { CurriculumSaveMode } from "./curriculumSavePolicy.js";
 import { downloadOfficialPdf } from "./ingest/officialPdfDownload.js";
 import { curriculumSourceUrl } from "../utils/curriculumCopy.js";
+import { wrapAsReadOnlyDocHtml } from "../utils/readOnlyDocHtml.js";
 
 type CurriculumArticle = {
   id: string;
@@ -83,7 +84,12 @@ export async function finishCurriculumLibraryCopy(params: {
     if (article.contentUrl && saveMode === "copy_admin") {
       const html = await getFromS3(article.contentUrl);
       contentUrl = `${docPrefix}/content.html`;
-      await uploadToS3(contentUrl, html, "text/html; charset=utf-8");
+      // Store as read-only Doc so the library reader matches Learn (no edit).
+      await uploadToS3(
+        contentUrl,
+        wrapAsReadOnlyDocHtml(html),
+        "text/html; charset=utf-8"
+      );
     }
 
     await prisma.userTopic.update({

@@ -9,7 +9,6 @@ import { LiveEditorRouter } from "./LiveEditorRouter";
 import { usePersonalContentClip } from "./usePersonalContentClip";
 import { PersonalContentHighlightChrome } from "./PersonalContentHighlightChrome";
 import { PersonalContentArticle } from "./PersonalContentArticle";
-import { deleteHighlight } from "@/lib/offline/highlights";
 import type { PersonalContentAreaProps } from "./personalContentAreaTypes";
 import { usePersonalContentSelection } from "./usePersonalContentSelection";
 import { useHtmlHighlightStroke } from "./useHtmlHighlightStroke";
@@ -17,6 +16,7 @@ import { useHtmlTextHighlightPaint } from "./useHtmlTextHighlightPaint";
 import type { HtmlTextPick } from "./htmlPageSelection";
 import {
   persistHtmlHighlight,
+  removePersistedHtmlHighlight,
   strokeHighlightDraft,
   textHighlightDraft,
 } from "./persistHtmlHighlight";
@@ -49,6 +49,7 @@ export function PersonalContentArea({
   onViewStateChange,
   readOnly = false,
   guestLocked = false,
+  curriculumArticleId,
   onGuestLockedClick,
   compactEditor = false,
   onAskQuoteChange,
@@ -238,7 +239,11 @@ export function PersonalContentArea({
       droppedHighlightIds.current.add(id);
       return;
     }
-    void deleteHighlight(id, userTopicId).catch(() => undefined);
+    void removePersistedHtmlHighlight(
+      id,
+      userTopicId,
+      curriculumArticleId
+    ).catch(() => undefined);
   };
 
   const saveHighlight = (
@@ -268,6 +273,7 @@ export function PersonalContentArea({
       commit: commitHighlights,
       current: () => highlightsRef.current,
       dropped: droppedHighlightIds.current,
+      curriculumArticleId,
     });
     selectionRef.current = null;
     setSelection(null);
@@ -281,6 +287,8 @@ export function PersonalContentArea({
       onGuestLockedClick?.("Highlight and annotate");
       return;
     }
+    // Curriculum highlights are offset TEXT only — no freehand strokes.
+    if (curriculumArticleId) return;
     if (points.length < 2) return;
     const optimistic = strokeHighlightDraft(
       userTopicId,
