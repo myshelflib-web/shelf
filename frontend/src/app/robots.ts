@@ -4,6 +4,13 @@ import { getSiteUrl } from "@/lib/siteUrl";
 /** Crawl rules: index marketing & curriculum; keep private app shells out of search. */
 export default function robots(): MetadataRoute.Robots {
   const siteUrl = getSiteUrl();
+  const host = (() => {
+    try {
+      return new URL(siteUrl).host;
+    } catch {
+      return siteUrl.replace(/^https?:\/\//, "");
+    }
+  })();
 
   return {
     rules: [
@@ -22,6 +29,8 @@ export default function robots(): MetadataRoute.Robots {
           "/subscribe",
           "/login",
           "/quiz",
+          "/legal",
+          "/legal/",
         ],
         disallow: [
           "/quiz/",
@@ -36,11 +45,12 @@ export default function robots(): MetadataRoute.Robots {
           "/study-ai",
           "/offline",
           "/forgot-password",
+          "/onboarding",
           "/api/",
         ],
       },
     ],
     sitemap: `${siteUrl}/sitemap.xml`,
-    host: siteUrl,
+    host,
   };
 }

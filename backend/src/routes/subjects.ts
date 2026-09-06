@@ -9,6 +9,7 @@ import { param } from "../utils/param.js";
 import { isStudyGoal } from "../studyGoal.js";
 import { registerSubjectArticlePdfRoutes } from "./subjectsArticlePdf.js";
 import { registerSubjectArticleMediaRoutes } from "./subjectsArticleMedia.js";
+import { registerSubjectsSitemapRoutes } from "./subjectsSitemap.js";
 import { buildPreloadedSummaryHtml } from "../services/preloaded/buildSummaryHtml.js";
 import {
   applyLinkEmbedPolicy,
@@ -22,6 +23,8 @@ import { ensureOfficialSyllabusFromS3 } from "../services/officialSyllabus/sync.
 import { isOfficialSyllabusSubjectSlug } from "../services/officialSyllabus/slugs.js";
 
 const router = Router();
+
+registerSubjectsSitemapRoutes(router);
 
 function rejectNonPublicSubject(slug: string, res: Response): boolean {
   if (isPublicLearnSubject(slug)) return false;

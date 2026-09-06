@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LearnBreadcrumbJsonLd } from "@/components/seo/LearnBreadcrumbJsonLd";
+import { LearnCatalogSeoIntro } from "@/components/seo/LearnCatalogSeoIntro";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { fetchLearnSubject } from "@/lib/seo/learnFetch";
 import {
@@ -56,6 +57,18 @@ export default async function LearnSubjectLayout({
 
   if (!subject) return children;
 
+  const description = learnSubjectDescription(
+    subject.name,
+    isStudyGoal(subject.studyGoal) ? subject.studyGoal : null,
+    subject.description
+  );
+  const topicLinks = (subject.topics ?? [])
+    .filter((t) => (t.articles?.length ?? 0) > 0)
+    .map((t) => ({
+      name: t.title,
+      href: `/learn/${slug}/${t.slug}`,
+    }));
+
   return (
     <>
       <LearnBreadcrumbJsonLd
@@ -63,6 +76,16 @@ export default async function LearnSubjectLayout({
           { name: "Learn", path: "/learn" },
           { name: subject.name, path: `/learn/${slug}` },
         ]}
+      />
+      <LearnCatalogSeoIntro
+        title={subject.name}
+        description={description}
+        crumbs={[
+          { name: "Learn", href: "/learn" },
+          { name: subject.name },
+        ]}
+        childrenLinks={topicLinks}
+        childrenLabel="Topics"
       />
       {children}
     </>
