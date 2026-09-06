@@ -34,7 +34,10 @@ export function normRectsFromClient(
   );
 }
 
-/** Same as PdfViewer.handleTextMouseUp — selection string + geometry, not innerHTML. */
+/**
+ * Native selection → highlight geometry.
+ * Rects are required for paint. Offsets are best-effort for reload/Ask AI.
+ */
 export function captureHtmlTextSelection(
   contentRoot: HTMLElement,
   origin: HTMLElement
@@ -60,25 +63,32 @@ export function captureHtmlTextSelection(
   );
   if (!rects.length) return null;
 
-  let startOffset: number;
-  let endOffset: number;
+  let startOffset = 0;
+  let endOffset = 0;
   try {
-    startOffset = textOffsetInRoot(
-      contentRoot,
-      range.startContainer,
-      range.startOffset
-    );
-    endOffset = textOffsetInRoot(
-      contentRoot,
-      range.endContainer,
-      range.endOffset
-    );
+    if (
+      contentRoot.contains(range.startContainer) &&
+      contentRoot.contains(range.endContainer)
+    ) {
+      startOffset = textOffsetInRoot(
+        contentRoot,
+        range.startContainer,
+        range.startOffset
+      );
+      endOffset = textOffsetInRoot(
+        contentRoot,
+        range.endContainer,
+        range.endOffset
+      );
+      if (endOffset <= startOffset) {
+        startOffset = 0;
+        endOffset = 0;
+      }
+    }
   } catch {
-    // Fail closed — bad offsets paint at the document start and look like
-    // "highlight did nothing."
-    return null;
+    startOffset = 0;
+    endOffset = 0;
   }
-  if (endOffset <= startOffset) return null;
 
   return {
     text,

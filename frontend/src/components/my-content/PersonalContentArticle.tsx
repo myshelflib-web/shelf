@@ -11,7 +11,7 @@ import {
 
 type Pt = { x: number; y: number };
 
-/** Article body + stroke layer + optional pen hit surface (PDF-style tools). */
+/** Article body + highlight overlays above text (pointer-events none). */
 export function PersonalContentArticle({
   originRef,
   setOrigin,
@@ -67,19 +67,9 @@ export function PersonalContentArticle({
           : undefined
       }
     >
-      <HtmlHighlightLayer
-        originRef={originRef}
-        highlights={highlights}
-        eraseMode={eraseMode}
-        draftPoints={draft}
-        draftColor={preferredHighlightColorId}
-        draftWidth={highlightWidth ?? DEFAULT_PEN_WIDTH}
-        draftOpacity={highlightOpacity ?? 0.72}
-        onActivate={onMarkActivate}
-      />
       <div
         ref={setContentRoot}
-        className="prose-content personal-content select-text relative z-[1] bg-transparent"
+        className="prose-content personal-content select-text relative z-0 bg-transparent"
         onClick={(e) => {
           if (clipMode || highlightMode || editing) return;
           const live = window.getSelection();
@@ -98,7 +88,17 @@ export function PersonalContentArticle({
         }}
         dangerouslySetInnerHTML={{ __html: fragment }}
       />
-      {/* Pen tool: capture strokes above prose (same idea as PDF pen mode). */}
+      {/* Above prose so the wash is visible; pointer-events none keeps selection. */}
+      <HtmlHighlightLayer
+        originRef={originRef}
+        highlights={highlights}
+        eraseMode={eraseMode}
+        draftPoints={draft}
+        draftColor={preferredHighlightColorId}
+        draftWidth={highlightWidth ?? DEFAULT_PEN_WIDTH}
+        draftOpacity={highlightOpacity ?? 0.72}
+        onActivate={onMarkActivate}
+      />
       {highlightMode ? (
         <div
           className="absolute inset-0 z-[2] touch-none"
