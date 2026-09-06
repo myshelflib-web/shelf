@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { FileText, Sparkles, Trash2, X } from "lucide-react";
+import { FileText, ScanSearch, Sparkles, Trash2, Wand2, X } from "lucide-react";
 import { withShortcut } from "@/lib/hotkeys";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { lockedFeatureLabel } from "@/lib/preloadedReadOnly";
@@ -20,6 +20,8 @@ interface HighlightToolbarProps {
   rect: DOMRect;
   onHighlight: (color: string) => void;
   onAsk?: () => void;
+  onParaphrase?: () => void;
+  onOriginality?: () => void;
   onNote?: () => void;
   /** When set, shows trash to delete the highlight */
   onRemove?: () => void;
@@ -35,6 +37,8 @@ export function HighlightToolbar({
   rect,
   onHighlight,
   onAsk,
+  onParaphrase,
+  onOriginality,
   onNote,
   onRemove,
   onClose,
@@ -94,12 +98,15 @@ export function HighlightToolbar({
     action();
   };
 
+  const hasWriting = Boolean(onParaphrase || onOriginality);
+  const hasActions = Boolean(onNote || onAsk || hasWriting || onRemove);
+
   const menu = (
     <div
       ref={rootRef}
       role="toolbar"
       aria-label="Highlight"
-      className={`highlight-menu fixed z-[200] flex items-center gap-3 px-3.5 py-2.5 rounded-2xl shadow-2xl${
+      className={`highlight-menu fixed z-[200] flex items-center gap-2.5 px-3 py-2 rounded-2xl shadow-2xl${
         locked ? " opacity-60 saturate-[0.85]" : ""
       }`}
       style={{
@@ -139,7 +146,7 @@ export function HighlightToolbar({
         </div>
       )}
 
-      {showColors && (onNote || onAsk || onRemove) && (
+      {showColors && hasActions && (
         <div
           className="w-px self-stretch min-h-[1.25rem]"
           style={{ background: "rgba(255,255,255,0.12)" }}
@@ -167,7 +174,7 @@ export function HighlightToolbar({
         </button>
       )}
 
-      {onNote && onAsk && (
+      {onNote && (onAsk || hasWriting) && (
         <div
           className="w-px self-stretch min-h-[1.25rem]"
           style={{ background: "rgba(255,255,255,0.12)" }}
@@ -192,6 +199,52 @@ export function HighlightToolbar({
         >
           <Sparkles className="w-3.5 h-3.5" strokeWidth={2} />
           Ask AI
+        </button>
+      )}
+
+      {onParaphrase && (
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() =>
+            onParaphrase && guard(onParaphrase, "Use Study AI")
+          }
+          className={`flex items-center gap-1.5 text-[13px] font-medium leading-none ${
+            locked ? "cursor-not-allowed opacity-70" : "hover:opacity-90"
+          }`}
+          style={{ color: "#7dd3c0" }}
+          title={
+            locked
+              ? lockedFeatureLabel(lockedGate, "paraphrase")
+              : "Paraphrase selection"
+          }
+          aria-disabled={locked}
+        >
+          <Wand2 className="w-3.5 h-3.5" strokeWidth={2} />
+          Paraphrase
+        </button>
+      )}
+
+      {onOriginality && (
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() =>
+            onOriginality && guard(onOriginality, "Use Study AI")
+          }
+          className={`flex items-center gap-1.5 text-[13px] font-medium leading-none ${
+            locked ? "cursor-not-allowed opacity-70" : "hover:opacity-90"
+          }`}
+          style={{ color: "#9ec5e8" }}
+          title={
+            locked
+              ? lockedFeatureLabel(lockedGate, "check originality")
+              : "Check originality (library + syllabus)"
+          }
+          aria-disabled={locked}
+        >
+          <ScanSearch className="w-3.5 h-3.5" strokeWidth={2} />
+          Originality
         </button>
       )}
 

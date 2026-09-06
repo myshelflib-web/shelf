@@ -1794,6 +1794,30 @@ export const api = {
         method: "POST",
         body: JSON.stringify(data),
       }),
+    paraphrase: (data: {
+      text: string;
+      style?: "paraphrase" | "simplify" | "formal" | "shorten";
+    }) =>
+      request<{
+        style: string;
+        variants: string[];
+        tokens: number;
+      }>("/api/study/paraphrase", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    originality: (data: {
+      text: string;
+      excludePageId?: string;
+      includeAiHeuristic?: boolean;
+    }) =>
+      request<import("@/lib/writingAssistTypes").OriginalityReport>(
+        "/api/study/originality",
+        {
+          method: "POST",
+          body: JSON.stringify(data),
+        }
+      ),
     listChats: (opts?: { pageId?: string }) =>
       request<{ threads: import("@/types").ChatThreadSummary[] }>(
         opts?.pageId

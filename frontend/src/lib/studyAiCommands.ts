@@ -238,6 +238,28 @@ export const STUDY_AI_COMMANDS: StudyAiCommand[] = [
       ),
   },
   {
+    slash: "paraphrase",
+    name: "Paraphrase",
+    description: "Rewrite a passage in your own words.",
+    prompt: (_scope, args) => {
+      const passage = args.trim();
+      return passage
+        ? `Use the paraphrase_text tool to rewrite this passage (style paraphrase). Then show the variants clearly:\n\n${passage}`
+        : "Ask me for the passage to paraphrase, or use paraphrase_text on text I paste next.";
+    },
+  },
+  {
+    slash: "originality",
+    name: "Originality",
+    description: "Flag library / syllabus overlaps for a passage.",
+    prompt: (_scope, args) => {
+      const passage = args.trim();
+      return passage
+        ? `Use check_library_overlap and check_syllabus_overlap on this passage. Summarize close matches; remind me this is not a web plagiarism scan:\n\n${passage}`
+        : "Ask me for the passage to check, then call check_library_overlap and check_syllabus_overlap.";
+    },
+  },
+  {
     slash: "help",
     name: "Commands",
     description: "Show every command.",

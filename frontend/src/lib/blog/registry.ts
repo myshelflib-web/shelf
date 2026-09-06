@@ -26,10 +26,12 @@ import { studyAiDepthModes } from "./posts/study-ai-depth-modes";
 import { currentAffairsIngest } from "./posts/current-affairs-ingest";
 import { examStarterPacks } from "./posts/exam-starter-packs";
 import { officialExamSyllabus } from "./posts/official-exam-syllabus";
+import { writingAssistOriginality } from "./posts/writing-assist-originality";
 import { EXTRA_BLOG_POSTS } from "./posts/extra";
 
 const ALL_POSTS: BlogPost[] = [
   ...EXTRA_BLOG_POSTS,
+  writingAssistOriginality,
   officialExamSyllabus,
   examStarterPacks,
   currentAffairsIngest,
