@@ -15,7 +15,7 @@ export function isHtmlSelectionChromeTarget(target: EventTarget | null): boolean
   return Boolean(el.closest(HTML_SELECTION_CHROME));
 }
 
-/** Pointer tool: keep the native selection and open the color menu. */
+/** Freeze native selection into a pick and open the color menu. */
 export function usePersonalContentSelection(opts: {
   editing: boolean;
   readOnly: boolean;
@@ -50,54 +50,59 @@ export function usePersonalContentSelection(opts: {
   onClearPickRef.current = onClearPick;
 
   const capturePick = useCallback(() => {
-    if (!enabled) return;
+    if (!enabled) return false;
     const root = contentRootRef.current;
     const origin = originRef.current;
-    if (!root || !origin) return;
+    if (!root || !origin) return false;
     const next = captureHtmlTextSelection(root, origin);
-    if (!next) {
-      // Sticky: keep an armed popup pick until explicit close/save/ask/note.
-      if (selectionRef.current) return;
-      onClearPickRef.current();
-      return;
-    }
+    if (!next) return false;
     onTextPickRef.current(next);
-  }, [enabled, contentRootRef, originRef, selectionRef]);
+    return true;
+  }, [enabled, contentRootRef, originRef]);
 
   useEffect(() => {
     if (!enabled) return;
+
+    const scheduleCapture = () => {
+      // Two frames: past capture-phase toolbar dismiss + layout.
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          if (capturePick()) return;
+          // Sticky: keep an armed popup pick until explicit close/save/ask/note.
+          if (selectionRef.current) return;
+          onClearPickRef.current();
+        });
+      });
+    };
+
     const onUp = (e: PointerEvent) => {
       if (isHtmlSelectionChromeTarget(e.target)) return;
-      // Defer past capture-phase toolbar dismiss so a just-finished
-      // selection is still present when we open the color menu.
-      window.requestAnimationFrame(capturePick);
+      scheduleCapture();
     };
-    document.addEventListener("pointerup", onUp);
-    return () => document.removeEventListener("pointerup", onUp);
-  }, [enabled, capturePick]);
 
-  // Keyboard / slow-drag selections: open the menu when the range settles.
-  useEffect(() => {
-    if (!enabled) return;
-    let timer: number | null = null;
+    // Keyboard / slow-drag: open when the range settles inside the article.
+    let changeTimer: number | null = null;
     const onChange = () => {
-      if (timer != null) window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        timer = null;
+      if (changeTimer != null) window.clearTimeout(changeTimer);
+      changeTimer = window.setTimeout(() => {
+        changeTimer = null;
         const root = contentRootRef.current;
         const sel = window.getSelection();
         if (!root || !sel || sel.isCollapsed || sel.rangeCount < 1) return;
         const node = sel.anchorNode;
         if (!node || !root.contains(node)) return;
         capturePick();
-      }, 120);
+      }, 160);
     };
+
+    document.addEventListener("pointerup", onUp);
     document.addEventListener("selectionchange", onChange);
     return () => {
-      if (timer != null) window.clearTimeout(timer);
+      document.removeEventListener("pointerup", onUp);
       document.removeEventListener("selectionchange", onChange);
+      if (changeTimer != null) window.clearTimeout(changeTimer);
     };
-  }, [enabled, capturePick, contentRootRef]);
+  }, [enabled, capturePick, contentRootRef, selectionRef]);
 
   return { handleMouseUp: capturePick };
 }

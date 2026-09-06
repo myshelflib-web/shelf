@@ -3,6 +3,7 @@
 import { useLayoutEffect, useState, type MutableRefObject } from "react";
 import type { UserContentHighlight } from "@/types";
 import { DEFAULT_PEN_WIDTH, PEN_WIDTHS } from "@/lib/straightenStroke";
+import { isRectTextHighlight } from "./htmlHighlightGeometry";
 import { isInkHighlight, penStroke } from "./pdfViewerHelpers";
 
 /** Vertical thickness in CSS px — covers most of a body-text line, not a thin underline. */
@@ -30,7 +31,7 @@ function isStrokeHighlight(h: UserContentHighlight): boolean {
 }
 
 export function hasHtmlStrokes(highlights: UserContentHighlight[]): boolean {
-  return highlights.some(isStrokeHighlight);
+  return highlights.some(isStrokeHighlight) || highlights.some(isRectTextHighlight);
 }
 
 /** Stable across tmp→server id swaps so remounts do not interrupt selection. */
@@ -44,9 +45,18 @@ function strokeReactKey(h: UserContentHighlight): string {
   return h.id;
 }
 
+function rectReactKey(
+  h: UserContentHighlight,
+  r: { x: number; y: number; w: number; h: number },
+  idx: number
+): string {
+  return `box:${h.startOffset}:${h.endOffset}:${r.x.toFixed(4)}:${r.y.toFixed(4)}:${r.w.toFixed(4)}:${h.color}:${idx}`;
+}
+
 /**
- * Pixel-space SVG behind the article — freehand pen/ink only.
- * Popup TEXT highlights paint via CSS/mark (useHtmlTextHighlightPaint).
+ * Behind the article: freehand SVG + PDF-style text highlight boxes.
+ * Boxes use pointer-events:none so selection stays reliable; click hit-tests
+ * go through PersonalContentArticle.
  */
 export function HtmlHighlightLayer({
   originRef,
@@ -87,42 +97,68 @@ export function HtmlHighlightLayer({
   }, [originRef]);
 
   const pointStrokes = highlights.filter((h) => h.position?.points?.length);
+  const rectHighlights = highlights.filter(isRectTextHighlight);
   const { w, h } = size;
   if (w < 1 || h < 1) return null;
 
   return (
-    <svg
-      aria-hidden
-      width={w}
-      height={h}
-      viewBox={`0 0 ${w} ${h}`}
-      className={`absolute top-0 left-0 ${
-        eraseMode || (draftPoints && draftPoints.length > 1) ? "z-[3]" : "z-0"
-      }`}
-      style={{ pointerEvents: "none", overflow: "visible" }}
-    >
-      {pointStrokes.map((hl) => (
-        <StrokeMark
-          key={strokeReactKey(hl)}
-          highlight={hl}
-          d={pathFromNorm(hl.position!.points!, w, h)}
-          width={hl.position?.width ?? DEFAULT_PEN_WIDTH}
-          eraseMode={eraseMode}
-          onActivate={onActivate}
-        />
-      ))}
-      {draftPoints && draftPoints.length > 1 ? (
-        <path
-          d={pathFromNorm(draftPoints, w, h)}
-          fill="none"
-          stroke={penStroke(draftColor, draftOpacity)}
-          strokeWidth={htmlStrokePx(draftWidth)}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="html-pen-stroke"
-        />
-      ) : null}
-    </svg>
+    <>
+      <div
+        aria-hidden
+        className="absolute top-0 left-0 z-[1] overflow-visible"
+        style={{ width: w, height: h, pointerEvents: "none" }}
+      >
+        {rectHighlights.flatMap((hl) =>
+          (hl.position?.rects ?? []).map((r, idx) => (
+            <div
+              key={rectReactKey(hl, r, idx)}
+              className={`html-hl-box highlight-${hl.color || "yellow"}${
+                hl.note?.trim() ? " has-note" : ""
+              }`}
+              style={{
+                position: "absolute",
+                left: `${r.x * 100}%`,
+                top: `${r.y * 100}%`,
+                width: `${r.w * 100}%`,
+                height: `${Math.max(r.h, 0.012) * 100}%`,
+              }}
+            />
+          ))
+        )}
+      </div>
+      <svg
+        aria-hidden
+        width={w}
+        height={h}
+        viewBox={`0 0 ${w} ${h}`}
+        className={`absolute top-0 left-0 ${
+          eraseMode || (draftPoints && draftPoints.length > 1) ? "z-[3]" : "z-[1]"
+        }`}
+        style={{ pointerEvents: "none", overflow: "visible" }}
+      >
+        {pointStrokes.map((hl) => (
+          <StrokeMark
+            key={strokeReactKey(hl)}
+            highlight={hl}
+            d={pathFromNorm(hl.position!.points!, w, h)}
+            width={hl.position?.width ?? DEFAULT_PEN_WIDTH}
+            eraseMode={eraseMode}
+            onActivate={onActivate}
+          />
+        ))}
+        {draftPoints && draftPoints.length > 1 ? (
+          <path
+            d={pathFromNorm(draftPoints, w, h)}
+            fill="none"
+            stroke={penStroke(draftColor, draftOpacity)}
+            strokeWidth={htmlStrokePx(draftWidth)}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="html-pen-stroke"
+          />
+        ) : null}
+      </svg>
+    </>
   );
 }
 
