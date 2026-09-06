@@ -1,19 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
-import { parseDocBody, serializeDocBody } from "@/lib/docEditor";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api } from "@/lib/api";
+import {
+  extractDocInnerHtml,
+  parseDocBody,
+  serializeDocBody,
+} from "@/lib/docEditor";
+import { insertHtmlAtSelection } from "@/lib/docResearchMarkup";
 import {
   openOriginalityFromSelection,
   openParaphraseFromSelection,
 } from "@/lib/openWritingAssistFromSelection";
 import { useDocResearch } from "@/lib/useDocResearch";
+import { useAppDialog } from "@/hooks/useAppDialog";
 import { DocToolbar, runDocCommand } from "./DocToolbar";
 import { DocResearchToolbar } from "./doc-research/DocResearchToolbar";
 import { DocSourcesPanel } from "./doc-research/DocSourcesPanel";
 import { DocOutlinePanel } from "./doc-research/DocOutlinePanel";
 import { DocHistoryPanel } from "./doc-research/DocHistoryPanel";
-import { DocCommentsPanel } from "./doc-research/DocCommentsPanel";
+import { DocInlineComments } from "./doc-research/DocInlineComments";
 import { DocLibraryFindPanel } from "./doc-research/DocLibraryFindPanel";
+import { DocTableControls } from "./doc-research/DocTableControls";
+import "./doc-research/shelf-doc-research.css";
 
 interface DocEditorProps {
   initialHtml: string;
@@ -47,6 +56,7 @@ export function DocEditor({
   pageId,
   title,
 }: DocEditorProps) {
+  const { alert } = useAppDialog();
   const viewportRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const onChangeRef = useRef(onChange);
@@ -54,6 +64,7 @@ export function DocEditor({
   const seeded = useRef(false);
   const scheduleRef = useRef<(html: string) => void>(() => undefined);
   const refreshStatsRef = useRef<() => void>(() => undefined);
+  const [importBusy, setImportBusy] = useState(false);
 
   const emit = useCallback(() => {
     const el = bodyRef.current;
@@ -133,6 +144,33 @@ export function DocEditor({
     emit();
   };
 
+  const importFile = useCallback(
+    async (file: File) => {
+      const el = bodyRef.current;
+      if (!el || importBusy) return;
+      setImportBusy(true);
+      try {
+        const fd = new FormData();
+        fd.append("file", file);
+        const { html } = await api.myContent.importDocHtml(fd);
+        const inner = extractDocInnerHtml(html);
+        el.focus();
+        if (!insertHtmlAtSelection(inner)) {
+          el.insertAdjacentHTML("beforeend", inner);
+        }
+        emit();
+      } catch (e) {
+        await alert({
+          title: "Import failed",
+          message: e instanceof Error ? e.message : "Could not import file",
+        });
+      } finally {
+        setImportBusy(false);
+      }
+    },
+    [alert, emit, importBusy]
+  );
+
   const showResearch = Boolean(pageId) && !compact;
 
   return (
@@ -163,28 +201,35 @@ export function DocEditor({
               }
               panel={research.panel}
               onPanel={research.setPanel}
-              onFootnote={research.insertFootnote}
-              onFigure={research.insertFigure}
-              onTable={research.insertTable}
-              onEquation={research.insertEquation}
-              onGlossary={research.insertGlossary}
-              onXref={research.insertXref}
+              onFootnote={() => void research.insertFootnote()}
+              onFigure={() => void research.insertFigure()}
+              onTable={() => void research.insertTable()}
+              onEquation={() => void research.insertEquation()}
+              onGlossary={() => void research.insertGlossary()}
+              onXref={() => void research.insertXref()}
               onExport={(fmt) => void research.onExport(fmt)}
               onResearchAi={research.onResearchAi}
+              onImportFile={(file) => void importFile(file)}
+              importBusy={importBusy}
             />
           ) : null
         }
       />
       {research.suggestMode && showResearch && (
-        <div className="flex items-center gap-2 px-3 py-1 border-b border-[var(--border)] bg-[var(--bg-secondary)] text-[11px]">
-          <span className="text-[var(--text-muted)]">Suggest mode</span>
+        <div className="flex flex-wrap items-center gap-2 px-3 py-1.5 border-b border-[var(--border)] bg-[var(--bg-secondary)] text-[11px]">
+          <span className="font-medium text-[var(--text-primary)]">
+            Suggest mode
+          </span>
+          <span className="text-[var(--text-muted)]">
+            Typing inserts suggestions · Backspace marks deletions
+          </span>
           <button
             type="button"
             className="text-[var(--accent)]"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => research.applySuggestToSelection("ins")}
           >
-            Mark insert
+            Mark selection insert
           </button>
           <button
             type="button"
@@ -192,7 +237,7 @@ export function DocEditor({
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => research.applySuggestToSelection("del")}
           >
-            Mark delete
+            Mark selection delete
           </button>
           <button
             type="button"
@@ -253,6 +298,13 @@ export function DocEditor({
             </div>
           )}
         </div>
+        {showResearch ? (
+          <DocTableControls
+            bodyRef={bodyRef}
+            onEdited={research.afterEdit}
+            enabled
+          />
+        ) : null}
         {pageId ? (
           <>
             <DocSourcesPanel
@@ -274,11 +326,13 @@ export function DocEditor({
               currentHtml={serializeDocBody(bodyRef.current?.innerHTML || "")}
               onRestore={restoreHtml}
             />
-            <DocCommentsPanel
+            <DocInlineComments
               pageId={pageId}
+              bodyRef={bodyRef}
               open={research.panel === "comments"}
               onClose={() => research.setPanel(null)}
-              selectionQuote={research.selectionQuote}
+              onDocEdited={emit}
+              pendingQuote={research.selectionQuote}
             />
             <DocLibraryFindPanel
               open={research.panel === "find"}

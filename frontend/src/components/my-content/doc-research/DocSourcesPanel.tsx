@@ -8,6 +8,7 @@ import {
   buildCiteSpan,
   insertHtmlAtSelection,
 } from "@/lib/docResearchMarkup";
+import { DocResearchSidePanel } from "./DocResearchSidePanel";
 
 type Props = {
   pageId: string;
@@ -57,8 +58,6 @@ export function DocSourcesPanel({
       setLibraryHits([]);
     }
   }, [open, q]);
-
-  if (!open) return null;
 
   async function citeFromLibrary(hit: {
     id: string;
@@ -209,38 +208,26 @@ export function DocSourcesPanel({
   }
 
   return (
-    <div className="absolute right-0 top-0 bottom-0 z-20 w-72 border-l border-[var(--border)] bg-[var(--bg-elevated)] flex flex-col shadow-lg">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border)]">
-        <h3 className="text-xs font-semibold text-[var(--text-primary)]">
-          Sources
-        </h3>
-        <button
-          type="button"
-          className="text-xs text-[var(--text-muted)]"
-          onClick={onClose}
-        >
-          Close
-        </button>
-      </div>
-      <div className="p-2 space-y-2 border-b border-[var(--border)]">
+    <DocResearchSidePanel open={open} title="Sources & citations" onClose={onClose}>
+      <div className="p-3 space-y-2.5 border-b border-[var(--border)]">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search sources…"
-          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1.5 text-xs"
+          placeholder="Search sources or library…"
+          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
         />
-        <div className="flex gap-1">
+        <div className="flex gap-1.5">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="New source title"
-            className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1.5 text-xs"
+            className="flex-1 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
           />
           <button
             type="button"
             disabled={busy}
             onClick={() => void addManual()}
-            className="px-2 text-[11px] font-medium text-[var(--accent)]"
+            className="px-2.5 rounded-lg text-[11px] font-semibold text-[var(--accent)] hover:bg-[var(--accent-light)]"
           >
             Add
           </button>
@@ -250,16 +237,16 @@ export function DocSourcesPanel({
           onChange={(e) => setImportText(e.target.value)}
           rows={3}
           placeholder="Paste BibTeX or CSL-JSON…"
-          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1.5 text-[11px]"
+          className="w-full rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-2 text-[11px] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
         />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             disabled={busy}
             onClick={() => void runImport()}
-            className="text-[11px] font-medium text-[var(--accent)]"
+            className="text-[11px] font-semibold text-[var(--accent)]"
           >
-            Import
+            Import BibTeX
           </button>
           <button
             type="button"
@@ -272,14 +259,14 @@ export function DocSourcesPanel({
             type="button"
             disabled={busy}
             onClick={() => void refreshBib()}
-            className="text-[11px] font-medium text-[var(--accent)]"
+            className="text-[11px] font-semibold text-[var(--accent)]"
           >
             Refresh bibliography
           </button>
         </div>
         {error && <p className="text-[11px] text-red-400">{error}</p>}
       </div>
-      <ul className="flex-1 overflow-y-auto p-2 space-y-1.5">
+      <ul className="p-2.5 space-y-1.5">
         {libraryHits.length > 0 && (
           <li className="text-[10px] font-semibold uppercase tracking-wide text-[var(--text-muted)] px-1 pt-1">
             From library
@@ -291,9 +278,9 @@ export function DocSourcesPanel({
               type="button"
               disabled={busy}
               onClick={() => void citeFromLibrary(h)}
-              className="w-full text-left rounded-lg border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1.5 hover:border-[var(--accent)]"
+              className="w-full text-left rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-2 hover:border-[var(--accent)]"
             >
-              <p className="text-xs font-medium text-[var(--text-primary)] line-clamp-2">
+              <p className="text-[12px] font-medium text-[var(--text-primary)] line-clamp-2">
                 {h.title}
               </p>
               {h.quote && (
@@ -315,9 +302,9 @@ export function DocSourcesPanel({
               type="button"
               disabled={busy}
               onClick={() => void insertCite(s)}
-              className="w-full text-left rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2 py-1.5 hover:border-[var(--accent)]"
+              className="w-full text-left rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-2 hover:border-[var(--accent)]/50"
             >
-              <p className="text-xs font-medium text-[var(--text-primary)] line-clamp-2">
+              <p className="text-[12px] font-medium text-[var(--text-primary)] line-clamp-2">
                 {s.title}
               </p>
               <p className="text-[10px] text-[var(--text-muted)]">
@@ -328,11 +315,11 @@ export function DocSourcesPanel({
           </li>
         ))}
         {sources.length === 0 && libraryHits.length === 0 && (
-          <li className="text-[11px] text-[var(--text-muted)] px-1">
+          <li className="text-[12px] text-[var(--text-muted)] px-1 py-2">
             No sources yet. Add, import BibTeX, or search the library.
           </li>
         )}
       </ul>
-    </div>
+    </DocResearchSidePanel>
   );
 }

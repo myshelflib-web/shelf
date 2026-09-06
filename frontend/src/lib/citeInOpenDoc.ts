@@ -30,8 +30,14 @@ export function citeInOpenDoc(detail: CiteInDocDetail): boolean {
   } catch {
     /* ignore */
   }
-  window.alert(
-    "No Doc is open. Open or create a Doc tab, then use Cite again — or the quote will insert when a Doc opens."
+  window.dispatchEvent(
+    new CustomEvent("shelf:app-alert", {
+      detail: {
+        title: "Open a Doc first",
+        message:
+          "Open or create a Doc tab, then use Cite again — or the quote will insert when a Doc opens.",
+      },
+    })
   );
   return false;
 }
