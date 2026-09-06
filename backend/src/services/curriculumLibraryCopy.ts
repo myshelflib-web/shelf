@@ -7,7 +7,7 @@ import { assertStorageRoom, QuotaError, type QuotaUser } from "../utils/quotas.j
 import type { CurriculumSaveMode } from "./curriculumSavePolicy.js";
 import { downloadOfficialPdf } from "./ingest/officialPdfDownload.js";
 import { curriculumSourceUrl } from "../utils/curriculumCopy.js";
-import { wrapAsReadOnlyDocHtml } from "../utils/readOnlyDocHtml.js";
+import { ensureStoredReadOnlyDocDocument } from "../utils/readOnlyDocHtml.js";
 
 type CurriculumArticle = {
   id: string;
@@ -86,7 +86,7 @@ export async function finishCurriculumLibraryCopy(params: {
       contentUrl = `${docPrefix}/content.html`;
       await uploadToS3(
         contentUrl,
-        wrapAsReadOnlyDocHtml(html),
+        ensureStoredReadOnlyDocDocument(html),
         "text/html; charset=utf-8"
       );
     }

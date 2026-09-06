@@ -94,6 +94,8 @@ export function renderArticleHtml(
 <meta name="keywords" content="${esc(article.keywords.join(", "))}" />
 </head>
 <body>
+<div class="shelf-doc-editor shelf-doc-readonly" data-shelf-readonly="1">
+<div class="shelf-doc-body">
 ${mastheadHtml(article, spec)}
 <article class="shelf-generated">
 <p class="shelf-doc-intro">${esc(article.intro)}</p>
@@ -105,6 +107,8 @@ ${callout("Common mistakes to avoid", article.commonMistakes, "mistakes")}
 ${callout("Connects to", article.linkages, "linkages")}
 ${sources}
 </article>
+</div>
+</div>
 </body>
 </html>`;
 }
