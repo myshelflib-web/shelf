@@ -1713,6 +1713,17 @@ export const api = {
       request<{ success: boolean }>(`/api/my-content/highlights/${id}`, {
         method: "DELETE",
       }),
+    importDocHtml: async (formData: FormData) => {
+      await compressFormDataFiles(formData, ["file"]);
+      return request<{
+        html: string;
+        title: string;
+        kind: "pdf" | "markdown" | "text" | "docx";
+      }>("/api/my-content/docs/import-html", {
+        method: "POST",
+        body: formData,
+      });
+    },
     listCitations: (q?: string) =>
       request<{ sources: import("@/lib/researchDocTypes").CitationSource[] }>(
         q

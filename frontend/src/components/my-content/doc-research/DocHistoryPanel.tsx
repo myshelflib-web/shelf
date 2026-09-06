@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import { diffLines } from "./docDiff";
+import { DocResearchSidePanel } from "./DocResearchSidePanel";
 
 type Props = {
   pageId: string;
@@ -22,20 +23,20 @@ export function DocHistoryPanel({
   const [rows, setRows] = useState<
     Array<{ id: string; label: string | null; createdAt: string }>
   >([]);
+  const [selected, setSelected] = useState<string | null>(null);
   const [diffText, setDiffText] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     void api.myContent.listRevisions(pageId).then((r) => setRows(r.revisions));
+    setSelected(null);
+    setDiffText(null);
   }, [open, pageId]);
 
-  if (!open) return null;
-
   async function preview(id: string) {
+    setSelected(id);
     const { revision } = await api.myContent.getRevision(pageId, id);
-    const a = strip(currentHtml);
-    const b = strip(revision.html);
-    setDiffText(diffLines(a, b));
+    setDiffText(diffLines(strip(currentHtml), strip(revision.html)));
   }
 
   async function restore(id: string) {
@@ -49,41 +50,48 @@ export function DocHistoryPanel({
   }
 
   return (
-    <div className="absolute right-0 top-0 bottom-0 z-20 w-80 border-l border-[var(--border)] bg-[var(--bg-elevated)] flex flex-col shadow-lg">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--border)]">
-        <h3 className="text-xs font-semibold">History</h3>
-        <button type="button" className="text-xs text-[var(--text-muted)]" onClick={onClose}>
-          Close
-        </button>
-      </div>
-      <ul className="max-h-40 overflow-y-auto border-b border-[var(--border)] p-2 space-y-1">
+    <DocResearchSidePanel open={open} title="Version history" onClose={onClose}>
+      <div className="p-2.5 space-y-1.5 border-b border-[var(--border)]">
         {rows.map((r) => (
-          <li key={r.id} className="flex items-center gap-1">
+          <div
+            key={r.id}
+            className={`rounded-xl border px-2.5 py-2 ${
+              selected === r.id
+                ? "border-[var(--accent)] bg-[var(--accent-light)]"
+                : "border-[var(--border)] bg-[var(--bg-secondary)]"
+            }`}
+          >
             <button
               type="button"
-              className="flex-1 text-left text-[11px] text-[var(--text-secondary)] hover:text-[var(--accent)]"
+              className="w-full text-left"
               onClick={() => void preview(r.id)}
             >
-              {r.label || "Snapshot"} ·{" "}
-              {new Date(r.createdAt).toLocaleString()}
+              <p className="text-[12px] font-medium text-[var(--text-primary)]">
+                {r.label || "Autosaved snapshot"}
+              </p>
+              <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
+                {new Date(r.createdAt).toLocaleString()}
+              </p>
             </button>
             <button
               type="button"
-              className="text-[10px] text-[var(--accent)]"
+              className="mt-1.5 text-[11px] font-semibold text-[var(--accent)]"
               onClick={() => void restore(r.id)}
             >
-              Restore
+              Restore this version
             </button>
-          </li>
+          </div>
         ))}
         {rows.length === 0 && (
-          <li className="text-[11px] text-[var(--text-muted)]">No snapshots yet.</li>
+          <p className="text-[12px] text-[var(--text-muted)] px-1 py-2">
+            Snapshots appear as you edit and save.
+          </p>
         )}
-      </ul>
-      <pre className="flex-1 overflow-auto p-2 text-[10px] text-[var(--text-secondary)] whitespace-pre-wrap">
+      </div>
+      <pre className="p-3 text-[11px] leading-relaxed text-[var(--text-secondary)] whitespace-pre-wrap font-mono">
         {diffText || "Select a snapshot to compare with the current draft."}
       </pre>
-    </div>
+    </DocResearchSidePanel>
   );
 }
 

@@ -85,3 +85,30 @@
   background: color-mix(in srgb, #ef4444 22%, transparent);
   text-decoration: line-through;
 }
+
+.shelf-doc-body .shelf-comment-mark {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  border-bottom: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.shelf-doc-body .shelf-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.shelf-doc-body .shelf-table th,
+.shelf-doc-body .shelf-table td {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.55rem;
+  min-width: 3rem;
+  vertical-align: top;
+}
+
+.shelf-doc-body .shelf-table th {
+  background: var(--bg-primary);
+  font-weight: 600;
+  text-align: left;
+}

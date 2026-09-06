@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { useAppDialog } from "@/hooks/useAppDialog";
 import {
   buildEquationSpan,
   buildFigureHtml,
@@ -26,6 +27,7 @@ import {
   type CiteInDocDetail,
   consumePendingCite,
 } from "@/lib/citeInOpenDoc";
+import { useDocSuggestMode } from "@/lib/useDocSuggestMode";
 
 const CITE_STYLE_KEY = "shelf-doc-cite-style";
 
@@ -52,6 +54,7 @@ type Args = {
 };
 
 export function useDocResearch({ pageId, bodyRef, emit, title = "Document" }: Args) {
+  const { prompt, alert } = useAppDialog();
   const [panel, setPanel] = useState<ResearchPanel>(null);
   const [citeStyle, setCiteStyleState] = useState<CiteStyle>("apa");
   const [suggestMode, setSuggestMode] = useState(false);
@@ -98,6 +101,12 @@ export function useDocResearch({ pageId, bodyRef, emit, title = "Document" }: Ar
     emit();
   }, [bodyRef, emit, paintEquations, refreshStats]);
 
+  const suggest = useDocSuggestMode({
+    enabled: suggestMode,
+    bodyRef,
+    onEdited: afterEdit,
+  });
+
   useEffect(() => {
     paintEquations();
     refreshStats();
@@ -117,56 +126,98 @@ export function useDocResearch({ pageId, bodyRef, emit, title = "Document" }: Ar
     [pageId]
   );
 
-  const insertFootnote = useCallback(() => {
-    const note = window.prompt("Footnote text:") || "";
-    if (!note.trim()) return;
+  const insertFootnote = useCallback(async () => {
+    const note = await prompt({
+      title: "Insert footnote",
+      placeholder: "Footnote text",
+      confirmLabel: "Insert",
+    });
+    if (!note?.trim()) return;
     const id = `fn-${Math.random().toString(36).slice(2, 8)}`;
     const n =
       (bodyRef.current?.querySelectorAll("sup.shelf-footnote").length || 0) + 1;
     bodyRef.current?.focus();
     insertHtmlAtSelection(buildFootnoteSup(id, n, note.trim()));
     afterEdit();
-  }, [afterEdit, bodyRef]);
+  }, [afterEdit, bodyRef, prompt]);
 
-  const insertFigure = useCallback(() => {
-    const caption = window.prompt("Figure caption:") || "Caption";
+  const insertFigure = useCallback(async () => {
+    const caption = await prompt({
+      title: "Insert figure",
+      message: "Caption for the figure.",
+      defaultValue: "Caption",
+      confirmLabel: "Insert",
+    });
+    if (!caption?.trim()) return;
     bodyRef.current?.focus();
-    insertHtmlAtSelection(buildFigureHtml(caption));
+    insertHtmlAtSelection(buildFigureHtml(caption.trim()));
     afterEdit();
-  }, [afterEdit, bodyRef]);
+  }, [afterEdit, bodyRef, prompt]);
 
-  const insertTable = useCallback(() => {
-    const caption = window.prompt("Table caption:") || "Caption";
+  const insertTable = useCallback(async () => {
+    const caption = await prompt({
+      title: "Insert table",
+      message: "Caption for the table. Use the floating bar to add rows or columns.",
+      defaultValue: "Caption",
+      confirmLabel: "Insert",
+    });
+    if (!caption?.trim()) return;
     bodyRef.current?.focus();
-    insertHtmlAtSelection(buildTableHtml(caption));
+    insertHtmlAtSelection(buildTableHtml(caption.trim()));
     afterEdit();
-  }, [afterEdit, bodyRef]);
+  }, [afterEdit, bodyRef, prompt]);
 
-  const insertEquation = useCallback(() => {
-    const latex = window.prompt("LaTeX equation:", "E = mc^2");
+  const insertEquation = useCallback(async () => {
+    const latex = await prompt({
+      title: "Insert equation",
+      message: "Enter LaTeX (KaTeX). You can omit surrounding $…$.",
+      defaultValue: "E = mc^2",
+      placeholder: "E = mc^2",
+      confirmLabel: "Insert",
+    });
     if (latex == null) return;
     bodyRef.current?.focus();
     insertHtmlAtSelection(buildEquationSpan(latex.trim() || "E = mc^2"));
     afterEdit();
-  }, [afterEdit, bodyRef]);
+  }, [afterEdit, bodyRef, prompt]);
 
-  const insertGlossary = useCallback(() => {
-    const term = window.prompt("Term:") || "";
-    const def = window.prompt("Definition:") || "";
-    if (!term.trim()) return;
+  const insertGlossary = useCallback(async () => {
+    const term = await prompt({
+      title: "Glossary term",
+      placeholder: "Term",
+      confirmLabel: "Next",
+    });
+    if (!term?.trim()) return;
+    const def = await prompt({
+      title: "Definition",
+      message: `Definition for “${term.trim()}”.`,
+      placeholder: "Definition",
+      confirmLabel: "Insert",
+    });
+    if (def == null) return;
     bodyRef.current?.focus();
     insertHtmlAtSelection(buildGlossaryTerm(term.trim(), def.trim()));
     afterEdit();
-  }, [afterEdit, bodyRef]);
+  }, [afterEdit, bodyRef, prompt]);
 
-  const insertXref = useCallback(() => {
-    const targetId = window.prompt("Target element id (e.g. fig-1, sec-1):") || "";
-    if (!targetId.trim()) return;
-    const label = window.prompt("Label text:", `Section ${targetId}`) || targetId;
+  const insertXref = useCallback(async () => {
+    const targetId = await prompt({
+      title: "Cross-reference",
+      message: "Target element id (e.g. fig-1, sec-1, tbl-1).",
+      placeholder: "fig-1",
+      confirmLabel: "Next",
+    });
+    if (!targetId?.trim()) return;
+    const label = await prompt({
+      title: "Link label",
+      defaultValue: `Section ${targetId.trim()}`,
+      confirmLabel: "Insert",
+    });
+    if (!label?.trim()) return;
     bodyRef.current?.focus();
     insertHtmlAtSelection(buildXref(targetId.trim(), label.trim()));
     afterEdit();
-  }, [afterEdit, bodyRef]);
+  }, [afterEdit, bodyRef, prompt]);
 
   const onExport = useCallback(
     async (fmt: "md" | "pdf" | "doc" | "tex") => {
@@ -187,7 +238,10 @@ export function useDocResearch({ pageId, bodyRef, emit, title = "Document" }: Ar
           .replace(/\s+/g, " ")
           .trim();
       if (text.length < 20) {
-        window.alert("Select or write more text for research assist.");
+        await alert({
+          title: "Need more text",
+          message: "Select or write at least a short paragraph for research assist.",
+        });
         return;
       }
       const keys = [
@@ -226,71 +280,20 @@ export function useDocResearch({ pageId, bodyRef, emit, title = "Document" }: Ar
           }
           afterEdit();
         } else {
-          window.alert(result.text);
+          await alert({
+            title: "Claim check",
+            message: result.text,
+            confirmLabel: "Done",
+          });
         }
       } catch (e) {
-        window.alert(e instanceof Error ? e.message : "Research assist failed");
+        await alert({
+          title: "Research assist failed",
+          message: e instanceof Error ? e.message : "Something went wrong",
+        });
       }
     },
-    [afterEdit, bodyRef]
-  );
-
-  const acceptSuggest = useCallback(() => {
-    const el = bodyRef.current;
-    if (!el) return;
-    el.querySelectorAll("mark.shelf-suggest").forEach((m) => {
-      const op = m.getAttribute("data-op");
-      if (op === "del") m.remove();
-      else {
-        const parent = m.parentNode;
-        while (m.firstChild) parent?.insertBefore(m.firstChild, m);
-        m.remove();
-      }
-    });
-    afterEdit();
-  }, [afterEdit, bodyRef]);
-
-  const rejectSuggest = useCallback(() => {
-    const el = bodyRef.current;
-    if (!el) return;
-    el.querySelectorAll("mark.shelf-suggest").forEach((m) => {
-      const op = m.getAttribute("data-op");
-      if (op === "ins") m.remove();
-      else {
-        const parent = m.parentNode;
-        while (m.firstChild) parent?.insertBefore(m.firstChild, m);
-        m.remove();
-      }
-    });
-    afterEdit();
-  }, [afterEdit, bodyRef]);
-
-  const wrapSuggestOnInput = useCallback(() => {
-    if (!suggestMode) return;
-    const sel = window.getSelection();
-    if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return;
-    // Best-effort: mark last typed character path is hard; wrap selection if any.
-  }, [suggestMode]);
-
-  const applySuggestToSelection = useCallback(
-    (op: "ins" | "del") => {
-      const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
-      const range = sel.getRangeAt(0);
-      const mark = document.createElement("mark");
-      mark.className = "shelf-suggest";
-      mark.setAttribute("data-op", op);
-      mark.setAttribute("data-author", "me");
-      try {
-        range.surroundContents(mark);
-      } catch {
-        const frag = range.extractContents();
-        mark.appendChild(frag);
-        range.insertNode(mark);
-      }
-      afterEdit();
-    },
-    [afterEdit]
+    [afterEdit, alert, bodyRef]
   );
 
   const insertCitePayload = useCallback(
@@ -384,10 +387,9 @@ export function useDocResearch({ pageId, bodyRef, emit, title = "Document" }: Ar
     insertXref,
     onExport,
     onResearchAi,
-    acceptSuggest,
-    rejectSuggest,
-    applySuggestToSelection,
-    wrapSuggestOnInput,
+    acceptSuggest: suggest.acceptSuggest,
+    rejectSuggest: suggest.rejectSuggest,
+    applySuggestToSelection: suggest.applySuggestToSelection,
     captureSelectionQuote,
   };
 }

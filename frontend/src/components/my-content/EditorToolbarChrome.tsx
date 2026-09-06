@@ -36,7 +36,7 @@ export function EditorToolbarShell({
             ? "flex-nowrap overflow-x-auto scrollbar-none px-1.5 py-1 min-h-[40px]"
             : compact
               ? "flex-wrap justify-start px-1.5 py-1 min-h-0"
-              : "justify-center gap-1 px-3 py-1.5 min-h-[56px] overflow-x-auto scrollbar-none"
+              : "flex-wrap justify-center gap-1 px-3 py-1.5 min-h-[56px]"
         )}
       >
         {children}

@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -122,6 +123,16 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
     else item.resolve();
     finish();
   }, [finish]);
+
+  useEffect(() => {
+    const onAlert = (e: Event) => {
+      const detail = (e as CustomEvent<AlertDialogOptions>).detail;
+      if (!detail?.title) return;
+      void alert(detail);
+    };
+    window.addEventListener("shelf:app-alert", onAlert);
+    return () => window.removeEventListener("shelf:app-alert", onAlert);
+  }, [alert]);
 
   const value = useMemo(
     () => ({ confirm, alert, prompt }),
