@@ -21,6 +21,21 @@ import { parseExploreAreaFromSearch } from "@/components/learn/explore/ExploreSi
 import { useLearnSubjects } from "@/hooks/useLearnSubjects";
 import { StudyGoal } from "@/types";
 
+/** Paint header + empty panes while useSearchParams resolves — avoid a blank Loading page. */
+export function LearnBrowseShellFallback() {
+  return (
+    <div className="h-full flex flex-col overflow-hidden">
+      <Header />
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        <div className="hidden sm:block h-full w-72 shrink-0 border-r border-[var(--border)] bg-[var(--bg-secondary)]" />
+        <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg-primary)] relative flex items-center justify-center">
+          <ThinkingIndicator label="Loading" />
+        </main>
+      </div>
+    </div>
+  );
+}
+
 export function LearnBrowseWorkspace(props: {
   subjectSlug?: string;
   topicSlug?: string;
@@ -28,13 +43,7 @@ export function LearnBrowseWorkspace(props: {
   initialGoal?: StudyGoal;
 }) {
   return (
-    <Suspense
-      fallback={
-        <div className="h-full flex items-center justify-center">
-          <ThinkingIndicator label="Loading" />
-        </div>
-      }
-    >
+    <Suspense fallback={<LearnBrowseShellFallback />}>
       <LearnBrowseWorkspaceInner {...props} />
     </Suspense>
   );

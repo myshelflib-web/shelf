@@ -21,36 +21,37 @@ export default async function LearnTrackPage({ params }: PageProps) {
   return (
     <>
       <FaqJsonLd faqs={seo.faqs} />
-      <section className="learn-track-seo-intro" aria-label="About this track">
-        <div className="learn-track-seo-inner">
-          <nav className="learn-track-seo-breadcrumb" aria-label="Breadcrumb">
-            <Link href="/learn">Learn</Link>
-            <span aria-hidden> / </span>
-            <span>{seo.h1}</span>
-          </nav>
-          <h1 className="learn-track-seo-title">{seo.h1}</h1>
-          <p className="learn-track-seo-lead">{seo.intro}</p>
-          <p className="learn-track-seo-note">
-            All articles open in the reader without sign-in.{" "}
-            <Link href="/login">Sign in</Link> to save highlights and build a
-            private library on <Link href="/my-content">My Content</Link>.
-          </p>
-          {seo.faqs.length > 0 && (
-            <div className="learn-track-seo-faq">
-              <h2 className="learn-track-seo-faq-title">Common questions</h2>
-              <dl className="learn-track-seo-faq-list">
-                {seo.faqs.map((faq) => (
-                  <div key={faq.question} className="learn-track-seo-faq-item">
-                    <dt>{faq.question}</dt>
-                    <dd>{faq.answer}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
-        </div>
-      </section>
-      <LearnTrackBrowse goal={goal} />
+      {/* Crawl-only — same visually-hidden pattern as Learn article SEO intros. */}
+      <article className="learn-article-seo-intro" aria-label="About this track">
+        <nav className="learn-article-seo-breadcrumb" aria-label="Breadcrumb">
+          <Link href="/learn">Learn</Link>
+          <span aria-hidden> / </span>
+          <span>{seo.h1}</span>
+        </nav>
+        <h1 className="learn-article-seo-title">{seo.h1}</h1>
+        <p className="learn-article-seo-lead">{seo.intro}</p>
+        <p>
+          All articles open in the reader without sign-in.{" "}
+          <Link href="/login">Sign in</Link> to save highlights and build a
+          private library on <Link href="/my-content">My Content</Link>.
+        </p>
+        {seo.faqs.length > 0 ? (
+          <section>
+            <h2>Common questions</h2>
+            <dl>
+              {seo.faqs.map((faq) => (
+                <div key={faq.question}>
+                  <dt>{faq.question}</dt>
+                  <dd>{faq.answer}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ) : null}
+      </article>
+      <div className="h-full">
+        <LearnTrackBrowse goal={goal} />
+      </div>
     </>
   );
 }

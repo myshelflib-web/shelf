@@ -2,8 +2,10 @@
 
 import { Suspense } from "react";
 import { useParams } from "next/navigation";
-import { LearnBrowseWorkspace } from "@/components/learn/LearnBrowseWorkspace";
-import { ThinkingIndicator } from "@/components/GreetingAccent";
+import {
+  LearnBrowseShellFallback,
+  LearnBrowseWorkspace,
+} from "@/components/learn/LearnBrowseWorkspace";
 
 function TopicBrowse() {
   const params = useParams<{ subject: string; topic: string }>();
@@ -17,13 +19,7 @@ function TopicBrowse() {
 
 export default function TopicPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="h-full flex items-center justify-center">
-          <ThinkingIndicator label="Loading" />
-        </div>
-      }
-    >
+    <Suspense fallback={<LearnBrowseShellFallback />}>
       <TopicBrowse />
     </Suspense>
   );
