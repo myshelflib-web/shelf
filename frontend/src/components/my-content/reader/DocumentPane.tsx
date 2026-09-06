@@ -82,6 +82,7 @@ import {
 import clsx from "clsx";
 import { isLiveEditorHtml } from "@/lib/pageKinds";
 import { isCurriculumReadOnlyHtml } from "@/lib/docEditor";
+import { curriculumHighlightToUser } from "@/components/my-content/persistHtmlHighlight";
 import { linkEmbedHint, shouldUseLinkEmbed } from "@/lib/linkEmbedPolicy";
 import { formatOfficialSourceAttribution } from "@/lib/officialSourceAttribution";
 import { useDocumentPaneFlags } from "./useDocumentPaneFlags";
@@ -498,6 +499,28 @@ export function DocumentPane({
         // Show the document immediately; hydrate highlights in the background.
         setLoading(false);
         if (isPreloaded) {
+          if (loaded.contentType === "HTML") {
+            setHighlightsHydrating(true);
+            void api.highlights
+              .list(page.id)
+              .then(({ highlights: rows }) => {
+                if (gen !== pageLoadGen.current) return;
+                setHighlights(
+                  keepOptimisticHighlights(
+                    [],
+                    rows.map((h) => curriculumHighlightToUser(page.id, h))
+                  )
+                );
+              })
+              .catch(() => {
+                if (gen !== pageLoadGen.current) return;
+                setHighlights((prev) => keepOptimisticHighlights(prev, []));
+              })
+              .finally(() => {
+                if (gen === pageLoadGen.current) setHighlightsHydrating(false);
+              });
+            return;
+          }
           setHighlightsHydrating(false);
           return;
         }
@@ -944,11 +967,12 @@ export function DocumentPane({
   const guestLocked =
     Boolean(signInGate?.active) ||
     Boolean(pageData?.access && !pageData.access.canAnnotate) ||
-    isPreloadedDoc;
+    // Learn HTML Docs annotate via curriculum highlights; PDF still needs save.
+    (isPreloadedDoc && pageData?.contentType !== "HTML");
   const { gate: annotationGate } = resolveAnnotationLock({
     signInGateActive: Boolean(signInGate?.active),
     canAnnotate: pageData?.access?.canAnnotate,
-    isPreloaded: isPreloadedDoc,
+    isPreloaded: isPreloadedDoc && pageData?.contentType !== "HTML",
   });
   const onGuestLockedClick = signInGate?.active
     ? (feature: string) => signInGate.prompt(feature)
@@ -1529,6 +1553,11 @@ export function DocumentPane({
                     askQuoteRef.current = quote;
                   }}
                   editing={!isReadOnlyCurriculum && editing}
+                  curriculumArticleId={
+                    isPreloadedDoc && pageData.contentType === "HTML"
+                      ? pageData.id
+                      : undefined
+                  }
                   onContentChange={(html) => {
                     draftContentRef.current = html;
                     if (editorSeed) {

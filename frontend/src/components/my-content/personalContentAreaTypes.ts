@@ -41,6 +41,8 @@ export type PersonalContentAreaProps = {
   }) => void;
   readOnly?: boolean;
   guestLocked?: boolean;
+  /** When set, highlights persist to the Learn curriculum API (article id). */
+  curriculumArticleId?: string;
   onGuestLockedClick?: (feature: string) => void;
   compactEditor?: boolean;
   /** Live quote for mod+l / Study AI when the native selection was cleared. */
