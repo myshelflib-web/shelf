@@ -165,7 +165,7 @@ export function BlankEditorToolbar({
           <ToolGroup>
             <ShelfSelect
               compact
-              className="h-[34px] max-w-[7.5rem] rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1.5"
+              className="h-[34px] w-[110px] rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-[var(--text-primary)] px-1.5"
               value={fontValue}
               options={FONTS.map((f) => ({ value: f.value, label: f.label }))}
               aria-label="Font family"
