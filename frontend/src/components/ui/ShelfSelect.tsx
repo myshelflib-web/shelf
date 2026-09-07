@@ -87,7 +87,7 @@ export function ShelfSelect({
     const trigger = triggerRef.current;
     const menu = menuRef.current;
     if (!trigger || !menu) return;
-    positionMenuBelow(menu, trigger, { minWidth: trigger.offsetWidth });
+    positionMenuBelow(menu, trigger, { minWidth: trigger.offsetWidth, matchWidth: false });
     setMenuReady(true);
   }, []);
 
@@ -160,7 +160,7 @@ export function ShelfSelect({
         onClick={() => !opt.disabled && pick(opt.value)}
       >
         <Check className="shelf-select-option-check" aria-hidden />
-        <span className="truncate">{opt.label}</span>
+        <span className="whitespace-nowrap">{opt.label}</span>
       </button>
     );
   };

@@ -2,7 +2,7 @@
 export function positionMenuBelow(
   menu: HTMLElement,
   anchor: HTMLElement,
-  opts?: { gap?: number; edge?: number; minWidth?: number; width?: number }
+  opts?: { gap?: number; edge?: number; minWidth?: number; width?: number; matchWidth?: boolean }
 ) {
   const gap = opts?.gap ?? 4;
   const edge = opts?.edge ?? 8;
@@ -11,7 +11,13 @@ export function positionMenuBelow(
   const minWidth = fixedWidth ?? opts?.minWidth ?? anchorRect.width;
 
   menu.style.minWidth = `${minWidth}px`;
-  menu.style.width = `${fixedWidth ?? Math.max(minWidth, anchorRect.width)}px`;
+  if (fixedWidth) {
+    menu.style.width = `${fixedWidth}px`;
+  } else if (opts?.matchWidth === false) {
+    menu.style.width = "max-content";
+  } else {
+    menu.style.width = `${Math.max(minWidth, anchorRect.width)}px`;
+  }
 
   const menuRect = menu.getBoundingClientRect();
   const roomBelow = window.innerHeight - anchorRect.bottom;
