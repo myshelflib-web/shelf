@@ -151,7 +151,8 @@ export function DocResearchToolbar({
           </ToolBtn>
         </ShelfTooltip>
         <ShelfSelect
-          className="h-7 max-w-[8rem] px-1.5 rounded-md text-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+          compact
+          className="h-7 w-[90px] px-1.5 rounded-md text-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
           value={citeStyle}
           options={[
             { value: "apa", label: "APA" },

@@ -226,8 +226,8 @@ export function DocToolbar({
         <ShelfSelect
           className={
             compact
-              ? "h-7 max-w-[8rem] px-1.5 rounded-md text-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
-              : "h-[34px] min-w-[6rem] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+              ? "h-7 w-[96px] px-1.5 rounded-md text-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+              : "h-[34px] w-[110px] px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
           }
           value={fontValue}
           options={FONTS.map((f) => ({ value: f.value, label: f.label }))}
