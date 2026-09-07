@@ -22,6 +22,7 @@ import { ShelfTooltip } from "@/components/ShelfTooltip";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import { ToolBtn, ToolGroup, ToolSep } from "../EditorToolbarChrome";
 import { ToolPopover } from "../ToolPopover";
+import { shelfSelectToolbarClass } from "@/lib/ui/fieldClasses";
 import type { CiteStyle } from "@/lib/researchDocTypes";
 
 type Panel =
@@ -152,7 +153,7 @@ export function DocResearchToolbar({
         </ShelfTooltip>
         <ShelfSelect
           compact
-          className="h-7 min-h-0 w-[4.5rem] shrink-0 px-1.5 rounded-md text-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+          className={`${shelfSelectToolbarClass} w-[3.25rem]`}
           value={citeStyle}
           options={[
             { value: "apa", label: "APA" },

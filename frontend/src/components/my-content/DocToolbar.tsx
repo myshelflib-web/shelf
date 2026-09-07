@@ -27,6 +27,7 @@ import {
 } from "./EditorToolbarChrome";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import { ShelfTooltip } from "@/components/ShelfTooltip";
+import { shelfSelectToolbarClass } from "@/lib/ui/fieldClasses";
 import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
 
 const FONTS = [
@@ -224,12 +225,8 @@ export function DocToolbar({
 
       <ToolGroup>
         <ShelfSelect
-          compact={compact}
-          className={
-            compact
-              ? "h-7 min-h-0 w-[4.75rem] shrink-0 px-1.5 rounded-md text-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
-              : "h-[34px] min-h-0 w-[5.25rem] shrink-0 px-1.5 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
-          }
+          compact
+          className={`${shelfSelectToolbarClass} w-[4.5rem]`}
           value={fontValue}
           options={FONTS.map((f) => ({ value: f.value, label: f.label }))}
           aria-label="Font"
