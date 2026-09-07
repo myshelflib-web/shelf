@@ -24,6 +24,7 @@ import {
   ToolSep,
 } from "./EditorToolbarChrome";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
+import { shelfSelectToolbarClass } from "@/lib/ui/fieldClasses";
 import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
 
 export type DrawTool = "pen" | "stroke-erase" | "object-erase";
@@ -165,7 +166,7 @@ export function BlankEditorToolbar({
           <ToolGroup>
             <ShelfSelect
               compact
-              className="h-[34px] min-h-0 w-[5.25rem] shrink-0 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[11px] text-[var(--text-primary)] px-1.5"
+              className={`${shelfSelectToolbarClass} w-[4.5rem]`}
               value={fontValue}
               options={FONTS.map((f) => ({ value: f.value, label: f.label }))}
               aria-label="Font family"
