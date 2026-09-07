@@ -227,8 +227,8 @@ export function DocToolbar({
           compact={compact}
           className={
             compact
-              ? "h-7 w-[96px] shrink-0 px-1.5 rounded-md text-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
-              : "h-[34px] w-[110px] shrink-0 px-2 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+              ? "h-7 min-h-0 w-[4.75rem] shrink-0 px-1.5 rounded-md text-[10px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
+              : "h-[34px] min-h-0 w-[5.25rem] shrink-0 px-1.5 rounded-lg text-[11px] bg-[var(--bg-secondary)] border border-[var(--border)] text-[var(--text-secondary)]"
           }
           value={fontValue}
           options={FONTS.map((f) => ({ value: f.value, label: f.label }))}
