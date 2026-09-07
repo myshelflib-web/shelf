@@ -2,10 +2,10 @@
 
 <!-- What and why -->
 
-## Staging (backend / workers only)
+## Staging (isolated DB + S3)
 
 - [ ] **Frontend-only?** Use the Vercel Preview link — do **not** deploy staging.
-- [ ] **Backend / processor / ingestion changed?** Add the label `deploy-staging` on this PR when you want to update shared staging images + Render staging. Production is untouched.
+- [ ] **Backend / processor / ingestion changed?** Add label `deploy-staging` to update staging images. Staging uses a **separate Neon database** and **separate R2 bucket** (`docs/STAGING.md`). Production is untouched.
 
 ## Test plan
 

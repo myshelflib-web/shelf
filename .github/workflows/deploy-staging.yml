@@ -1,9 +1,10 @@
 name: Deploy staging
 
 # Manual shared-staging update (never production).
+# Uses isolated staging Neon DB + staging R2 bucket configured on Render.
 # Trigger: add label `deploy-staging` on a PR that changes backend/workers,
-# or Actions → Deploy staging (workflow_dispatch) on a branch.
-# Frontend-only PRs: use Vercel Preview only — do not run this workflow.
+# or Actions → Deploy staging (workflow_dispatch).
+# Frontend-only PRs: Vercel Preview only — do not run this.
 
 on:
   pull_request:
@@ -83,7 +84,7 @@ jobs:
             P="${{ steps.filter.outputs.processing }}"
             I="${{ steps.filter.outputs.ingestion }}"
             if [ "$B" != "true" ] && [ "$P" != "true" ] && [ "$I" != "true" ]; then
-              echo "::error::No backend/processor/ingestion changes on this PR. Frontend-only — use Vercel Preview; do not deploy staging."
+              echo "::error::No backend/processor/ingestion changes. Frontend-only — use Vercel Preview."
               echo "proceed=false" >> "$GITHUB_OUTPUT"
               echo "backend=false" >> "$GITHUB_OUTPUT"
               echo "processing=false" >> "$GITHUB_OUTPUT"
@@ -160,11 +161,11 @@ jobs:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND_STAGING }}
         run: |
           if [ -z "$HOOK" ]; then
-            echo "::warning::No RENDER_DEPLOY_HOOK_BACKEND_STAGING — image pushed, Render not triggered"
+            echo "::warning::No RENDER_DEPLOY_HOOK_BACKEND_STAGING — image pushed only"
             exit 0
           fi
           curl -fsS -X POST "$HOOK" >/dev/null
-          echo "Triggered staging backend"
+          echo "Triggered staging backend (isolated DB + S3)"
 
   staging-processor:
     name: Staging processor
@@ -225,7 +226,7 @@ jobs:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_PROCESSOR_STAGING }}
         run: |
           if [ -z "$HOOK" ]; then
-            echo "::warning::No RENDER_DEPLOY_HOOK_PROCESSOR_STAGING — image pushed, Render not triggered"
+            echo "::warning::No RENDER_DEPLOY_HOOK_PROCESSOR_STAGING — image pushed only"
             exit 0
           fi
           curl -fsS -X POST "$HOOK" >/dev/null
@@ -290,7 +291,7 @@ jobs:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_INGESTION_STAGING }}
         run: |
           if [ -z "$HOOK" ]; then
-            echo "::warning::No RENDER_DEPLOY_HOOK_INGESTION_STAGING — image pushed, Render not triggered"
+            echo "::warning::No RENDER_DEPLOY_HOOK_INGESTION_STAGING — image pushed only"
             exit 0
           fi
           curl -fsS -X POST "$HOOK" >/dev/null

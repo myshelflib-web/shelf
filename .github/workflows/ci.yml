@@ -188,7 +188,6 @@ jobs:
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID != '' && vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'ci-placeholder' }}
         run: npm run build
 
-
   docker-deploy:
     name: Docker + Render (production)
     needs: [changes, ci-backend, ci-processing, ci-ingestion]
@@ -230,17 +229,17 @@ jobs:
             const body = [
               '### Manual staging deploy',
               '',
-              'This PR changes **backend / processor / ingestion**. Shared staging is **not** updated automatically.',
+              'This PR changes **backend / processor / ingestion**.',
+              'Staging uses a **separate Neon DB** and **separate R2 bucket** (see `docs/STAGING.md`).',
               '',
-              '**To update staging images + Render staging:** add the label `deploy-staging` to this PR.',
+              '**To update staging images:** add the label `deploy-staging`.',
               '',
-              '- That rebuilds `:staging` / `:processor-staging` / `:ingest-staging` from this PR head and triggers staging deploy hooks.',
-              '- Production images (`:main`, etc.) are **not** touched.',
-              '- Frontend-only changes do not need this — use the Vercel Preview link.',
+              '- Rebuilds `:staging*` tags and triggers staging Render hooks only.',
+              '- Production DB, bucket, and `:main` images are **not** touched.',
+              '- Frontend-only PRs: use Vercel Preview only.',
               '',
               'Re-add the label after it is removed to deploy again.',
             ].join('\n');
-
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -263,8 +262,7 @@ jobs:
                 body,
               });
             }
-
-            core.notice('Add label deploy-staging on this PR to update shared staging (manual).');
+            core.notice('Add label deploy-staging to update shared staging (isolated DB + S3).');
       - name: Check summary
         run: |
           {

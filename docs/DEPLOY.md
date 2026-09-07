@@ -1,6 +1,6 @@
 # Production Deployment
 
-Deploy with **Vercel + Neon + Cloudflare R2 + Render**. **Merge to `main` still deploys production** (unchanged). PRs can additionally update a shared staging stack for preview links. Full checklist: [`DOCKER.md`](DOCKER.md).
+Deploy with **Vercel + Neon + Cloudflare R2 + Render**. Merge to `main` still deploys production. PR previews use an **isolated staging stack** (separate Neon DB + separate R2 bucket). Full staging checklist: [`STAGING.md`](STAGING.md). Full deploy notes: [`DOCKER.md`](DOCKER.md).
 
 ---
 
