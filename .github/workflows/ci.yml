@@ -188,257 +188,88 @@ jobs:
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID != '' && vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'ci-placeholder' }}
         run: npm run build
 
-  docker-backend:
-    name: Deploy backend (Render)
-    needs: [changes, ci-backend]
-    if: >-
-      github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
-      needs.changes.outputs.backend == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-      - name: Require Docker Hub secrets
-        run: |
-          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
-            echo "Missing DOCKERHUB_USERNAME or DOCKERHUB_TOKEN secrets"
-            exit 1
-          fi
-      - name: Set image tags
-        id: meta
-        run: |
-          SHA_SHORT="${GITHUB_SHA::7}"
-          echo "sha=$SHA_SHORT" >> "$GITHUB_OUTPUT"
-          echo "image=${{ secrets.DOCKERHUB_USERNAME }}/shelf" >> "$GITHUB_OUTPUT"
-      - name: Login to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Ensure Docker Hub repos are PRIVATE
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          ENSURE_MODE: ensure
-        run: |
-          chmod +x scripts/ensure-private-dockerhub-repos.sh
-          ./scripts/ensure-private-dockerhub-repos.sh shelf
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-      - name: Build & push backend
-        uses: docker/build-push-action@v7
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ${{ steps.meta.outputs.image }}:main
-            ${{ steps.meta.outputs.image }}:latest
-            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha }}
-          cache-from: type=gha,scope=backend
-          cache-to: type=gha,mode=max,scope=backend
-      - name: Verify images remain PRIVATE
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          ENSURE_MODE: verify
-        run: ./scripts/ensure-private-dockerhub-repos.sh shelf
-      - name: Prune old tags (keep max 10)
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          MAX_DOCKER_TAGS: "10"
-          PROTECTED_DOCKER_TAGS: "main,latest,processor-main,processor-latest,ingest-main,ingest-latest"
-        run: |
-          chmod +x scripts/prune-dockerhub-tags.sh
-          ./scripts/prune-dockerhub-tags.sh shelf
-      - name: Trigger Render redeploy
-        env:
-          RENDER_DEPLOY_HOOK_BACKEND: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}
-        run: |
-          if [ -z "$RENDER_DEPLOY_HOOK_BACKEND" ]; then
-            echo "Skip backend (no deploy hook secret)"
-            exit 0
-          fi
-          echo "Triggering backend..."
-          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_BACKEND" >/dev/null
-          echo "Triggered backend"
-      - name: Summary
-        run: |
-          {
-            echo "### Backend image pushed"
-            echo ""
-            echo "\`${{ steps.meta.outputs.image }}:main\` → Render hook"
-          } >> "$GITHUB_STEP_SUMMARY"
 
-  docker-processor:
-    name: Deploy processor (Render)
-    needs: [changes, ci-processing]
+  docker-deploy:
+    name: Docker + Render (production)
+    needs: [changes, ci-backend, ci-processing, ci-ingestion]
     if: >-
+      always() &&
+      needs.changes.result == 'success' &&
       github.event_name == 'push' &&
       (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
-      needs.changes.outputs.processing == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-      - name: Require Docker Hub secrets
-        run: |
-          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
-            echo "Missing DOCKERHUB_USERNAME or DOCKERHUB_TOKEN secrets"
-            exit 1
-          fi
-      - name: Set image tags
-        id: meta
-        run: |
-          SHA_SHORT="${GITHUB_SHA::7}"
-          echo "sha=$SHA_SHORT" >> "$GITHUB_OUTPUT"
-          echo "image=${{ secrets.DOCKERHUB_USERNAME }}/shelf" >> "$GITHUB_OUTPUT"
-      - name: Login to Docker Hub
-        uses: docker/login-action@v4
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Ensure Docker Hub repos are PRIVATE
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          ENSURE_MODE: ensure
-        run: |
-          chmod +x scripts/ensure-private-dockerhub-repos.sh
-          ./scripts/ensure-private-dockerhub-repos.sh shelf
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-      - name: Build & push processing service
-        uses: docker/build-push-action@v7
-        with:
-          context: ./processing-service
-          push: true
-          tags: |
-            ${{ steps.meta.outputs.image }}:processor-main
-            ${{ steps.meta.outputs.image }}:processor-latest
-            ${{ steps.meta.outputs.image }}:processor-${{ steps.meta.outputs.sha }}
-          cache-from: type=gha,scope=processing-service
-          cache-to: type=gha,mode=max,scope=processing-service
-      - name: Verify images remain PRIVATE
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          ENSURE_MODE: verify
-        run: ./scripts/ensure-private-dockerhub-repos.sh shelf
-      - name: Prune old tags (keep max 10)
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          MAX_DOCKER_TAGS: "10"
-          PROTECTED_DOCKER_TAGS: "main,latest,processor-main,processor-latest,ingest-main,ingest-latest"
-        run: |
-          chmod +x scripts/prune-dockerhub-tags.sh
-          ./scripts/prune-dockerhub-tags.sh shelf
-      - name: Trigger Render redeploy
-        env:
-          RENDER_DEPLOY_HOOK_PROCESSOR: ${{ secrets.RENDER_DEPLOY_HOOK_PROCESSOR }}
-        run: |
-          if [ -z "$RENDER_DEPLOY_HOOK_PROCESSOR" ]; then
-            echo "Skip processor (no deploy hook secret)"
-            exit 0
-          fi
-          echo "Triggering processor..."
-          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_PROCESSOR" >/dev/null
-          echo "Triggered processor"
-      - name: Summary
-        run: |
-          {
-            echo "### Processor image pushed"
-            echo ""
-            echo "\`${{ steps.meta.outputs.image }}:processor-main\` → Render hook"
-          } >> "$GITHUB_STEP_SUMMARY"
+      (
+        (needs.changes.outputs.backend == 'true' && needs.ci-backend.result == 'success') ||
+        (needs.changes.outputs.processing == 'true' && needs.ci-processing.result == 'success') ||
+        (needs.changes.outputs.ingestion == 'true' && needs.ci-ingestion.result == 'success')
+      )
+    uses: ./.github/workflows/docker-deploy.yml
+    secrets: inherit
+    with:
+      backend: ${{ needs.changes.outputs.backend == 'true' && needs.ci-backend.result == 'success' }}
+      processing: ${{ needs.changes.outputs.processing == 'true' && needs.ci-processing.result == 'success' }}
+      ingestion: ${{ needs.changes.outputs.ingestion == 'true' && needs.ci-ingestion.result == 'success' }}
 
-  docker-ingestion:
-    name: Deploy ingestion (Render)
-    needs: [changes, ci-ingestion]
+  staging-manual-hint:
+    name: Staging deploy (manual — add label)
+    needs: changes
     if: >-
-      github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
-      needs.changes.outputs.ingestion == 'true'
+      github.event_name == 'pull_request' &&
+      (
+        needs.changes.outputs.backend == 'true' ||
+        needs.changes.outputs.processing == 'true' ||
+        needs.changes.outputs.ingestion == 'true'
+      )
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      pull-requests: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-      - name: Require Docker Hub secrets
-        run: |
-          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
-            echo "Missing DOCKERHUB_USERNAME or DOCKERHUB_TOKEN secrets"
-            exit 1
-          fi
-      - name: Set image tags
-        id: meta
-        run: |
-          SHA_SHORT="${GITHUB_SHA::7}"
-          echo "sha=$SHA_SHORT" >> "$GITHUB_OUTPUT"
-          echo "image=${{ secrets.DOCKERHUB_USERNAME }}/shelf" >> "$GITHUB_OUTPUT"
-      - name: Login to Docker Hub
-        uses: docker/login-action@v4
+      - name: Instruct manual staging deploy
+        uses: actions/github-script@v7
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Ensure Docker Hub repos are PRIVATE
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          ENSURE_MODE: ensure
-        run: |
-          chmod +x scripts/ensure-private-dockerhub-repos.sh
-          ./scripts/ensure-private-dockerhub-repos.sh shelf
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-      - name: Build & push ingestion service
-        uses: docker/build-push-action@v7
-        with:
-          context: ./ingestion-service
-          push: true
-          tags: |
-            ${{ steps.meta.outputs.image }}:ingest-main
-            ${{ steps.meta.outputs.image }}:ingest-latest
-            ${{ steps.meta.outputs.image }}:ingest-${{ steps.meta.outputs.sha }}
-          cache-from: type=gha,scope=ingestion-service
-          cache-to: type=gha,mode=max,scope=ingestion-service
-      - name: Verify images remain PRIVATE
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          ENSURE_MODE: verify
-        run: ./scripts/ensure-private-dockerhub-repos.sh shelf
-      - name: Prune old tags (keep max 10)
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-          MAX_DOCKER_TAGS: "10"
-          PROTECTED_DOCKER_TAGS: "main,latest,processor-main,processor-latest,ingest-main,ingest-latest"
-        run: |
-          chmod +x scripts/prune-dockerhub-tags.sh
-          ./scripts/prune-dockerhub-tags.sh shelf
-      - name: Trigger Render redeploy
-        env:
-          RENDER_DEPLOY_HOOK_INGESTION: ${{ secrets.RENDER_DEPLOY_HOOK_INGESTION }}
-        run: |
-          if [ -z "$RENDER_DEPLOY_HOOK_INGESTION" ]; then
-            echo "Skip ingestion (no deploy hook secret)"
-            exit 0
-          fi
-          echo "Triggering ingestion..."
-          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_INGESTION" >/dev/null
-          echo "Triggered ingestion"
-      - name: Summary
+          script: |
+            const body = [
+              '### Manual staging deploy',
+              '',
+              'This PR changes **backend / processor / ingestion**. Shared staging is **not** updated automatically.',
+              '',
+              '**To update staging images + Render staging:** add the label `deploy-staging` to this PR.',
+              '',
+              '- That rebuilds `:staging` / `:processor-staging` / `:ingest-staging` from this PR head and triggers staging deploy hooks.',
+              '- Production images (`:main`, etc.) are **not** touched.',
+              '- Frontend-only changes do not need this — use the Vercel Preview link.',
+              '',
+              'Re-add the label after it is removed to deploy again.',
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const marker = '### Manual staging deploy';
+            const existing = comments.find((c) => c.user?.type === 'Bot' && c.body?.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+            core.notice('Add label deploy-staging on this PR to update shared staging (manual).');
+      - name: Check summary
         run: |
           {
-            echo "### Ingestion image pushed"
+            echo "### Staging is manual on this PR"
             echo ""
-            echo "\`${{ steps.meta.outputs.image }}:ingest-main\` → Render hook"
+            echo "Add the GitHub label \`deploy-staging\` to push staging Docker tags and redeploy shared staging."
+            echo "Frontend preview: use the Vercel Preview deployment on this PR."
           } >> "$GITHUB_STEP_SUMMARY"

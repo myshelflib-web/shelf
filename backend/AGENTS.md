@@ -23,7 +23,7 @@ Express + TypeScript (`"type": "module"`), Prisma 6, PostgreSQL. Entry: `src/ind
 | `/api/admin/blog` | `routes/adminBlog.ts` | Admin blog CRUD + cover upload |
 | `/api/internal` | `routes/internal.ts` | Processor callbacks (shared secret) |
 
-Health: `GET /health`, `GET /metrics`. JSON body limit 10mb. CORS from `CORS_ORIGIN` (comma-separated).
+Health: `GET /health`, `GET /metrics`. JSON body limit 10mb. CORS from `CORS_ORIGIN` (comma-separated). Staging may set `ALLOW_VERCEL_PREVIEW_CORS=true` to allow `https://*.vercel.app` preview origins (leave off in production).
 
 ## Logging & tracing
 

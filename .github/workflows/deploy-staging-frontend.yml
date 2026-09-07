@@ -1,0 +1,88 @@
+name: Deploy staging frontend
+
+# Optional: after merge to main, also publish a Preview-env FE build (staging API).
+# Does NOT replace Vercel Production Git auto-deploy on main — leave that enabled.
+# PR preview URLs still come from Vercel's Git Preview integration.
+# Requires VERCEL_* secrets; skip/disable this workflow until staging API + secrets exist.
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "frontend/**"
+      - ".nvmrc"
+      - ".github/workflows/deploy-staging-frontend.yml"
+
+concurrency:
+  group: deploy-staging-frontend
+  cancel-in-progress: true
+
+jobs:
+  staging-frontend:
+    name: Staging frontend (Vercel)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Require Vercel secrets
+        id: vercel
+        run: |
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ] || [ -z "${{ secrets.VERCEL_ORG_ID }}" ] || [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "Skipping staging FE (VERCEL_* secrets not set). Production Git deploy is unaffected."
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.vercel.outputs.skip != 'true'
+        run: npm ci
+      - name: Install Vercel CLI
+        if: steps.vercel.outputs.skip != 'true'
+        run: npm install -g vercel@latest
+      - name: Pull Preview env (staging API URL)
+        if: steps.vercel.outputs.skip != 'true'
+        run: vercel pull --yes --environment=preview --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Build
+        if: steps.vercel.outputs.skip != 'true'
+        run: vercel build --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Deploy Preview (staging)
+        if: steps.vercel.outputs.skip != 'true'
+        id: deploy
+        run: |
+          URL=$(vercel deploy --prebuilt --token="${{ secrets.VERCEL_TOKEN }}")
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Deployed staging FE: $URL"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Alias staging host (optional)
+        if: steps.vercel.outputs.skip != 'true' && vars.STAGING_FRONTEND_ALIAS != ''
+        run: |
+          vercel alias set "${{ steps.deploy.outputs.url }}" "${{ vars.STAGING_FRONTEND_ALIAS }}" \
+            --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - if: steps.vercel.outputs.skip != 'true'
+        run: |
+          {
+            echo "### Staging frontend"
+            echo ""
+            echo "${{ steps.deploy.outputs.url }}"
+            if [ -n "${{ vars.STAGING_FRONTEND_ALIAS }}" ]; then
+              echo ""
+              echo "Alias: \`${{ vars.STAGING_FRONTEND_ALIAS }}\`"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
