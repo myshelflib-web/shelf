@@ -1,167 +1,141 @@
 # Docker images & deploy (Vercel + Render)
 
 ```
-GitHub push to main
-  ├─ Detect which apps changed (backend / processing-service / ingestion-service / frontend)
-  ├─ CI: lint / test / build — changed apps only
-  ├─ Docker Hub: push only changed images (main, processor-main, ingest-main)
-  ├─ Render deploy hooks → only for images just pushed
-  └─ Vercel → frontend only when frontend/ (or .nvmrc) changed
+PR (frontend only)
+  └─ Vercel Preview → staging or prod API (Preview env) — no Docker/staging deploy
+
+PR (backend / processor / ingestion changed)
+  ├─ CI checks
+  ├─ PR comment + check: add label `deploy-staging` (manual)
+  └─ When labeled → :staging* images + staging Render hooks (prod untouched)
+
+Push / merge to main  (unchanged production path)
+  ├─ CI checks (changed apps)
+  ├─ Docker Hub → main / processor-main / ingest-main (+ sha)
+  ├─ Render production deploy hooks
+  └─ Vercel Production (Git auto-deploy — leave enabled)
 ```
+
+**Production is not gated on staging.** Merge to `main` still ships production exactly as before. Staging updates only when someone **manually** adds `deploy-staging` on a PR that changes server apps.
+
+
+---
+
+## One-time platform checklist
+
+### 1. Neon staging database
+
+Create a separate Neon project or branch. Do **not** reuse production `DATABASE_URL` on staging Render services. Run `npx prisma migrate deploy` against the staging URL once.
+
+### 2. Render staging services (image deploy) — optional until you want PR previews
+
+| Service | Image |
+|---------|--------|
+| Backend staging | `docker.io/<user>/shelf:staging` |
+| Processor staging | `docker.io/<user>/shelf:processor-staging` |
+| Ingestion staging | `docker.io/<user>/shelf:ingest-staging` |
+
+- Same shape of env vars as prod; use staging DB, staging `BACKEND_URL`, `OTEL_DEPLOYMENT_ENVIRONMENT=staging`.
+- Staging backend: `ALLOW_VERCEL_PREVIEW_CORS=true` and `CORS_ORIGIN` including your staging FE origin.
+- **Leave `ALLOW_VERCEL_PREVIEW_CORS` unset/false on production.**
+- Deploy Hooks → GitHub secrets:
+  - `RENDER_DEPLOY_HOOK_BACKEND_STAGING`
+  - `RENDER_DEPLOY_HOOK_PROCESSOR_STAGING`
+  - `RENDER_DEPLOY_HOOK_INGESTION_STAGING`
+- Keep existing prod hooks as `RENDER_DEPLOY_HOOK_BACKEND` / `_PROCESSOR` / `_INGESTION` (still used on every merge to `main`).
+- Do **not** enable Render auto-deploy from Git.
+
+Until staging hooks exist, PR Docker jobs still push `:staging*` tags but skip the hook (no production impact).
+
+### 3. Render production services
+
+Unchanged. Image tags: `:main`, `:processor-main`, `:ingest-main`. Updated on every push to `main` when those apps change.
+
+### 4. Vercel
+
+You must configure **`NEXT_PUBLIC_API_URL` for both environments**:
+
+| Environment | `NEXT_PUBLIC_API_URL` |
+|-------------|------------------------|
+| **Preview** | Staging Render API URL (when staging exists; else keep prod until then) |
+| **Production** | Production Render API URL |
+
+- **Keep automatic Production deployments from Git enabled** — this is the existing FE → prod path.
+- Preview deployments stay on for PRs.
+- Optional GitHub secrets for CLI tools: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
+- Optional repo variable `STAGING_FRONTEND_ALIAS` for a stable staging FE hostname.
+
+### 5. GitHub variables / secrets
+
+| Name | Purpose |
+|------|---------|
+| `STAGING_API_URL` | Optional docs / tooling |
+| `NEXT_PUBLIC_API_URL` | Prod API (CI build placeholder / keep-awake) |
+| `DOCKERHUB_*` | Image push |
+| `RENDER_DEPLOY_HOOK_*` | **Prod** hooks (required for main → prod) |
+| `RENDER_DEPLOY_HOOK_*_STAGING` | Staging hooks (optional until staging services exist) |
+| `VERCEL_*` | Optional CLI deploys |
+
+---
 
 ## Images (Render only)
 
-Docker Hub **Personal** allows **one private repository**. Both images share `shelf`; the service is the tag.
+Docker Hub **Personal** allows **one private repository** (`shelf`). Staging and production are **different tags**.
 
-| Service | Image |
-|---------|--------|
-| Backend | `vishnubhardwaj8826/shelf:main` |
-| Processing service | `vishnubhardwaj8826/shelf:processor-main` |
-| Ingestion service | `vishnubhardwaj8826/shelf:ingest-main` |
+| Event | Backend | Processor | Ingestion |
+|-------|---------|-----------|-----------|
+| **PR + label `deploy-staging`** (manual) | `:staging` | `:processor-staging` | `:ingest-staging` |
+| **Push to `main`** (automatic) | `:main` (+ `:latest`, sha) | `:processor-main` | `:ingest-main` |
 
-| Tag | Purpose |
-|-----|---------|
-| **`main`** / `processor-main` / `ingest-main` | Constant tags for Render |
-| `latest` / `processor-latest` / `ingest-latest` | Same pointers |
-| `<sha>` / `processor-<sha>` / `ingest-<sha>` | Rollback pins |
+**Rules:**
+- Staging deploy is **manual** (label or Actions → Deploy staging). Frontend-only PRs never need it.
+- PR / staging jobs never write `main`, `latest`, `processor-main`, `processor-latest`, `ingest-main`, or `ingest-latest`.
+- Production Render services keep pointing at `:main` / `:processor-main` / `:ingest-main`.
 
-Frontend is **not** pushed to Docker Hub — Vercel builds it from the repo.
+Frontend is **not** pushed to Docker Hub — Vercel builds it.
 
----
-
-## Frontend on Vercel (API URL injection)
-
-In Vercel project → **Settings → Environment Variables**:
-
-| Name | Value |
-|------|--------|
-| `NEXT_PUBLIC_API_URL` | your Render backend URL, e.g. `https://shelf.onrender.com` |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | optional |
-
-Vercel injects these at **build time** on every **frontend** deploy. After you change them, trigger a Redeploy.
-
-Root Directory must stay `frontend`. Builds are skipped when that folder (and `.nvmrc`) did not change.
-
-Also set backend `CORS_ORIGIN` to your Vercel URL (e.g. `https://your-app.vercel.app`).
+CI prune keeps **at most 20** tags; protected: `main`, `latest`, `processor-main`, `processor-latest`, `ingest-main`, `ingest-latest`, `staging`, `processor-staging`, `ingest-staging`.
 
 ---
 
-## Backend + worker on Render
+## Frontend on Vercel (`NEXT_PUBLIC_API_URL`)
 
-1. Create 3 services → **Deploy an existing image from a registry**
-2. Image URLs:
+| Vercel environment | `NEXT_PUBLIC_API_URL` | Used by |
+|--------------------|----------------------|---------|
+| **Preview** | Staging API (when ready) | PR preview URLs |
+| **Production** | Prod API | Git auto-deploy on `main` + optional manual Action |
 
-| Service | Image |
-|---------|--------|
-| Backend | `docker.io/vishnubhardwaj8826/shelf:main` |
-| Processing service | `docker.io/vishnubhardwaj8826/shelf:processor-main` |
-| Ingestion service | `docker.io/vishnubhardwaj8826/shelf:ingest-main` |
-
-3. Private registry: add Docker Hub username + access token in Render credentials  
-4. Env vars on each service (see below)  
-5. Deploy Hooks → GitHub secrets (CI triggers them after image push). **Do not** also enable Render auto-deploy from Git — that would bounce both services on every commit.
-
-| Secret | Value |
-|--------|--------|
-| `RENDER_DEPLOY_HOOK_BACKEND` | backend deploy hook URL |
-| `RENDER_DEPLOY_HOOK_PROCESSOR` | processing-service deploy hook URL |
-| `RENDER_DEPLOY_HOOK_INGESTION` | ingestion-service deploy hook URL |
+Root Directory must stay `frontend`. Staging backend may set `ALLOW_VERCEL_PREVIEW_CORS=true`.
 
 ---
 
-## GitHub secrets (for Docker publish)
+## Backend + workers on Render
 
-| Name | Value |
-|------|--------|
-| `DOCKERHUB_USERNAME` | `vishnubhardwaj8826` |
-| `DOCKERHUB_TOKEN` | Docker Hub PAT with **Read, Write, Delete** (not account password) |
-| `RENDER_DEPLOY_HOOK_BACKEND` | optional |
-| `RENDER_DEPLOY_HOOK_PROCESSOR` | optional |
-| `RENDER_DEPLOY_HOOK_INGESTION` | optional |
+1. **Production** services (existing) → `:main` / `:processor-main` / `:ingest-main`
+2. **Staging** services (new, optional) → `:staging` / `:processor-staging` / `:ingest-staging`
+3. Never enable Render auto-deploy from Git — CI triggers hooks after image push
 
-Keep **one** private Hub repo: `shelf` (Personal-plan limit). Do not create a second repo for the processing service.
-
-CI enforces this automatically:
-
-1. Before push → create/keep `shelf` private
-2. After push → verify `is_private=true` or **fail the job**
-3. Prune tags → keep **at most 10** (`main`, `latest`, `processor-main`, `processor-latest`, `ingest-main`, `ingest-latest` always kept; oldest SHA tags deleted)
-
-No frontend image is published (Vercel only).
-
-> Creating a second private repo fails on Personal (`No more private repositories available`). Upgrade to Pro only if you want separate repos.
-> Tag prune needs a PAT with **Read, Write, Delete**.
-
----
-
-## Runtime env (Render containers)
-
-### Backend
+**Backend (staging extras):**
 
 ```
-DATABASE_URL=
-JWT_SECRET=
-INTERNAL_SECRET=
-CORS_ORIGIN=https://your-app.vercel.app
-S3_ENDPOINT=
-S3_ACCESS_KEY=
-S3_SECRET_KEY=
-S3_BUCKET=upsc-content
-S3_REGION=auto
-LOG_LEVEL=info
-PORT=4000
+DATABASE_URL=                 # staging Neon — not prod
+CORS_ORIGIN=https://your-staging-fe.vercel.app
+ALLOW_VERCEL_PREVIEW_CORS=true
+OTEL_DEPLOYMENT_ENVIRONMENT=staging
 ```
 
-### Processing service
-
-```
-BACKEND_URL=https://shelf.onrender.com
-INTERNAL_SECRET=   # same as backend
-S3_ENDPOINT=
-S3_ACCESS_KEY=
-S3_SECRET_KEY=
-S3_BUCKET=upsc-content
-S3_REGION=auto
-POLL_INTERVAL_MS=15000
-PORT=4001
-```
-
-### Ingestion service
-
-```
-BACKEND_URL=https://shelf.onrender.com
-INTERNAL_SECRET=   # same as backend
-INGEST_WORKER_MODE=sqs
-AWS_REGION=ap-south-1
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-INGEST_SQS_POLL_QUEUE_URL=
-INGEST_SQS_FETCH_QUEUE_URL=
-INGEST_SQS_PROCESS_QUEUE_URL=
-INGEST_SQS_PROMOTE_QUEUE_URL=
-INGEST_SQS_ARCHIVE_QUEUE_URL=
-INGEST_SQS_WAIT_SECONDS=20
-INGEST_SQS_VISIBILITY_TIMEOUT=300
-PORT=4002
-```
-
-Backend also needs `INGEST_SCHEDULER=true` and the same SQS queue URLs if the scheduler enqueues polls from the API container. See [`INGEST.md`](INGEST.md).
+**Backend (production):** exact FE origins only; **no** `ALLOW_VERCEL_PREVIEW_CORS`.
 
 ---
 
 ## Pipeline behavior
 
-On **push to `main`**, only apps whose files (or dependents) changed are rebuilt and redeployed. The other two keep running on the last good deploy.
+| Event | CI | Docker + Render | Frontend |
+|-------|----|-----------------|----------|
+| PR frontend-only | FE checks | skip | Vercel Preview |
+| PR with server apps | checks + staging hint | **manual** `deploy-staging` label → staging tags/hooks | Vercel Preview |
+| Push to `main` (changed apps) | checks | **production** tags + prod hooks | Vercel Production (Git) |
+| **Deploy production** (manual) | checks | prod tags + prod hooks (optional redeploy) | `vercel --prod` |
+| workflow / docs only | skip | skip | skip |
 
-| Change in | CI checks | Docker + Render | Vercel |
-|-----------|-----------|-----------------|--------|
-| `backend/**` | backend | backend image + hook | skip |
-| `processing-service/**` | processing service | processor image + hook | skip |
-| `ingestion-service/**` | ingestion service | ingest image + hook | skip |
-| `frontend/**` | frontend | skip | deploy |
-| `.nvmrc` | all four | skip (images pin `node:22-alpine`) | deploy |
-| workflow / docs / other | skip | skip | skip |
-
-The four packages do not import each other. A backend-only change does **not** bounce the workers or frontend; change both trees in the same commit if an API contract requires it.
-
-PRs only run CI checks for the apps that changed.
+A backend-only change does **not** bounce workers or frontend; change both trees in the same commit if an API contract requires it.

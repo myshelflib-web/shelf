@@ -1,23 +1,20 @@
 # Production Deployment
 
-Deploy with **Vercel + Neon + Cloudflare R2 + Render**. No credit card required on free tiers. **No CI/CD pipeline needed** — Vercel and Render deploy automatically when you push to GitHub.
+Deploy with **Vercel + Neon + Cloudflare R2 + Render**. Merge to `main` still deploys production. PR previews use an **isolated staging stack** (separate Neon DB + separate R2 bucket). Full staging checklist: [`STAGING.md`](STAGING.md). Full deploy notes: [`DOCKER.md`](DOCKER.md).
 
 ---
 
 ## Architecture
 
 ```
-GitHub (push to main)
-    │
-    ├──► Vercel          → Next.js frontend
-    │
-    ├──► Render          → Express backend (port 4000)
-    │
-    └──► Render          → Processing service (polls for jobs)
-    │
-    └──► Render          → Ingestion service (SQS current-affairs pipeline)
+GitHub
+  │
+  ├── PR (FE only)         → Vercel Preview only
+  ├── PR (backend/workers) → CI + manual label `deploy-staging` → shared staging
+  └── merge to main        → production Render + Vercel Production (existing path)
+        optional           → Actions → Deploy production (manual redeploy)
 
-Neon                   → PostgreSQL
+Neon                   → PostgreSQL (separate DB/branch for staging)
 Cloudflare R2          → S3 bucket (admin/ + users/{id}/ folders)
 Qdrant Cloud (optional) → Study AI vector index (`VECTOR_DB_URL`)
 ```
@@ -30,10 +27,10 @@ Qdrant Cloud (optional) → Study AI vector index (`VECTOR_DB_URL`)
 |---------|------------|--------------|
 | Vercel Hobby | ₹0 | No |
 | Neon Free | ₹0 | No |
-| Render Free (backend + worker) | ₹0 | No |
+| Render Free (backend + worker + staging) | ₹0 | No |
 | Cloudflare R2 (< 10 GB) | ₹0 | Debit for signup |
 
-**Total: ₹0/month** to start (Render free tier has cold starts after idle).
+**Total: ₹0/month** to start (Render free tier has cold starts after idle). Staging services count toward the free-service limit.
 
 ---
 
@@ -52,15 +49,17 @@ git push -u origin main
 ## Step 2 — Database (Neon)
 
 1. Sign up at [neon.tech](https://neon.tech) (no card)
-2. Create project → copy **connection string**
-3. Run migrations once from your laptop (or they run automatically on Docker deploy):
+2. Create project → copy **connection string** (production)
+3. Create a **second** database or Neon branch for **staging**
+4. Run migrations against each URL once:
 
 ```bash
 cd backend
-DATABASE_URL="postgresql://..." npx prisma migrate deploy
+DATABASE_URL="postgresql://...prod..." npx prisma migrate deploy
+DATABASE_URL="postgresql://...staging..." npx prisma migrate deploy
 ```
 
-If the backend crashes with `UserTopic.fileSizeBytes does not exist`, production is behind — run the command above against your **Neon** URL (same value as Render `DATABASE_URL`), then restart the backend.
+If the backend crashes with `UserTopic.fileSizeBytes does not exist`, that environment is behind — run migrate deploy against its `DATABASE_URL`, then restart the service.
 
 Optional seed (demo catalog only):
 
@@ -80,7 +79,7 @@ DATABASE_URL="postgresql://..." npm run db:seed
 4. Copy the **Access Key ID** (32 chars) and **Secret Access Key** (64 chars)
 5. Find your **Account ID** in the R2 overview page (used in the endpoint URL)
 
-Set on **both** backend and processing service (Render env vars):
+Set on **both** backend and processing service (Render env vars), for prod and staging:
 
 ```
 S3_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
@@ -92,8 +91,8 @@ S3_REGION=auto
 
 **Notes:**
 - Use **R2 API tokens**, not your global Cloudflare API key
-- R2 buckets are **private** (no public bucket). The API mints short-lived URLs; the browser PUTs uploads and Range-GETs PDFs straight to R2. Page metadata, HTML notes, highlights, and Study AI still go through the API.
-- Library uploads go **browser → R2** with a short-lived presigned PUT. The bucket must allow CORS from your **Vercel origin** (the site URL in the browser, not the Render API URL).
+- R2 buckets are **private** (no public bucket). The API mints short-lived URLs; the browser PUTs uploads and Range-GETs PDFs straight to R2.
+- Library uploads go **browser → R2** with a short-lived presigned PUT. The bucket must allow CORS from your **Vercel origins** (site URL in the browser, not the Render API URL).
 
 ### R2 bucket CORS (required for direct uploads)
 
@@ -101,16 +100,16 @@ This is **not** the same as Render `CORS_ORIGIN` (that only lets the browser cal
 
 1. Open [Cloudflare Dashboard](https://dash.cloudflare.com) → **R2 Object Storage**.
 2. Click your bucket (`upsc-docs`).
-3. Open **Settings**.
-4. Find **CORS Policy** → **Add CORS policy** (or **Edit**).
-5. Paste this, replacing the origin with your real Vercel URL (no trailing slash). If you also use a custom domain, list both:
+3. Open **Settings** → **CORS Policy** → **Add** / **Edit**.
+4. Paste this, replacing origins with your real URLs (no trailing slash). Include production, staging FE, and note the Vercel preview caveat below:
 
 ```json
 [
   {
     "AllowedOrigins": [
       "https://your-app.vercel.app",
-      "https://www.your-custom-domain.com"
+      "https://www.your-custom-domain.com",
+      "https://your-staging-alias.vercel.app"
     ],
     "AllowedMethods": ["GET", "PUT", "HEAD"],
     "AllowedHeaders": ["*", "Range", "Content-Type"],
@@ -126,17 +125,19 @@ This is **not** the same as Render `CORS_ORIGIN` (that only lets the browser cal
 ]
 ```
 
-6. Save.
+R2 may not accept a true `*.vercel.app` wildcard — if PR-preview uploads fail, add the specific preview origin or use `STAGING_FRONTEND_ALIAS` for upload testing.
 
-Also set Render **backend** `CORS_ORIGIN` to the **same** origin(s), comma-separated if you have two:
+5. Save.
+
+Also set Render **backend** `CORS_ORIGIN` to the same exact origin(s), comma-separated. On **staging** backend only, set `ALLOW_VERCEL_PREVIEW_CORS=true` so API calls from arbitrary `*.vercel.app` PR previews succeed (API CORS ≠ R2 CORS).
 
 ```
 CORS_ORIGIN=https://your-app.vercel.app,https://www.your-custom-domain.com
 ```
 
-On boot the backend tries `PutBucketCors` using `CORS_ORIGIN`. That often **fails** with a typical R2 “Object Read & Write” token (no permission to change bucket CORS). The dashboard step above is the reliable one. After saving, retry an upload — a CORS failure looks like “Cannot reach storage” with status 0 in the browser.
+On boot the backend tries `PutBucketCors` using `CORS_ORIGIN`. That often **fails** with a typical R2 “Object Read & Write” token. The dashboard step above is the reliable one.
 
-To confirm later: DevTools → Network → the `PUT` (upload) and Range `GET` (PDF read) to `r2.cloudflarestorage.com` should be 200, with a prior `OPTIONS` preflight. Those requests must **not** send `Authorization: Bearer`. The API calls are only `…/uploads/init`, `…/uploads/complete`, and `…/pdf-url`.
+To confirm: DevTools → Network → `PUT` / Range `GET` to `r2.cloudflarestorage.com` should be 200. Those must **not** send `Authorization: Bearer`.
 
 - Local dev still uses MinIO; production uses R2 — the code auto-detects from the endpoint URL
 
@@ -144,220 +145,79 @@ To confirm later: DevTools → Network → the `PUT` (upload) and Range `GET` (P
 
 ## Step 4 — Backend (Render)
 
-1. Sign up at [render.com](https://render.com) (no card on free tier)
-2. **New → Web Service** → connect GitHub repo
-3. Settings:
-   - **Root directory:** `backend`
-   - **Build command:** `npm install && npx prisma generate && npm run build`
-   - **Start command:** `npm start`
-4. Environment variables (from `backend/.env.example`):
+Prefer **Deploy an existing image** (see [`DOCKER.md`](DOCKER.md)): create **production** and **staging** web services.
+
+Staging image: `…/shelf:staging`. Production image: `…/shelf:main`.
 
 | Variable | Value |
 |----------|-------|
-| `DATABASE_URL` | Neon connection string |
+| `DATABASE_URL` | Neon connection string (env-specific) |
 | `JWT_SECRET` | Random long string |
-| `S3_ENDPOINT` | `https://<account-id>.r2.cloudflarestorage.com` |
-| `S3_ACCESS_KEY` | R2 access key |
-| `S3_SECRET_KEY` | R2 secret key |
-| `S3_BUCKET` | `upsc-docs` |
-| `S3_REGION` | `auto` |
-| `CORS_ORIGIN` | `https://your-app.vercel.app` |
-| `INTERNAL_SECRET` | Same random string as processing service |
-| `GOOGLE_CLIENT_ID` | Optional |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Optional — Grafana Cloud OTLP URL (`…/otlp`) |
-| `OTEL_EXPORTER_OTLP_HEADERS` | Optional — `Authorization=Basic%20…` from Grafana wizard |
-| `OTEL_SERVICE_NAME` | Optional — `shelf-backend` |
-| `OTEL_DEPLOYMENT_ENVIRONMENT` | Optional — `production` |
+| `S3_*` | R2 credentials (same as Step 3) |
+| `CORS_ORIGIN` | FE origin(s) for that env |
+| `ALLOW_VERCEL_PREVIEW_CORS` | `true` on **staging only** |
+| `INTERNAL_SECRET` | Same as processing service |
+| `OTEL_DEPLOYMENT_ENVIRONMENT` | `staging` or `production` |
+
+Wire Deploy Hooks to the matching GitHub secrets (`*_STAGING` vs prod). See [`DOCKER.md`](DOCKER.md).
 
 ### Keep free tier awake (temporary)
 
-Render free web services spin down after ~**15 minutes** idle. Until you upgrade, a light `GET /health` every **10 minutes** keeps the API warm.
+Render free web services spin down after ~**15 minutes** idle.
 
-1. GitHub repo → **Settings → Variables** → add `RENDER_BACKEND_URL` = `https://your-api.onrender.com` (or reuse existing `NEXT_PUBLIC_API_URL`).
-2. Optional: `RENDER_PROCESSOR_URL` for the processing service.
-3. Workflow: [`.github/workflows/keep-render-awake.yml`](../.github/workflows/keep-render-awake.yml) (runs on a schedule; **Actions → Keep Render awake → Run workflow** to test).
-4. Local alternative: `BACKEND_URL=https://your-api.onrender.com ./scripts/keep-render-awake.sh`
+1. GitHub → **Settings → Variables** → `RENDER_BACKEND_URL` = production API origin.
+2. Optional: `RENDER_PROCESSOR_URL`.
+3. Workflow: [`.github/workflows/keep-render-awake.yml`](../.github/workflows/keep-render-awake.yml).
+4. Local: `BACKEND_URL=https://your-api.onrender.com ./scripts/keep-render-awake.sh`
 
-Disable or delete that workflow once the backend is on a paid always-on plan.
+### Study AI + Qdrant (optional)
 
-### Study AI + Qdrant (optional but required together)
+Set `VECTOR_DB_*`, `LLM_*`, and `EMBEDDING_*` on the backend (see `backend/.env.example`). Prefer separate vector collections for staging vs production if sharing a Qdrant cluster.
 
-**Qdrant only stores vectors.** Chat and embeddings need OpenAI-compatible APIs.
+**“Study AI failed” with no backend logs:** often FE ahead of a Render redeploy, or a cold-start timeout. Check **backend** Render logs for `study.ask.stream.start`.
 
-**Groq free tier** = chat only (no embeddings). Use Groq for `LLM_*` and a separate free embedding provider for `EMBEDDING_*`.
-
-**Recommended free stack:** Groq chat + **Jina** embeddings + Qdrant.
-
-| Variable | Groq + Jina (recommended) |
-|----------|---------------------------|
-| `VECTOR_DB_URL` | Qdrant Cloud REST URL |
-| `VECTOR_DB_API_KEY` | Qdrant API key |
-| `VECTOR_DB_COLLECTION` | `shelf-library` |
-| `LLM_API_KEY` | Groq key (`gsk_...`) |
-| `LLM_BASE_URL` | `https://api.groq.com/openai/v1` |
-| `LLM_MODEL` | `llama-3.1-8b-instant` |
-| `EMBEDDING_API_KEY` | Free key from [jina.ai/?sui=apikey](https://jina.ai/?sui=apikey) |
-| `EMBEDDING_BASE_URL` | `https://api.jina.ai/v1` |
-| `EMBEDDING_MODEL` | `jina-embeddings-v3` |
-
-**Gemini Flash-Lite (chat) + gemini-embedding-001** — set all of these. Prefer Google’s rolling lite alias:
-
-| Variable | Gemini |
-|----------|--------|
-| `LLM_API_KEY` | Google AI Studio key (`AIza…`) |
-| `LLM_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/openai` |
-| `LLM_MODEL` | `gemini-flash-lite-latest` (default) or `gemini-flash-latest` |
-| `EMBEDDING_API_KEY` | Same AI Studio key (or a dedicated one) |
-| `EMBEDDING_BASE_URL` | `https://generativelanguage.googleapis.com/v1beta/openai` |
-| `EMBEDDING_MODEL` | `gemini-embedding-001` |
-| `GEMINI_CHAT_RPM` | `15` free-tier Flash-Lite (raise if billed) |
-| `GEMINI_EMBED_RPM` | `100` free-tier embedding-001 |
-
-Optional Google web lookup (Custom Search JSON API — does not burn Gemini RPM). Create a Programmable Search Engine and enable Custom Search API:
-
-| Variable | Google web search |
-|----------|-------------------|
-| `GOOGLE_CSE_ID` | Search engine `cx` |
-| `GOOGLE_SEARCH_API_KEY` | API key with Custom Search API enabled |
-
-If CSE is unset, Study AI falls back to Gemini Google Search grounding (uses Flash-Lite RPM), then Wikipedia / DuckDuckGo.
-
-If a model returns 404 / “no longer available”, the backend retries `LLM_MODEL_FALLBACKS` and remembers the working model until restart.
-
-**Free-tier speed tips (Render):** stay on lite, keep `PAGE_ASK_CONTEXT_BUDGET` ≤ 6500 (default), leave embedding batch at 4 / 2s pause, avoid `PAGE_ASK_ALWAYS_VECTORS=true` unless you need retrieval on every ask. Render free cold starts add 30–60s after idle — unrelated to Gemini.
-
-**“Study AI failed” with no backend logs:** the browser usually got a non-JSON error (404/502 HTML) before Express handled the request — often Vercel frontend ahead of a Render redeploy for `/api/study/ask/stream`, or a cold-start gateway timeout. Rate limits *do* log (`llm.request.failed` / `study.ask.*`) and return a clear “rate limit” / “quota” message. Check the **backend** Render service logs (not the processing worker) for `study.ask.stream.start` / `study.ask.start`.
-
-If `VECTOR_DB_URL` is set but embeddings fail (`model_not_found`), you are likely pointing embeddings at Groq — set `EMBEDDING_*` separately.
-
-Local Ollama (`nomic-embed-text`) is for laptop Docker only — do **not** point production Render at `localhost:11434`.
-
-5. Deploy → note URL: `https://your-api.onrender.com`
+Note URLs: prod `https://your-api.onrender.com`, staging `https://your-api-staging.onrender.com`.
 
 ---
 
-## Step 5 — Processing service (Render)
+## Step 5 — Processing + ingestion (Render)
 
-1. **New → Web Service** → same GitHub repo
-2. Settings:
-   - **Root directory:** `processing-service`
-   - **Build command:** `npm install && npm run build`
-   - **Start command:** `npm start`
-3. Environment variables (from `processing-service/.env.example`):
-
-| Variable | Value |
-|----------|-------|
-| `BACKEND_URL` | `https://your-api.onrender.com` |
-| `INTERNAL_SECRET` | Same as backend |
-| `S3_ENDPOINT` | Same as backend |
-| `S3_ACCESS_KEY` | Same as backend |
-| `S3_SECRET_KEY` | Same as backend |
-| `S3_BUCKET` | `upsc-docs` |
-| `POLL_INTERVAL_MS` | `15000` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Same as backend (optional) |
-| `OTEL_EXPORTER_OTLP_HEADERS` | Same as backend (optional) |
-| `OTEL_SERVICE_NAME` | `shelf-processing-service` |
-| `OTEL_DEPLOYMENT_ENVIRONMENT` | `production` |
-
-### Where to paste Grafana / OTEL vars (production)
-
-When set, Shelf exports **traces**, **HTTP + app metrics** (`http_requests_total`, upload counters, etc.), and **structured application logs** to Grafana over OTLP.
-
-Do **not** put them only in local `.env` if you want production telemetry. Add them in the host UI:
-
-1. [Grafana Cloud](https://grafana.com/products/cloud/) → **Connections** → **OpenTelemetry** → copy OTLP endpoint + `Authorization=Basic …` header.
-2. Open [dashboard.render.com](https://dashboard.render.com) → your **backend** web service → **Environment** → **Add Environment Variable** (or bulk edit).
-3. Add:
-   - `OTEL_EXPORTER_OTLP_ENDPOINT` = `https://otlp-gateway-prod-ap-south-1.grafana.net/otlp` (your region)
-   - `OTEL_EXPORTER_OTLP_HEADERS` = the `Authorization=Basic%20…` value from Grafana
-   - `OTEL_SERVICE_NAME` = `shelf-backend`
-   - `OTEL_DEPLOYMENT_ENVIRONMENT` = `production`
-4. Repeat on the **processing service** with `OTEL_SERVICE_NAME=shelf-processing-service` (same endpoint + headers).
-5. Repeat on the **ingestion service** with `OTEL_SERVICE_NAME=shelf-ingestion-service` (same endpoint + headers).
-6. Save → Render redeploys. In Grafana: **Explore** → Loki for logs, **Metrics** for counters/histograms, **Traces** for request spans. No OTEL vars needed on **Vercel** (frontend is not instrumented yet).
-
-**Dashboards:** metric names, PromQL examples, and suggested panel layout → [`docs/OBSERVABILITY.md`](OBSERVABILITY.md).
-
-**Verify on Render:** after deploy, open backend **Logs** and search for `"msg":"otel.started"`. If missing, the Docker image is not loading `instrumentation.js` (backend/processing Dockerfiles must start Node with `--import ./dist/instrumentation.js`).
-
-**Local dev:** `docker compose --profile observability up -d` → Grafana UI at [http://localhost:3001](http://localhost:3001), OTLP HTTP at `http://localhost:4318` (no auth header). Set `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318` in `backend/.env`, `processing-service/.env`, and `ingestion-service/.env`.
-
-The worker polls the backend every 15s for PDFs waiting to be processed.
-
----
-
-## Step 5b — Ingestion service (Render, Docker image)
-
-Use the same **Deploy an existing image from a registry** flow as backend/processor (see [`DOCKER.md`](DOCKER.md)).
-
-1. **New → Web Service** → **Deploy an existing image**
-2. Image: `docker.io/YOUR_DOCKERHUB_USER/shelf:ingest-main`
-3. **Do not** enable Render auto-deploy from Git — CI pushes the image and triggers the deploy hook.
-4. Environment variables (from `ingestion-service/.env.example`):
-
-| Variable | Value |
-|----------|-------|
-| `BACKEND_URL` | `https://your-api.onrender.com` |
-| `INTERNAL_SECRET` | Same as backend |
-| `INGEST_WORKER_MODE` | `sqs` |
-| `AWS_REGION` | e.g. `ap-south-1` |
-| `AWS_ACCESS_KEY_ID` | IAM user with SQS consume + send |
-| `AWS_SECRET_ACCESS_KEY` | |
-| `INGEST_SQS_POLL_QUEUE_URL` | |
-| `INGEST_SQS_FETCH_QUEUE_URL` | |
-| `INGEST_SQS_PROCESS_QUEUE_URL` | |
-| `INGEST_SQS_PROMOTE_QUEUE_URL` | |
-| `INGEST_SQS_ARCHIVE_QUEUE_URL` | |
-| `PORT` | `4002` |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | Same as backend (optional) |
-| `OTEL_EXPORTER_OTLP_HEADERS` | Same as backend (optional) |
-| `OTEL_SERVICE_NAME` | `shelf-ingestion-service` |
-| `OTEL_DEPLOYMENT_ENVIRONMENT` | `production` |
-
-5. On the **backend** Render service, also set:
-
-| Variable | Value |
-|----------|-------|
-| `INGEST_SCHEDULER=true` | Enables due-source polling |
-| `INGEST_SCHEDULER_INTERVAL_MS` | `300000` (optional) |
-| Same `AWS_*` and `INGEST_SQS_*` URLs | So admin “Poll now” enqueues to SQS |
-
-6. **Deploy Hook** → copy URL → GitHub secret `RENDER_DEPLOY_HOOK_INGESTION`
-
-Full pipeline details: [`docs/INGEST.md`](INGEST.md).
+Same image-deploy pattern ([`DOCKER.md`](DOCKER.md), [`INGEST.md`](INGEST.md)). Create staging + production services; point workers’ `BACKEND_URL` at the matching API; attach staging/prod deploy hooks.
 
 ---
 
 ## Step 6 — Frontend (Vercel)
 
-1. Sign up at [vercel.com](https://vercel.com) (no card)
+1. Sign up at [vercel.com](https://vercel.com)
 2. **Add New Project** → import GitHub repo
-3. Settings:
-   - **Root directory:** `frontend`
-   - **Framework:** Next.js (auto-detected)
-4. Environment variables:
+3. Settings: **Root directory** `frontend`, Framework Next.js
+4. Environment variables — set **`NEXT_PUBLIC_API_URL` on both** Preview and Production:
 
-| Variable | Value |
-|----------|-------|
-| `NEXT_PUBLIC_API_URL` | `https://your-api.onrender.com` |
-| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Optional |
+| Variable | Preview | Production |
+|----------|---------|------------|
+| `NEXT_PUBLIC_API_URL` | Staging Render API | **Prod** Render API |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID` | Optional | Optional |
 
-5. Deploy → your app is live at `https://your-app.vercel.app`
+Preview alone is not enough: production FE builds read the Production env and must call the prod API.
+
+5. **Keep automatic Production deploys** from Git (existing FE → prod path). Keep Preview deployments for PRs.
+6. Optional: GitHub secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` for CLI staging/manual tools.
 
 ---
 
-## Deploy flow (no pipeline)
+## Deploy flow
 
-Every `git push` to `main`:
+| Trigger | What deploys |
+|---------|----------------|
+| Pull request (frontend only) | CI + Vercel Preview — no staging Docker |
+| Pull request (backend/workers) | CI + comment/check: add label `deploy-staging` to update shared staging |
+| Label `deploy-staging` | Staging Docker tags + staging Render hooks (prod untouched) |
+| Merge / push to `main` | CI + **production** Docker/Render (same as before) + Vercel Production |
+| **Actions → Deploy production** | Optional manual redeploy of prod |
 
-- **Vercel** rebuilds and deploys frontend automatically
-- **Render** rebuilds and deploys backend + processing service automatically
+**Shared staging** (when configured): one staging API for PR previews; concurrent backend PRs overwrite it. Missing staging secrets only skip staging hooks — production on `main` still runs.
 
-No GitHub Actions deploy workflow required.
-
-### Optional: CI on pull requests
-
-`.github/workflows/ci.yml` runs build checks when you open a PR. This is optional quality assurance — not required for deployment.
+Details: [`DOCKER.md`](DOCKER.md). Workflows: [ci.yml](../.github/workflows/ci.yml), [deploy-production.yml](../.github/workflows/deploy-production.yml).
 
 ---
 
@@ -367,45 +227,13 @@ No GitHub Actions deploy workflow required.
 upsc-docs/
 ├── admin/{subject}/{topic}/source.pdf
 ├── admin/{subject}/{topic}/content.html
-└── users/{userId}/{section}/{page}/source.pdf
-    users/{userId}/{section}/{page}/content.html
+├── users/{userId}/...
 ```
 
----
-
-## Free tier limitations
-
-| Limitation | Workaround |
-|------------|------------|
-| Render sleeps after 15 min idle | Upgrade to Starter (~$7/mo) or use Oracle Always Free VM |
-| Render 750 free hours/month | Combine services or upgrade |
-| Neon DB sleeps after 5 min idle | First query may be slow; upgrade if needed |
-| Vercel Hobby = personal use only | Upgrade to Pro ($20/mo) for commercial apps |
+Admin curriculum and personal library share the bucket; keys are namespaced. Staging may share the same bucket (separate Neon) — prefer a staging bucket if you need hard isolation.
 
 ---
 
-## Alternatives (debit / UPI)
+## Observability (optional)
 
-| Option | Cost | Payment |
-|--------|------|---------|
-| **Oracle Cloud Always Free VM** | ₹0 | Debit verification |
-| **Hostinger India VPS** | ₹599–999/mo | UPI / debit |
-| **Render Starter** (always-on API) | ~₹595/mo | Debit |
-
----
-
-## Troubleshooting
-
-**CORS errors** — two different CORS settings:
-- Browser → **API**: Render `CORS_ORIGIN` must exactly match the Vercel URL (no trailing slash).
-- Browser → **R2** (upload PUT and PDF Range GET): set the same origin on the R2 bucket **Settings → CORS Policy** (see Step 3). A failed PUT/GET shows as “Cannot reach storage”.
-
-**PDFs stuck on PROCESSING** — ensure the processing-service Render service is running and `INTERNAL_SECRET` matches backend.
-
-**Current affairs not updating** — ensure ingestion-service is running, SQS queue URLs match backend, and `INGEST_SCHEDULER=true` on backend. Check Admin → Ingestion → seed sources, then poll.
-
-**Empty topic content** — check R2 bucket has files under `admin/` and env vars are correct.
-
-**Cold start (30–60s)** — Render free tier; first request after idle is slow.
-
-**`embeddings.failed` / Gemini 401 on `AQ.` keys** — switch embeddings to Jina: `EMBEDDING_BASE_URL=https://api.jina.ai/v1`, `EMBEDDING_MODEL=jina-embeddings-v3`, free key from jina.ai. Qdrant does not embed text.
+Grafana Cloud OTLP on backend/workers: set `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_EXPORTER_OTLP_HEADERS`. See [`OBSERVABILITY.md`](OBSERVABILITY.md). Verify logs for `"msg":"otel.started"` after deploy.

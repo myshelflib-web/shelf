@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Keep at most MAX_TAGS tags per Docker Hub repo.
-# Always preserves protected tags (main, latest); deletes oldest others first.
+# Always preserves protected tags (main/latest/staging + worker tags); deletes oldest others first.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

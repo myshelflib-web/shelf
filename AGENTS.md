@@ -11,7 +11,7 @@ Read the package `AGENTS.md` for the area you are changing:
 | Processing service | [`processing-service/AGENTS.md`](processing-service/AGENTS.md) | Async PDF → HTML worker |
 | Ingestion service | [`ingestion-service/AGENTS.md`](ingestion-service/AGENTS.md) | SQS current-affairs + official doc pipeline |
 
-Deploy notes: [`docs/DEPLOY.md`](docs/DEPLOY.md), [`docs/DOCKER.md`](docs/DOCKER.md).
+Deploy notes: [`docs/DEPLOY.md`](docs/DEPLOY.md), [`docs/DOCKER.md`](docs/DOCKER.md), staging isolation [`docs/STAGING.md`](docs/STAGING.md).
 
 ## Layout
 

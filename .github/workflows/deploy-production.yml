@@ -1,0 +1,374 @@
+name: Deploy production
+
+# Optional manual redeploy of production (FE + selected services).
+# Normal path remains: push/merge to main → CI writes :main tags + prod Render hooks
+# and Vercel Git Production auto-deploy. This workflow does not replace that.
+# Docker: may rewrite :main / :processor-main / :ingest-main.
+# Vercel: pulls Production env — NEXT_PUBLIC_API_URL must be the PROD API.
+
+on:
+  workflow_dispatch:
+    inputs:
+      frontend:
+        description: Deploy frontend to Vercel Production
+        type: boolean
+        default: true
+      backend:
+        description: Deploy backend image + Render prod hook
+        type: boolean
+        default: true
+      processor:
+        description: Deploy processor image + Render prod hook
+        type: boolean
+        default: true
+      ingestion:
+        description: Deploy ingestion image + Render prod hook
+        type: boolean
+        default: true
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+  PROTECTED_DOCKER_TAGS: main,latest,processor-main,processor-latest,ingest-main,ingest-latest,staging,processor-staging,ingest-staging
+
+jobs:
+  ci-backend:
+    name: Backend checks
+    if: inputs.backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - working-directory: backend
+        run: npm ci
+      - working-directory: backend
+        run: npx prisma generate
+      - run: npm run lint --prefix backend
+      - run: npm run typecheck --prefix backend
+      - run: npm run test --prefix backend
+      - run: npm run preloaded:copyright-audit --prefix backend
+      - working-directory: backend
+        run: npm run build
+
+  ci-processing:
+    name: Processor checks
+    if: inputs.processor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: processing-service/package-lock.json
+      - working-directory: processing-service
+        run: npm ci
+      - run: npm run lint --prefix processing-service
+      - run: npm run typecheck --prefix processing-service
+      - run: npm run test --prefix processing-service
+      - working-directory: processing-service
+        run: npm run build
+
+  ci-ingestion:
+    name: Ingestion checks
+    if: inputs.ingestion
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: ingestion-service/package-lock.json
+      - working-directory: ingestion-service
+        run: npm ci
+      - run: npm run lint --prefix ingestion-service
+      - run: npm run typecheck --prefix ingestion-service
+      - run: npm run test --prefix ingestion-service
+      - working-directory: ingestion-service
+        run: npm run build
+
+  ci-frontend:
+    name: Frontend checks
+    if: inputs.frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - working-directory: frontend
+        run: npm ci
+      - run: npm run lint --prefix frontend
+      - run: npm run typecheck --prefix frontend
+      - run: npm run test --prefix frontend
+      - working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: ${{ vars.NEXT_PUBLIC_API_URL != '' && vars.NEXT_PUBLIC_API_URL || 'https://api.example.com' }}
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID != '' && vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'ci-placeholder' }}
+        run: npm run build
+
+  docker-backend:
+    name: Production backend
+    needs: [ci-backend]
+    if: inputs.backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Require Docker Hub secrets
+        run: |
+          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "Missing DOCKERHUB_USERNAME or DOCKERHUB_TOKEN secrets"
+            exit 1
+          fi
+      - id: meta
+        run: |
+          echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "image=${{ secrets.DOCKERHUB_USERNAME }}/shelf" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          ENSURE_MODE: ensure
+        run: |
+          chmod +x scripts/ensure-private-dockerhub-repos.sh
+          ./scripts/ensure-private-dockerhub-repos.sh shelf
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:main
+            ${{ steps.meta.outputs.image }}:latest
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.sha }}
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+      - env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          ENSURE_MODE: verify
+        run: ./scripts/ensure-private-dockerhub-repos.sh shelf
+      - env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          MAX_DOCKER_TAGS: "20"
+          PROTECTED_DOCKER_TAGS: ${{ env.PROTECTED_DOCKER_TAGS }}
+        run: |
+          chmod +x scripts/prune-dockerhub-tags.sh
+          ./scripts/prune-dockerhub-tags.sh shelf
+      - env:
+          RENDER_DEPLOY_HOOK_BACKEND: ${{ secrets.RENDER_DEPLOY_HOOK_BACKEND }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_BACKEND" ]; then
+            echo "::error::Missing RENDER_DEPLOY_HOOK_BACKEND"
+            exit 1
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_BACKEND" >/dev/null
+          echo "Triggered production backend"
+      - run: |
+          {
+            echo "### Production backend"
+            echo ""
+            echo "\`${{ steps.meta.outputs.image }}:main\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  docker-processor:
+    name: Production processor
+    needs: [ci-processing]
+    if: inputs.processor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Require Docker Hub secrets
+        run: |
+          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "Missing DOCKERHUB_USERNAME or DOCKERHUB_TOKEN secrets"
+            exit 1
+          fi
+      - id: meta
+        run: |
+          echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "image=${{ secrets.DOCKERHUB_USERNAME }}/shelf" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          ENSURE_MODE: ensure
+        run: |
+          chmod +x scripts/ensure-private-dockerhub-repos.sh
+          ./scripts/ensure-private-dockerhub-repos.sh shelf
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: ./processing-service
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:processor-main
+            ${{ steps.meta.outputs.image }}:processor-latest
+            ${{ steps.meta.outputs.image }}:processor-${{ steps.meta.outputs.sha }}
+          cache-from: type=gha,scope=processing-service
+          cache-to: type=gha,mode=max,scope=processing-service
+      - env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          ENSURE_MODE: verify
+        run: ./scripts/ensure-private-dockerhub-repos.sh shelf
+      - env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          MAX_DOCKER_TAGS: "20"
+          PROTECTED_DOCKER_TAGS: ${{ env.PROTECTED_DOCKER_TAGS }}
+        run: |
+          chmod +x scripts/prune-dockerhub-tags.sh
+          ./scripts/prune-dockerhub-tags.sh shelf
+      - env:
+          RENDER_DEPLOY_HOOK_PROCESSOR: ${{ secrets.RENDER_DEPLOY_HOOK_PROCESSOR }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_PROCESSOR" ]; then
+            echo "::error::Missing RENDER_DEPLOY_HOOK_PROCESSOR"
+            exit 1
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_PROCESSOR" >/dev/null
+          echo "Triggered production processor"
+      - run: |
+          {
+            echo "### Production processor"
+            echo ""
+            echo "\`${{ steps.meta.outputs.image }}:processor-main\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  docker-ingestion:
+    name: Production ingestion
+    needs: [ci-ingestion]
+    if: inputs.ingestion
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Require Docker Hub secrets
+        run: |
+          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "Missing DOCKERHUB_USERNAME or DOCKERHUB_TOKEN secrets"
+            exit 1
+          fi
+      - id: meta
+        run: |
+          echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "image=${{ secrets.DOCKERHUB_USERNAME }}/shelf" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          ENSURE_MODE: ensure
+        run: |
+          chmod +x scripts/ensure-private-dockerhub-repos.sh
+          ./scripts/ensure-private-dockerhub-repos.sh shelf
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: ./ingestion-service
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:ingest-main
+            ${{ steps.meta.outputs.image }}:ingest-latest
+            ${{ steps.meta.outputs.image }}:ingest-${{ steps.meta.outputs.sha }}
+          cache-from: type=gha,scope=ingestion-service
+          cache-to: type=gha,mode=max,scope=ingestion-service
+      - env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          ENSURE_MODE: verify
+        run: ./scripts/ensure-private-dockerhub-repos.sh shelf
+      - env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          MAX_DOCKER_TAGS: "20"
+          PROTECTED_DOCKER_TAGS: ${{ env.PROTECTED_DOCKER_TAGS }}
+        run: |
+          chmod +x scripts/prune-dockerhub-tags.sh
+          ./scripts/prune-dockerhub-tags.sh shelf
+      - env:
+          RENDER_DEPLOY_HOOK_INGESTION: ${{ secrets.RENDER_DEPLOY_HOOK_INGESTION }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_INGESTION" ]; then
+            echo "::error::Missing RENDER_DEPLOY_HOOK_INGESTION"
+            exit 1
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_INGESTION" >/dev/null
+          echo "Triggered production ingestion"
+      - run: |
+          {
+            echo "### Production ingestion"
+            echo ""
+            echo "\`${{ steps.meta.outputs.image }}:ingest-main\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  vercel-production:
+    name: Production frontend
+    needs: [ci-frontend]
+    if: inputs.frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Require Vercel secrets
+        run: |
+          if [ -z "${{ secrets.VERCEL_TOKEN }}" ] || [ -z "${{ secrets.VERCEL_ORG_ID }}" ] || [ -z "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            echo "::error::Missing VERCEL_TOKEN, VERCEL_ORG_ID, or VERCEL_PROJECT_ID"
+            exit 1
+          fi
+      - run: npm ci
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+      - name: Pull Production env (prod API URL)
+        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Build
+        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Deploy Production
+        id: deploy
+        run: |
+          URL=$(vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}")
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "Deployed: $URL"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - run: |
+          {
+            echo "### Production frontend"
+            echo ""
+            echo "${{ steps.deploy.outputs.url }}"
+            echo ""
+            echo "Built with Vercel **Production** env (\`NEXT_PUBLIC_API_URL\` = prod API)."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -49,6 +49,11 @@ import { requestContext } from "./middleware/requestContext.js";
 import { logger } from "./utils/logger.js";
 import { metrics } from "./utils/metrics.js";
 import { errorFields } from "./utils/logger.js";
+import {
+  allowVercelPreviewCors,
+  isCorsOriginAllowed,
+  parseCorsOrigins,
+} from "./utils/corsOrigin.js";
 import { startVectorIndexWorker } from "./services/vectorIndexWorker.js";
 import { startIngestScheduler, startLinkHealthScheduler } from "./services/ingest/ingestScheduler.js";
 import { startPreloadedLinkHealthScheduler } from "./services/preloaded/linkHealthScheduler.js";
@@ -61,14 +66,13 @@ process.env.SERVICE_NAME = process.env.SERVICE_NAME ?? "backend";
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
-const corsOrigins = (process.env.CORS_ORIGIN ?? "http://localhost:3000")
-  .split(",")
-  .map((o) => o.trim())
-  .filter(Boolean);
+const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
+const vercelPreviewCors = allowVercelPreviewCors();
 
 logger.info("cors.config", {
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "(default http://localhost:3000)",
   allowedOrigins: corsOrigins,
+  ALLOW_VERCEL_PREVIEW_CORS: vercelPreviewCors,
 });
 
 app.use((req, _res, next) => {
@@ -82,8 +86,11 @@ app.use((req, _res, next) => {
     logger.info("cors.request", {
       CORS_ORIGIN: process.env.CORS_ORIGIN ?? "(default http://localhost:3000)",
       allowedOrigins: corsOrigins,
+      ALLOW_VERCEL_PREVIEW_CORS: vercelPreviewCors,
       requestOrigin: checkOrigin ?? null,
-      allowed: checkOrigin ? corsOrigins.includes(checkOrigin) : null,
+      allowed: checkOrigin
+        ? isCorsOriginAllowed(checkOrigin, corsOrigins, vercelPreviewCors)
+        : null,
       method: req.method,
       path: req.originalUrl,
     });
@@ -100,10 +107,11 @@ app.use(
         callback(null, true);
         return;
       }
-      if (corsOrigins.includes(origin)) {
+      if (isCorsOriginAllowed(origin, corsOrigins, vercelPreviewCors)) {
         logger.info("cors.allowed", {
           requestOrigin: origin,
           allowedOrigins: corsOrigins,
+          ALLOW_VERCEL_PREVIEW_CORS: vercelPreviewCors,
         });
         callback(null, true);
         return;
@@ -112,6 +120,7 @@ app.use(
         requestOrigin: origin,
         CORS_ORIGIN: process.env.CORS_ORIGIN ?? "(default http://localhost:3000)",
         allowedOrigins: corsOrigins,
+        ALLOW_VERCEL_PREVIEW_CORS: vercelPreviewCors,
       });
       callback(new Error(`CORS blocked for origin: ${origin}`));
     },
