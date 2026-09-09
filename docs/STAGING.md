@@ -109,6 +109,8 @@ Wire Deploy Hooks → GitHub secrets `RENDER_DEPLOY_HOOK_*_STAGING`.
 | Secret | `RENDER_DEPLOY_HOOK_BACKEND_STAGING` |
 | Secret | `RENDER_DEPLOY_HOOK_PROCESSOR_STAGING` |
 | Secret | `RENDER_DEPLOY_HOOK_INGESTION_STAGING` |
+| Secret | `VERCEL_TOKEN` + `VERCEL_PROJECT_ID` (+ `VERCEL_ORG_ID` if team) — optional; prints FE preview URL on PR after staging deploy |
+| Variable | `STAGING_API_URL` — optional; printed on the PR comment |
 | Label | `deploy-staging` (manual staging image deploy on PRs with backend changes) |
 
 Prod hooks (`RENDER_DEPLOY_HOOK_BACKEND`, etc.) stay for merge-to-`main`.
@@ -117,6 +119,6 @@ Prod hooks (`RENDER_DEPLOY_HOOK_BACKEND`, etc.) stay for merge-to-`main`.
 
 ## How deploys use this
 
-- **FE-only PR** → Vercel Preview only (talks to staging API / staging DB / staging bucket via Preview env).
-- **Backend PR** → add label `deploy-staging` to rebuild staging images against this isolated stack.
-- **Merge to `main`** → production images + prod DB + prod bucket (unchanged).
+- **FE-only PR** → Vercel Preview only (talks to staging API via Preview env).
+- **Staging backend** → **manual only**: label `deploy-staging` or Actions → Deploy staging (not on every commit).
+- **Merge to `main`** → production images + prod DB + prod bucket. Optional: Actions → Deploy production.

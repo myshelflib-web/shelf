@@ -209,65 +209,68 @@ jobs:
       ingestion: ${{ needs.changes.outputs.ingestion == 'true' && needs.ci-ingestion.result == 'success' }}
 
   staging-manual-hint:
-    name: Staging deploy (manual — add label)
+    name: Deploy guide on PR
     needs: changes
     if: >-
       github.event_name == 'pull_request' &&
       (
         needs.changes.outputs.backend == 'true' ||
         needs.changes.outputs.processing == 'true' ||
-        needs.changes.outputs.ingestion == 'true'
+        needs.changes.outputs.ingestion == 'true' ||
+        needs.changes.outputs.frontend == 'true'
       )
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
     steps:
-      - name: Instruct manual staging deploy
+      - name: Post deploy buttons / guide
         uses: actions/github-script@v7
         with:
           script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const stagingWf = `https://github.com/${owner}/${repo}/actions/workflows/deploy-staging.yml`;
+            const prodWf = `https://github.com/${owner}/${repo}/actions/workflows/deploy-production.yml`;
+            const runs = `https://github.com/${owner}/${repo}/actions`;
+
             const body = [
-              '### Manual staging deploy',
+              '### Deploy backend (manual)',
               '',
-              'This PR changes **backend / processor / ingestion**.',
-              'Staging uses a **separate Neon DB** and **separate R2 bucket** (see `docs/STAGING.md`).',
+              '| Target | When | How |',
+              '|--------|------|-----|',
+              '| **Staging** | When you choose | Add label `deploy-staging`, or [Run Deploy staging](' + stagingWf + ') |',
+              '| **Production** | **After merge** to `main` | Automatic on merge (CI). Optional: [Deploy production](' + prodWf + ') |',
               '',
-              '**To update staging images:** add the label `deploy-staging`.',
+              'Staging is **not** auto-deployed on commit. Production is **not** deployed from the open PR.',
               '',
-              '- Rebuilds `:staging*` tags and triggers staging Render hooks only.',
-              '- Production DB, bucket, and `:main` images are **not** touched.',
-              '- Frontend-only PRs: use Vercel Preview only.',
+              `- Actions: ${runs}`,
               '',
-              'Re-add the label after it is removed to deploy again.',
+              'Staging uses a **separate Neon DB** and **R2 bucket** (`docs/STAGING.md`).',
+              '',
+              'Frontend: use the **Vercel Preview** link on this PR.',
             ].join('\n');
+
+            const marker = '### Deploy backend (manual)';
             const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
+              owner,
+              repo,
               issue_number: context.issue.number,
             });
-            const marker = '### Manual staging deploy';
-            const existing = comments.find((c) => c.user?.type === 'Bot' && c.body?.includes(marker));
+            const existing = comments.find((c) => c.user?.type === 'Bot' && (
+              c.body?.includes(marker) || c.body?.includes('### Deploy backend')
+            ));
             if (existing) {
               await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                owner,
+                repo,
                 comment_id: existing.id,
                 body,
               });
             } else {
               await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
+                owner,
+                repo,
                 issue_number: context.issue.number,
                 body,
               });
             }
-            core.notice('Add label deploy-staging to update shared staging (isolated DB + S3).');
-      - name: Check summary
-        run: |
-          {
-            echo "### Staging is manual on this PR"
-            echo ""
-            echo "Add the GitHub label \`deploy-staging\` to push staging Docker tags and redeploy shared staging."
-            echo "Frontend preview: use the Vercel Preview deployment on this PR."
-          } >> "$GITHUB_STEP_SUMMARY"
