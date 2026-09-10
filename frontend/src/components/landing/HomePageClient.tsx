@@ -15,12 +15,13 @@ import { LandingCtaBanner } from "@/components/landing/LandingCtaBanner";
 import { LandingQuizSection } from "@/components/landing/LandingQuizSection";
 import { LandingIntegrationsSection } from "@/components/landing/LandingIntegrationsSection";
 import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
-import { LandingPointerTorch } from "@/components/landing/LandingPointerTorch";
 import { useAuth } from "@/hooks/useAuth";
 import {
   BookMarked,
+  BookOpen,
   CalendarDays,
   FolderOpen,
+  FolderPlus,
   Layers,
   ListChecks,
   NotebookPen,
@@ -49,14 +50,12 @@ export function HomePageClient() {
       <Header />
 
       <main className="landing-page flex-1 min-h-0 overflow-y-auto">
-        <LandingPointerTorch />
         <section
-          className="landing-hero landing-torch-zone"
+          className="landing-hero"
           id="landing-hero"
           aria-labelledby="landing-hero-heading"
         >
           <div className="landing-hero-glow" aria-hidden />
-          <div className="landing-torch-local" aria-hidden />
           <RevealOnScroll>
             <div>
               <div className="landing-eyebrow">Your personal study library</div>
@@ -73,9 +72,11 @@ export function HomePageClient() {
               </p>
               <div className="landing-hero-actions">
                 <Link href="/login" className="landing-btn landing-btn-primary">
+                  <FolderPlus className="w-4 h-4" strokeWidth={1.75} aria-hidden />
                   Create your library
                 </Link>
                 <Link href="/learn" className="landing-btn">
+                  <BookOpen className="w-4 h-4" strokeWidth={1.75} aria-hidden />
                   Browse free library
                 </Link>
               </div>

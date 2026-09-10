@@ -19,6 +19,8 @@ export function MarketingFooter({ variant }: { variant?: "landing" }) {
             <Link href="/quiz">Quiz</Link>
             <Link href="/about">About</Link>
             <Link href="/contact">Contact</Link>
+            <Link href="/legal/terms">Terms</Link>
+            <Link href="/legal/privacy">Privacy</Link>
             <Link href="/legal/copyright">Copyright</Link>
             <Link href="/login">Sign in</Link>
           </nav>
@@ -64,6 +66,12 @@ export function MarketingFooter({ variant }: { variant?: "landing" }) {
           </Link>
           <Link href="/contact" className="nav-link">
             Contact
+          </Link>
+          <Link href="/legal/terms" className="nav-link">
+            Terms
+          </Link>
+          <Link href="/legal/privacy" className="nav-link">
+            Privacy
           </Link>
           <Link href="/legal/copyright" className="nav-link">
             Copyright

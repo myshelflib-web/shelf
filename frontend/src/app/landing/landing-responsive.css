@@ -46,7 +46,7 @@
     max-width: 100%;
   }
   .landing-preview-body {
-    height: min(380px, 56vh);
+    height: min(440px, 58vh);
   }
   .landing-mini-content {
     grid-template-columns: 1fr;
@@ -135,6 +135,7 @@
   }
   .landing-slide {
     transition: none;
+    transform: none;
   }
   .landing-btn:hover,
   .landing-btn:active,
@@ -146,14 +147,21 @@
   .landing-preview-stage::before {
     opacity: 0.4;
   }
-  .landing-torch-local {
-    display: none;
-  }
   .landing-sticky-cta,
   .landing-sticky-cta.is-visible {
     transition: none;
   }
   .landing-showcase-visual-layer {
     transition: none;
+    transform: none;
+  }
+  .landing-morph-layer {
+    transition: none;
+    transform: none;
+  }
+  .landing-floating-panel {
+    transition: none;
+    transform: none;
+    opacity: 1;
   }
 }

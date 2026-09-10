@@ -9,7 +9,7 @@ import {
 } from "./LandingPreviewSlides";
 
 const SLIDE_COUNT = 4;
-const ROTATE_MS = 3000;
+const ROTATE_MS = 3500;
 
 export function LandingProductPreview() {
   const [current, setCurrent] = useState(0);

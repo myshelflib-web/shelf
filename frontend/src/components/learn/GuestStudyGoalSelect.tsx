@@ -30,7 +30,7 @@ export function GuestStudyGoalSelect({
   return (
     <label
       className={`flex items-center gap-2 min-w-0 ${
-        compact ? "" : "w-full sm:w-auto"
+        compact ? "w-full" : "w-full sm:w-auto"
       }`}
     >
       {!compact && (
@@ -42,6 +42,7 @@ export function GuestStudyGoalSelect({
       <ShelfSelect
         value={value}
         disabled={disabled}
+        compact={compact}
         groups={groups.map((group) => ({
           label: group.label,
           options: group.options.map((goal) => ({
@@ -52,7 +53,7 @@ export function GuestStudyGoalSelect({
         aria-label={catalogFilter ? "Filter by exam track" : "Study goal"}
         className={`rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)] disabled:opacity-60 ${
           compact
-            ? "select-compact text-sm py-2 pl-2.5 min-w-[10rem]"
+            ? "w-full text-xs pl-2.5"
             : "text-sm py-2 pl-3 w-full sm:min-w-[11rem]"
         }`}
         onChange={(next) => onChange(next as StudyGoal)}

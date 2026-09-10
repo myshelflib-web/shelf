@@ -21,6 +21,7 @@ import {
 } from "@/hooks/useOtpResendCooldown";
 import { needsOnboarding } from "@/lib/onboarding";
 import { destinationAfterSignIn } from "@/lib/postAuthNavigation";
+import { SignupTermsAccept } from "@/components/legal/SignupTermsAccept";
 
 export function safeNextPath(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/my-content";
@@ -112,6 +113,10 @@ export function LoginForm({
     if (otpSent && coolingDown) return;
     setError("");
     setMessage("");
+    if (!agreedToTerms) {
+      setError("Please accept the Terms of Service and Privacy Policy first");
+      return;
+    }
     if (!email.trim() || !name.trim() || password.length < 6) {
       setError("Enter name, email, and a password (min 6 characters) first");
       return;
@@ -145,7 +150,7 @@ export function LoginForm({
     try {
       if (isRegister) {
         if (!agreedToTerms) {
-          setError("Please accept the copyright and upload terms to create an account");
+          setError("Please accept the Terms of Service and Privacy Policy to create an account");
           return;
         }
         if (!otpSent) {
@@ -305,27 +310,15 @@ export function LoginForm({
           )}
 
           {isRegister && (
-            <label className="flex items-start gap-2 text-xs text-[var(--text-secondary)] leading-relaxed">
-              <input
-                type="checkbox"
-                checked={agreedToTerms}
-                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                className="mt-0.5 rounded border-[var(--border)]"
-              />
-              <span>
-                I will only upload material I have the right to use, and I agree to
-                Shelf&apos;s{" "}
-                <a href="/legal/copyright" className="text-[var(--accent)] hover:underline">
-                  copyright &amp; takedown policy
-                </a>
-                .
-              </span>
-            </label>
+            <SignupTermsAccept
+              checked={agreedToTerms}
+              onChange={setAgreedToTerms}
+            />
           )}
 
           <button
             type="submit"
-            disabled={loading || sendingOtp}
+            disabled={loading || sendingOtp || (isRegister && !agreedToTerms)}
             className="w-full py-2.5 rounded-lg bg-[var(--accent)] text-white font-medium hover:bg-[var(--accent-hover)] transition disabled:opacity-50"
           >
             {loading || sendingOtp
@@ -362,18 +355,33 @@ export function LoginForm({
           </div>
 
           <div className="space-y-3 w-full">
-            {showGoogleSignIn ? (
-              <GoogleSignInButton
+            <div
+              className={
+                isRegister && !agreedToTerms
+                  ? "opacity-50 pointer-events-none"
+                  : undefined
+              }
+              aria-disabled={isRegister && !agreedToTerms}
+            >
+              {showGoogleSignIn ? (
+                <GoogleSignInButton
+                  onError={setError}
+                  redirectTo={socialRedirect}
+                  onSigningInChange={handleSocialSigningIn}
+                />
+              ) : null}
+              <TelegramSignInButton
                 onError={setError}
                 redirectTo={socialRedirect}
                 onSigningInChange={handleSocialSigningIn}
               />
+            </div>
+            {isRegister && !agreedToTerms ? (
+              <p className="text-[11px] text-center text-[var(--text-muted)]">
+                Accept the Terms and Privacy Policy above to continue with Google
+                or Telegram.
+              </p>
             ) : null}
-            <TelegramSignInButton
-              onError={setError}
-              redirectTo={socialRedirect}
-              onSigningInChange={handleSocialSigningIn}
-            />
           </div>
         </>
       </div>
@@ -386,6 +394,7 @@ export function LoginForm({
             setIsRegister(!isRegister);
             setError("");
             setMessage("");
+            setAgreedToTerms(false);
             resetRegisterOtp();
           }}
           className="text-[var(--accent)] hover:underline"

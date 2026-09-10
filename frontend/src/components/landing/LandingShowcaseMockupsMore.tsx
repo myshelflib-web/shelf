@@ -29,21 +29,30 @@ function PdfHighlightBack() {
 
 function StudyAiAnswerFront() {
   return (
-    <div className="p-3 space-y-2 text-xs">
-      <p className="text-[var(--text-muted)]">Explain this highlight</p>
-      <div className="rounded-lg bg-[var(--bg-secondary)] p-2.5 leading-relaxed text-[var(--text-secondary)]">
+    <div className="p-3 space-y-2 text-xs flex flex-col h-full min-h-[140px]">
+      <div className="flex items-center gap-1.5">
+        <span className="w-5 h-5 rounded-md bg-[var(--accent-light)] flex items-center justify-center">
+          <Sparkles className="w-3 h-3 text-[var(--accent)]" />
+        </span>
+        <span className="text-[11px] font-semibold text-[var(--text-primary)]">
+          Study AI
+        </span>
+      </div>
+      <div className="rounded-xl rounded-bl-md border border-[var(--border)] bg-[var(--bg-secondary)] p-2.5 leading-relaxed text-[var(--text-secondary)]">
         The Basic Structure doctrine means amendments cannot alter the
         Constitution&apos;s essential character — judicial review, federalism,
         and fundamental rights remain protected.
       </div>
       <div className="flex gap-1.5 flex-wrap">
-        <span className="px-2 py-1 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)] text-[10px] inline-flex items-center gap-1">
-          <Sparkles className="w-3 h-3" />
+        <span className="px-2 py-1 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)] text-[10px]">
           Short notes
         </span>
-        <span className="px-2 py-1 rounded-full border border-[var(--border)] text-[10px]">
+        <span className="px-2 py-1 rounded-full border border-[var(--border)] text-[10px] text-[var(--text-muted)]">
           Mind map
         </span>
+      </div>
+      <div className="mt-auto flex items-center h-8 rounded-full border border-[var(--border)] bg-[var(--bg-elevated)] px-2 text-[10px] text-[var(--text-muted)]">
+        Ask about this page…
       </div>
     </div>
   );

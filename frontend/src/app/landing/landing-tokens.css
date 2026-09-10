@@ -43,28 +43,6 @@
   overflow-x: hidden;
 }
 
-.landing-torch-zone {
-  position: relative;
-}
-
-.landing-torch-local {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.28s ease;
-  background: radial-gradient(
-    520px circle at var(--torch-x, 50%) var(--torch-y, 40%),
-    color-mix(in srgb, var(--accent) 26%, transparent) 0%,
-    color-mix(in srgb, var(--lp-sand) 32%, transparent) 26%,
-    transparent 62%
-  );
-}
-
-.landing-torch-zone.is-torch-on > .landing-torch-local {
-  opacity: 1;
-}
 /* Dark mode — follows app .dark class on html */
 .dark .landing-page {
   --bg-primary: #0c0c0d;
@@ -105,15 +83,6 @@
   --lp-value-mini-bg: #161618;
   --lp-bubble-user-text: #b8b4e8;
   --lp-goal-impact-text: #9b96d4;
-}
-
-.dark .landing-torch-local {
-  background: radial-gradient(
-    560px circle at var(--torch-x, 50%) var(--torch-y, 40%),
-    color-mix(in srgb, var(--accent) 32%, transparent) 0%,
-    color-mix(in srgb, var(--accent) 12%, transparent) 34%,
-    transparent 64%
-  );
 }
 
 .dark .landing-mini-top {

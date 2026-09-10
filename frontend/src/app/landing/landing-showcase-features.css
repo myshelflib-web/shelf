@@ -57,12 +57,16 @@
   position: absolute;
   inset: 0;
   opacity: 0;
-  transition: opacity 1.2s ease-in-out;
+  transform: translateY(8px) scale(0.99);
+  transition:
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
 }
 
 .landing-showcase-visual-layer-active {
   opacity: 1;
+  transform: translateY(0) scale(1);
   pointer-events: auto;
 }
 
