@@ -1,4 +1,4 @@
-import { api, type UploadProgressHandler } from "@/lib/api";
+import { api, type UploadEarlyReady, type UploadProgressHandler } from "@/lib/api";
 import { pageHref } from "@/lib/myContentTree";
 import { htmlForDocTemplate, type DocTemplateId } from "@/lib/docTemplates";
 import {
@@ -17,6 +17,7 @@ import { emitContentChanged } from "@/lib/contentEvents";
 import { isYoutubeUrl } from "@/lib/youtubeUrl";
 import { VIDEO_NOTES_HTML } from "@/lib/videoNotesHtml";
 import type { OptimisticOpenSeed } from "@/lib/optimisticOpenSeed";
+import { dispatchSyncStatus } from "@/lib/syncStatus";
 
 function assertUploadOk(file: File) {
   const name = file.name.toLowerCase();
@@ -29,6 +30,12 @@ function assertUploadOk(file: File) {
 
 export type AddPageOpenSeed = Omit<OptimisticOpenSeed, "href" | "pageId"> & {
   contentType: UserContentType;
+};
+
+export type AddPageEarlyReady = {
+  page: UserPageSummary;
+  href: string;
+  openSeed: AddPageOpenSeed;
 };
 
 export async function submitBulkFolderImport(input: {
@@ -72,6 +79,25 @@ export async function submitBulkFolderImport(input: {
   });
 }
 
+function emitPageCreated(
+  page: UserPageSummary,
+  href: string,
+  notebook?: UserSubject,
+  topic?: UserTopicGroup
+) {
+  // Never list DRAFT rows — explorer would flash then vanish on failure.
+  if (page.status === "DRAFT") return;
+  emitContentChanged({
+    type: "page-created",
+    page,
+    href,
+    notebookId: notebook?.id,
+    notebookSlug: notebook?.slug ?? null,
+    topicId: topic?.id,
+    topicSlug: topic?.slug ?? null,
+  });
+}
+
 export async function submitAddPage(input: {
   addMode: PageAddMode;
   pageTitle: string;
@@ -83,14 +109,27 @@ export async function submitAddPage(input: {
   sketchBg: string;
   docTemplate?: DocTemplateId;
   reportUploadProgress: UploadProgressHandler;
+  onEarlyReady?: (early: AddPageEarlyReady) => void;
 }): Promise<{
   page: UserPageSummary;
   href: string;
   openSeed?: AddPageOpenSeed;
+  openedEarly?: boolean;
 }> {
   const { notebook, topic } = input;
   let page: UserPageSummary;
   let openSeed: AddPageOpenSeed | undefined;
+  let openedEarly = false;
+
+  const notifyEarly = (early: UploadEarlyReady) => {
+    const href = pageHref(notebook?.slug, topic?.slug, early.page.slug);
+    openedEarly = true;
+    input.onEarlyReady?.({
+      page: early.page,
+      href,
+      openSeed: early.openSeed,
+    });
+  };
 
   if (input.addMode === "file" && input.uploadFile) {
     assertUploadOk(input.uploadFile);
@@ -102,27 +141,32 @@ export async function submitAddPage(input: {
         notebook.id,
         topic.id,
         fd,
-        input.reportUploadProgress
+        input.reportUploadProgress,
+        notifyEarly
       ));
     } else if (notebook) {
       ({ page } = await api.myContent.uploadNotebookFile(
         notebook.id,
         fd,
-        input.reportUploadProgress
+        input.reportUploadProgress,
+        notifyEarly
       ));
     } else {
       ({ page } = await api.myContent.uploadRootFile(
         fd,
-        input.reportUploadProgress
+        input.reportUploadProgress,
+        notifyEarly
       ));
     }
-    if (page.contentType === "PDF") {
-      openSeed = { contentType: "PDF", title: page.title };
-    }
+    openSeed = {
+      contentType: page.contentType ?? "PDF",
+      title: page.title,
+    };
   } else if (
     input.addMode === "youtube" ||
     (input.addMode === "link" && isYoutubeUrl(input.pageLink))
   ) {
+    dispatchSyncStatus({ state: "saving", label: "Creating…" });
     const result = await api.myContent.importYoutube({
       sourceUrl: input.pageLink,
       title: input.pageTitle.trim() || undefined,
@@ -150,6 +194,7 @@ export async function submitAddPage(input: {
     }
     return { page: result.page, href: result.href, openSeed };
   } else if (input.addMode === "link") {
+    dispatchSyncStatus({ state: "saving", label: "Creating…" });
     const body = { title: input.pageTitle, sourceUrl: input.pageLink };
     if (notebook && topic) {
       ({ page } = await api.myContent.createPage(notebook.id, topic.id, body));
@@ -164,6 +209,7 @@ export async function submitAddPage(input: {
       sourceUrl: input.pageLink.trim(),
     };
   } else if (input.addMode === "sketch") {
+    dispatchSyncStatus({ state: "saving", label: "Creating…" });
     const htmlContent = createSketchNotebookHtml({
       bg: input.sketchBg,
       template: input.sketchTemplate,
@@ -182,6 +228,7 @@ export async function submitAddPage(input: {
       content: htmlContent,
     };
   } else if (input.addMode === "doc") {
+    dispatchSyncStatus({ state: "saving", label: "Creating…" });
     const htmlContent = htmlForDocTemplate(
       input.docTemplate || "blank",
       input.pageTitle
@@ -204,14 +251,6 @@ export async function submitAddPage(input: {
   }
 
   const href = pageHref(notebook?.slug, topic?.slug, page.slug);
-  emitContentChanged({
-    type: "page-created",
-    page,
-    href,
-    notebookId: notebook?.id,
-    notebookSlug: notebook?.slug ?? null,
-    topicId: topic?.id,
-    topicSlug: topic?.slug ?? null,
-  });
-  return { page, href, openSeed };
+  emitPageCreated(page, href, notebook, topic);
+  return { page, href, openSeed, openedEarly };
 }

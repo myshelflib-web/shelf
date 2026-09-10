@@ -69,10 +69,12 @@ export function canOptimisticMount(input: {
     case "VIDEO":
       return Boolean(input.seed?.sourceUrl);
     case "HTML":
-      // Doc/sketch need the client HTML so the live editor is not empty.
+    case "TEXT":
+    case "MARKDOWN":
+    case "DOCX":
+      // Need client HTML (or placeholder) so the reader is not an empty shell.
       return Boolean(input.seed?.content);
     default:
-      // TEXT/MARKDOWN/DOCX: content only exists after server convert — no early shell.
       return false;
   }
 }

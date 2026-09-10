@@ -3,8 +3,12 @@ import {
   decidePdfCompress,
   shouldAttemptPdfCompress,
 } from "@/lib/pdfCompressDecision";
+import {
+  contentTypeFromUploadFile,
+  earlyHtmlForUploadFile,
+} from "@/lib/earlyUploadOpen";
 import { seedPdfByteCache } from "@/lib/seedPdfByteCache";
-import type { UserPageSummary } from "@/types";
+import type { UserContentType, UserPageSummary } from "@/types";
 
 export type UploadProgress = {
   loaded: number;
@@ -14,6 +18,16 @@ export type UploadProgress = {
 };
 
 export type UploadProgressHandler = (progress: UploadProgress) => void;
+
+export type UploadEarlyReady = {
+  page: UserPageSummary;
+  pdfCacheVersion?: string;
+  openSeed: {
+    contentType: UserContentType;
+    title: string;
+    content?: string;
+  };
+};
 
 type RequestFn = <T>(
   path: string,
@@ -28,9 +42,7 @@ type PutFn = (
 ) => Promise<void>;
 
 function isPdfFile(file: File): boolean {
-  const name = file.name.toLowerCase();
-  const mime = (file.type || "").toLowerCase();
-  return name.endsWith(".pdf") || mime === "application/pdf";
+  return contentTypeFromUploadFile(file) === "PDF";
 }
 
 async function prepareUploadFile(
@@ -89,15 +101,15 @@ async function completeUploadWithRetry<T>(
 }
 
 /**
- * Direct-to-S3 library upload. PDFs create a draft on init (hidden from lists)
- * so we can seed the byte cache; complete must succeed before we return so the
- * explorer never sees a row that later vanishes.
+ * Direct-to-S3 library upload. After init, calls `onEarlyReady` so the reader
+ * can open from local cache/seed while PUT + complete continue.
  */
 export async function uploadLibraryFile(opts: {
   file: File;
   title: string;
   scope: { subjectId?: string; topicGroupId?: string };
   onProgress?: UploadProgressHandler;
+  onEarlyReady?: (early: UploadEarlyReady) => void;
   request: RequestFn;
   putToUrl: PutFn;
   deletePage?: (id: string) => Promise<unknown>;
@@ -108,12 +120,14 @@ export async function uploadLibraryFile(opts: {
     title,
     scope,
     onProgress,
+    onEarlyReady,
     request,
     putToUrl,
     deletePage,
     onDraftAbandoned,
   } = opts;
   const { toUpload, clientPacked } = await prepareUploadFile(file, onProgress);
+  const contentType = contentTypeFromUploadFile(toUpload);
 
   const init = await request<{
     uploadUrl: string;
@@ -142,6 +156,30 @@ export async function uploadLibraryFile(opts: {
     onDraftAbandoned?.(init.page.id);
   };
 
+  const earlyPage = init.page
+    ? {
+        ...init.page,
+        contentType: init.page.contentType ?? contentType,
+      }
+    : undefined;
+  const earlyVersion = init.pdfCacheVersion;
+
+  if (earlyPage?.id && onEarlyReady) {
+    if (contentType === "PDF" && earlyVersion) {
+      await seedPdfByteCache(earlyPage.id, earlyVersion, toUpload);
+    }
+    const content = await earlyHtmlForUploadFile(toUpload, contentType);
+    onEarlyReady({
+      page: earlyPage,
+      pdfCacheVersion: earlyVersion,
+      openSeed: {
+        contentType,
+        title: earlyPage.title || title,
+        ...(content ? { content } : {}),
+      },
+    });
+  }
+
   try {
     await putToUrl(
       init.uploadUrl,
@@ -154,39 +192,12 @@ export async function uploadLibraryFile(opts: {
     throw err;
   }
 
-  const earlyPage = init.page;
-  const earlyVersion = init.pdfCacheVersion;
-
   onProgress?.({
     loaded: toUpload.size,
     total: toUpload.size,
     percent: 100,
     phase: "finalizing",
   });
-
-  if (earlyPage?.id && earlyVersion && isPdfFile(toUpload)) {
-    const seedPromise = seedPdfByteCache(earlyPage.id, earlyVersion, toUpload);
-    try {
-      const done = await completeUploadWithRetry<{
-        page: UserPageSummary;
-        message?: string;
-        pdfCacheVersion?: string;
-      }>(request, init.token);
-      await seedPromise;
-      const version = done.pdfCacheVersion ?? earlyVersion;
-      if (version !== earlyVersion) {
-        await seedPdfByteCache(done.page.id, version, toUpload);
-      }
-      return {
-        page: { ...done.page, contentType: done.page.contentType ?? "PDF" },
-        message: done.message ?? "PDF uploaded. Open the page to read it.",
-        pdfCacheVersion: version,
-      };
-    } catch (err) {
-      await abandonDraft();
-      throw err;
-    }
-  }
 
   try {
     const done = await completeUploadWithRetry<{
@@ -195,8 +206,16 @@ export async function uploadLibraryFile(opts: {
       pdfCacheVersion?: string;
     }>(request, init.token);
 
-    if (done.page?.id && done.pdfCacheVersion && isPdfFile(toUpload)) {
-      await seedPdfByteCache(done.page.id, done.pdfCacheVersion, toUpload);
+    if (done.page?.id && contentType === "PDF") {
+      const version = done.pdfCacheVersion ?? earlyVersion;
+      if (version) {
+        await seedPdfByteCache(done.page.id, version, toUpload);
+      }
+      return {
+        page: { ...done.page, contentType: done.page.contentType ?? "PDF" },
+        message: done.message ?? "PDF uploaded. Open the page to read it.",
+        pdfCacheVersion: version,
+      };
     }
 
     return done;

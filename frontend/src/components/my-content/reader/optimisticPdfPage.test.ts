@@ -103,7 +103,7 @@ describe("canOptimisticMount", () => {
     ).toBe(true);
   });
 
-  it("rejects imported text types without seed content", () => {
+  it("allows imported text types when seed has content", () => {
     expect(
       canOptimisticMount({
         pageId: "p1",
@@ -111,5 +111,18 @@ describe("canOptimisticMount", () => {
         scope: root,
       })
     ).toBe(false);
+    expect(
+      canOptimisticMount({
+        pageId: "p1",
+        contentType: "MARKDOWN",
+        scope: root,
+        seed: {
+          pageId: "p1",
+          href: "/x",
+          contentType: "MARKDOWN",
+          content: "<pre>hi</pre>",
+        },
+      })
+    ).toBe(true);
   });
 });

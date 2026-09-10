@@ -5,6 +5,7 @@ import {
 } from "@/lib/compressUploadFile";
 import {
   uploadLibraryFile as runLibraryUpload,
+  type UploadEarlyReady,
   type UploadProgress,
   type UploadProgressHandler,
 } from "@/lib/uploadLibraryFile";
@@ -18,7 +19,7 @@ import { reportApiFailure } from "@/lib/analytics/errors";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { toUserFacingError } from "@/lib/userFacingError";
 
-export type { UploadProgress, UploadProgressHandler };
+export type { UploadEarlyReady, UploadProgress, UploadProgressHandler };
 
 /** Production (Vercel): set NEXT_PUBLIC_API_URL to the Render backend, e.g. https://your-api.onrender.com */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -221,13 +222,15 @@ async function uploadLibraryFile(
   file: File,
   title: string,
   scope: { subjectId?: string; topicGroupId?: string },
-  onProgress?: UploadProgressHandler
+  onProgress?: UploadProgressHandler,
+  onEarlyReady?: (early: UploadEarlyReady) => void
 ) {
   return runLibraryUpload({
     file,
     title,
     scope,
     onProgress,
+    onEarlyReady,
     request,
     putToUrl,
     deletePage: (id) =>
@@ -1262,30 +1265,40 @@ export const api = {
       subjectId: string,
       topicGroupId: string,
       formData: FormData,
-      onProgress?: UploadProgressHandler
+      onProgress?: UploadProgressHandler,
+      onEarlyReady?: (early: UploadEarlyReady) => void
     ) => {
       const { file, title } = fileFromForm(formData);
       return uploadLibraryFile(
         file,
         title,
         { subjectId, topicGroupId },
-        onProgress
+        onProgress,
+        onEarlyReady
       );
     },
     uploadNotebookFile: (
       subjectId: string,
       formData: FormData,
-      onProgress?: UploadProgressHandler
+      onProgress?: UploadProgressHandler,
+      onEarlyReady?: (early: UploadEarlyReady) => void
     ) => {
       const { file, title } = fileFromForm(formData);
-      return uploadLibraryFile(file, title, { subjectId }, onProgress);
+      return uploadLibraryFile(
+        file,
+        title,
+        { subjectId },
+        onProgress,
+        onEarlyReady
+      );
     },
     uploadRootFile: (
       formData: FormData,
-      onProgress?: UploadProgressHandler
+      onProgress?: UploadProgressHandler,
+      onEarlyReady?: (early: UploadEarlyReady) => void
     ) => {
       const { file, title } = fileFromForm(formData);
-      return uploadLibraryFile(file, title, {}, onProgress);
+      return uploadLibraryFile(file, title, {}, onProgress, onEarlyReady);
     },
     createPage: (
       subjectId: string,

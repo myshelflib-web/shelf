@@ -21,8 +21,8 @@ export type DirectUploadClaims = {
   /** Client already lossless-packed; skip server GetObject recompress. */
   clientPacked?: boolean;
   /**
-   * PDF row created at init so the client can open after PUT while complete
-   * finalizes (charge + publish) in the background.
+   * Library page created at init so the client can open while PUT + complete
+   * finish in the background (all upload kinds).
    */
   pageId?: string;
 };

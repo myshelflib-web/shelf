@@ -356,7 +356,7 @@ export function MyContentAddProvider({
         setUploadProgress(initialUploadProgress(uploadFile));
         reportSyncFromUploadProgress(initialUploadProgress(uploadFile));
       }
-      const { page, href, openSeed } = await submitAddPage({
+      const { page, href, openSeed, openedEarly } = await submitAddPage({
         addMode,
         pageTitle,
         pageLink,
@@ -367,8 +367,19 @@ export function MyContentAddProvider({
         sketchBg,
         docTemplate,
         reportUploadProgress,
+        onEarlyReady: (earlyReady) => {
+          close();
+          openCreatedPage(
+            earlyReady.href,
+            earlyReady.page,
+            earlyReady.openSeed
+          );
+        },
       });
-      close();
+      if (!openedEarly) {
+        close();
+        openCreatedPage(href, page, openSeed);
+      }
       if (isFileUpload) {
         trackUploadAnalytics("completed", {
           addMode,
@@ -376,7 +387,6 @@ export function MyContentAddProvider({
         });
       }
       reportSyncUploadDone();
-      openCreatedPage(href, page, openSeed);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to add page";
       setMessage(message);

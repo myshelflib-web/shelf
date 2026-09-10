@@ -36,16 +36,18 @@ type ParentFields = {
 };
 
 /**
- * Create a DRAFT PDF row at init so the client can open after PUT while
- * complete charges storage and publishes. Processor ignores DRAFT.
- * DRAFT rows are hidden from library list APIs until published.
+ * Create a DRAFT library row at init so the client can open while PUT +
+ * complete finish. Processor ignores DRAFT. DRAFT rows are hidden from
+ * library list APIs until published.
  */
-export async function createDraftPdfPage(input: {
+export async function createDraftUploadPage(input: {
   userId: string;
   parentFields: ParentFields;
   title: string;
   slug: string;
-  pdfKey: string;
+  contentType: "PDF" | "TEXT" | "MARKDOWN" | "DOCX";
+  /** PDF object key; omitted for text/md/docx until convert writes contentUrl. */
+  pdfKey?: string;
   size: number;
   order: number;
 }): Promise<PdfUploadPageRow> {
@@ -55,13 +57,29 @@ export async function createDraftPdfPage(input: {
       ...input.parentFields,
       title: input.title,
       slug: input.slug,
-      pdfKey: input.pdfKey,
-      contentType: "PDF",
+      ...(input.pdfKey ? { pdfKey: input.pdfKey } : {}),
+      contentType: input.contentType,
       fileSizeBytes: input.size,
       status: "DRAFT",
       order: input.order,
     },
     select: pdfUploadPageSelect,
+  });
+}
+
+/** @deprecated use createDraftUploadPage */
+export async function createDraftPdfPage(input: {
+  userId: string;
+  parentFields: ParentFields;
+  title: string;
+  slug: string;
+  pdfKey: string;
+  size: number;
+  order: number;
+}): Promise<PdfUploadPageRow> {
+  return createDraftUploadPage({
+    ...input,
+    contentType: "PDF",
   });
 }
 
