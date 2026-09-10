@@ -17,9 +17,11 @@ import { needsOnboarding } from "@/lib/onboarding";
 import { stepsForSurface } from "@/lib/productTour/steps";
 import {
   isTourDone,
+  isNewEnoughForProductTour,
   markTourDone,
   resetAllTours,
   resetTour,
+  skipProductToursForLegacyUser,
   surfaceFromPathname,
   type TourSurface,
 } from "@/lib/productTour/storage";
@@ -157,9 +159,16 @@ export function ProductTourProvider({ children }: { children: ReactNode }) {
     stripTourQueryFromLocation();
   }, [user, pathname, startTour]);
 
-  // Auto-start when visiting an eligible surface
+  // Stamp legacy accounts so auto-tours never appear for them
   useEffect(() => {
     if (!user || needsOnboarding(user)) return;
+    skipProductToursForLegacyUser(user);
+  }, [user]);
+
+  // Auto-start when visiting an eligible surface (new accounts only)
+  useEffect(() => {
+    if (!user || needsOnboarding(user)) return;
+    if (!isNewEnoughForProductTour(user)) return;
     if (activeSurface) return;
     if (parseTourQuery(readTourQueryFromLocation())) return;
     const surface = surfaceFromPathname(pathname);

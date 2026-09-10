@@ -1,14 +1,30 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   isTourDone,
+  isNewEnoughForProductTour,
   markTourDone,
+  PRODUCT_TOUR_NEW_USER_MS,
   resetAllTours,
   resetTour,
+  skipProductToursForLegacyUser,
   surfaceFromPathname,
   tourStorageKey,
 } from "./storage";
+import type { User } from "@/types";
 
 const USER = "user-tour-test";
+
+function userWithAge(ageMs: number | null): User {
+  return {
+    id: USER,
+    email: "tour@test.com",
+    name: "Tour",
+    role: "STUDENT",
+    plan: "FREE",
+    createdAt:
+      ageMs == null ? undefined : new Date(Date.now() - ageMs).toISOString(),
+  } as User;
+}
 
 describe("productTour storage", () => {
   const mem = new Map<string, string>();
@@ -59,6 +75,21 @@ describe("productTour storage", () => {
     resetAllTours(USER);
     expect(isTourDone("library", USER)).toBe(false);
     expect(isTourDone("reader", USER)).toBe(false);
+  });
+
+  it("only treats recent accounts as new enough for auto tours", () => {
+    expect(isNewEnoughForProductTour(userWithAge(60_000))).toBe(true);
+    expect(
+      isNewEnoughForProductTour(userWithAge(PRODUCT_TOUR_NEW_USER_MS + 1))
+    ).toBe(false);
+    expect(isNewEnoughForProductTour(userWithAge(null))).toBe(false);
+  });
+
+  it("stamps all surfaces skipped for legacy accounts", () => {
+    const legacy = userWithAge(PRODUCT_TOUR_NEW_USER_MS + 1);
+    skipProductToursForLegacyUser(legacy);
+    expect(isTourDone("library", USER)).toBe(true);
+    expect(isTourDone("quiz", USER)).toBe(true);
   });
 });
 

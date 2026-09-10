@@ -1,3 +1,5 @@
+import type { User } from "@/types";
+
 export type TourSurface =
   | "library"
   | "dashboard"
@@ -16,6 +18,9 @@ export const TOUR_SURFACES: TourSurface[] = [
 ];
 
 const KEY_PREFIX = "shelf:product-tour:";
+
+/** Auto-start product tours only for accounts this young. */
+export const PRODUCT_TOUR_NEW_USER_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function tourStorageKey(surface: TourSurface, userId: string): string {
   return `${KEY_PREFIX}${surface}:${userId}`;
@@ -60,6 +65,31 @@ export function resetTour(surface: TourSurface, userId: string) {
 export function resetAllTours(userId: string) {
   for (const surface of TOUR_SURFACES) {
     resetTour(surface, userId);
+  }
+}
+
+/** True when the account is new enough for auto product tours. */
+export function isNewEnoughForProductTour(
+  user: User | null | undefined
+): boolean {
+  if (!user?.createdAt) return false;
+  const created = new Date(user.createdAt).getTime();
+  if (Number.isNaN(created)) return false;
+  return Date.now() - created <= PRODUCT_TOUR_NEW_USER_MS;
+}
+
+/**
+ * Older accounts never auto-see spotlight tours. Stamp all surfaces skipped
+ * once so a cleared flag cannot re-trigger them.
+ */
+export function skipProductToursForLegacyUser(
+  user: User | null | undefined
+): void {
+  if (!user || isNewEnoughForProductTour(user)) return;
+  for (const surface of TOUR_SURFACES) {
+    if (!isTourDone(surface, user.id)) {
+      markTourDone(surface, user.id, "skipped");
+    }
   }
 }
 

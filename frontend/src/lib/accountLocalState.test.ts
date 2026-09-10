@@ -51,6 +51,23 @@ describe("accountLocalState", () => {
     expect(localStorage.getItem("theme")).toBe("dark");
   });
 
+  it("keeps product-tour and onboarding flags across logout", () => {
+    localStorage.setItem("token", "jwt");
+    localStorage.setItem("user", '{"id":"user-a"}');
+    localStorage.setItem("shelf:product-tour:library:user-a", "done");
+    localStorage.setItem("shelf:onboarding-completed:user-a", "1");
+    localStorage.setItem("shelf:last-read", "{}");
+    clearAccountLocalState();
+    expect(localStorage.getItem("shelf:product-tour:library:user-a")).toBe(
+      "done"
+    );
+    expect(localStorage.getItem("shelf:onboarding-completed:user-a")).toBe(
+      "1"
+    );
+    expect(localStorage.getItem("shelf:last-read")).toBeNull();
+    expect(localStorage.getItem("token")).toBeNull();
+  });
+
   it("clears when a different account signs in", () => {
     localStorage.setItem("shelf:last-user-id", "user-a");
     localStorage.setItem(WORKSPACE_STORAGE_KEY, '{"panes":[{"tabs":[1]}]}');
