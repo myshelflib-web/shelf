@@ -114,7 +114,7 @@ Run `ingestion-service` — it polls `GET /api/internal/ingest/due-sources` and 
 3. Copy Render **Deploy Hook** → GitHub secret `RENDER_DEPLOY_HOOK_INGESTION` (staging: `RENDER_DEPLOY_HOOK_INGESTION_STAGING`)
 4. On backend Render service: `INGEST_SCHEDULER=true` + same SQS queue URLs
 
-CI pushes `:ingest-main` on merge to `main`. Staging `:ingest-staging` only via label `deploy-staging` or **Actions → Deploy staging**. See [`DOCKER.md`](DOCKER.md).
+PRs with ingestion changes push `:ingest-staging` automatically. Production `:ingest-main` deploys only via **Actions → Deploy production**. See [`DOCKER.md`](DOCKER.md).
 
 ## Copyright policy
 

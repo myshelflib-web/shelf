@@ -10,8 +10,8 @@ Deploy with **Vercel + Neon + Cloudflare R2 + Render**. Merge to `main` still de
 GitHub
   │
   ├── PR (FE only)         → Vercel Preview only
-  ├── PR (backend/workers) → CI + manual label `deploy-staging` → shared staging
-  └── merge to main        → production Render + Vercel Production (existing path)
+  ├── PR (backend/workers) → CI + automatic shared staging
+  └── when you choose      → manual production deploy
         optional           → Actions → Deploy production (manual redeploy)
 
 Neon                   → PostgreSQL (separate DB/branch for staging)
@@ -200,7 +200,7 @@ Same image-deploy pattern ([`DOCKER.md`](DOCKER.md), [`INGEST.md`](INGEST.md)). 
 
 Preview alone is not enough: production FE builds read the Production env and must call the prod API.
 
-5. **Keep automatic Production deploys** from Git (existing FE → prod path). Keep Preview deployments for PRs.
+5. Keep Preview deployments for PRs. Production is deployed manually via **Deploy production**.
 6. Optional: GitHub secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` for CLI staging/manual tools.
 
 ---
@@ -210,12 +210,12 @@ Preview alone is not enough: production FE builds read the Production env and mu
 | Trigger | What deploys |
 |---------|----------------|
 | Pull request (frontend only) | CI + Vercel Preview — no staging Docker |
-| Pull request (backend/workers) | CI + comment/check: add label `deploy-staging` to update shared staging |
-| Label `deploy-staging` | Staging Docker tags + staging Render hooks (prod untouched) |
-| Merge / push to `main` | CI + **production** Docker/Render (same as before) + Vercel Production |
-| **Actions → Deploy production** | Optional manual redeploy of prod |
+| Pull request (backend/workers) | CI + automatic staging Docker/Render update |
+| **Actions → Deploy staging** | Optional manual staging redeploy |
+| Merge / push to `main` | CI checks + Vercel Production Git deploy only |
+| **Actions → Deploy production** | Manual production Docker/Render deploy |
 
-**Shared staging** (when configured): one staging API for PR previews; concurrent backend PRs overwrite it. Missing staging secrets only skip staging hooks — production on `main` still runs.
+**Shared staging** (when configured): one staging API for PR previews; concurrent backend PRs overwrite it. Missing staging secrets only skip staging hooks.
 
 Details: [`DOCKER.md`](DOCKER.md). Workflows: [ci.yml](../.github/workflows/ci.yml), [deploy-production.yml](../.github/workflows/deploy-production.yml).
 

@@ -6,17 +6,17 @@ PR (frontend only)
 
 PR (backend / processor / ingestion changed)
   ├─ CI checks
-  ├─ PR comment + check: add label `deploy-staging` (manual)
+  ├─ PR with server changes: automatic staging deploy
   └─ When labeled → :staging* images + staging Render hooks (prod untouched)
 
 Push / merge to main  (unchanged production path)
   ├─ CI checks (changed apps)
   ├─ Docker Hub → main / processor-main / ingest-main (+ sha)
   ├─ Render production deploy hooks
-  └─ Vercel Production (Git auto-deploy — leave enabled)
+  └─ Production Docker/Render: manual workflow
 ```
 
-**Production is not gated on staging.** Merge to `main` still ships production exactly as before. Staging updates only when someone **manually** adds `deploy-staging` on a PR that changes server apps.
+**Production is not gated on staging.** PR server changes update shared staging automatically. Production Docker/Render deploys only when someone runs **Deploy production**.
 
 
 ---
@@ -42,7 +42,7 @@ Create a separate Neon project or branch. Do **not** reuse production `DATABASE_
   - `RENDER_DEPLOY_HOOK_BACKEND_STAGING`
   - `RENDER_DEPLOY_HOOK_PROCESSOR_STAGING`
   - `RENDER_DEPLOY_HOOK_INGESTION_STAGING`
-- Keep existing prod hooks as `RENDER_DEPLOY_HOOK_BACKEND` / `_PROCESSOR` / `_INGESTION` (still used on every merge to `main`).
+- Keep existing prod hooks as `RENDER_DEPLOY_HOOK_BACKEND` / `_PROCESSOR` / `_INGESTION` (used by the manual production workflow).
 - Do **not** enable Render auto-deploy from Git.
 
 Until staging hooks exist, PR Docker jobs still push `:staging*` tags but skip the hook (no production impact).
@@ -84,7 +84,7 @@ Docker Hub **Personal** allows **one private repository** (`shelf`). Staging and
 
 | Event | Backend | Processor | Ingestion |
 |-------|---------|-----------|-----------|
-| **PR + label `deploy-staging`** (manual) | `:staging` | `:processor-staging` | `:ingest-staging` |
+| **PR with server changes** | `:staging` | `:processor-staging` | `:ingest-staging` |
 | **Push to `main`** (automatic) | `:main` (+ `:latest`, sha) | `:processor-main` | `:ingest-main` |
 
 **Rules:**
@@ -103,7 +103,7 @@ CI prune keeps **at most 20** tags; protected: `main`, `latest`, `processor-main
 | Vercel environment | `NEXT_PUBLIC_API_URL` | Used by |
 |--------------------|----------------------|---------|
 | **Preview** | Staging API (when ready) | PR preview URLs |
-| **Production** | Prod API | Git auto-deploy on `main` + optional manual Action |
+| **Production** | Prod API | Manual **Deploy production** Action |
 
 Root Directory must stay `frontend`. Staging backend may set `ALLOW_VERCEL_PREVIEW_CORS=true`.
 
@@ -133,8 +133,8 @@ OTEL_DEPLOYMENT_ENVIRONMENT=staging
 | Event | CI | Docker + Render | Frontend |
 |-------|----|-----------------|----------|
 | PR frontend-only | FE checks | skip | Vercel Preview |
-| PR with server apps | checks + staging hint | **manual** `deploy-staging` label → staging tags/hooks | Vercel Preview |
-| Push to `main` (changed apps) | checks | **production** tags + prod hooks | Vercel Production (Git) |
+| PR with server apps | checks + automatic staging deploy | staging tags/hooks | Vercel Preview |
+| Push to `main` (changed apps) | checks | skip Docker/Render production deploy | Vercel Production (Git) |
 | **Deploy production** (manual) | checks | prod tags + prod hooks (optional redeploy) | `vercel --prod` |
 | workflow / docs only | skip | skip | skip |
 

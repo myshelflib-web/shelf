@@ -1,7 +1,7 @@
 name: Deploy staging frontend
 
 # Optional: after merge to main, also publish a Preview-env FE build (staging API).
-# Does NOT replace Vercel Production Git auto-deploy on main — leave that enabled.
+# This only keeps a stable staging frontend alias warm; production Docker/Render deploys remain manual.
 # PR preview URLs still come from Vercel's Git Preview integration.
 # Requires VERCEL_* secrets; skip/disable this workflow until staging API + secrets exist.
 

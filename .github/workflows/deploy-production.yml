@@ -1,8 +1,8 @@
 name: Deploy production
 
-# Optional manual redeploy of production (FE + selected services).
-# Normal path remains: push/merge to main → CI writes :main tags + prod Render hooks
-# and Vercel Git Production auto-deploy. This workflow does not replace that.
+# Manual production deploy (FE + selected services).
+# Docker/Render production deploys happen only from this workflow.
+# Vercel Git Production auto-deploy can still publish the frontend from main.
 # Docker: may rewrite :main / :processor-main / :ingest-main.
 # Vercel: pulls Production env — NEXT_PUBLIC_API_URL must be the PROD API.
 
