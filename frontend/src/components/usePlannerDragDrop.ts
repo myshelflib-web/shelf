@@ -9,6 +9,8 @@ import {
   canDragItem,
   moveDueToDay,
   moveEndsWithDue,
+  sameLocalDay,
+  startOfLocalDay,
 } from "@/lib/plannerBoard";
 import type { usePlannerCardMotion } from "@/components/usePlannerCardMotion";
 
@@ -25,10 +27,26 @@ type CardMotionApi = Pick<
 
 export type { PlannerCardMotion } from "@/components/usePlannerCardMotion";
 
+function isNoOpDrop(
+  task: StudyTask,
+  target: Date | "backlog",
+  nextDue: string | null
+): boolean {
+  if (target === "backlog") {
+    return task.dueAt == null;
+  }
+  if (!task.dueAt || !nextDue) return false;
+  const prev = new Date(task.dueAt);
+  const next = new Date(nextDue);
+  if (Number.isNaN(prev.getTime()) || Number.isNaN(next.getTime())) return false;
+  return sameLocalDay(prev, next);
+}
+
 export function usePlannerDragDrop(
   tasks: StudyTask[],
   setTasks: React.Dispatch<React.SetStateAction<StudyTask[]>>,
-  motion: CardMotionApi
+  motion: CardMotionApi,
+  mutationGuard?: { begin: () => void; end: () => void }
 ) {
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -119,8 +137,13 @@ export function usePlannerDragDrop(
         nextDue = null;
         nextEnd = null;
       } else {
-        nextDue = moveDueToDay(task.dueAt, target);
+        nextDue = moveDueToDay(task.dueAt, startOfLocalDay(target));
         nextEnd = moveEndsWithDue(task.dueAt, task.endsAt, nextDue);
+      }
+
+      if (isNoOpDrop(task, target, nextDue)) {
+        resetDragUi();
+        return;
       }
 
       setTasks((prev) =>
@@ -129,6 +152,7 @@ export function usePlannerDragDrop(
         )
       );
       resetDragUi();
+      mutationGuard?.begin();
 
       void updateTask(id, { dueAt: nextDue, endsAt: nextEnd })
         .then(() => {
@@ -150,9 +174,12 @@ export function usePlannerDragDrop(
               )
             );
           });
+        })
+        .finally(() => {
+          mutationGuard?.end();
         });
     },
-    [tasks, setTasks, resetDragUi, showDropError, motion]
+    [tasks, setTasks, resetDragUi, showDropError, motion, mutationGuard]
   );
 
   const finishDrop = useCallback(

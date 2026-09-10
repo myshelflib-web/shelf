@@ -88,7 +88,13 @@ export function StudyCalendar({
     createItem,
     updateItem,
     remove,
+    beginMutation,
+    endMutation,
   } = usePlannerTasks(from, to, motion);
+  const dragMutationGuard = useMemo(
+    () => ({ begin: beginMutation, end: endMutation }),
+    [beginMutation, endMutation]
+  );
   const {
     dropTarget,
     draggingId,
@@ -100,7 +106,7 @@ export function StudyCalendar({
     allowDrop,
     leaveDrop,
     finishDrop,
-  } = usePlannerDragDrop(tasks, setTasks, motion);
+  } = usePlannerDragDrop(tasks, setTasks, motion, dragMutationGuard);
 
   const flashError = dropError ?? actionError;
   const clearFlashError = useCallback(() => {

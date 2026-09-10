@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { MoreHorizontal, Paperclip, Plus, Search } from "lucide-react";
+import { MoreHorizontal, Paperclip, Pin, Plus, Search } from "lucide-react";
 import {
   filterThreads,
   groupThreadsByDate,
+  isThreadPinned,
 } from "@/lib/studyAiThreadGroups";
 import { threadSidebarMeta } from "@/lib/studyAiWorkspaceUtils";
 import { ChatThreadSummary } from "@/types";
@@ -72,6 +73,7 @@ export function StudyAiSidebar({
             <ul className="space-y-0.5">
               {group.threads.map((t) => {
                 const meta = threadSidebarMeta(t);
+                const pinned = isThreadPinned(t);
                 return (
                   <li key={t.id}>
                     <div
@@ -82,8 +84,16 @@ export function StudyAiSidebar({
                       }`}
                     >
                       <Link href={`/study-ai/${t.id}`} className="flex-1 min-w-0">
-                        <span className="block text-[11.5px] font-semibold truncate">
-                          {t.title}
+                        <span className="flex items-center gap-1 min-w-0">
+                          {pinned && (
+                            <Pin
+                              className="w-2.5 h-2.5 shrink-0 text-[var(--accent)]"
+                              aria-hidden
+                            />
+                          )}
+                          <span className="block text-[11.5px] font-semibold truncate">
+                            {t.title}
+                          </span>
                         </span>
                         {meta && (
                           <span className="mt-0.5 flex items-center gap-1 text-[8.8px] text-[var(--text-muted)] truncate">
@@ -114,7 +124,7 @@ export function StudyAiSidebar({
       </div>
 
       <p className="shrink-0 px-3 py-3 border-t border-[var(--border)] text-[9px] text-[var(--text-muted)] leading-snug">
-        Chat titles are generated automatically. Rename them anytime.
+        Chat titles are generated automatically. Rename or pin them anytime.
       </p>
     </aside>
   );

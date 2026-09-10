@@ -2146,6 +2146,7 @@ export const api = {
         contextTopicId?: string | null;
         contextPageId?: string | null;
         relevancyDocId?: string | null;
+        pinned?: boolean;
       }
     ) =>
       request<{ thread: import("@/types").ChatThreadSummary }>(

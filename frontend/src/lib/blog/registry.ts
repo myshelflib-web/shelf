@@ -16,6 +16,7 @@ import { keyboardShortcuts } from "./posts/keyboard-shortcuts";
 import { spotifyFocus } from "./posts/spotify-focus";
 import { pwaOffline } from "./posts/pwa-offline";
 import { studyAiChatControls } from "./posts/study-ai-chat-controls";
+import { studyAiPinChats } from "./posts/study-ai-pin-chats";
 import { examStyleQuiz } from "./posts/exam-style-quiz";
 import { documentSharing } from "./posts/document-sharing";
 import { youtubeLectures } from "./posts/youtube-lectures";
@@ -44,6 +45,7 @@ const ALL_POSTS: BlogPost[] = [
   telegramSavePdfs,
   documentSharing,
   examStyleQuiz,
+  studyAiPinChats,
   studyAiChatControls,
   pwaOffline,
   spotifyFocus,

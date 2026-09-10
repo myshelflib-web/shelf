@@ -1,35 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
-import { SaveAnswerModal } from "@/components/study-ai/SaveAnswerModal";
-import { FlashcardsStudyModal } from "@/components/study-ai/FlashcardsStudyModal";
-import { StudySourcesModal } from "@/components/study-ai/StudySourcesModal";
-import { parseFlashcards } from "@/lib/parseFlashcards";
 import { StudyAiSidebar } from "@/components/study-ai/StudyAiSidebar";
 import { StudyAiMessageList } from "@/components/study-ai/StudyAiMessageList";
 import { StudyAiComposer } from "@/components/study-ai/StudyAiComposer";
 import { StudyAiSuggestChips } from "@/components/study-ai/StudyAiSuggestChips";
+import { StudyAiWorkspaceOverlays } from "@/components/study-ai/StudyAiWorkspaceOverlays";
 import { studyAiSendParts } from "@/lib/studyAiCommands";
 import { quizSetupHref } from "@/lib/quiz/href";
-import {
-  StudyAiAttachMenu,
-  StudyAiChatMenu,
-  StudyAiRenameModal,
-} from "@/components/study-ai/StudyAiChatMenus";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudyAiChat } from "@/hooks/useStudyAiChat";
+import { useStudyAiPopovers } from "@/hooks/useStudyAiPopovers";
 import { api } from "@/lib/api";
 import { downloadChatPdf } from "@/lib/exportAnswer";
 import { isPremiumUser } from "@/lib/premium";
 import { getStoredStudyDepth, resolveStudyDepth, type StudyDepth } from "@/lib/studyDepth";
 import { getStoredStudyWebSearch } from "@/lib/studyWebSearch";
 import { normalizeContextKind } from "@/lib/studyAiContextLabel";
-import {
-  positionPopover,
-  type PopoverKind,
-} from "@/lib/studyAiWorkspaceUtils";
 import { Download, MoreHorizontal, PanelLeft } from "lucide-react";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { GreetingBlock } from "@/components/GreetingBlock";
@@ -37,7 +26,6 @@ import { LivelyLine } from "@/components/LivelyLine";
 import { ShelfLogo } from "@/components/ShelfLogo";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
 import { useIsPhone } from "@/hooks/useIsPhone";
-import { ShelfDrawer } from "@/components/ShelfDrawer";
 
 export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const router = useRouter();
@@ -69,22 +57,24 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const [saveContent, setSaveContent] = useState<string | null>(null);
   const [flashcardsMd, setFlashcardsMd] = useState<string | null>(null);
   const [exportingChat, setExportingChat] = useState(false);
-  const [popover, setPopover] = useState<PopoverKind>(null);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
-  const [renaming, setRenaming] = useState(false);
-  const [chatMenuThreadId, setChatMenuThreadId] = useState<string | null>(null);
   const [threadsOpen, setThreadsOpen] = useState(false);
   const compactPortrait = useCompactPortrait();
   const isPhone = useIsPhone();
+  const {
+    popover,
+    chatMenuThreadId,
+    attachMenuRef,
+    chatMenuRef,
+    closePopover,
+    openPopover,
+  } = useStudyAiPopovers();
 
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const attachBtnRef = useRef<HTMLButtonElement>(null);
   const headerMoreRef = useRef<HTMLButtonElement>(null);
-  const attachMenuRef = useRef<HTMLDivElement>(null);
-  const chatMenuRef = useRef<HTMLDivElement>(null);
-  const chatMenuAnchorRef = useRef<HTMLElement | null>(null);
 
   const sourcesActive =
     Boolean(chat.threadMeta?.relevancyDocId) ||
@@ -99,27 +89,44 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const contextChips = useMemo(() => {
     const chips: { key: string; label: string; onRemove: () => void }[] = [];
     if (threadMeta?.relevancyDoc?.title) {
+      const prev = threadMeta;
       chips.push({
         key: "relevancy",
         label: threadMeta.relevancyDoc.title,
         onRemove: () => {
           if (!activeId) return;
+          setThreadMeta({
+            ...prev,
+            relevancyDocId: null,
+            relevancyDoc: null,
+          });
           void api.study
             .updateChat(activeId, { relevancyDocId: null })
             .then(({ thread }) => {
               setThreadMeta(thread);
               refreshThreads();
             })
-            .catch(() => setError("Could not remove source"));
+            .catch(() => {
+              setThreadMeta(prev);
+              setError("Could not remove source");
+            });
         },
       });
     }
     if (threadMeta && normalizeContextKind(threadMeta.contextKind) !== "LIBRARY") {
+      const prev = threadMeta;
       chips.push({
         key: "scope",
         label: "Library scope",
         onRemove: () => {
           if (!activeId) return;
+          setThreadMeta({
+            ...prev,
+            contextKind: "LIBRARY",
+            contextNotebookId: null,
+            contextTopicId: null,
+            contextPageId: null,
+          });
           void api.study
             .updateChat(activeId, {
               contextKind: "LIBRARY",
@@ -131,48 +138,15 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
               setThreadMeta(thread);
               refreshThreads();
             })
-            .catch(() => setError("Could not remove scope"));
+            .catch(() => {
+              setThreadMeta(prev);
+              setError("Could not remove scope");
+            });
         },
       });
     }
     return chips;
   }, [threadMeta, activeId, refreshThreads, setThreadMeta, setError]);
-
-  const closePopover = useCallback(() => {
-    setPopover(null);
-    setChatMenuThreadId(null);
-    chatMenuAnchorRef.current = null;
-  }, []);
-
-  const openPopover = useCallback(
-    (kind: PopoverKind, anchor: HTMLElement, menuThreadId?: string) => {
-      setPopover(kind);
-      if (menuThreadId) setChatMenuThreadId(menuThreadId);
-      chatMenuAnchorRef.current = anchor;
-    },
-    []
-  );
-
-  useLayoutEffect(() => {
-    if (popover === null) return;
-    const menu =
-      popover === "attach" ? attachMenuRef.current : chatMenuRef.current;
-    const anchor = chatMenuAnchorRef.current;
-    if (!menu || !anchor) return;
-    positionPopover(menu, anchor);
-  }, [popover]);
-
-  useEffect(() => {
-    if (popover === null) return;
-    const onDocClick = () => closePopover();
-    const timer = window.setTimeout(() => {
-      document.addEventListener("click", onDocClick);
-    }, 0);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener("click", onDocClick);
-    };
-  }, [popover, closePopover]);
 
   useEffect(() => {
     if (!authLoading && !user) router.push("/login");
@@ -220,21 +194,12 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
     setRenameOpen(true);
   };
 
-  const confirmRename = async () => {
+  const confirmRename = () => {
     const next = renameValue.trim();
     const targetId = chatMenuThreadId ?? chat.activeId;
-    if (!targetId || !next || renaming) return;
-    setRenaming(true);
-    try {
-      const { thread } = await api.study.updateChat(targetId, { title: next });
-      if (chat.activeId === targetId) chat.setTitle(thread.title);
-      chat.refreshThreads();
-      setRenameOpen(false);
-    } catch {
-      chat.setError("Could not rename chat");
-    } finally {
-      setRenaming(false);
-    }
+    if (!targetId || !next) return;
+    setRenameOpen(false);
+    chat.renameThread(targetId, next);
   };
 
   if (authLoading || !user) {
@@ -450,81 +415,32 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
         </main>
       </div>
 
-      <StudyAiAttachMenu
-        menuRef={attachMenuRef}
-        open={popover === "attach"}
-        onClose={closePopover}
-        onFromLibrary={() => setSourcesOpen(true)}
-        onUpload={() => fileRef.current?.click()}
+      <StudyAiWorkspaceOverlays
+        chat={chat}
+        popover={popover}
+        closePopover={closePopover}
+        attachMenuRef={attachMenuRef}
+        chatMenuRef={chatMenuRef}
+        chatMenuThreadId={chatMenuThreadId}
+        openRename={openRename}
+        renameOpen={renameOpen}
+        renameValue={renameValue}
+        setRenameValue={setRenameValue}
+        setRenameOpen={setRenameOpen}
+        confirmRename={confirmRename}
+        sourcesOpen={sourcesOpen}
+        setSourcesOpen={setSourcesOpen}
+        flashcardsMd={flashcardsMd}
+        setFlashcardsMd={setFlashcardsMd}
+        saveContent={saveContent}
+        setSaveContent={setSaveContent}
+        fileRef={fileRef}
+        compactPortrait={compactPortrait}
+        threadsOpen={threadsOpen}
+        setThreadsOpen={setThreadsOpen}
+        isPhone={isPhone}
+        sidebar={sidebar}
       />
-      <StudyAiChatMenu
-        menuRef={chatMenuRef}
-        open={popover === "chat"}
-        onRename={() => {
-          const target = chat.threads.find(
-            (t) => t.id === (chatMenuThreadId ?? chat.activeId)
-          );
-          openRename(target?.title ?? chat.title);
-        }}
-        onDelete={() => {
-          const id = chatMenuThreadId ?? chat.activeId;
-          closePopover();
-          if (id) void chat.removeThread(id);
-        }}
-      />
-
-      {renameOpen && (
-        <StudyAiRenameModal
-          value={renameValue}
-          onChange={setRenameValue}
-          renaming={renaming}
-          onClose={() => setRenameOpen(false)}
-          onSave={() => void confirmRename()}
-        />
-      )}
-
-      {sourcesOpen && (
-        <StudySourcesModal
-          threadId={chat.activeId}
-          thread={chat.threadMeta}
-          onThreadUpdated={(t) => {
-            chat.setThreadMeta(t);
-            chat.setTitle(t.title);
-            chat.setActiveId(t.id);
-            chat.refreshThreads();
-          }}
-          onClose={() => setSourcesOpen(false)}
-        />
-      )}
-
-      {flashcardsMd && (
-        <FlashcardsStudyModal
-          cards={parseFlashcards(flashcardsMd)}
-          title="Flashcards"
-          onClose={() => setFlashcardsMd(null)}
-          onSave={(md) => {
-            setFlashcardsMd(null);
-            setSaveContent(md);
-          }}
-        />
-      )}
-
-      {saveContent && (
-        <SaveAnswerModal
-          content={saveContent}
-          defaultTitle={chat.title === "New chat" ? "Study AI notes" : chat.title}
-          onClose={() => setSaveContent(null)}
-        />
-      )}
-
-      <ShelfDrawer
-        open={compactPortrait && threadsOpen}
-        onClose={() => setThreadsOpen(false)}
-        title="Chats"
-        fullScreen={isPhone}
-      >
-        <div className="study-ai-sidebar-drawer-host h-full">{sidebar}</div>
-      </ShelfDrawer>
     </div>
   );
 }

@@ -51,8 +51,9 @@ export function PlannerTaskCard({
 
   if (compact) {
     return (
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         draggable={draggable}
         onDragStart={(e) => {
           e.stopPropagation();
@@ -63,16 +64,22 @@ export function PlannerTaskCard({
           e.stopPropagation();
           onEdit(task);
         }}
-        className={`block w-full truncate rounded-md px-1.5 py-0.5 text-left text-[9px] font-medium border-l-2 ${
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onEdit(task);
+          }
+        }}
+        className={`block w-full truncate rounded-md px-1.5 py-0.5 text-left text-[9px] font-medium border-l-2 select-none ${
           isEvent
             ? "border-l-[var(--text-muted)] bg-[var(--bg-elevated)] text-[var(--text-secondary)]"
             : "border-l-[var(--accent)] bg-[var(--accent-light)] text-[var(--text-primary)]"
         } ${task.completed ? "line-through opacity-60" : ""} ${
-          draggable ? "cursor-grab active:cursor-grabbing" : ""
+          draggable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
         } ${dragClass} ${motionClass}`}
       >
         {task.title}
-      </button>
+      </div>
     );
   }
 
@@ -82,7 +89,7 @@ export function PlannerTaskCard({
       onClick={(e) => e.stopPropagation()}
       onDragStart={(e) => onDragStart(task, e)}
       onDragEnd={onDragEnd}
-      className={`group rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] px-2.5 py-2 border-l-2 ${
+      className={`group rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] px-2.5 py-2 border-l-2 select-none ${
         isEvent ? "border-l-[var(--text-muted)]" : "border-l-[var(--accent)]"
       } ${task.completed ? "opacity-70" : ""} ${
         draggable ? "cursor-grab active:cursor-grabbing" : ""
@@ -90,10 +97,11 @@ export function PlannerTaskCard({
     >
       <div className="flex items-start gap-2 min-w-0">
         {isEvent ? (
-          <CalendarDays className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[var(--text-muted)]" />
+          <CalendarDays className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[var(--text-muted)] pointer-events-none" />
         ) : (
           <button
             type="button"
+            draggable={false}
             onClick={(e) => {
               e.stopPropagation();
               onToggleDone(task);
@@ -109,23 +117,31 @@ export function PlannerTaskCard({
             )}
           </button>
         )}
-        <button
-          type="button"
+        <div
+          role="button"
+          tabIndex={0}
           onClick={() => onEdit(task)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onEdit(task);
+            }
+          }}
           className={`flex-1 min-w-0 text-left text-[12px] font-semibold leading-snug text-[var(--text-primary)] hover:text-[var(--accent)] ${
             task.completed ? "line-through text-[var(--text-muted)]" : ""
           }`}
         >
           {task.title}
-        </button>
+        </div>
         {repeating && (
-          <Repeat className="w-3 h-3 mt-0.5 shrink-0 text-[var(--accent)]" />
+          <Repeat className="w-3 h-3 mt-0.5 shrink-0 text-[var(--accent)] pointer-events-none" />
         )}
         {ext && (
           <a
             href={ext}
             target="_blank"
             rel="noreferrer"
+            draggable={false}
             onClick={(e) => e.stopPropagation()}
             className="mt-0.5 text-[var(--accent)] hover:opacity-80"
             aria-label="Open event link"
@@ -135,6 +151,7 @@ export function PlannerTaskCard({
         )}
         <button
           type="button"
+          draggable={false}
           onClick={() => onRemove(task.id)}
           className="opacity-0 group-hover:opacity-100 mt-0.5 rounded-md p-0.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
           aria-label="Delete"

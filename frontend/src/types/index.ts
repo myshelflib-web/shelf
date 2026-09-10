@@ -334,6 +334,8 @@ export interface ChatThreadSummary {
   contextPageId?: string | null;
   relevancyDocId?: string | null;
   relevancyDoc?: StudyRelevancyDocSummary | null;
+  /** ISO timestamp when pinned; null/undefined = unpinned. */
+  pinnedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

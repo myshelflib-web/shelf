@@ -154,4 +154,33 @@ export const BLOG_EXPANSIONS_C: Record<string, BlogSection[]> = {
       ],
     },
   ],
+  "pin-study-ai-chats": [
+    {
+      heading: "Pinned vs starred pages",
+      paragraphs: [
+        "Starring a library page marks material you want to reopen from lists and Study AI tools. Pinning a chat marks a conversation — the tutor thread where you already worked through a topic — so the dialogue stays at the top of /study-ai.",
+        "Use both together: star the PDF, pin the chat that explained it. Opening the chat does not change the star; starring does not auto-pin the thread.",
+      ],
+    },
+    {
+      heading: "How many pins to keep",
+      paragraphs: [
+        "Shelf caps pins at ten so the sidebar stays scannable. If you hit the limit, unpin an older subject thread before pinning a new one — the API returns a clear error instead of silently dropping pins.",
+        "Treat pins as the active semester stack: current papers, a live mock debrief, and one long syllabus map. Archive the rest by unpinning when the exam unit is done.",
+      ],
+    },
+    {
+      heading: "Search and date buckets",
+      paragraphs: [
+        "Pinned chats leave the Today / Yesterday / Older buckets until you unpin them. Search still matches titles across pinned and unpinned threads, so a pin is for visibility, not a separate catalog.",
+        "Updating a pinned chat (new messages, rename) keeps the pin. Delete removes the thread entirely, pin included.",
+      ],
+    },
+    {
+      heading: "Mobile chat drawer",
+      paragraphs: [
+        "On compact portrait layouts, open Chats from the Study AI header to reach the same list, pin menu, and Pinned section. Pins sync the same way as on desktop.",
+      ],
+    },
+  ],
 };
