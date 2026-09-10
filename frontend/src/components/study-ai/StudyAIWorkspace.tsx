@@ -19,7 +19,7 @@ import { isPremiumUser } from "@/lib/premium";
 import { getStoredStudyDepth, resolveStudyDepth, type StudyDepth } from "@/lib/studyDepth";
 import { getStoredStudyWebSearch } from "@/lib/studyWebSearch";
 import { normalizeContextKind } from "@/lib/studyAiContextLabel";
-import { Download, MoreHorizontal, PanelLeft } from "lucide-react";
+import { Download, PanelLeft, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { GreetingBlock } from "@/components/GreetingBlock";
 import { LivelyLine } from "@/components/LivelyLine";
@@ -59,22 +59,16 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const [exportingChat, setExportingChat] = useState(false);
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
+  const [renameTargetId, setRenameTargetId] = useState<string | null>(null);
   const [threadsOpen, setThreadsOpen] = useState(false);
   const compactPortrait = useCompactPortrait();
   const isPhone = useIsPhone();
-  const {
-    popover,
-    chatMenuThreadId,
-    attachMenuRef,
-    chatMenuRef,
-    closePopover,
-    openPopover,
-  } = useStudyAiPopovers();
+  const { popover, attachMenuRef, closePopover, openPopover } =
+    useStudyAiPopovers();
 
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const attachBtnRef = useRef<HTMLButtonElement>(null);
-  const headerMoreRef = useRef<HTMLButtonElement>(null);
 
   const sourcesActive =
     Boolean(chat.threadMeta?.relevancyDocId) ||
@@ -188,17 +182,18 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
     }
   };
 
-  const openRename = (threadTitle: string) => {
-    closePopover();
+  const openRename = (threadId: string, threadTitle: string) => {
+    setRenameTargetId(threadId);
     setRenameValue(threadTitle);
     setRenameOpen(true);
   };
 
   const confirmRename = () => {
     const next = renameValue.trim();
-    const targetId = chatMenuThreadId ?? chat.activeId;
+    const targetId = renameTargetId ?? chat.activeId;
     if (!targetId || !next) return;
     setRenameOpen(false);
+    setRenameTargetId(null);
     chat.renameThread(targetId, next);
   };
 
@@ -218,6 +213,10 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const canExport =
     chat.messages.some((m) => !m.streaming && m.content.trim().length > 0) &&
     !chat.loading;
+  const activePinned = Boolean(
+    chat.threads.find((t) => t.id === chat.activeId)?.pinnedAt ??
+      chat.threadMeta?.pinnedAt
+  );
 
   const sidebar = (
     <StudyAiSidebar
@@ -227,7 +226,9 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
       onSearchQuery={setSearchQuery}
       activeId={chat.activeId}
       onNewChat={chat.startNewChat}
-      onOpenMenu={(el, id) => openPopover("chat", el, id)}
+      onPin={(id) => chat.togglePinThread(id)}
+      onRename={(id, title) => openRename(id, title)}
+      onDelete={(id) => chat.removeThread(id)}
     />
   );
 
@@ -273,19 +274,47 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
                   <Download className="w-3.5 h-3.5" />
                   {exportingChat ? "Exporting…" : "Download"}
                 </button>
-                <button
-                  ref={headerMoreRef}
-                  type="button"
-                  aria-label="More chat options"
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openPopover("chat", e.currentTarget, chat.activeId);
-                  }}
-                  className="w-[34px] h-[34px] rounded-[9px] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] flex items-center justify-center"
-                >
-                  <MoreHorizontal className="w-4 h-4" />
-                </button>
+                {chat.activeId && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label={activePinned ? "Unpin chat" : "Pin chat"}
+                      title={activePinned ? "Unpin" : "Pin"}
+                      onClick={() => chat.togglePinThread(chat.activeId!)}
+                      className={`w-[34px] h-[34px] rounded-[9px] flex items-center justify-center hover:bg-[var(--bg-elevated)] ${
+                        activePinned
+                          ? "text-[var(--accent)]"
+                          : "text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                      }`}
+                    >
+                      {activePinned ? (
+                        <PinOff className="w-4 h-4" />
+                      ) : (
+                        <Pin className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Rename chat"
+                      title="Rename"
+                      onClick={() =>
+                        openRename(chat.activeId!, chat.title)
+                      }
+                      className="w-[34px] h-[34px] rounded-[9px] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] flex items-center justify-center"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Delete chat"
+                      title="Delete"
+                      onClick={() => chat.removeThread(chat.activeId!)}
+                      className="w-[34px] h-[34px] rounded-[9px] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-red-400 flex items-center justify-center"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -420,9 +449,6 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
         popover={popover}
         closePopover={closePopover}
         attachMenuRef={attachMenuRef}
-        chatMenuRef={chatMenuRef}
-        chatMenuThreadId={chatMenuThreadId}
-        openRename={openRename}
         renameOpen={renameOpen}
         renameValue={renameValue}
         setRenameValue={setRenameValue}

@@ -6,33 +6,30 @@ import {
   type PopoverKind,
 } from "@/lib/studyAiWorkspaceUtils";
 
+/** Attach popover only — chat pin/rename/delete are inline on each row. */
 export function useStudyAiPopovers() {
   const [popover, setPopover] = useState<PopoverKind>(null);
-  const [chatMenuThreadId, setChatMenuThreadId] = useState<string | null>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
-  const chatMenuRef = useRef<HTMLDivElement>(null);
-  const chatMenuAnchorRef = useRef<HTMLElement | null>(null);
+  const attachAnchorRef = useRef<HTMLElement | null>(null);
 
   const closePopover = useCallback(() => {
     setPopover(null);
-    setChatMenuThreadId(null);
-    chatMenuAnchorRef.current = null;
+    attachAnchorRef.current = null;
   }, []);
 
   const openPopover = useCallback(
-    (kind: PopoverKind, anchor: HTMLElement, menuThreadId?: string) => {
+    (kind: PopoverKind, anchor: HTMLElement) => {
+      if (kind !== "attach") return;
       setPopover(kind);
-      if (menuThreadId) setChatMenuThreadId(menuThreadId);
-      chatMenuAnchorRef.current = anchor;
+      attachAnchorRef.current = anchor;
     },
     []
   );
 
   useLayoutEffect(() => {
-    if (popover === null) return;
-    const menu =
-      popover === "attach" ? attachMenuRef.current : chatMenuRef.current;
-    const anchor = chatMenuAnchorRef.current;
+    if (popover !== "attach") return;
+    const menu = attachMenuRef.current;
+    const anchor = attachAnchorRef.current;
     if (!menu || !anchor) return;
     positionPopover(menu, anchor);
   }, [popover]);
@@ -51,9 +48,7 @@ export function useStudyAiPopovers() {
 
   return {
     popover,
-    chatMenuThreadId,
     attachMenuRef,
-    chatMenuRef,
     closePopover,
     openPopover,
   };
