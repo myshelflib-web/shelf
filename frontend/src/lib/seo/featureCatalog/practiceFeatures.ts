@@ -1,19 +1,84 @@
 import type { ShelfFeature } from "../featureTypes";
 
 export const PRACTICE_FEATURES: ShelfFeature[] = [
-
   {
-slug: "exam-quiz",
+    slug: "ai-flashcards-quizzes",
     category: "practice",
-    title: "Exam-Style Quiz from Your Notes — MCQ, Written & PYQ | Shelf",
+    title: "AI Flashcards & Quizzes from PDF Notes | Shelf",
     metaDescription:
-      "Sit timed MCQs, written answers, and photo working on Shelf Quiz. Choose a proctored fullscreen sitting or practice mode, then review a per-quiz analysis board.",
+      "Generate AI flashcards and exam-style quizzes from PDF notes on Shelf. Quizlet- and Anki-style practice grounded in your uploads — MCQ, written, and photo working.",
+    keywords: [
+      "AI flashcards from PDF",
+      "generate quiz from PDF",
+      "PDF to flashcards AI",
+      "Quizlet alternative AI",
+      "Anki AI from notes",
+      "AI quiz generator from notes",
+    ],
+    headline: "Flashcards and quizzes from the same PDFs you read",
+    subhead:
+      "Turn textbook chapters and class notes into active practice: Study AI flashcards plus Shelf Quiz papers — without copying text into another app.",
+    bullets: [
+      "Flashcards from Study AI on a page or thread",
+      "Exam-style MCQ and written quizzes from library scope",
+      "Practice or proctored sittings with analysis",
+      "Teachers can prepare tests from the same material",
+    ],
+    paragraphs: [
+      "Passive rereading fails. Shelf connects chat-with-PDF to flashcards and quizzes so retrieval practice stays tied to what you actually uploaded.",
+    ],
+    relatedBlogSlug: "ai-flashcards-quizzes-from-pdf",
+    ctaHref: "/quiz",
+    ctaLabel: "Make a quiz",
+    secondaryCtaHref: "/login?next=/study-ai",
+    secondaryCtaLabel: "Open Study AI flashcards",
+  },
+  {
+    slug: "teacher-test-prep",
+    category: "practice",
+    title: "Teacher Tool for Preparing Tests from Notes & PDFs | Shelf",
+    metaDescription:
+      "Teacher tool for preparing tests: organize lesson PDFs, generate exam-style MCQs and written items from your notes, keep answer keys private, and share handouts with students.",
+    keywords: [
+      "teacher tool for preparing tests",
+      "teacher quiz maker from notes",
+      "prepare MCQ tests for class",
+      "create quiz from lesson PDF",
+      "tutor exam paper generator",
+      "teacher assessment tool",
+    ],
+    headline: "Prepare tests from the same PDFs you teach",
+    subhead:
+      "Upload syllabus and worksheets, then build exam-style quizzes from that material. Shelf keeps prep in your private library — share only the handouts students should see.",
+    bullets: [
+      "Generate MCQ and written items from lesson PDFs or uploads",
+      "Practice or proctored sittings for class drills",
+      "Share Shelf handouts; keep answer keys in a private topic",
+      "Study AI helps rephrase stems or differentiate difficulty",
+    ],
+    paragraphs: [
+      "Teachers and tutors often juggle a drive folder, a quiz website, and ChatGPT. Shelf is a teacher tool that keeps materials and test prep together so papers stay grounded in what you actually taught.",
+      "Students can sit the same quiz workspace for self-study — one product for both sides of the classroom.",
+    ],
+    relatedBlogSlug: "teacher-tool-prepare-tests",
+    ctaHref: "/quiz",
+    ctaLabel: "Prepare a test",
+    secondaryCtaHref: "/blog/teachers-lesson-materials",
+    secondaryCtaLabel: "Lesson materials guide",
+  },
+  {
+    slug: "exam-quiz",
+    category: "practice",
+    title: "Exam-Style Quiz from Your Notes — Students & Teachers | Shelf",
+    metaDescription:
+      "Student quizzes and teacher test prep from your Shelf notes: timed MCQs, written answers, and photo working. Proctored or practice, then a per-quiz analysis board.",
     keywords: [
       "exam quiz app",
+      "student study quiz",
+      "teacher tool for preparing tests",
       "MCQ from PDF",
       "PYQ practice quiz",
       "written answer quiz",
-      "UPSC MCQ practice",
     ],
     headline: "Exam-style papers from your notes",
     subhead:

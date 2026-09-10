@@ -4,11 +4,11 @@ export const vsChatbots = longPost(
   {
     slug: "shelf-vs-generic-chatbots",
     title: "Shelf Study AI vs Generic Chatbots: Why Grounding in Your PDFs Matters",
-    description: "Compare asking ChatGPT-style tools versus Shelf Study AI that retrieves from your uploaded PDFs and notes — with workflows for students and professionals.",
-    excerpt: "Generic chatbots guess from the open web. Shelf Study AI answers from your library with retrieval and citations back to your pages — better for exam and work accuracy.",
+    description: "Compare asking ChatGPT-style LLMs versus Shelf Study AI that retrieves from your uploaded PDFs and notes — with workflows for students and professionals.",
+    excerpt: "Generic LLMs guess from the open web. Shelf Study AI answers from your library with retrieval and citations back to your pages — better for exam and work accuracy.",
     publishedAt: "2026-03-10",
-    updatedAt: "2026-08-26",
-    tags: ["Study AI","comparison","RAG","productivity"],
+    updatedAt: "2026-09-11",
+    tags: ["Study AI","comparison","RAG","LLM","productivity"],
   },
   [
     {
@@ -46,7 +46,7 @@ export const vsChatbots = longPost(
     {
       heading: "Workflow pairing",
       paragraphs: [
-        "Use generic AI for outline ideas; use Shelf to force every claim back to your highlighted sources before you submit.",
+        "Use a generic LLM for outline ideas; use Shelf Study AI to force every claim back to your highlighted sources before you submit.",
       ],
     },
     {

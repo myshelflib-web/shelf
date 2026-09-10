@@ -5,19 +5,19 @@ export const FEATURE_CATEGORIES: FeatureCategory[] = [
     id: "library",
     label: "Library & reader",
     description:
-      "Organize PDFs, YouTube lectures, highlight as you read, write research Docs with citations, and work in a multi-tab reader workspace.",
+      "All-in-one study library: store PDFs, notes, and YouTube; highlight; write Docs; tabs and split view.",
   },
   {
     id: "study-ai",
     label: "Study AI",
     description:
-      "Ask questions grounded in your uploads — from a highlight, a page, or your whole library. Paraphrase and originality checks included.",
+      "Students ask an LLM grounded in uploads — Study AI on a highlight, page, or whole library. Paraphrase and originality included.",
   },
   {
     id: "practice",
     label: "Practice & planning",
     description:
-      "Exam-style quizzes, a revision calendar, and a dashboard that tracks reading habits.",
+      "Teacher test prep and student quizzes, a revision calendar, and a dashboard that tracks reading habits.",
   },
   {
     id: "integrations",

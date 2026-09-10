@@ -3,6 +3,7 @@ import { Header } from "@/components/Header";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { IntentCoverageSection } from "@/components/seo/IntentCoverageSection";
+import { FeatureComparisonSection } from "@/components/features/FeatureComparisonSection";
 import type { ShelfFeature } from "@/lib/seo/featureTypes";
 import { FEATURE_CATEGORIES } from "@/lib/seo/featureCategories";
 import {
@@ -12,6 +13,8 @@ import {
 import { ArrowRight, BookOpen } from "lucide-react";
 
 export function FeatureLanding({ feature }: { feature: ShelfFeature }) {
+  const showComparison = feature.slug === "shelf-vs-alternatives";
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
@@ -65,6 +68,8 @@ export function FeatureLanding({ feature }: { feature: ShelfFeature }) {
           </ul>
         </section>
 
+        {showComparison ? <FeatureComparisonSection /> : null}
+
         {feature.paragraphs.map((paragraph, i) => (
           <section
             key={paragraph.slice(0, 40)}
@@ -115,9 +120,9 @@ export function FeaturesHub() {
               Every Shelf feature
             </h1>
             <p className="text-[var(--text-secondary)] leading-relaxed max-w-2xl mx-auto">
-              Granular guides to PDF libraries, YouTube lectures, Study AI, Quiz,
-              Telegram import and send, Spotify focus audio, sharing, planner,
-              and more — for students, teachers, and professionals.
+              Granular guides to PDF libraries, Study AI, quizzes, teacher test
+              prep, comparisons vs NotebookLM / Notion / Obsidian, and more —
+              for students, teachers, and professionals.
             </p>
           </RevealOnScroll>
         </section>

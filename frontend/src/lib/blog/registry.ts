@@ -30,8 +30,10 @@ import { officialExamSyllabus } from "./posts/official-exam-syllabus";
 import { writingAssistOriginality } from "./posts/writing-assist-originality";
 import { researchDocWritingSuite } from "./posts/research-doc-writing-suite";
 import { EXTRA_BLOG_POSTS } from "./posts/extra";
+import { TRAFFIC_BLOG_POSTS } from "./posts/traffic";
 
 const ALL_POSTS: BlogPost[] = [
+  ...TRAFFIC_BLOG_POSTS,
   ...EXTRA_BLOG_POSTS,
   researchDocWritingSuite,
   writingAssistOriginality,

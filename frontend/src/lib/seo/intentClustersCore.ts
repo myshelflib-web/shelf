@@ -10,6 +10,21 @@ export type IntentCluster = {
 
 export const INTENT_CLUSTERS_CORE: IntentCluster[] = [
   {
+    id: "notes-pdfs-ask-llm",
+    label: "Store notes and PDFs, then ask an LLM",
+    answer:
+      "Shelf stores your notes and PDFs in one personal library, then Study AI — an LLM grounded in your uploads — answers with citations. Chat with PDFs without leaving your files.",
+    queries: [
+      "store notes and PDFs ask LLM",
+      "tool for storing notes and PDFs",
+      "ask LLM about my PDFs",
+      "store all my notes and PDFs",
+      "PDF notes library with AI",
+      "LLM grounded in my documents",
+    ],
+    path: "/features/notes-pdfs-ask-llm",
+  },
+  {
     id: "personal-library",
     label: "Organize PDFs into a personal study library",
     answer:
@@ -17,6 +32,7 @@ export const INTENT_CLUSTERS_CORE: IntentCluster[] = [
     queries: [
       "personal study library",
       "organize PDF notes",
+      "store notes and PDFs",
       "PDF library for students",
       "digital study notebook",
       "organize coaching PDFs",
@@ -131,15 +147,17 @@ export const INTENT_CLUSTERS_CORE: IntentCluster[] = [
   },
   {
     id: "study-ai",
-    label: "Chat with your PDFs using Study AI",
+    label: "Chat with your PDFs using Study AI (LLM)",
     answer:
-      "Study AI answers from your uploaded PDFs and notes — not the open web — with cited excerpts for exam prep, research, and coursework.",
+      "Study AI is Shelf’s LLM for your library: it answers from uploaded PDFs and notes — not the open web — with cited excerpts for exam prep, research, and coursework.",
     queries: [
       "chat with PDF",
+      "ask LLM about PDFs",
       "AI study assistant",
       "ask AI from PDF notes",
       "AI tutor from my notes",
       "PDF question answering",
+      "LLM on my documents",
     ],
     path: "/features/study-ai",
   },
@@ -185,11 +203,14 @@ export const INTENT_CLUSTERS_CORE: IntentCluster[] = [
     id: "vs-chatbots",
     label: "AI grounded in your notes (not generic ChatGPT)",
     answer:
-      "Unlike generic chatbots, Shelf Study AI retrieves from your library so answers stay tied to your coaching notes, textbooks, and highlights.",
+      "Unlike generic chatbots, Shelf Study AI retrieves from your library so answers stay tied to your coaching notes, textbooks, and highlights. Compare with NotebookLM, ChatPDF, and Notion AI on our blog.",
     queries: [
       "AI grounded in your notes",
       "chat with your PDFs vs ChatGPT",
       "study AI from uploads only",
+      "NotebookLM alternative",
+      "ChatPDF alternative",
+      "Notion AI alternative for PDFs",
     ],
     path: "/blog/shelf-vs-generic-chatbots",
   },

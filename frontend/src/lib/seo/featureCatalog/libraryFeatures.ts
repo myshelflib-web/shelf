@@ -2,13 +2,80 @@ import type { ShelfFeature } from "../featureTypes";
 
 export const LIBRARY_FEATURES: ShelfFeature[] = [
   {
+    slug: "all-in-one-study-workspace",
+    category: "library",
+    title: "All-in-One Study Workspace — Notes, PDFs, LLM, Docs & Quizzes | Shelf",
+    metaDescription:
+      "Shelf combines Notion-style Docs, NotebookLM-style Study AI, Obsidian-style notes, and a PDF library with quizzes and a planner — one study workspace for students and teachers.",
+    keywords: [
+      "all in one study workspace",
+      "all in one study app",
+      "Notion NotebookLM Obsidian alternative",
+      "student study tool",
+      "unified study workspace",
+      "second brain for students",
+    ],
+    headline: "Notion + NotebookLM + Obsidian + Docs — in one Shelf",
+    subhead:
+      "Stop bouncing between a notes app, a PDF folder, a chatbot, and a quiz site. Shelf is the study workspace that stores your material, lets you write Docs, ask an LLM grounded in your library, practice with quizzes, and plan revision.",
+    bullets: [
+      "Personal PDF library with highlights, tabs, and split view",
+      "Typed Docs and sketch notebooks beside your sources",
+      "Study AI — ask an LLM about your notes and PDFs with citations",
+      "Exam-style quizzes and a revision planner in the same account",
+    ],
+    paragraphs: [
+      "Searchers looking for “the Notion and NotebookLM combo” or “Obsidian with PDFs and AI” usually need one product that does filing, reading, writing, and grounded Q&A. That is Shelf’s design center.",
+      "Teachers prepare lesson PDFs and tests; students ask Study AI about class notes and sit practice papers — without exporting files into five tools.",
+    ],
+    relatedBlogSlug: "all-in-one-study-workspace",
+    ctaHref: "/login",
+    ctaLabel: "Open your workspace",
+    secondaryCtaHref: "/features/notes-pdfs-ask-llm",
+    secondaryCtaLabel: "Store & ask LLM",
+  },
+  {
+    slug: "notes-pdfs-ask-llm",
+    category: "library",
+    title: "Store Notes & PDFs, Then Ask an LLM | Shelf Study AI",
+    metaDescription:
+      "Store all your notes and PDFs in one Shelf library, then ask Study AI — an LLM grounded in your uploads with citations. Chat with PDFs, highlight, quiz, and plan in one place.",
+    keywords: [
+      "store notes and PDFs",
+      "ask LLM about my notes",
+      "PDF notes library with AI",
+      "LLM grounded in uploads",
+      "chat with PDF",
+      "Study AI",
+    ],
+    headline: "One place for notes and PDFs. Then ask an LLM.",
+    subhead:
+      "Shelf is built for the workflow people search for: keep everything you study in one library, then use Study AI — our LLM layer — to ask questions grounded in your files, not the open web.",
+    bullets: [
+      "Upload PDFs, typed Docs, sketch notebooks, and YouTube lectures",
+      "Organize with collections and topics — no forced General folder",
+      "Ask Study AI on a page, highlight, collection, or the whole library",
+      "Answers cite your sources; pair with quizzes and a revision planner",
+    ],
+    paragraphs: [
+      "If you have tried NotebookLM, ChatPDF, or pasting chapters into ChatGPT, you already know the gap: either the AI forgets your full library, or your notes live somewhere else. Shelf keeps storage and Q&A together.",
+      "Study AI is the product name for Shelf’s LLM. It retrieves from your indexed pages (RAG), so explanations, summaries, and exam-style follow-ups stay tied to what you uploaded.",
+    ],
+    relatedBlogSlug: "store-notes-pdfs-ask-llm",
+    ctaHref: "/login",
+    ctaLabel: "Store your files",
+    secondaryCtaHref: "/features/study-ai",
+    secondaryCtaLabel: "How Study AI works",
+  },
+  {
     slug: "personal-library",
     category: "library",
-    title: "Personal Study Library — Collections, Topics & PDF Organization | Shelf",
+    title: "Personal Study Library — Store PDFs & Notes | Shelf",
     metaDescription:
-      "Build a private study library on Shelf: collections, topics, and root-level pages for PDFs, YouTube lectures, and notes. Organize coaching material, research papers, and exam PDFs your way.",
+      "Store PDFs, notes, and YouTube lectures in one private Shelf library. Collections and topics you control — then ask Study AI (an LLM) from any file.",
     keywords: [
       "personal study library",
+      "store notes and PDFs",
       "organize PDF notes",
       "digital notebook students",
       "PDF folder organizer",

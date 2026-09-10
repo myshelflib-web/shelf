@@ -58,17 +58,18 @@ export function HomePageClient() {
           <div className="landing-hero-glow" aria-hidden />
           <RevealOnScroll>
             <div>
-              <div className="landing-eyebrow">Your personal study library</div>
+              <div className="landing-eyebrow">
+                Free AI study workspace
+              </div>
               <h1 id="landing-hero-heading">
                 Everything you’re learning or working on.{" "}
                 <span className="landing-em">In one Shelf.</span>
               </h1>
               <p className="landing-lead">
-                Upload PDFs, YouTube lectures, sketch notebooks, and research Docs
-                into collections you control. Read in tabs or split view, highlight
-                as you go, cite sources while you write, ask Study AI from your files,
-                check originality, sit exam-style quizzes, and plan revision on one
-                calendar.
+                Chat with PDF, AI tutor from your notes, summaries &amp; mind maps,
+                flashcards and quizzes, Docs, and a planner — the study stack
+                students search for (NotebookLM + Notion + Obsidian) in one free
+                workspace. Teachers prepare tests from the same library.
               </p>
               <div className="landing-hero-actions">
                 <Link href="/login" className="landing-btn landing-btn-primary">
@@ -142,8 +143,8 @@ export function HomePageClient() {
         <LandingGoalSection />
 
         <LandingCtaBanner
-          title="Start with your material. Shape Shelf around your workflow."
-          copy="Use it for learning, research, exam prep, professional reading, or anything else you keep building over time."
+          title="One workspace for students and teachers."
+          copy="Store material, ask Study AI, prepare or sit quizzes, and plan the week — Shelf is the study tool stack in a single app."
         />
 
         <MarketingFooter variant="landing" />

@@ -135,24 +135,44 @@ export const BRAND_KEYWORDS: string[] = Array.from(
 );
 
 export const BRAND_TAGLINE =
-  "Shelf (myshelflib) is your personal study library for PDFs, highlights, Study AI, and planning.";
+  "Free AI study workspace: chat with PDF, AI tutor, summarizer, quizzes, Docs, and planner — all-in-one like Notion + NotebookLM + Obsidian.";
 
 export const BRAND_HOME_TITLE =
-  "Shelf (myshelflib) — Personal Study Library | PDFs, Research Docs & Study AI";
+  "Chat with PDF, AI Tutor & Study Apps — All-in-One Workspace | Shelf";
 
 export const BRAND_HOME_DESCRIPTION =
-  "Shelf — also called My Shelf Lib / myshelflib — is a personal study library: upload PDFs and YouTube lectures, write research Docs with citations, highlight as you read, ask Study AI from your notes, Share Shelf with classmates, and plan on one calendar.";
+  "Shelf (myshelflib) is a free AI study tool for students and teachers: chat with PDF, AI tutor from your notes, flashcards & quizzes, Docs, and planner — Premium from ~₹149/mo.";
 
 export const BRAND_FAQS = [
   {
     question: "What is Shelf / myshelflib?",
     answer:
-      "Shelf (website myshelflib.com, also searched as My Shelf Lib, my shelf, shelflib, or myshelf) is a personal study library app. Upload PDFs, write research Docs with citations, highlight notes, ask Study AI from your material, share documents, and plan revision — your private library at /my-content.",
+      "Shelf (myshelflib.com) is an all-in-one study workspace: personal PDF library, typed Docs and notebooks, Study AI (an LLM grounded in your uploads), exam-style quizzes, Share Shelf, and a planner — like Notion, NotebookLM, Obsidian, and Docs combined for study.",
+  },
+  {
+    question: "Is Shelf a student study tool?",
+    answer:
+      "Yes. Students store lecture PDFs and notes, highlight while reading, ask Study AI questions about their material, sit quizzes from their own files, and schedule revision — one student study tool instead of five apps.",
+  },
+  {
+    question: "Can teachers use Shelf to prepare tests?",
+    answer:
+      "Yes. Teachers and tutors organize syllabus PDFs, generate exam-style MCQs and written items from lesson notes, keep answer keys private, and share handouts with students via Share Shelf.",
+  },
+  {
+    question: "Can students ask an LLM questions about their notes?",
+    answer:
+      "Yes. Study AI is Shelf’s LLM: ask about a highlight, a PDF, or your whole library. Answers retrieve from your uploads with citations — not a generic chatbot that never saw your class notes.",
+  },
+  {
+    question: "Is Shelf better than NotebookLM, Notion, or Obsidian?",
+    answer:
+      "For the full study stack — PDFs, Docs, grounded Study AI, quizzes, and planner — Shelf is usually the better single product, with Free including AI and quiz and Premium from about ₹149/month. Specialists still win for throwaway notebooks (NotebookLM), team wikis (Notion), or local Markdown graphs (Obsidian). See /features/shelf-vs-alternatives.",
   },
   {
     question: "Is My Shelf Lib the same as Shelf?",
     answer:
-      "Yes. Shelf is the product name; myshelflib.com and My Shelf Lib are how many people find and refer to the same study library app. Searches like my shelf, shel, sheld, shelflib, or myshelf usually mean this product.",
+      "Yes. Shelf is the product name; myshelflib.com and My Shelf Lib are how many people find and refer to the same study library app.",
   },
   {
     question: "How do I open my Shelf library?",
@@ -162,7 +182,7 @@ export const BRAND_FAQS = [
   {
     question: "I searched shel, sheld, or my shel — is that Shelf?",
     answer:
-      "Yes. Common misspellings and short forms — shel, sheld, shef, shellf, shlef, myshelf, shelflib, my shel — refer to Shelf at myshelflib.com, the personal study library app.",
+      "Yes. Common misspellings and short forms — shel, sheld, shef, shellf, shlef, myshelf, shelflib, my shel — refer to Shelf at myshelflib.com.",
   },
 ] as const;
 
