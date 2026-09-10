@@ -8,7 +8,11 @@ import {
   type UploadProgress,
   type UploadProgressHandler,
 } from "@/lib/uploadLibraryFile";
-import { emitPageDeleted } from "@/lib/contentEvents";
+import {
+  beginApiSync,
+  endApiSync,
+  withApiSyncStatus,
+} from "@/lib/apiRequestSync";
 import { fetchWithRetry } from "@/lib/fetchRetry";
 import { reportApiFailure } from "@/lib/analytics/errors";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
@@ -48,6 +52,18 @@ function newRequestId(): string {
 }
 
 async function request<T>(
+  path: string,
+  options: RequestInit = {}
+): Promise<T> {
+  return withApiSyncStatus(
+    path,
+    options.method ?? "GET",
+    options.body ?? null,
+    () => requestRaw<T>(path, options)
+  );
+}
+
+async function requestRaw<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
@@ -217,7 +233,11 @@ async function uploadLibraryFile(
     deletePage: (id) =>
       request(`/api/my-content/pages/${id}`, { method: "DELETE" }),
     onDraftAbandoned: (pageId) => {
-      emitPageDeleted(pageId);
+      // Lazy import — a static contentEvents import here cycles with api via
+      // DocumentPane → useDocumentPaneFlags → api and blows up with TDZ.
+      void import("@/lib/contentEvents").then(({ emitPageDeleted }) => {
+        emitPageDeleted(pageId);
+      });
     },
   });
 }
@@ -1585,36 +1605,45 @@ export const api = {
       file: Blob,
       opts: { deletedPages: number[]; numPagesBefore: number }
     ) => {
-      const packed = await compressUploadFile(
-        file instanceof File
-          ? file
-          : new File([file], "source.pdf", { type: "application/pdf" })
-      );
-      const init = await request<{
-        uploadUrl: string;
-        headers: { "Content-Type": string };
-        token: string;
-      }>(`/api/my-content/pages/${id}/pdf/replace/init`, {
-        method: "POST",
-        body: JSON.stringify({
-          size: packed.size,
-          deletedPages: opts.deletedPages,
-          numPagesBefore: opts.numPagesBefore,
-        }),
-      });
-      await putToUrl(
-        init.uploadUrl,
-        packed,
-        init.headers["Content-Type"] || "application/pdf"
-      );
-      return request<{
-        success: boolean;
-        fileSizeBytes: number;
-        highlights: import("@/types").UserContentHighlight[];
-      }>(`/api/my-content/pages/${id}/pdf/replace/complete`, {
-        method: "POST",
-        body: JSON.stringify({ token: init.token }),
-      });
+      // Outer wrap keeps the chip on through the S3 PUT between init/complete.
+      beginApiSync("Saving…");
+      try {
+        const packed = await compressUploadFile(
+          file instanceof File
+            ? file
+            : new File([file], "source.pdf", { type: "application/pdf" })
+        );
+        const init = await request<{
+          uploadUrl: string;
+          headers: { "Content-Type": string };
+          token: string;
+        }>(`/api/my-content/pages/${id}/pdf/replace/init`, {
+          method: "POST",
+          body: JSON.stringify({
+            size: packed.size,
+            deletedPages: opts.deletedPages,
+            numPagesBefore: opts.numPagesBefore,
+          }),
+        });
+        await putToUrl(
+          init.uploadUrl,
+          packed,
+          init.headers["Content-Type"] || "application/pdf"
+        );
+        const result = await request<{
+          success: boolean;
+          fileSizeBytes: number;
+          highlights: import("@/types").UserContentHighlight[];
+        }>(`/api/my-content/pages/${id}/pdf/replace/complete`, {
+          method: "POST",
+          body: JSON.stringify({ token: init.token }),
+        });
+        endApiSync(true);
+        return result;
+      } catch (err) {
+        endApiSync(false);
+        throw err;
+      }
     },
     /** Restore a prior PDF snapshot (session undo after page delete). */
     restorePdfPages: async (
@@ -1625,34 +1654,42 @@ export const api = {
         viewPdfPage?: number;
       }
     ) => {
-      const init = await request<{
-        uploadUrl: string;
-        headers: { "Content-Type": string };
-        token: string;
-      }>(`/api/my-content/pages/${id}/pdf/replace/init`, {
-        method: "POST",
-        body: JSON.stringify({
-          size: file.size,
-          restore: true,
-        }),
-      });
-      await putToUrl(
-        init.uploadUrl,
-        file,
-        init.headers["Content-Type"] || "application/pdf"
-      );
-      return request<{
-        success: boolean;
-        fileSizeBytes: number;
-        highlights: import("@/types").UserContentHighlight[];
-      }>(`/api/my-content/pages/${id}/pdf/replace/complete`, {
-        method: "POST",
-        body: JSON.stringify({
-          token: init.token,
-          highlights: opts.highlights,
-          viewPdfPage: opts.viewPdfPage,
-        }),
-      });
+      beginApiSync("Saving…");
+      try {
+        const init = await request<{
+          uploadUrl: string;
+          headers: { "Content-Type": string };
+          token: string;
+        }>(`/api/my-content/pages/${id}/pdf/replace/init`, {
+          method: "POST",
+          body: JSON.stringify({
+            size: file.size,
+            restore: true,
+          }),
+        });
+        await putToUrl(
+          init.uploadUrl,
+          file,
+          init.headers["Content-Type"] || "application/pdf"
+        );
+        const result = await request<{
+          success: boolean;
+          fileSizeBytes: number;
+          highlights: import("@/types").UserContentHighlight[];
+        }>(`/api/my-content/pages/${id}/pdf/replace/complete`, {
+          method: "POST",
+          body: JSON.stringify({
+            token: init.token,
+            highlights: opts.highlights,
+            viewPdfPage: opts.viewPdfPage,
+          }),
+        });
+        endApiSync(true);
+        return result;
+      } catch (err) {
+        endApiSync(false);
+        throw err;
+      }
     },
     listHighlights: (topicId: string, linkToken?: string | null) => {
       const qs = linkToken ? `?t=${encodeURIComponent(linkToken)}` : "";

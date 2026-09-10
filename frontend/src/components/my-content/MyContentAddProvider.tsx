@@ -12,8 +12,6 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { api, type UploadProgress, type UploadProgressHandler, getStoredUser } from "@/lib/api";
-import { shouldCompressUpload } from "@/lib/compressUploadFile";
-import { decidePdfCompress } from "@/lib/pdfCompressDecision";
 import { requireOnline } from "@/lib/offline/notice";
 import { getTopicGroups } from "@/lib/myContentTree";
 import { UserPageSummary, UserSubject, UserTopicGroup } from "@/types";
@@ -22,25 +20,28 @@ import { MyContentAddDropLayer } from "./MyContentAddDropLayer";
 import {
   submitAddPage,
   submitBulkFolderImport,
+  type AddPageOpenSeed,
 } from "./myContentAddPageSubmit";
+import {
+  initialUploadProgress,
+  openCreatedLibraryPage,
+} from "./myContentAddOpen";
 import { useMyContentAddDrop } from "./useMyContentAddDrop";
 import type { DocTemplateId } from "@/lib/docTemplates";
 import type { SketchTemplate } from "@/lib/sketchNotebook";
 import { SHELF_OPEN_ADD } from "@/lib/hotkeys";
+import { emitContentChanged } from "@/lib/contentEvents";
 import {
-  emitContentChanged,
-  emitOpenPage,
-} from "@/lib/contentEvents";
-import { setOptimisticOpenSeed } from "@/lib/optimisticOpenSeed";
-import type { AddPageOpenSeed } from "./myContentAddPageSubmit";
+  reportSyncFromUploadProgress,
+  reportSyncUploadDone,
+  reportSyncUploadFailed,
+} from "@/lib/reportUploadSyncStatus";
 import {
   AnalyticsEvents,
   AnalyticsFirstTimeFlags,
   track,
   trackOncePerUser,
 } from "@/lib/analytics";
-import { isReaderHref } from "@/lib/softNavigate";
-import { scopeFromHref } from "@/components/my-content/reader/types";
 import { findCachedSubject } from "@/lib/offline/library";
 import {
   addContextFromPath,
@@ -236,33 +237,17 @@ export function MyContentAddProvider({
       percent: next.percent,
       phase: next.phase ?? prev?.phase,
     }));
+    reportSyncFromUploadProgress({
+      loaded: next.loaded ?? 0,
+      total: next.total ?? 0,
+      percent: next.percent,
+      phase: next.phase,
+    });
   }, []);
 
   const openCreatedPage = useCallback(
     (href: string, page: UserPageSummary, openSeed?: AddPageOpenSeed) => {
-      const contentType = openSeed?.contentType ?? page.contentType;
-      if (contentType) {
-        setOptimisticOpenSeed({
-          pageId: page.id,
-          href,
-          contentType,
-          title: openSeed?.title ?? page.title,
-          content: openSeed?.content,
-          sourceUrl: openSeed?.sourceUrl,
-        });
-      }
-      const scope = scopeFromHref(href);
-      if (scope && isReaderHref(window.location.pathname)) {
-        emitOpenPage({
-          href,
-          title: page.title,
-          pageId: page.id,
-          scope,
-          contentType,
-        });
-        return;
-      }
-      router.push(href);
+      openCreatedLibraryPage(router, href, page, openSeed);
     },
     [router]
   );
@@ -343,12 +328,14 @@ export function MyContentAddProvider({
             addMode: "bulk",
             contentType: result.page.contentType,
           });
+          reportSyncUploadDone();
           openCreatedPage(result.href, result.page);
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Folder import failed";
         setMessage(message);
         trackUploadAnalytics("failed", { addMode: "bulk", error: message });
+        reportSyncUploadFailed(message);
       } finally {
         setSubmitting(false);
         setBulkProgress(null);
@@ -366,23 +353,8 @@ export function MyContentAddProvider({
     }
     try {
       if (isFileUpload && uploadFile) {
-        const name = uploadFile.name.toLowerCase();
-        const isPdf =
-          name.endsWith(".pdf") ||
-          (uploadFile.type || "").toLowerCase() === "application/pdf";
-        const phase = isPdf
-          ? decidePdfCompress(uploadFile).attempt
-            ? "compressing"
-            : "uploading"
-          : shouldCompressUpload(uploadFile)
-            ? "compressing"
-            : "uploading";
-        setUploadProgress({
-          loaded: 0,
-          total: uploadFile.size,
-          percent: 0,
-          phase,
-        });
+        setUploadProgress(initialUploadProgress(uploadFile));
+        reportSyncFromUploadProgress(initialUploadProgress(uploadFile));
       }
       const { page, href, openSeed } = await submitAddPage({
         addMode,
@@ -403,10 +375,12 @@ export function MyContentAddProvider({
           contentType: page.contentType,
         });
       }
+      reportSyncUploadDone();
       openCreatedPage(href, page, openSeed);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to add page";
       setMessage(message);
+      reportSyncUploadFailed(message);
       if (isFileUpload) {
         trackUploadAnalytics("failed", { addMode, error: message });
       } else {

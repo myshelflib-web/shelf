@@ -7,7 +7,7 @@ import { emitPageFlags } from "@/lib/contentEvents";
 import { patchLibraryCachePageFlags } from "@/lib/offline/library";
 import { toUserFacingError } from "@/lib/userFacingError";
 import type { UserSubject } from "@/types";
-import type { LoadedPage } from "./DocumentPane";
+import type { LoadedPage } from "./documentPaneFetch";
 
 type SignInGate = {
   active: boolean;
