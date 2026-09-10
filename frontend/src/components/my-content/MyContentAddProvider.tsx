@@ -312,37 +312,37 @@ export function MyContentAddProvider({
     if (addMode === "bulk") {
       if (bulkFiles.length === 0) return;
       if (!requireOnline("Import folders")) return;
-      setSubmitting(true);
-      setMessage("");
-      setBulkProgress({ done: 0, total: bulkFiles.length, label: "Starting…" });
+      const files = [...bulkFiles];
+      const notebook = target?.notebook;
+      const collectionName = notebookName;
       trackUploadAnalytics("started", { addMode: "bulk" });
-      try {
-        const result = await submitBulkFolderImport({
-          bulkFiles,
-          notebook: target?.notebook,
-          notebookName,
-          reportUploadProgress,
-          onProgress: setBulkProgress,
-        });
-        close();
-        if (result) {
+      // Close immediately — progress lives on the Sync chip so the UI stays usable.
+      close();
+      void (async () => {
+        try {
+          const result = await submitBulkFolderImport({
+            bulkFiles: files,
+            notebook,
+            notebookName: collectionName,
+            onProgress: () => {
+              /* Sync chip tracks batch progress */
+            },
+          });
           trackUploadAnalytics("completed", {
             addMode: "bulk",
-            contentType: result.page.contentType,
+            contentType: result.last?.page.contentType,
           });
-          reportSyncUploadDone();
-          openCreatedPage(result.href, result.page);
+          if (result.last && result.failed === 0) {
+            openCreatedPage(result.last.href, result.last.page);
+          }
+          // Partial imports stay on the Sync chip (summary + Retry failed).
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Folder import failed";
+          trackUploadAnalytics("failed", { addMode: "bulk", error: message });
+          reportSyncUploadFailed(message);
         }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Folder import failed";
-        setMessage(message);
-        trackUploadAnalytics("failed", { addMode: "bulk", error: message });
-        reportSyncUploadFailed(message);
-      } finally {
-        setSubmitting(false);
-        setBulkProgress(null);
-        setUploadProgress(null);
-      }
+      })();
       return;
     }
     if (!pageTitle.trim() && addMode !== "youtube") return;

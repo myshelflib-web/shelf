@@ -15,7 +15,16 @@ export async function dismissSyncActivity(id: string): Promise<void> {
   if (id.startsWith("queued-upload:")) {
     const pageId = id.slice("queued-upload:".length);
     await removePendingUpload(pageId);
+    const { removeSessionDeferredUpload } = await import(
+      "@/lib/sessionDeferredUploads"
+    );
+    removeSessionDeferredUpload(pageId);
     clearEntitiesFailed([`page:${pageId}`]);
+  } else if (id.startsWith("failed-bulk:")) {
+    const { removeFailedBulkUploadByActivityId } = await import(
+      "@/lib/failedBulkUploads"
+    );
+    removeFailedBulkUploadByActivityId(id);
   } else if (id.startsWith("queued-mut:")) {
     const mutId = id.slice("queued-mut:".length);
     const userId = getStoredUserId();
@@ -29,8 +38,11 @@ export async function dismissSyncActivity(id: string): Promise<void> {
   removeSyncActivity(id);
   dispatchOfflineSync();
   const left = await countAllPending();
+  const { countFailedBulkUploads } = await import("@/lib/failedBulkUploads");
+  const still =
+    left + countFailedBulkUploads() > 0;
   dispatchSyncStatus(
-    left > 0
+    still
       ? { state: "error", label: "Not synced" }
       : { state: "synced", label: "Synced" }
   );

@@ -18,6 +18,11 @@ import {
   type PendingUploadSummary,
 } from "@/lib/pendingUploadQueue";
 import {
+  listSessionDeferredUploads,
+  removeSessionDeferredUpload,
+  type SessionDeferredUpload,
+} from "@/lib/sessionDeferredUploads";
+import {
   MAX_SYNC_RETRY_ATTEMPTS,
   SYNC_RETRY_EXHAUSTED_AT,
   STORAGE_CORS_STOP_MESSAGE,
@@ -213,9 +218,35 @@ async function flushOne(entry: PendingUploadEntry): Promise<boolean> {
   }
 
   await removePendingUpload(entry.pageId);
+  removeSessionDeferredUpload(entry.pageId);
   clearEntitiesFailed([`page:${entry.pageId}`]);
   removeSyncActivity(`queued-upload:${entry.pageId}`);
   return true;
+}
+
+async function flushSessionOne(entry: SessionDeferredUpload): Promise<boolean> {
+  const data = await entry.file.arrayBuffer();
+  const asPending: PendingUploadEntry = {
+    pageId: entry.pageId,
+    userId: entry.userId,
+    token: entry.token,
+    uploadUrl: entry.uploadUrl,
+    contentTypeHeader: entry.contentTypeHeader,
+    filename: entry.filename,
+    title: entry.title,
+    contentType: entry.contentType,
+    pdfCacheVersion: entry.pdfCacheVersion,
+    clientPacked: entry.clientPacked,
+    putDone: entry.putDone,
+    data,
+    createdAt: entry.createdAt,
+    attempts: 0,
+    nextAttemptAt: 0,
+    lastError: entry.lastError,
+  };
+  const ok = await flushOne(asPending);
+  if (ok) removeSessionDeferredUpload(entry.pageId);
+  return ok;
 }
 
 /** Run due pending uploads; schedules the next wake when more remain. */
@@ -226,18 +257,32 @@ export async function flushPendingUploads(): Promise<number> {
   let synced = 0;
   let scheduledDelayMs: number | null = null;
   try {
+    const sessionDue = listSessionDeferredUploads(userId).filter(
+      (e) => !/CORS|Cannot reach storage/i.test(e.lastError)
+    );
+    for (const entry of sessionDue) {
+      try {
+        if (await flushSessionOne(entry)) synced += 1;
+      } catch {
+        /* keep in session map for next wake */
+      }
+      if (!isOnline()) break;
+    }
+
     const due = await listDuePendingUploads(userId);
-    if (due.length === 0) {
+    if (due.length === 0 && sessionDue.length === 0) {
       const remaining = await listPendingUploadSummaries(userId);
       const nextAt = soonestUploadRetryAt(remaining);
       if (nextAt != null) {
         // Never use a 0 delay for a future-dated retry (clock skew / race).
         scheduleFlushPendingUploads(Math.max(250, nextAt - Date.now()));
       }
-      return 0;
+      return synced;
     }
 
-    dispatchSyncStatus({ state: "uploading", label: "Retrying upload…" });
+    if (due.length > 0) {
+      dispatchSyncStatus({ state: "uploading", label: "Retrying upload…" });
+    }
     for (const entry of due) {
       try {
         if (await flushOne(entry)) synced += 1;
@@ -256,18 +301,20 @@ export async function flushPendingUploads(): Promise<number> {
     }
 
     const remaining = await listPendingUploadSummaries(userId);
-    if (remaining.length === 0) {
+    const sessionLeft = listSessionDeferredUploads(userId).length;
+    if (remaining.length === 0 && sessionLeft === 0) {
       if (synced > 0) {
         dispatchSyncStatus({ state: "synced", label: "Synced" });
       }
     } else {
       const nextAt = soonestUploadRetryAt(remaining);
-      if (nextAt != null) {
+      if (nextAt != null || sessionLeft > 0) {
         dispatchSyncStatus({
           state: "error",
           label: "Not synced",
         });
-        const fromQueue = Math.max(250, nextAt - Date.now());
+        const fromQueue =
+          nextAt != null ? Math.max(250, nextAt - Date.now()) : 2_000;
         const delayMs =
           scheduledDelayMs != null
             ? Math.max(fromQueue, scheduledDelayMs)

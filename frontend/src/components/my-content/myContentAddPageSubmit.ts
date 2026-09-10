@@ -42,8 +42,8 @@ export async function submitBulkFolderImport(input: {
   bulkFiles: File[];
   notebook?: UserSubject;
   notebookName: string;
-  reportUploadProgress: UploadProgressHandler;
-  onProgress: (progress: BulkUploadProgress) => void;
+  reportUploadProgress?: UploadProgressHandler;
+  onProgress?: (progress: BulkUploadProgress) => void;
 }) {
   let notebook = input.notebook;
   if (!notebook) {
@@ -57,26 +57,31 @@ export async function submitBulkFolderImport(input: {
     emitContentChanged({ type: "notebook-created", subject });
   }
 
-  return runBulkFolderUpload(notebook, input.bulkFiles, input.reportUploadProgress, {
-    onProgress: input.onProgress,
-    onTopicCreated: (payload) =>
-      emitContentChanged({
-        type: "topic-created",
-        notebookId: payload.notebookId,
-        notebookSlug: payload.notebookSlug,
-        topicGroup: payload.topicGroup,
-      }),
-    onPageCreated: (payload) =>
-      emitContentChanged({
-        type: "page-created",
-        page: payload.page,
-        href: payload.href,
-        notebookId: payload.notebookId,
-        notebookSlug: payload.notebookSlug,
-        topicId: payload.topicId,
-        topicSlug: payload.topicSlug ?? null,
-      }),
-  });
+  return runBulkFolderUpload(
+    notebook,
+    input.bulkFiles,
+    input.reportUploadProgress,
+    {
+      onProgress: input.onProgress,
+      onTopicCreated: (payload) =>
+        emitContentChanged({
+          type: "topic-created",
+          notebookId: payload.notebookId,
+          notebookSlug: payload.notebookSlug,
+          topicGroup: payload.topicGroup,
+        }),
+      onPageCreated: (payload) =>
+        emitContentChanged({
+          type: "page-created",
+          page: payload.page,
+          href: payload.href,
+          notebookId: payload.notebookId,
+          notebookSlug: payload.notebookSlug,
+          topicId: payload.topicId,
+          topicSlug: payload.topicSlug ?? null,
+        }),
+    }
+  );
 }
 
 function emitPageCreated(

@@ -200,7 +200,7 @@ export function Header() {
 
   return (
     <>
-    <header className="app-header shrink-0 border-b border-[var(--border)] bg-[var(--bg-primary)] sticky top-0 z-50">
+    <header className="app-header shrink-0 border-b border-[var(--border)] bg-[var(--bg-primary)] sticky top-0 z-[80]">
       <div className="app-header-inner w-full px-4 sm:px-6">
         <div className="app-header-brand min-w-0">
           <Link

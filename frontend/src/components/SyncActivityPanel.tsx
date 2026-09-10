@@ -1,9 +1,11 @@
 "use client";
 
-import { Loader2, Upload, AlertCircle, Cloud, X } from "lucide-react";
+import { useState } from "react";
+import { Loader2, Upload, AlertCircle, Cloud, X, RefreshCw } from "lucide-react";
 import type { SyncActivityItem } from "@/lib/syncActivityStore";
 import { activityStatusLabel } from "@/lib/syncActivityStore";
 import { dismissSyncActivity } from "@/lib/dismissSyncActivity";
+import { retryFailedSync } from "@/lib/retryFailedSync";
 
 function RowIcon({ item }: { item: SyncActivityItem }) {
   if (item.status === "error") {
@@ -48,8 +50,14 @@ export function SyncActivityPanel({
   items: SyncActivityItem[];
   online: boolean;
 }) {
+  const [retrying, setRetrying] = useState(false);
+  const retryable = items.filter(
+    (a) => a.status === "error" || a.status === "pending"
+  );
+  const showRetry = online && retryable.length > 0;
+
   return (
-    <div className="absolute right-0 top-[calc(100%+0.5rem)] z-[60] w-[18.5rem] rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl overflow-hidden">
+    <div className="relative z-[60] w-[18.5rem] rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl overflow-hidden">
       <div className="px-3.5 py-2.5 border-b border-[var(--border)]">
         <p className="text-sm font-semibold">Sync</p>
         <p className="text-[11px] text-[var(--text-muted)]">
@@ -116,6 +124,26 @@ export function SyncActivityPanel({
           </ul>
         )}
       </div>
+      {showRetry ? (
+        <div className="border-t border-[var(--border)] px-3.5 py-2.5">
+          <button
+            type="button"
+            disabled={retrying}
+            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-1.5 text-[12px] text-[var(--text-primary)] hover:bg-[var(--bg-primary)] disabled:opacity-60"
+            onClick={() => {
+              setRetrying(true);
+              void retryFailedSync().finally(() => setRetrying(false));
+            }}
+          >
+            {retrying ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+            )}
+            {retrying ? "Retrying…" : "Retry failed"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

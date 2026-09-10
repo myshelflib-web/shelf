@@ -234,7 +234,8 @@ async function uploadLibraryFile(
   title: string,
   scope: { subjectId?: string; topicGroupId?: string },
   onProgress?: UploadProgressHandler,
-  onEarlyReady?: (early: UploadEarlyReady) => void
+  onEarlyReady?: (early: UploadEarlyReady) => void,
+  opts?: { seedPdfCache?: boolean }
 ) {
   return runLibraryUpload({
     file,
@@ -242,6 +243,7 @@ async function uploadLibraryFile(
     scope,
     onProgress,
     onEarlyReady,
+    seedPdfCache: opts?.seedPdfCache,
     request,
     putToUrl,
     deletePage: (id) =>
@@ -1277,7 +1279,8 @@ export const api = {
       topicGroupId: string,
       formData: FormData,
       onProgress?: UploadProgressHandler,
-      onEarlyReady?: (early: UploadEarlyReady) => void
+      onEarlyReady?: (early: UploadEarlyReady) => void,
+      opts?: { seedPdfCache?: boolean }
     ) => {
       const { file, title } = fileFromForm(formData);
       return uploadLibraryFile(
@@ -1285,14 +1288,16 @@ export const api = {
         title,
         { subjectId, topicGroupId },
         onProgress,
-        onEarlyReady
+        onEarlyReady,
+        opts
       );
     },
     uploadNotebookFile: (
       subjectId: string,
       formData: FormData,
       onProgress?: UploadProgressHandler,
-      onEarlyReady?: (early: UploadEarlyReady) => void
+      onEarlyReady?: (early: UploadEarlyReady) => void,
+      opts?: { seedPdfCache?: boolean }
     ) => {
       const { file, title } = fileFromForm(formData);
       return uploadLibraryFile(
@@ -1300,16 +1305,18 @@ export const api = {
         title,
         { subjectId },
         onProgress,
-        onEarlyReady
+        onEarlyReady,
+        opts
       );
     },
     uploadRootFile: (
       formData: FormData,
       onProgress?: UploadProgressHandler,
-      onEarlyReady?: (early: UploadEarlyReady) => void
+      onEarlyReady?: (early: UploadEarlyReady) => void,
+      opts?: { seedPdfCache?: boolean }
     ) => {
       const { file, title } = fileFromForm(formData);
-      return uploadLibraryFile(file, title, {}, onProgress, onEarlyReady);
+      return uploadLibraryFile(file, title, {}, onProgress, onEarlyReady, opts);
     },
     resumeUpload: (
       pageId: string,

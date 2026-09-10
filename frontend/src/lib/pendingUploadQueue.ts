@@ -109,9 +109,10 @@ export function pendingUploadBackoffMs(attempts: number): number {
   return syncBackoffMs(attempts);
 }
 
+/** Persist a deferred upload. Returns false if quota blocked the write. */
 export async function putPendingUpload(
   entry: PendingUploadEntry
-): Promise<void> {
+): Promise<boolean> {
   try {
     await withStores("readwrite", async (uploads, meta) => {
       const summaries = meta
@@ -155,8 +156,10 @@ export async function putPendingUpload(
       await idbReq(uploads.put(entry));
       if (meta) await idbReq(meta.put(toSummary(entry)));
     });
+    return true;
   } catch {
     /* quota / private mode */
+    return false;
   }
 }
 

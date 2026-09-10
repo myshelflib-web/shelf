@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Cloud, CloudOff, Loader2, Upload } from "lucide-react";
 import { countAllPending } from "@/lib/offline/outbox";
 import {
@@ -23,6 +24,7 @@ import {
   type SyncActivityItem,
 } from "@/lib/syncActivityStore";
 import { collectSyncActivitySnapshot } from "@/lib/collectSyncActivitySnapshot";
+import { scheduleFlushOfflineSync } from "@/lib/flushPendingMutations";
 import { SyncActivityPanel } from "@/components/SyncActivityPanel";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -85,7 +87,7 @@ function viewFromActivity(
   if (showFailure && pending > 0) {
     return {
       label: pending > 1 ? `Not synced · ${pending}` : "Not synced",
-      title: "Some changes could not sync — click for details",
+      title: "Some changes could not sync — click to retry / dismiss",
       icon: "error",
     };
   }
@@ -93,16 +95,17 @@ function viewFromActivity(
   if (activity?.state === "error") {
     return {
       label: activity.label ?? "Not synced",
-      title: "Some changes could not sync — click for details",
+      title: "Some changes could not sync — click to retry / dismiss",
       icon: "error",
     };
   }
 
+  // Pending without an active upload — show Not synced (not endless Syncing spin).
   if (pending > 0) {
     return {
-      label: `Syncing ${pending}…`,
-      title: `Syncing ${pending} pending change${pending === 1 ? "" : "s"} — click for details`,
-      icon: "sync",
+      label: pending > 1 ? `Not synced · ${pending}` : "Not synced",
+      title: "Pending changes — click to sync and view details",
+      icon: "error",
     };
   }
 
@@ -122,8 +125,8 @@ function viewFromActivity(
 }
 
 /**
- * Always-visible header cloud chip (signed-in). Click for a dropdown of
- * background uploads and pending sync work.
+ * Always-visible header cloud chip (signed-in). Click opens details and
+ * wakes a flush. Panel portals above modals so it stays clickable during import.
  */
 export function OfflineStatusBadge() {
   const { user } = useAuth();
@@ -133,8 +136,13 @@ export function OfflineStatusBadge() {
   const [stickyError, setStickyError] = useState(false);
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<SyncActivityItem[]>([]);
+  const [mounted, setMounted] = useState(false);
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const refresh = () => {
@@ -182,7 +190,15 @@ export function OfflineStatusBadge() {
     if (!open) return;
     void collectSyncActivitySnapshot().then(setItems);
     const onDoc = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (wrapRef.current?.contains(t)) return;
+      if (
+        t instanceof Element &&
+        t.closest("[data-tour-id='sync-panel-portal']")
+      ) {
+        return;
+      }
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -223,7 +239,6 @@ export function OfflineStatusBadge() {
             setStickyError(false);
             clearLater(2_400);
           } else {
-            // Pending parked failures remain — keep Not synced, don't flash Synced.
             setStickyError(true);
             setActivity({ state: "error", label: "Not synced" });
           }
@@ -267,7 +282,9 @@ export function OfflineStatusBadge() {
     stickyError,
     errorItems
   );
-  const liveCount = items.length || listSyncActivities().filter((a) => a.status !== "done").length;
+  const liveCount =
+    items.length ||
+    listSyncActivities().filter((a) => a.status !== "done").length;
 
   const Icon =
     view.icon === "offline"
@@ -282,7 +299,7 @@ export function OfflineStatusBadge() {
               ? Loader2
               : Cloud;
 
-  const spinning = view.icon === "sync";
+  const spinning = view.icon === "sync" || view.icon === "upload";
   const tone =
     view.icon === "error"
       ? "border-red-500/35 text-red-400"
@@ -290,11 +307,22 @@ export function OfflineStatusBadge() {
         ? "border-[color-mix(in_srgb,var(--accent)_28%,var(--border))] text-[var(--accent)]"
         : "border-[var(--border)] text-[var(--text-secondary)]";
 
-  return (
-    <div className="relative hidden sm:block" ref={wrapRef}>
+  const onToggle = () => {
+    setOpen((v) => !v);
+    // Click always wakes flush — chip is the manual sync control.
+    if (online) scheduleFlushOfflineSync(0);
+    void collectSyncActivitySnapshot().then(setItems);
+  };
+
+  const chip = (
+    <div
+      className="relative z-[80]"
+      ref={wrapRef}
+      data-tour-id="hdr-sync-wrap"
+    >
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={onToggle}
         className={`inline-flex items-center gap-1.5 rounded-[10px] border bg-[var(--bg-secondary)] px-2 py-1 text-[11px] ${tone} hover:bg-[var(--bg-elevated)] transition-colors`}
         title={view.title}
         aria-label="Sync status"
@@ -310,14 +338,37 @@ export function OfflineStatusBadge() {
           }${spinning ? " animate-spin" : ""}`}
           aria-hidden
         />
-        {view.label}
+        <span className="hidden sm:inline">{view.label}</span>
         {liveCount > 0 && view.icon !== "upload" && view.icon !== "sync" ? (
           <span className="ml-0.5 rounded-full bg-[var(--bg-primary)] px-1 text-[9px] text-[var(--text-muted)]">
             {liveCount > 9 ? "9+" : liveCount}
           </span>
         ) : null}
       </button>
-      {open ? <SyncActivityPanel items={items} online={online} /> : null}
+      {open && mounted
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[90]"
+              data-tour-id="sync-panel-portal"
+            >
+              <button
+                type="button"
+                className="absolute inset-0 cursor-default bg-transparent"
+                aria-label="Close sync panel"
+                onClick={() => setOpen(false)}
+              />
+              <div
+                className="absolute right-3 top-14 sm:right-6"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <SyncActivityPanel items={items} online={online} />
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
+
+  return chip;
 }

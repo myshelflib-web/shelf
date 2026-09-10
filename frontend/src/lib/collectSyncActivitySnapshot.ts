@@ -1,6 +1,7 @@
 import { getStoredUserId } from "@/lib/accountLocalState";
 import { listPendingUploadSummaries } from "@/lib/pendingUploadQueue";
 import { listPendingMutations } from "@/lib/pendingMutationQueue";
+import { listSessionDeferredUploads } from "@/lib/sessionDeferredUploads";
 import { MAX_SYNC_RETRY_ATTEMPTS, SYNC_RETRY_EXHAUSTED_AT } from "@/lib/syncBackoff";
 import {
   emitSyncActivity,
@@ -37,6 +38,7 @@ export async function collectSyncActivitySnapshot(): Promise<SyncActivityItem[]>
       listPendingUploadSummaries(userId),
       listPendingMutations(userId),
     ]);
+    const session = listSessionDeferredUploads(userId);
     for (const u of uploads) {
       const parked =
         Boolean(u.lastError) ||
@@ -48,6 +50,19 @@ export async function collectSyncActivitySnapshot(): Promise<SyncActivityItem[]>
           title: u.title || u.filename,
           detail: u.lastError ? u.lastError : "Waiting to upload…",
           error: parked,
+          silent: true,
+        })
+      ) {
+        changed = true;
+      }
+    }
+    for (const u of session) {
+      if (
+        upsertQueuedUploadActivity({
+          pageId: u.pageId,
+          title: u.title || u.filename,
+          detail: u.lastError,
+          error: true,
           silent: true,
         })
       ) {

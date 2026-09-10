@@ -8,6 +8,7 @@ import {
   pendingUploadBackoffMs,
   putPendingUpload,
 } from "@/lib/pendingUploadQueue";
+import { putSessionDeferredUpload } from "@/lib/sessionDeferredUploads";
 import { scheduleFlushPendingUploads } from "@/lib/flushPendingUploads";
 import { markEntitiesFailed } from "@/lib/entitySyncState";
 import { upsertQueuedUploadActivity } from "@/lib/syncActivityStore";
@@ -139,31 +140,62 @@ async function enqueueDeferredUpload(input: {
 }): Promise<void> {
   const userId = getStoredUserId();
   if (!userId) return;
-  const data = await input.toUpload.arrayBuffer();
   const cors = isStorageCorsOrUnreachableError(input.cause);
   const lastError = cors
     ? STORAGE_CORS_STOP_MESSAGE
     : input.lastError ?? "Upload failed";
-  await putPendingUpload({
-    pageId: input.pageId,
-    userId,
-    token: input.token,
-    uploadUrl: input.uploadUrl,
-    contentTypeHeader: input.contentTypeHeader,
-    filename: input.toUpload.name,
-    title: input.title,
-    contentType: input.contentType,
-    pdfCacheVersion: input.pdfCacheVersion,
-    clientPacked: input.clientPacked,
-    putDone: input.putDone,
-    data,
-    createdAt: Date.now(),
-    attempts: cors ? MAX_SYNC_RETRY_ATTEMPTS : 0,
-    nextAttemptAt: cors
-      ? SYNC_RETRY_EXHAUSTED_AT
-      : Date.now() + pendingUploadBackoffMs(0),
-    lastError,
-  });
+
+  let stored = false;
+  try {
+    const data = await input.toUpload.arrayBuffer();
+    stored = await putPendingUpload({
+      pageId: input.pageId,
+      userId,
+      token: input.token,
+      uploadUrl: input.uploadUrl,
+      contentTypeHeader: input.contentTypeHeader,
+      filename: input.toUpload.name,
+      title: input.title,
+      contentType: input.contentType,
+      pdfCacheVersion: input.pdfCacheVersion,
+      clientPacked: input.clientPacked,
+      putDone: input.putDone,
+      data,
+      createdAt: Date.now(),
+      attempts: cors ? MAX_SYNC_RETRY_ATTEMPTS : 0,
+      nextAttemptAt: cors
+        ? SYNC_RETRY_EXHAUSTED_AT
+        : Date.now() + pendingUploadBackoffMs(0),
+      lastError,
+    });
+  } catch {
+    stored = false;
+  }
+
+  if (!stored) {
+    // IndexedDB full / eviction — keep File in this tab until sync succeeds.
+    putSessionDeferredUpload({
+      pageId: input.pageId,
+      userId,
+      token: input.token,
+      uploadUrl: input.uploadUrl,
+      contentTypeHeader: input.contentTypeHeader,
+      filename: input.toUpload.name,
+      title: input.title,
+      contentType: input.contentType,
+      pdfCacheVersion: input.pdfCacheVersion,
+      clientPacked: input.clientPacked,
+      putDone: input.putDone,
+      file: input.toUpload,
+      createdAt: Date.now(),
+      lastError:
+        lastError === STORAGE_CORS_STOP_MESSAGE
+          ? lastError
+          : `${lastError} (kept in this tab — device storage is full)`,
+    });
+    return;
+  }
+
   markEntitiesFailed([`page:${input.pageId}`]);
   upsertQueuedUploadActivity({
     pageId: input.pageId,
@@ -190,6 +222,8 @@ export async function uploadLibraryFile(opts: {
   scope: { subjectId?: string; topicGroupId?: string };
   onProgress?: UploadProgressHandler;
   onEarlyReady?: (early: UploadEarlyReady) => void;
+  /** Default true. Bulk imports skip so hundreds of PDFs do not fill IDB. */
+  seedPdfCache?: boolean;
   request: RequestFn;
   putToUrl: PutFn;
   deletePage?: (id: string) => Promise<unknown>;
@@ -201,6 +235,7 @@ export async function uploadLibraryFile(opts: {
     scope,
     onProgress,
     onEarlyReady,
+    seedPdfCache = true,
     request,
     putToUrl,
     deletePage,
@@ -253,7 +288,7 @@ export async function uploadLibraryFile(opts: {
   // Open the reader immediately; seed IndexedDB in the background so PUT
   // is never blocked by getAll/arrayBuffer of large PDF caches.
   if (earlyPage?.id && onEarlyReady) {
-    if (contentType === "PDF" && earlyVersion) {
+    if (seedPdfCache && contentType === "PDF" && earlyVersion) {
       void seedPdfByteCache(earlyPage.id, earlyVersion, toUpload);
     }
     if (contentType === "PDF") {
@@ -361,8 +396,8 @@ export async function uploadLibraryFile(opts: {
 
   if (done.page?.id && contentType === "PDF") {
     const version = done.pdfCacheVersion ?? earlyVersion;
-    if (version) {
-      await seedPdfByteCache(done.page.id, version, toUpload);
+    if (seedPdfCache && version) {
+      void seedPdfByteCache(done.page.id, version, toUpload);
     }
     return {
       page: { ...done.page, contentType: done.page.contentType ?? "PDF" },

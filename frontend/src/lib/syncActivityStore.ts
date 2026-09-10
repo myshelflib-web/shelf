@@ -58,6 +58,10 @@ export function getActiveUploadActivityId(): string | null {
   return activeUploadId;
 }
 
+export function clearActiveUploadActivity(): void {
+  activeUploadId = null;
+}
+
 export function upsertSyncActivity(
   partial: Omit<SyncActivityItem, "updatedAt"> & { updatedAt?: number },
   opts?: { silent?: boolean }
