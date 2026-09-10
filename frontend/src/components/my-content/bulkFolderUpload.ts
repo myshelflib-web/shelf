@@ -2,6 +2,12 @@ import { api, type UploadProgressHandler } from "@/lib/api";
 import { pageHref } from "@/lib/myContentTree";
 import type { UserPageSummary, UserSubject, UserTopicGroup } from "@/types";
 import {
+  reportSyncUploadDeferred,
+  reportSyncUploadDone,
+  reportSyncUploadFailed,
+  reportSyncUploadStarted,
+} from "@/lib/reportUploadSyncStatus";
+import {
   groupFilesForBulkUpload,
   titleFromFile,
 } from "./myContentAddUtils";
@@ -79,33 +85,48 @@ export async function runBulkFolderUpload(
         label: file.name,
       });
 
+      const title = titleFromFile(file);
+      const activityId = reportSyncUploadStarted(title);
       const fd = new FormData();
       fd.append("file", file);
-      fd.append("title", titleFromFile(file));
+      fd.append("title", title);
 
-      const { page } = topicGroupId
-        ? await api.myContent.uploadFile(
-            notebook.id,
-            topicGroupId,
-            fd,
-            reportFileProgress
-          )
-        : await api.myContent.uploadNotebookFile(
-            notebook.id,
-            fd,
-            reportFileProgress
-          );
+      try {
+        const result = topicGroupId
+          ? await api.myContent.uploadFile(
+              notebook.id,
+              topicGroupId,
+              fd,
+              reportFileProgress
+            )
+          : await api.myContent.uploadNotebookFile(
+              notebook.id,
+              fd,
+              reportFileProgress
+            );
+        const page = result.page;
+        if (result.deferred) {
+          reportSyncUploadDeferred(activityId);
+        } else {
+          reportSyncUploadDone(activityId);
+        }
 
-      const href = pageHref(notebook.slug, topicSlug, page.slug);
-      last = { page, href };
-      callbacks?.onPageCreated?.({
-        page,
-        href,
-        notebookId: notebook.id,
-        notebookSlug: notebook.slug,
-        topicId: topicGroupId,
-        topicSlug,
-      });
+        const href = pageHref(notebook.slug, topicSlug, page.slug);
+        last = { page, href };
+        callbacks?.onPageCreated?.({
+          page,
+          href,
+          notebookId: notebook.id,
+          notebookSlug: notebook.slug,
+          topicId: topicGroupId,
+          topicSlug,
+        });
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Upload failed";
+        reportSyncUploadFailed(message, activityId);
+        throw err;
+      }
     }
   }
 

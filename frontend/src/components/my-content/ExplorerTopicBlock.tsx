@@ -249,7 +249,12 @@ export function ExplorerTopicBlock({
             )}
           </span>
         )}
-        <WithItemSyncBadge status={folderStatus(pageIdsInTopicGroup(group))}>
+        <WithItemSyncBadge
+          status={folderStatus(
+            pageIdsInTopicGroup(group),
+            `topic:${group.id}`
+          )}
+        >
           <FolderMark seed={group.id} size={14} />
         </WithItemSyncBadge>
         <span className="flex-1 min-w-0 truncate text-[13px] font-medium pointer-events-none">

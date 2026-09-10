@@ -28,4 +28,27 @@ describe("resolveFolderSyncVisual", () => {
       "synced"
     );
   });
+
+  it("honors folder entity keys", () => {
+    expect(
+      resolveFolderSyncVisual(
+        [],
+        new Set(),
+        new Set(),
+        "subject:s1",
+        new Set(["subject:s1"]),
+        new Set()
+      )
+    ).toBe("pending");
+    expect(
+      resolveFolderSyncVisual(
+        [],
+        new Set(),
+        new Set(),
+        "topic:t1",
+        new Set(),
+        new Set(["topic:t1"])
+      )
+    ).toBe("error");
+  });
 });

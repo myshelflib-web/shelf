@@ -209,7 +209,7 @@ export function ExplorerCollectionBlock({
             <ChevronRight className="w-3.5 h-3.5" />
           )}
         </span>
-        <WithItemSyncBadge status={folderStatus(pageIdsInSubject(nb))}>
+        <WithItemSyncBadge status={folderStatus(pageIdsInSubject(nb), `subject:${nb.id}`)}>
           <FolderMark seed={nb.id} size={14} />
         </WithItemSyncBadge>
         <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">

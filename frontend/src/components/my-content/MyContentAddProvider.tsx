@@ -33,8 +33,10 @@ import { SHELF_OPEN_ADD } from "@/lib/hotkeys";
 import { emitContentChanged } from "@/lib/contentEvents";
 import {
   reportSyncFromUploadProgress,
+  reportSyncUploadDeferred,
   reportSyncUploadDone,
   reportSyncUploadFailed,
+  reportSyncUploadStarted,
 } from "@/lib/reportUploadSyncStatus";
 import {
   AnalyticsEvents,
@@ -348,15 +350,19 @@ export function MyContentAddProvider({
     setSubmitting(true);
     setMessage("");
     const isFileUpload = addMode === "file" && Boolean(uploadFile);
+    let uploadActivityId: string | null = null;
     if (isFileUpload) {
       trackUploadAnalytics("started", { addMode });
     }
     try {
       if (isFileUpload && uploadFile) {
+        uploadActivityId = reportSyncUploadStarted(
+          pageTitle.trim() || uploadFile.name
+        );
         setUploadProgress(initialUploadProgress(uploadFile));
         reportSyncFromUploadProgress(initialUploadProgress(uploadFile));
       }
-      const { page, href, openSeed, openedEarly } = await submitAddPage({
+      const { page, href, openSeed, openedEarly, deferred } = await submitAddPage({
         addMode,
         pageTitle,
         pageLink,
@@ -386,11 +392,15 @@ export function MyContentAddProvider({
           contentType: page.contentType,
         });
       }
-      reportSyncUploadDone();
+      if (deferred) {
+        reportSyncUploadDeferred(uploadActivityId);
+      } else {
+        reportSyncUploadDone(uploadActivityId);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to add page";
       setMessage(message);
-      reportSyncUploadFailed(message);
+      reportSyncUploadFailed(message, uploadActivityId);
       if (isFileUpload) {
         trackUploadAnalytics("failed", { addMode, error: message });
       } else {

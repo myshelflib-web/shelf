@@ -16,11 +16,14 @@ import {
 } from "@/lib/offline/network";
 import { ACTION_ERROR_EVENT } from "@/lib/offline/notice";
 import {
+  collectFailedEntityKeys,
+  collectPendingEntityKeys,
   collectPendingPageIds,
   resolveFolderSyncVisual,
   resolveItemSyncVisual,
   type ItemSyncVisual,
 } from "@/lib/offline/pendingPageSync";
+import { ENTITY_SYNC_EVENT } from "@/lib/entitySyncState";
 import {
   SYNC_STATUS_EVENT,
   syncStatusFromEvent,
@@ -28,7 +31,7 @@ import {
 
 type LibraryItemSyncValue = {
   pageStatus: (pageId: string) => ItemSyncVisual;
-  folderStatus: (pageIds: string[]) => ItemSyncVisual;
+  folderStatus: (pageIds: string[], folderKey?: string) => ItemSyncVisual;
 };
 
 const LibraryItemSyncContext = createContext<LibraryItemSyncValue | null>(
@@ -41,24 +44,37 @@ export function LibraryItemSyncProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [pending, setPending] = useState<Set<string>>(EMPTY);
   const [failed, setFailed] = useState<Set<string>>(EMPTY);
+  const [pendingEntities, setPendingEntities] = useState<Set<string>>(EMPTY);
+  const [failedEntities, setFailedEntities] = useState<Set<string>>(EMPTY);
 
   const refresh = useCallback(() => {
     if (!user?.id) {
       setPending(EMPTY);
+      setPendingEntities(EMPTY);
+      setFailedEntities(EMPTY);
       return;
     }
-    void collectPendingPageIds(user.id).then(setPending);
+    void Promise.all([
+      collectPendingPageIds(user.id),
+      collectPendingEntityKeys(user.id),
+    ]).then(([pages, entities]) => {
+      setPending(pages);
+      setPendingEntities(entities);
+      setFailedEntities(collectFailedEntityKeys());
+    });
   }, [user?.id]);
 
   useEffect(() => {
     refresh();
     window.addEventListener(OFFLINE_SYNC_EVENT, refresh);
     window.addEventListener(OFFLINE_STATUS_EVENT, refresh);
+    window.addEventListener(ENTITY_SYNC_EVENT, refresh);
     window.addEventListener("online", refresh);
     window.addEventListener("shelf:tasks-changed", refresh);
     return () => {
       window.removeEventListener(OFFLINE_SYNC_EVENT, refresh);
       window.removeEventListener(OFFLINE_STATUS_EVENT, refresh);
+      window.removeEventListener(ENTITY_SYNC_EVENT, refresh);
       window.removeEventListener("online", refresh);
       window.removeEventListener("shelf:tasks-changed", refresh);
     };
@@ -77,6 +93,7 @@ export function LibraryItemSyncProvider({ children }: { children: ReactNode }) {
           setFailed(new Set(prev));
           return prev;
         });
+        setFailedEntities(collectFailedEntityKeys());
       }
       if (detail.state === "saving" || detail.state === "uploading") {
         refresh();
@@ -87,6 +104,7 @@ export function LibraryItemSyncProvider({ children }: { children: ReactNode }) {
         setFailed(new Set(prev));
         return prev;
       });
+      setFailedEntities(collectFailedEntityKeys());
     };
     window.addEventListener(SYNC_STATUS_EVENT, onSync);
     window.addEventListener(ACTION_ERROR_EVENT, onActionError);
@@ -98,11 +116,25 @@ export function LibraryItemSyncProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<LibraryItemSyncValue>(
     () => ({
-      pageStatus: (pageId) => resolveItemSyncVisual(pageId, pending, failed),
-      folderStatus: (pageIds) =>
-        resolveFolderSyncVisual(pageIds, pending, failed),
+      pageStatus: (pageId) =>
+        resolveItemSyncVisual(
+          pageId,
+          pending,
+          failed,
+          pendingEntities,
+          failedEntities
+        ),
+      folderStatus: (pageIds, folderKey) =>
+        resolveFolderSyncVisual(
+          pageIds,
+          pending,
+          failed,
+          folderKey,
+          pendingEntities,
+          failedEntities
+        ),
     }),
-    [pending, failed]
+    [pending, failed, pendingEntities, failedEntities]
   );
 
   return (

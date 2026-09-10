@@ -13,6 +13,9 @@ import { clearPdfByteCache } from "@/lib/pdfByteCache";
 import { clearPdfDeleteUndos } from "@/lib/pdfDeleteUndo";
 import { clearOfflineDb } from "@/lib/offline/db";
 import { clearOptimisticOpenSeeds } from "@/lib/optimisticOpenSeed";
+import { clearPendingUploads } from "@/lib/pendingUploadQueue";
+import { clearPendingMutations } from "@/lib/pendingMutationQueue";
+import { clearAllFailedEntities } from "@/lib/entitySyncState";
 
 /** Known account keys — wipe also deletes any other `shelf:*` key. */
 export const ACCOUNT_LOCAL_KEYS = [
@@ -90,7 +93,12 @@ export function clearAccountLocalState(): Promise<void> {
   }
   return clearPdfByteCache()
     .then(() => clearPdfDeleteUndos())
-    .then(() => clearOfflineDb());
+    .then(() => clearOfflineDb())
+    .then(() => clearPendingUploads())
+    .then(() => clearPendingMutations())
+    .then(() => {
+      clearAllFailedEntities();
+    });
 }
 
 /**

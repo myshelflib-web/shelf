@@ -17,6 +17,13 @@ import {
   syncStatusFromEvent,
   type SyncStatusDetail,
 } from "@/lib/syncStatus";
+import {
+  SYNC_ACTIVITY_EVENT,
+  listSyncActivities,
+  type SyncActivityItem,
+} from "@/lib/syncActivityStore";
+import { collectSyncActivitySnapshot } from "@/lib/collectSyncActivitySnapshot";
+import { SyncActivityPanel } from "@/components/SyncActivityPanel";
 import { useAuth } from "@/hooks/useAuth";
 
 type BadgeView = {
@@ -25,12 +32,11 @@ type BadgeView = {
   icon: "offline" | "upload" | "sync" | "ok" | "error";
 };
 
-const ERROR_HOLD_MS = 6_000;
-
 function viewFromActivity(
   online: boolean,
   pending: number,
-  activity: SyncStatusDetail | null
+  activity: SyncStatusDetail | null,
+  stickyError: boolean
 ): BadgeView {
   if (!online) {
     return {
@@ -50,7 +56,7 @@ function viewFromActivity(
         : "";
     return {
       label: activity.label ? `${activity.label}${pct}` : `Uploading${pct}…`,
-      title: "Uploading to Shelf",
+      title: "Uploading to Shelf — click for details",
       icon: "upload",
     };
   }
@@ -58,15 +64,18 @@ function viewFromActivity(
   if (activity?.state === "saving") {
     return {
       label: activity.label ?? "Syncing…",
-      title: "Saving changes",
+      title: "Saving changes — click for details",
       icon: "sync",
     };
   }
 
-  if (activity?.state === "error") {
+  if (activity?.state === "error" || (stickyError && pending > 0)) {
     return {
-      label: activity.label ?? "Sync failed",
-      title: activity.label ?? "Could not sync changes",
+      label:
+        activity?.state === "error"
+          ? activity.label ?? "Not synced"
+          : "Not synced",
+      title: "Changes will keep retrying — click for details",
       icon: "error",
     };
   }
@@ -74,7 +83,7 @@ function viewFromActivity(
   if (pending > 0) {
     return {
       label: `Syncing ${pending}…`,
-      title: `Syncing ${pending} pending change${pending === 1 ? "" : "s"}`,
+      title: `Syncing ${pending} pending change${pending === 1 ? "" : "s"} — click for details`,
       icon: "sync",
     };
   }
@@ -82,33 +91,40 @@ function viewFromActivity(
   if (activity?.state === "synced") {
     return {
       label: "Synced",
-      title: "All changes saved",
+      title: "All changes saved — click for details",
       icon: "ok",
     };
   }
 
   return {
     label: "Synced",
-    title: "All changes saved",
+    title: "All changes saved — click for details",
     icon: "ok",
   };
 }
 
 /**
- * Always-visible header cloud chip (signed-in): offline / uploading /
- * syncing / synced / failed.
+ * Always-visible header cloud chip (signed-in). Click for a dropdown of
+ * background uploads and pending sync work.
  */
 export function OfflineStatusBadge() {
   const { user } = useAuth();
   const [online, setOnline] = useState(true);
   const [pending, setPending] = useState(0);
   const [activity, setActivity] = useState<SyncStatusDetail | null>(null);
+  const [stickyError, setStickyError] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<SyncActivityItem[]>([]);
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const refresh = () => {
       setOnline(isOnline());
-      void countAllPending(user?.id).then(setPending);
+      void countAllPending(user?.id).then((n) => {
+        setPending(n);
+        if (n === 0) setStickyError(false);
+      });
     };
     refresh();
     window.addEventListener("online", refresh);
@@ -126,6 +142,36 @@ export function OfflineStatusBadge() {
   }, [user?.id]);
 
   useEffect(() => {
+    const refreshItems = () => {
+      void collectSyncActivitySnapshot().then(setItems);
+    };
+    refreshItems();
+    window.addEventListener(SYNC_ACTIVITY_EVENT, refreshItems);
+    window.addEventListener(OFFLINE_SYNC_EVENT, refreshItems);
+    return () => {
+      window.removeEventListener(SYNC_ACTIVITY_EVENT, refreshItems);
+      window.removeEventListener(OFFLINE_SYNC_EVENT, refreshItems);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    void collectSyncActivitySnapshot().then(setItems);
+    const onDoc = (e: MouseEvent) => {
+      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  useEffect(() => {
     const clearLater = (ms: number) => {
       if (clearTimer.current) clearTimeout(clearTimer.current);
       clearTimer.current = setTimeout(() => setActivity(null), ms);
@@ -139,17 +185,29 @@ export function OfflineStatusBadge() {
         return;
       }
       setActivity(detail);
-      // Keep "Synced" flash briefly, then fall back to idle Synced label.
-      if (detail.state === "synced") clearLater(2_400);
-      if (detail.state === "error") clearLater(ERROR_HOLD_MS);
+      if (detail.state === "error") {
+        setStickyError(true);
+        void countAllPending(user?.id).then((n) => {
+          if (n === 0) clearLater(6_000);
+          else if (clearTimer.current) clearTimeout(clearTimer.current);
+        });
+        return;
+      }
+      if (detail.state === "synced") {
+        setStickyError(false);
+        clearLater(2_400);
+      }
       if (detail.state === "uploading" || detail.state === "saving") {
         if (clearTimer.current) clearTimeout(clearTimer.current);
       }
     };
 
     const onActionError = () => {
-      setActivity({ state: "error", label: "Sync failed" });
-      clearLater(ERROR_HOLD_MS);
+      setStickyError(true);
+      setActivity({ state: "error", label: "Not synced" });
+      void countAllPending(user?.id).then((n) => {
+        if (n === 0) clearLater(6_000);
+      });
     };
 
     const onOfflineNotice = () => {
@@ -165,11 +223,12 @@ export function OfflineStatusBadge() {
       window.removeEventListener(OFFLINE_NOTICE_EVENT, onOfflineNotice);
       if (clearTimer.current) clearTimeout(clearTimer.current);
     };
-  }, []);
+  }, [user?.id]);
 
   if (!user) return null;
 
-  const view = viewFromActivity(online, pending, activity);
+  const view = viewFromActivity(online, pending, activity, stickyError);
+  const liveCount = items.length || listSyncActivities().filter((a) => a.status !== "done").length;
 
   const Icon =
     view.icon === "offline"
@@ -193,21 +252,33 @@ export function OfflineStatusBadge() {
         : "border-[var(--border)] text-[var(--text-secondary)]";
 
   return (
-    <span
-      className={`hidden sm:inline-flex items-center gap-1.5 rounded-[10px] border bg-[var(--bg-secondary)] px-2 py-1 text-[11px] ${tone}`}
-      title={view.title}
-      role="status"
-      aria-live="polite"
-    >
-      <Icon
-        className={`h-3.5 w-3.5 shrink-0${
-          view.icon === "ok" || view.icon === "error"
-            ? ""
-            : " text-[var(--text-muted)]"
-        }${spinning ? " animate-spin" : ""}`}
-        aria-hidden
-      />
-      {view.label}
-    </span>
+    <div className="relative hidden sm:block" ref={wrapRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`inline-flex items-center gap-1.5 rounded-[10px] border bg-[var(--bg-secondary)] px-2 py-1 text-[11px] ${tone} hover:bg-[var(--bg-elevated)] transition-colors`}
+        title={view.title}
+        aria-label="Sync status"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        data-tour-id="hdr-sync"
+      >
+        <Icon
+          className={`h-3.5 w-3.5 shrink-0${
+            view.icon === "ok" || view.icon === "error"
+              ? ""
+              : " text-[var(--text-muted)]"
+          }${spinning ? " animate-spin" : ""}`}
+          aria-hidden
+        />
+        {view.label}
+        {liveCount > 0 && view.icon !== "upload" && view.icon !== "sync" ? (
+          <span className="ml-0.5 rounded-full bg-[var(--bg-primary)] px-1 text-[9px] text-[var(--text-muted)]">
+            {liveCount > 9 ? "9+" : liveCount}
+          </span>
+        ) : null}
+      </button>
+      {open ? <SyncActivityPanel items={items} online={online} /> : null}
+    </div>
   );
 }

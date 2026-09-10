@@ -91,6 +91,7 @@ import {
   finalizePdfDirectUpload,
   pdfCacheVersion as pdfCacheVersionFor,
 } from "./myContentPdfDirectUpload.js";
+import { resumeDraftUpload } from "./myContentUploadResume.js";
 import { NOT_DRAFT } from "../utils/libraryVisiblePages.js";
 
 const router = Router();
@@ -1052,6 +1053,10 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
     req.log?.error("my_content.upload_complete_failed", errorFields(err));
     res.status(500).json({ error: "Could not finish upload" });
   }
+});
+
+router.post("/uploads/resume", (req, res) => {
+  void resumeDraftUpload(req, res);
 });
 
 const LAST_READ_ROOT_KEY = "__root__";

@@ -6,6 +6,7 @@ import {
 import {
   uploadLibraryFile as runLibraryUpload,
   type UploadEarlyReady,
+  type UploadLibraryResult,
   type UploadProgress,
   type UploadProgressHandler,
 } from "@/lib/uploadLibraryFile";
@@ -18,8 +19,14 @@ import { fetchWithRetry } from "@/lib/fetchRetry";
 import { reportApiFailure } from "@/lib/analytics/errors";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { toUserFacingError } from "@/lib/userFacingError";
+import { bindMutationFlushRequest } from "@/lib/flushPendingMutations";
 
-export type { UploadEarlyReady, UploadProgress, UploadProgressHandler };
+export type {
+  UploadEarlyReady,
+  UploadLibraryResult,
+  UploadProgress,
+  UploadProgressHandler,
+};
 
 /** Production (Vercel): set NEXT_PUBLIC_API_URL to the Render backend, e.g. https://your-api.onrender.com */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -54,13 +61,17 @@ function newRequestId(): string {
 
 async function request<T>(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit & { skipSyncStatus?: boolean } = {}
 ): Promise<T> {
+  const { skipSyncStatus, ...init } = options;
+  if (skipSyncStatus) {
+    return requestRaw<T>(path, init);
+  }
   return withApiSyncStatus(
     path,
-    options.method ?? "GET",
-    options.body ?? null,
-    () => requestRaw<T>(path, options)
+    init.method ?? "GET",
+    init.body ?? null,
+    () => requestRaw<T>(path, init)
   );
 }
 
@@ -1300,6 +1311,32 @@ export const api = {
       const { file, title } = fileFromForm(formData);
       return uploadLibraryFile(file, title, {}, onProgress, onEarlyReady);
     },
+    resumeUpload: (
+      pageId: string,
+      opts?: { clientPacked?: boolean }
+    ) =>
+      request<{
+        uploadUrl: string;
+        headers: { "Content-Type": string };
+        token: string;
+        page: import("@/types").UserPageSummary;
+        pdfCacheVersion?: string;
+      }>("/api/my-content/uploads/resume", {
+        method: "POST",
+        body: JSON.stringify({
+          pageId,
+          clientPacked: Boolean(opts?.clientPacked),
+        }),
+      }),
+    completeUpload: (token: string) =>
+      request<{
+        page: import("@/types").UserPageSummary;
+        message?: string;
+        pdfCacheVersion?: string;
+      }>("/api/my-content/uploads/complete", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      }),
     createPage: (
       subjectId: string,
       topicGroupId: string,
@@ -2207,3 +2244,5 @@ export function getStoredUser(): import("@/types").User | null {
   const raw = localStorage.getItem("user");
   return raw ? JSON.parse(raw) : null;
 }
+
+bindMutationFlushRequest(request);

@@ -115,6 +115,7 @@ export async function submitAddPage(input: {
   href: string;
   openSeed?: AddPageOpenSeed;
   openedEarly?: boolean;
+  deferred?: boolean;
 }> {
   const { notebook, topic } = input;
   let page: UserPageSummary;
@@ -136,32 +137,43 @@ export async function submitAddPage(input: {
     const fd = new FormData();
     fd.append("file", input.uploadFile);
     fd.append("title", input.pageTitle);
+    let deferred = false;
+    let uploadResult: Awaited<
+      ReturnType<typeof api.myContent.uploadRootFile>
+    >;
     if (notebook && topic) {
-      ({ page } = await api.myContent.uploadFile(
+      uploadResult = await api.myContent.uploadFile(
         notebook.id,
         topic.id,
         fd,
         input.reportUploadProgress,
         notifyEarly
-      ));
+      );
     } else if (notebook) {
-      ({ page } = await api.myContent.uploadNotebookFile(
+      uploadResult = await api.myContent.uploadNotebookFile(
         notebook.id,
         fd,
         input.reportUploadProgress,
         notifyEarly
-      ));
+      );
     } else {
-      ({ page } = await api.myContent.uploadRootFile(
+      uploadResult = await api.myContent.uploadRootFile(
         fd,
         input.reportUploadProgress,
         notifyEarly
-      ));
+      );
     }
+    page = uploadResult.page;
+    deferred = Boolean(uploadResult.deferred);
     openSeed = {
       contentType: page.contentType ?? "PDF",
       title: page.title,
     };
+    const href = pageHref(notebook?.slug, topic?.slug, page.slug);
+    if (!deferred) {
+      emitPageCreated(page, href, notebook, topic);
+    }
+    return { page, href, openSeed, openedEarly, deferred };
   } else if (
     input.addMode === "youtube" ||
     (input.addMode === "link" && isYoutubeUrl(input.pageLink))

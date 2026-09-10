@@ -1,4 +1,4 @@
-import { api, isNetworkError } from "@/lib/api";
+import { api, ApiError, isNetworkError } from "@/lib/api";
 import { getStoredUserId } from "@/lib/accountLocalState";
 import {
   mergeProgressQueue,
@@ -29,6 +29,8 @@ export async function updatePageProgress(pageId: string, patch: ProgressPatch): 
       await removeProgressQueue(progressQueueKey(userId, pageId));
       return;
     } catch (err) {
+      // Draft abandoned / page gone — don't queue forever.
+      if (err instanceof ApiError && err.status === 404) return;
       if (!isNetworkError(err)) throw err;
     }
   }
@@ -50,6 +52,10 @@ export async function flushOfflineProgress(): Promise<number> {
       await removeProgressQueue(entry.key);
       synced += 1;
     } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        await removeProgressQueue(entry.key);
+        continue;
+      }
       if (isNetworkError(err)) break;
       throw err;
     }

@@ -1,3 +1,12 @@
+import { getStoredUserId } from "@/lib/accountLocalState";
+import { entityKeysFromApiPath } from "@/lib/entitySyncKeys";
+import {
+  clearEntitiesFailed,
+  markEntitiesFailed,
+} from "@/lib/entitySyncState";
+import { scheduleFlushOfflineSync } from "@/lib/flushPendingMutations";
+import { enqueuePendingMutation } from "@/lib/pendingMutationQueue";
+import { syncBackoffMs } from "@/lib/syncBackoff";
 import { dispatchSyncStatus } from "@/lib/syncStatus";
 
 let inflight = 0;
@@ -86,6 +95,53 @@ export function shouldTrackApiSync(
   return false;
 }
 
+function bodyAsString(body: BodyInit | null | undefined): string | null {
+  if (body == null) return null;
+  if (typeof body === "string") return body;
+  return null;
+}
+
+function errorStatus(err: unknown): number | null {
+  if (
+    err &&
+    typeof err === "object" &&
+    "status" in err &&
+    typeof (err as { status: unknown }).status === "number"
+  ) {
+    return (err as { status: number }).status;
+  }
+  return null;
+}
+
+/** Idempotent mutations we can safely replay after transient failures. */
+export function isRetryableMutationMethod(method: string): boolean {
+  const m = method.toUpperCase();
+  return m === "PATCH" || m === "PUT" || m === "DELETE";
+}
+
+export function shouldEnqueueMutationRetry(
+  path: string,
+  method: string,
+  err: unknown
+): boolean {
+  if (!isRetryableMutationMethod(method)) return false;
+  if (
+    !(
+      path.startsWith("/api/my-content") ||
+      path.startsWith("/api/tasks") ||
+      path.startsWith("/api/highlights")
+    )
+  ) {
+    return false;
+  }
+  const status = errorStatus(err);
+  if (status == null) return true;
+  if (status === 0) return true;
+  if (status === 408 || status === 429) return true;
+  if (status >= 500) return true;
+  return false;
+}
+
 export async function withApiSyncStatus<T>(
   path: string,
   method: string,
@@ -95,13 +151,36 @@ export async function withApiSyncStatus<T>(
   if (!shouldTrackApiSync(path, method, body)) {
     return run();
   }
+  const keys = entityKeysFromApiPath(path);
   beginApiSync("Saving…");
   try {
     const value = await run();
     endApiSync(true);
+    if (keys.length) clearEntitiesFailed(keys);
     return value;
   } catch (err) {
     endApiSync(false);
+    if (keys.length) markEntitiesFailed(keys);
+    if (shouldEnqueueMutationRetry(path, method, err)) {
+      const userId = getStoredUserId();
+      if (userId) {
+        const message = err instanceof Error ? err.message : "Not synced";
+        void enqueuePendingMutation({
+          userId,
+          path,
+          method,
+          body: bodyAsString(body),
+          entityKeys: keys,
+          lastError: message,
+        }).then(() => {
+          scheduleFlushOfflineSync(syncBackoffMs(0));
+        });
+      } else {
+        scheduleFlushOfflineSync(syncBackoffMs(0));
+      }
+    } else {
+      scheduleFlushOfflineSync(syncBackoffMs(0));
+    }
     throw err;
   }
 }
