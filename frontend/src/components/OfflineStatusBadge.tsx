@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Cloud, CloudOff, Loader2, Upload } from "lucide-react";
+import { Cloud, CloudOff, RefreshCw, Upload } from "lucide-react";
 import { countAllPending } from "@/lib/offline/outbox";
 import {
   OFFLINE_STATUS_EVENT,
@@ -15,6 +15,7 @@ import {
 } from "@/lib/offline/notice";
 import {
   SYNC_STATUS_EVENT,
+  dispatchSyncStatus,
   syncStatusFromEvent,
   type SyncStatusDetail,
 } from "@/lib/syncStatus";
@@ -137,8 +138,10 @@ export function OfflineStatusBadge() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<SyncActivityItem[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [manualSyncing, setManualSyncing] = useState(false);
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const syncingRef = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -287,31 +290,49 @@ export function OfflineStatusBadge() {
     listSyncActivities().filter((a) => a.status !== "done").length;
 
   const Icon =
-    view.icon === "offline"
-      ? CloudOff
-      : view.icon === "upload"
-        ? Upload
-        : view.icon === "ok"
-          ? Cloud
-          : view.icon === "error"
-            ? CloudOff
-            : view.icon === "sync"
-              ? Loader2
+    manualSyncing || view.icon === "sync"
+      ? RefreshCw
+      : view.icon === "offline"
+        ? CloudOff
+        : view.icon === "upload"
+          ? Upload
+          : view.icon === "ok"
+            ? Cloud
+            : view.icon === "error"
+              ? CloudOff
               : Cloud;
 
-  const spinning = view.icon === "sync" || view.icon === "upload";
+  const spinning =
+    manualSyncing || view.icon === "sync" || view.icon === "upload";
   const tone =
     view.icon === "error"
       ? "border-red-500/35 text-red-400"
-      : view.icon === "ok"
+      : view.icon === "ok" || manualSyncing
         ? "border-[color-mix(in_srgb,var(--accent)_28%,var(--border))] text-[var(--accent)]"
         : "border-[var(--border)] text-[var(--text-secondary)]";
 
   const onToggle = () => {
     setOpen((v) => !v);
-    // Click always wakes flush — chip is the manual sync control.
-    if (online) scheduleFlushOfflineSync(0);
     void collectSyncActivitySnapshot().then(setItems);
+    if (!online || syncingRef.current) return;
+    syncingRef.current = true;
+    setManualSyncing(true);
+    dispatchSyncStatus({ state: "saving", label: "Syncing…" });
+    scheduleFlushOfflineSync(0);
+    void import("@/lib/offline/sync")
+      .then(({ flushOfflineSync }) => flushOfflineSync())
+      .catch(() => undefined)
+      .finally(() => {
+        syncingRef.current = false;
+        setManualSyncing(false);
+        void countAllPending(user?.id).then((n) => {
+          setPending(n);
+          if (n === 0) {
+            dispatchSyncStatus({ state: "synced", label: "Synced" });
+          }
+        });
+        void collectSyncActivitySnapshot().then(setItems);
+      });
   };
 
   const chip = (
@@ -338,8 +359,13 @@ export function OfflineStatusBadge() {
           }${spinning ? " animate-spin" : ""}`}
           aria-hidden
         />
-        <span className="hidden sm:inline">{view.label}</span>
-        {liveCount > 0 && view.icon !== "upload" && view.icon !== "sync" ? (
+        <span className="hidden sm:inline">
+          {manualSyncing ? "Syncing…" : view.label}
+        </span>
+        {liveCount > 0 &&
+        !manualSyncing &&
+        view.icon !== "upload" &&
+        view.icon !== "sync" ? (
           <span className="ml-0.5 rounded-full bg-[var(--bg-primary)] px-1 text-[9px] text-[var(--text-muted)]">
             {liveCount > 9 ? "9+" : liveCount}
           </span>

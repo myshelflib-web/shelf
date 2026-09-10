@@ -322,7 +322,7 @@ export function MyContentSidebar({
         }
         onAddPage={() => openAdd({ kind: "page" })}
         onAddNotebook={() => openAdd({ kind: "notebook" })}
-        onRefresh={() => load()}
+        onRefresh={() => load({ spin: true })}
         loading={loading}
         onCollapseAll={collapseAll}
         workspaceMode={workspaceMode}

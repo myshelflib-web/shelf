@@ -112,12 +112,12 @@ export function MyContentAddPageForm({
                 type="button"
                 disabled={submitting}
                 onClick={() => onAddModeChange(mode)}
-                className={`py-2 rounded-lg text-sm border disabled:opacity-50 ${
+                className={`py-2 rounded-lg text-sm border transition-colors disabled:opacity-50 ${
                   row.length < 3 ? "w-[calc((100%-1rem)/3)]" : ""
                 } ${
                   addMode === mode || (mode === "file" && addMode === "bulk")
                     ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]"
-                    : "border-[var(--border)]"
+                    : "border-[var(--border)] text-[var(--text-secondary)] hover:border-[var(--accent)]/35 hover:text-[var(--text-primary)]"
                 }`}
               >
                 {label}
@@ -126,21 +126,21 @@ export function MyContentAddPageForm({
           </div>
         ))}
       </div>
-      <input
-        type="text"
-        placeholder={
-          addMode === "youtube"
-            ? "Title (optional — from YouTube)"
-            : multiUpload
-              ? "Titles come from file names"
+      {!isUploadTab || (uploadFile && !multiUpload) ? (
+        <input
+          type="text"
+          placeholder={
+            addMode === "youtube"
+              ? "Title (optional — from YouTube)"
               : "File name"
-        }
-        value={pageTitle}
-        onChange={(e) => onPageTitleChange(e.target.value)}
-        required={addMode !== "youtube" && !multiUpload}
-        disabled={submitting || multiUpload}
-        className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
-      />
+          }
+          value={pageTitle}
+          onChange={(e) => onPageTitleChange(e.target.value)}
+          required={addMode !== "youtube" && !isUploadTab}
+          disabled={submitting}
+          className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)] disabled:opacity-60"
+        />
+      ) : null}
       {isUploadTab && multiUpload && !notebookName ? (
         <>
           <input
@@ -150,7 +150,7 @@ export function MyContentAddPageForm({
             onChange={(e) => onNotebookNameChange(e.target.value)}
             required
             disabled={submitting}
-            className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
+            className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)] disabled:opacity-60"
           />
           <p className="text-xs text-[var(--text-muted)]">
             Each selected folder becomes a subfolder; only PDF, TXT, MD, and

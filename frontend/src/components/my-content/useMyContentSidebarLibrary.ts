@@ -102,12 +102,15 @@ export function useMyContentSidebarLibrary({
   );
 
   const load = useCallback(
-    (opts?: { silent?: boolean }) => {
+    (opts?: { silent?: boolean; spin?: boolean }) => {
       const gen = ++loadGen.current;
       const silent = Boolean(opts?.silent);
+      const spin = Boolean(opts?.spin);
       const pageSize = SIDEBAR_NOTEBOOK_PAGE_SIZE;
 
-      if (!silent && !searching) {
+      if (spin && !silent) {
+        setLoading(true);
+      } else if (!silent && !searching) {
         const paintOpts = { sort, page: notebookPage };
         const mem = peekCachedLibrary(paintOpts);
         if (mem) {

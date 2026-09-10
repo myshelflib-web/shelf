@@ -135,7 +135,7 @@ export function MyContentAddModal({
       <button
         type="button"
         aria-label="Close"
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/45"
         onClick={() => {
           if (!submitting) onClose();
         }}
@@ -144,93 +144,111 @@ export function MyContentAddModal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl p-5"
+        className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl"
       >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-[var(--text-primary)]">{title}</h2>
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[var(--border)]">
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+            {title}
+          </h2>
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="p-1.5 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)] disabled:opacity-40 disabled:pointer-events-none"
+            className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:pointer-events-none"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {kind === "notebook" && (
-          <form ref={formRef} onSubmit={onSubmitNotebook} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Folder name (e.g. UPSC Polity)"
-              value={notebookNameInput}
-              onChange={(e) => onNotebookNameChange(e.target.value)}
-              required
-              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
-            />
-            <input
-              type="text"
-              placeholder="Description (optional)"
-              value={notebookDesc}
-              onChange={(e) => onNotebookDescChange(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
-            />
-            <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? "Creating…" : "Create folder"}
-            </button>
-          </form>
-        )}
+        <div className="p-5">
+          {kind === "notebook" && (
+            <form
+              ref={formRef}
+              onSubmit={onSubmitNotebook}
+              className="space-y-3"
+            >
+              <input
+                type="text"
+                placeholder="Folder name (e.g. UPSC Polity)"
+                value={notebookNameInput}
+                onChange={(e) => onNotebookNameChange(e.target.value)}
+                required
+                className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+              />
+              <input
+                type="text"
+                placeholder="Description (optional)"
+                value={notebookDesc}
+                onChange={(e) => onNotebookDescChange(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+              />
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary"
+              >
+                {submitting ? "Creating…" : "Create folder"}
+              </button>
+            </form>
+          )}
 
-        {kind === "topic" && (
-          <form ref={formRef} onSubmit={onSubmitTopic} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Folder name (e.g. Fundamental Rights)"
-              value={topicTitleInput}
-              onChange={(e) => onTopicTitleChange(e.target.value)}
-              required
-              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
-            />
-            <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? "Creating…" : "Create folder"}
-            </button>
-          </form>
-        )}
+          {kind === "topic" && (
+            <form ref={formRef} onSubmit={onSubmitTopic} className="space-y-3">
+              <input
+                type="text"
+                placeholder="Folder name (e.g. Fundamental Rights)"
+                value={topicTitleInput}
+                onChange={(e) => onTopicTitleChange(e.target.value)}
+                required
+                className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+              />
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary"
+              >
+                {submitting ? "Creating…" : "Create folder"}
+              </button>
+            </form>
+          )}
 
-        {kind === "page" && (
-          <MyContentAddPageForm
-            notebookName={notebookName}
-            needsTopicName={needsTopicName}
-            notebookNameInput={notebookNameInput}
-            topicTitleInput={topicTitleInput}
-            pageTitle={pageTitle}
-            addMode={addMode}
-            pageLink={pageLink}
-            uploadFile={uploadFile}
-            bulkFiles={bulkFiles}
-            bulkProgress={bulkProgress}
-            submitting={submitting}
-            uploadProgress={uploadProgress}
-            message={message}
-            uploadRejectedCount={uploadRejectedCount}
-            sketchTemplate={sketchTemplate}
-            sketchBg={sketchBg}
-            docTemplate={docTemplate}
-            formRef={formRef}
-            onNotebookNameChange={onNotebookNameChange}
-            onTopicTitleChange={onTopicTitleChange}
-            onPageTitleChange={onPageTitleChange}
-            onAddModeChange={onAddModeChange}
-            onPageLinkChange={onPageLinkChange}
-            onUploadFileChange={onUploadFileChange}
-            onBulkFilesChange={onBulkFilesChange}
-            onUploadRejectedCountChange={onUploadRejectedCountChange ?? (() => {})}
-            onSketchTemplateChange={onSketchTemplateChange}
-            onSketchBgChange={onSketchBgChange}
-            onDocTemplateChange={onDocTemplateChange}
-            onSubmitPage={onSubmitPage}
-          />
-        )}
+          {kind === "page" && (
+            <MyContentAddPageForm
+              notebookName={notebookName}
+              needsTopicName={needsTopicName}
+              notebookNameInput={notebookNameInput}
+              topicTitleInput={topicTitleInput}
+              pageTitle={pageTitle}
+              addMode={addMode}
+              pageLink={pageLink}
+              uploadFile={uploadFile}
+              bulkFiles={bulkFiles}
+              bulkProgress={bulkProgress}
+              submitting={submitting}
+              uploadProgress={uploadProgress}
+              message={message}
+              uploadRejectedCount={uploadRejectedCount}
+              sketchTemplate={sketchTemplate}
+              sketchBg={sketchBg}
+              docTemplate={docTemplate}
+              formRef={formRef}
+              onNotebookNameChange={onNotebookNameChange}
+              onTopicTitleChange={onTopicTitleChange}
+              onPageTitleChange={onPageTitleChange}
+              onAddModeChange={onAddModeChange}
+              onPageLinkChange={onPageLinkChange}
+              onUploadFileChange={onUploadFileChange}
+              onBulkFilesChange={onBulkFilesChange}
+              onUploadRejectedCountChange={
+                onUploadRejectedCountChange ?? (() => {})
+              }
+              onSketchTemplateChange={onSketchTemplateChange}
+              onSketchBgChange={onSketchBgChange}
+              onDocTemplateChange={onDocTemplateChange}
+              onSubmitPage={onSubmitPage}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
