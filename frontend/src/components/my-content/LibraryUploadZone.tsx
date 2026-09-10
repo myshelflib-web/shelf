@@ -112,8 +112,6 @@ export function LibraryUploadZone({
         multiple
         // @ts-expect-error — non-standard directory picker (Chromium / Safari)
         webkitdirectory=""
-        // @ts-expect-error — Firefox directory attribute
-        directory=""
         disabled={disabled}
         className="sr-only"
         onChange={(e) => {
