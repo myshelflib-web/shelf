@@ -51,6 +51,16 @@ export const SITE_NAV_LINKS = [
     path: "/about",
   },
   {
+    name: "Terms of Service",
+    description: "Shelf Terms of Service for accounts, uploads, Study AI, and plans.",
+    path: "/legal/terms",
+  },
+  {
+    name: "Privacy Policy",
+    description: "How Shelf handles account, library, and Study AI data.",
+    path: "/legal/privacy",
+  },
+  {
     name: "Copyright",
     description: "Copyright policy, user upload terms, and takedown notices.",
     path: "/legal/copyright",
