@@ -1,8 +1,9 @@
 import { getStoredUserId } from "@/lib/accountLocalState";
+import { listPendingUploadSummaries } from "@/lib/pendingUploadQueue";
 import { listPendingMutations } from "@/lib/pendingMutationQueue";
-import { listPendingUploads } from "@/lib/pendingUploadQueue";
 import { MAX_SYNC_RETRY_ATTEMPTS, SYNC_RETRY_EXHAUSTED_AT } from "@/lib/syncBackoff";
 import {
+  emitSyncActivity,
   listSyncActivities,
   upsertQueuedMutationActivity,
   upsertQueuedUploadActivity,
@@ -23,12 +24,17 @@ function mutationTitle(path: string, method: string): string {
   return "Sync change";
 }
 
-/** Merge live activities with durable upload/mutation queues. */
+/**
+ * Merge live activities with durable upload/mutation queues.
+ * Upserts are silent so we never re-enter via SYNC_ACTIVITY_EVENT (that loop
+ * froze the UI whenever pending retries existed).
+ */
 export async function collectSyncActivitySnapshot(): Promise<SyncActivityItem[]> {
   const userId = getStoredUserId();
+  let changed = false;
   if (userId) {
     const [uploads, mutations] = await Promise.all([
-      listPendingUploads(userId),
+      listPendingUploadSummaries(userId),
       listPendingMutations(userId),
     ]);
     for (const u of uploads) {
@@ -36,20 +42,31 @@ export async function collectSyncActivitySnapshot(): Promise<SyncActivityItem[]>
         Boolean(u.lastError) ||
         u.nextAttemptAt >= SYNC_RETRY_EXHAUSTED_AT ||
         u.attempts >= MAX_SYNC_RETRY_ATTEMPTS;
-      upsertQueuedUploadActivity({
-        pageId: u.pageId,
-        title: u.title || u.filename,
-        detail: u.lastError ? u.lastError : "Waiting to upload…",
-        error: parked,
-      });
+      if (
+        upsertQueuedUploadActivity({
+          pageId: u.pageId,
+          title: u.title || u.filename,
+          detail: u.lastError ? u.lastError : "Waiting to upload…",
+          error: parked,
+          silent: true,
+        })
+      ) {
+        changed = true;
+      }
     }
     for (const m of mutations) {
-      upsertQueuedMutationActivity({
-        id: m.id,
-        title: mutationTitle(m.path, m.method),
-        detail: m.lastError ?? "Waiting to sync…",
-      });
+      if (
+        upsertQueuedMutationActivity({
+          id: m.id,
+          title: mutationTitle(m.path, m.method),
+          detail: m.lastError ?? "Waiting to sync…",
+          silent: true,
+        })
+      ) {
+        changed = true;
+      }
     }
   }
+  if (changed) emitSyncActivity();
   return listSyncActivities().filter((a) => a.status !== "done");
 }

@@ -250,21 +250,34 @@ export async function uploadLibraryFile(opts: {
     : undefined;
   const earlyVersion = init.pdfCacheVersion;
 
-  // Seed + open before PUT so CORS/network failures never yank a flash-open tab.
+  // Open the reader immediately; seed IndexedDB in the background so PUT
+  // is never blocked by getAll/arrayBuffer of large PDF caches.
   if (earlyPage?.id && onEarlyReady) {
     if (contentType === "PDF" && earlyVersion) {
-      await seedPdfByteCache(earlyPage.id, earlyVersion, toUpload);
+      void seedPdfByteCache(earlyPage.id, earlyVersion, toUpload);
     }
-    const content = await earlyHtmlForUploadFile(toUpload, contentType);
-    onEarlyReady({
-      page: earlyPage,
-      pdfCacheVersion: earlyVersion,
-      openSeed: {
-        contentType,
-        title: earlyPage.title || title,
-        ...(content ? { content } : {}),
-      },
-    });
+    if (contentType === "PDF") {
+      onEarlyReady({
+        page: earlyPage,
+        pdfCacheVersion: earlyVersion,
+        openSeed: {
+          contentType,
+          title: earlyPage.title || title,
+        },
+      });
+    } else {
+      void earlyHtmlForUploadFile(toUpload, contentType).then((content) => {
+        onEarlyReady({
+          page: earlyPage,
+          pdfCacheVersion: earlyVersion,
+          openSeed: {
+            contentType,
+            title: earlyPage.title || title,
+            ...(content ? { content } : {}),
+          },
+        });
+      });
+    }
   }
 
   const deferKeepLocal = async (

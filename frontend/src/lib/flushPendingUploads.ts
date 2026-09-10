@@ -10,11 +10,12 @@ import { dispatchOfflineSync, isOnline } from "@/lib/offline/network";
 import { dispatchSyncStatus } from "@/lib/syncStatus";
 import {
   listDuePendingUploads,
-  listPendingUploads,
+  listPendingUploadSummaries,
   pendingUploadBackoffMs,
   putPendingUpload,
   removePendingUpload,
   type PendingUploadEntry,
+  type PendingUploadSummary,
 } from "@/lib/pendingUploadQueue";
 import {
   MAX_SYNC_RETRY_ATTEMPTS,
@@ -30,7 +31,7 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let flushing = false;
 
 function soonestUploadRetryAt(
-  entries: PendingUploadEntry[]
+  entries: PendingUploadSummary[]
 ): number | null {
   const active = entries.filter(
     (e) =>
@@ -227,7 +228,7 @@ export async function flushPendingUploads(): Promise<number> {
   try {
     const due = await listDuePendingUploads(userId);
     if (due.length === 0) {
-      const remaining = await listPendingUploads(userId);
+      const remaining = await listPendingUploadSummaries(userId);
       const nextAt = soonestUploadRetryAt(remaining);
       if (nextAt != null) {
         // Never use a 0 delay for a future-dated retry (clock skew / race).
@@ -254,7 +255,7 @@ export async function flushPendingUploads(): Promise<number> {
       }
     }
 
-    const remaining = await listPendingUploads(userId);
+    const remaining = await listPendingUploadSummaries(userId);
     if (remaining.length === 0) {
       if (synced > 0) {
         dispatchSyncStatus({ state: "synced", label: "Synced" });

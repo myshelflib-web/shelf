@@ -28,9 +28,26 @@ const items = new Map<string, SyncActivityItem>();
 let activeUploadId: string | null = null;
 const removeTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
+let lastProgressEmitAt = 0;
+let lastProgressPercent = -1;
+
 function emit() {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(SYNC_ACTIVITY_EVENT));
+}
+
+function sameActivity(
+  a: SyncActivityItem | undefined,
+  b: SyncActivityItem
+): boolean {
+  if (!a) return false;
+  return (
+    a.kind === b.kind &&
+    a.title === b.title &&
+    a.status === b.status &&
+    a.percent === b.percent &&
+    a.detail === b.detail
+  );
 }
 
 export function listSyncActivities(): SyncActivityItem[] {
@@ -42,20 +59,27 @@ export function getActiveUploadActivityId(): string | null {
 }
 
 export function upsertSyncActivity(
-  partial: Omit<SyncActivityItem, "updatedAt"> & { updatedAt?: number }
-): void {
+  partial: Omit<SyncActivityItem, "updatedAt"> & { updatedAt?: number },
+  opts?: { silent?: boolean }
+): boolean {
   const prev = items.get(partial.id);
   const next: SyncActivityItem = {
     ...prev,
     ...partial,
     updatedAt: partial.updatedAt ?? Date.now(),
   };
+  if (sameActivity(prev, next)) return false;
   items.set(partial.id, next);
   const existingTimer = removeTimers.get(partial.id);
   if (existingTimer && next.status !== "done") {
     clearTimeout(existingTimer);
     removeTimers.delete(partial.id);
   }
+  if (!opts?.silent) emit();
+  return true;
+}
+
+export function emitSyncActivity(): void {
   emit();
 }
 
@@ -86,6 +110,8 @@ function scheduleRemove(id: string, ms: number) {
 /** Start tracking a live file upload; subsequent progress maps to this id. */
 export function beginUploadActivity(title: string, id = crypto.randomUUID()): string {
   activeUploadId = id;
+  lastProgressEmitAt = 0;
+  lastProgressPercent = -1;
   upsertSyncActivity({
     id,
     kind: "upload",
@@ -121,6 +147,24 @@ export function applyUploadProgressToActivity(
     });
     return;
   }
+  const now = Date.now();
+  const jumped =
+    progress.percent === 100 ||
+    progress.percent - lastProgressPercent >= 5 ||
+    now - lastProgressEmitAt >= 400;
+  if (!jumped) {
+    // Keep in-memory percent without waking every listener.
+    items.set(id, {
+      ...prev,
+      status: "uploading",
+      percent: progress.percent,
+      detail: `Uploading ${progress.percent}%`,
+      updatedAt: prev.updatedAt,
+    });
+    return;
+  }
+  lastProgressEmitAt = now;
+  lastProgressPercent = progress.percent;
   upsertSyncActivity({
     ...prev,
     status: "uploading",
@@ -168,28 +212,36 @@ export function upsertQueuedUploadActivity(input: {
   title: string;
   detail?: string;
   error?: boolean;
-}): void {
-  upsertSyncActivity({
-    id: `queued-upload:${input.pageId}`,
-    kind: "retry",
-    title: input.title.trim() || "Upload",
-    status: input.error ? "error" : "pending",
-    detail: input.detail ?? (input.error ? "Retrying…" : "Waiting to upload…"),
-  });
+  silent?: boolean;
+}): boolean {
+  return upsertSyncActivity(
+    {
+      id: `queued-upload:${input.pageId}`,
+      kind: "retry",
+      title: input.title.trim() || "Upload",
+      status: input.error ? "error" : "pending",
+      detail: input.detail ?? (input.error ? "Retrying…" : "Waiting to upload…"),
+    },
+    { silent: input.silent }
+  );
 }
 
 export function upsertQueuedMutationActivity(input: {
   id: string;
   title: string;
   detail?: string;
-}): void {
-  upsertSyncActivity({
-    id: `queued-mut:${input.id}`,
-    kind: "mutation",
-    title: input.title,
-    status: "pending",
-    detail: input.detail ?? "Waiting to sync…",
-  });
+  silent?: boolean;
+}): boolean {
+  return upsertSyncActivity(
+    {
+      id: `queued-mut:${input.id}`,
+      kind: "mutation",
+      title: input.title,
+      status: "pending",
+      detail: input.detail ?? "Waiting to sync…",
+    },
+    { silent: input.silent }
+  );
 }
 
 export function clearFinishedSyncActivities(): void {

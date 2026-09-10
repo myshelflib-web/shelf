@@ -10,7 +10,7 @@ import {
   progressQueueKey,
   withStore,
 } from "./db";
-import { listPendingUploads } from "@/lib/pendingUploadQueue";
+import { listPendingUploadSummaries } from "@/lib/pendingUploadQueue";
 import { listPendingMutations } from "@/lib/pendingMutationQueue";
 
 function newOutboxId(): string {
@@ -147,7 +147,7 @@ export async function countAllPending(userId?: string | null): Promise<number> {
   const [outbox, progress, uploads, mutations] = await Promise.all([
     readOutbox(uid),
     readProgressQueue(uid),
-    listPendingUploads(uid),
+    listPendingUploadSummaries(uid),
     listPendingMutations(uid),
   ]);
   return outbox.length + progress.length + uploads.length + mutations.length;

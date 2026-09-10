@@ -41,10 +41,12 @@ export async function collectPendingPageIds(
 }
 
 export async function collectPendingEntityKeys(
-  userId: string
+  userId: string,
+  knownPages?: Set<string>
 ): Promise<Set<string>> {
   const keys = await collectPendingMutationEntityKeys(userId);
-  for (const pageId of await collectPendingPageIds(userId)) {
+  const pages = knownPages ?? (await collectPendingPageIds(userId));
+  for (const pageId of pages) {
     keys.add(`page:${pageId}`);
   }
   return keys;

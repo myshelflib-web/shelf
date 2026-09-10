@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -46,6 +47,7 @@ export function LibraryItemSyncProvider({ children }: { children: ReactNode }) {
   const [failed, setFailed] = useState<Set<string>>(EMPTY);
   const [pendingEntities, setPendingEntities] = useState<Set<string>>(EMPTY);
   const [failedEntities, setFailedEntities] = useState<Set<string>>(EMPTY);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refresh = useCallback(() => {
     if (!user?.id) {
@@ -54,14 +56,18 @@ export function LibraryItemSyncProvider({ children }: { children: ReactNode }) {
       setFailedEntities(EMPTY);
       return;
     }
-    void Promise.all([
-      collectPendingPageIds(user.id),
-      collectPendingEntityKeys(user.id),
-    ]).then(([pages, entities]) => {
-      setPending(pages);
-      setPendingEntities(entities);
-      setFailedEntities(collectFailedEntityKeys());
-    });
+    // Debounce — upload progress used to fire this on every xhr tick and
+    // re-open IndexedDB, freezing the main thread.
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      void collectPendingPageIds(user.id).then(async (pages) => {
+        const entities = await collectPendingEntityKeys(user.id, pages);
+        setPending(pages);
+        setPendingEntities(entities);
+        setFailedEntities(collectFailedEntityKeys());
+      });
+    }, 400);
   }, [user?.id]);
 
   useEffect(() => {
@@ -77,6 +83,7 @@ export function LibraryItemSyncProvider({ children }: { children: ReactNode }) {
       window.removeEventListener(ENTITY_SYNC_EVENT, refresh);
       window.removeEventListener("online", refresh);
       window.removeEventListener("shelf:tasks-changed", refresh);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
     };
   }, [refresh]);
 
@@ -84,6 +91,8 @@ export function LibraryItemSyncProvider({ children }: { children: ReactNode }) {
     const onSync = (e: Event) => {
       const detail = syncStatusFromEvent(e);
       if (!detail) return;
+      // Do NOT refresh on uploading/saving — that ran on every PUT progress
+      // tick and made Upload click freeze the app after sync retries landed.
       if (detail.state === "synced" || detail.state === "idle") {
         setFailed(EMPTY);
         refresh();
@@ -94,8 +103,6 @@ export function LibraryItemSyncProvider({ children }: { children: ReactNode }) {
           return prev;
         });
         setFailedEntities(collectFailedEntityKeys());
-      }
-      if (detail.state === "saving" || detail.state === "uploading") {
         refresh();
       }
     };

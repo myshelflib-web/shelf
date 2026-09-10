@@ -8,6 +8,9 @@ import {
   removeSyncActivity,
 } from "@/lib/syncActivityStore";
 
+let lastUploadStatusAt = 0;
+let lastUploadPercent = -1;
+
 /** Mirror add-modal upload progress into the header sync chip + activity list. */
 export function reportSyncFromUploadProgress(progress: UploadProgress): void {
   applyUploadProgressToActivity(progress);
@@ -19,6 +22,15 @@ export function reportSyncFromUploadProgress(progress: UploadProgress): void {
     dispatchSyncStatus({ state: "saving", label: "Saving…" });
     return;
   }
+  // Throttle chip updates — xhr can fire dozens of events/sec.
+  const now = Date.now();
+  const jumped =
+    progress.percent === 100 ||
+    progress.percent - lastUploadPercent >= 5 ||
+    now - lastUploadStatusAt >= 400;
+  if (!jumped) return;
+  lastUploadStatusAt = now;
+  lastUploadPercent = progress.percent;
   dispatchSyncStatus({
     state: "uploading",
     label: "Uploading",
@@ -28,6 +40,8 @@ export function reportSyncFromUploadProgress(progress: UploadProgress): void {
 
 /** Start (or replace) the active upload row shown in the sync dropdown. */
 export function reportSyncUploadStarted(title: string): string {
+  lastUploadPercent = -1;
+  lastUploadStatusAt = 0;
   const id = beginUploadActivity(title);
   dispatchSyncStatus({ state: "uploading", label: "Uploading", percent: 0 });
   return id;

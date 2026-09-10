@@ -12,7 +12,7 @@ import {
   isSyncRetryExhausted,
   syncBackoffMs,
 } from "@/lib/syncBackoff";
-import { listPendingUploads } from "@/lib/pendingUploadQueue";
+import { listPendingUploadSummaries } from "@/lib/pendingUploadQueue";
 import { listPendingMutations } from "@/lib/pendingMutationQueue";
 import { getStoredUserId } from "@/lib/accountLocalState";
 import { clearAllFailedEntities } from "@/lib/entitySyncState";
@@ -47,7 +47,7 @@ export async function flushOfflineSync(): Promise<number> {
     const userId = getStoredUserId();
     const [uploadsLeft, mutationsLeft] = userId
       ? await Promise.all([
-          listPendingUploads(userId),
+          listPendingUploadSummaries(userId),
           listPendingMutations(userId),
         ])
       : [[], []];

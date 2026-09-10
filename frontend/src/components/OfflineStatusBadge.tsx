@@ -160,13 +160,19 @@ export function OfflineStatusBadge() {
   }, [user?.id]);
 
   useEffect(() => {
+    let debounce: ReturnType<typeof setTimeout> | null = null;
     const refreshItems = () => {
-      void collectSyncActivitySnapshot().then(setItems);
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        debounce = null;
+        void collectSyncActivitySnapshot().then(setItems);
+      }, 200);
     };
     refreshItems();
     window.addEventListener(SYNC_ACTIVITY_EVENT, refreshItems);
     window.addEventListener(OFFLINE_SYNC_EVENT, refreshItems);
     return () => {
+      if (debounce) clearTimeout(debounce);
       window.removeEventListener(SYNC_ACTIVITY_EVENT, refreshItems);
       window.removeEventListener(OFFLINE_SYNC_EVENT, refreshItems);
     };

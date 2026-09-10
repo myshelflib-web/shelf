@@ -3,8 +3,10 @@
 import { isCacheFresh } from "@/lib/cacheTtl";
 
 const DB_NAME = "shelf-pdf-cache";
-const DB_VERSION = 1;
+/** v2: separate meta store so eviction never getAll()s full PDF blobs. */
+const DB_VERSION = 2;
 const STORE = "pdfs";
+const META_STORE = "pdfMeta";
 const MAX_DOCS = 5;
 const MAX_BYTES = 80 * 1024 * 1024;
 
@@ -22,9 +24,7 @@ type PdfCacheRecord = PdfCacheMeta & {
 
 /** Stable content id — ignores legacy timestamp suffixes on cache versions. */
 export function pdfContentFingerprint(version: string): string {
-  const parts = version.split(":");
-  if (parts.length >= 2) return `${parts[0]}:${parts[1]}`;
-  return parts[0] ?? version;
+  return version.split(":").slice(0, 2).join(":") || version;
 }
 
 function openDb(): Promise<IDBDatabase> {
@@ -36,10 +36,15 @@ function openDb(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onerror = () => reject(req.error ?? new Error("IDB open failed"));
     req.onsuccess = () => resolve(req.result);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (event) => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) {
         db.createObjectStore(STORE, { keyPath: "pageId" });
+      }
+      if (!db.objectStoreNames.contains(META_STORE)) {
+        db.createObjectStore(META_STORE, { keyPath: "pageId" });
+        // No cursor migration of PDF blobs — that freezes open on large caches.
+        void event;
       }
     };
   });
@@ -52,15 +57,19 @@ function idbReq<T>(req: IDBRequest<T>): Promise<T> {
   });
 }
 
-async function withStore<T>(
+async function withStores<T>(
   mode: IDBTransactionMode,
-  fn: (store: IDBObjectStore) => Promise<T>
+  fn: (pdfs: IDBObjectStore, meta: IDBObjectStore | null) => Promise<T>
 ): Promise<T> {
   const db = await openDb();
   try {
-    const tx = db.transaction(STORE, mode);
-    const store = tx.objectStore(STORE);
-    const result = await fn(store);
+    const hasMeta = db.objectStoreNames.contains(META_STORE);
+    const names = hasMeta ? [STORE, META_STORE] : [STORE];
+    const tx = db.transaction(names, mode);
+    const pdfs = tx.objectStore(STORE);
+    // Never alias meta → pdfs: getAll would decode every cached PDF.
+    const meta = hasMeta ? tx.objectStore(META_STORE) : null;
+    const result = await fn(pdfs, meta);
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error ?? new Error("IDB tx failed"));
@@ -72,21 +81,27 @@ async function withStore<T>(
   }
 }
 
+async function listMeta(meta: IDBObjectStore | null): Promise<PdfCacheMeta[]> {
+  if (!meta) return [];
+  const rows = await idbReq<PdfCacheMeta[]>(meta.getAll());
+  return rows ?? [];
+}
+
 /** Return cached bytes + version without requiring a presign round-trip. */
 export async function peekCachedPdf(
   pageId: string
 ): Promise<{ version: string; data: ArrayBuffer } | null> {
   try {
-    const row = await withStore("readonly", (store) =>
-      idbReq<PdfCacheRecord | undefined>(store.get(pageId))
-    );
-    if (!row?.data?.byteLength) return null;
-    if (!isCacheFresh(row.lastAccess)) {
-      void removeCachedPdf(pageId);
-      return null;
-    }
-    void touchCachedPdf(pageId);
-    return { version: row.version, data: row.data };
+    return await withStores("readonly", async (pdfs) => {
+      const row = await idbReq<PdfCacheRecord | undefined>(pdfs.get(pageId));
+      if (!row?.data?.byteLength) return null;
+      if (!isCacheFresh(row.lastAccess)) {
+        void removeCachedPdf(pageId);
+        return null;
+      }
+      void touchCachedPdf(pageId);
+      return { version: row.version, data: row.data };
+    });
   } catch {
     return null;
   }
@@ -98,16 +113,16 @@ export async function getCachedPdf(
   version: string
 ): Promise<ArrayBuffer | null> {
   try {
-    const row = await withStore("readonly", (store) =>
-      idbReq<PdfCacheRecord | undefined>(store.get(pageId))
-    );
-    if (!row || row.version !== version) return null;
-    if (!isCacheFresh(row.lastAccess)) {
-      void removeCachedPdf(pageId);
-      return null;
-    }
-    void touchCachedPdf(pageId);
-    return row.data;
+    return await withStores("readonly", async (pdfs) => {
+      const row = await idbReq<PdfCacheRecord | undefined>(pdfs.get(pageId));
+      if (!row || row.version !== version) return null;
+      if (!isCacheFresh(row.lastAccess)) {
+        void removeCachedPdf(pageId);
+        return null;
+      }
+      void touchCachedPdf(pageId);
+      return row.data;
+    });
   } catch {
     return null;
   }
@@ -119,18 +134,25 @@ export async function reconcileCachedPdfVersion(
   serverVersion: string
 ): Promise<void> {
   try {
-    await withStore("readwrite", async (store) => {
-      const row = await idbReq<PdfCacheRecord | undefined>(store.get(pageId));
+    await withStores("readwrite", async (pdfs, meta) => {
+      const row = await idbReq<PdfCacheRecord | undefined>(pdfs.get(pageId));
       if (!row) return;
       const local = pdfContentFingerprint(row.version);
       const remote = pdfContentFingerprint(serverVersion);
       if (local !== remote) {
-        store.delete(pageId);
+        pdfs.delete(pageId);
+        meta?.delete(pageId);
         return;
       }
       if (row.version !== serverVersion) {
         row.version = serverVersion;
-        store.put(row);
+        pdfs.put(row);
+        meta?.put({
+          pageId: row.pageId,
+          version: row.version,
+          byteLength: row.byteLength,
+          lastAccess: row.lastAccess,
+        } satisfies PdfCacheMeta);
       }
     });
   } catch {
@@ -140,11 +162,17 @@ export async function reconcileCachedPdfVersion(
 
 export async function touchCachedPdf(pageId: string): Promise<void> {
   try {
-    await withStore("readwrite", async (store) => {
-      const row = await idbReq<PdfCacheRecord | undefined>(store.get(pageId));
+    await withStores("readwrite", async (pdfs, meta) => {
+      const row = await idbReq<PdfCacheRecord | undefined>(pdfs.get(pageId));
       if (!row) return;
       row.lastAccess = Date.now();
-      store.put(row);
+      pdfs.put(row);
+      meta?.put({
+        pageId: row.pageId,
+        version: row.version,
+        byteLength: row.byteLength,
+        lastAccess: row.lastAccess,
+      } satisfies PdfCacheMeta);
     });
   } catch {
     /* ignore */
@@ -157,9 +185,8 @@ export async function putCachedPdf(
   data: ArrayBuffer
 ): Promise<void> {
   try {
-    await withStore("readwrite", async (store) => {
-      const all = await idbReq<PdfCacheRecord[]>(store.getAll());
-      const others = all.filter((r) => r.pageId !== pageId);
+    await withStores("readwrite", async (pdfs, meta) => {
+      const others = (await listMeta(meta)).filter((r) => r.pageId !== pageId);
       others.sort((a, b) => a.lastAccess - b.lastAccess);
 
       let total = data.byteLength;
@@ -171,17 +198,25 @@ export async function putCachedPdf(
       ) {
         const evict = others.shift()!;
         total -= evict.byteLength;
-        store.delete(evict.pageId);
+        pdfs.delete(evict.pageId);
+        meta?.delete(evict.pageId);
       }
 
+      const lastAccess = Date.now();
       const record: PdfCacheRecord = {
         pageId,
         version,
         byteLength: data.byteLength,
-        lastAccess: Date.now(),
+        lastAccess,
         data,
       };
-      store.put(record);
+      pdfs.put(record);
+      meta?.put({
+        pageId,
+        version,
+        byteLength: data.byteLength,
+        lastAccess,
+      } satisfies PdfCacheMeta);
     });
   } catch {
     /* quota / private mode — ignore */
@@ -192,8 +227,13 @@ export async function clearPdfByteCache(): Promise<void> {
   try {
     const db = await openDb();
     try {
-      const tx = db.transaction(STORE, "readwrite");
+      const names = [STORE];
+      if (db.objectStoreNames.contains(META_STORE)) names.push(META_STORE);
+      const tx = db.transaction(names, "readwrite");
       tx.objectStore(STORE).clear();
+      if (db.objectStoreNames.contains(META_STORE)) {
+        tx.objectStore(META_STORE).clear();
+      }
       await new Promise<void>((resolve, reject) => {
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error ?? new Error("clear failed"));
@@ -208,8 +248,9 @@ export async function clearPdfByteCache(): Promise<void> {
 
 export async function removeCachedPdf(pageId: string): Promise<void> {
   try {
-    await withStore("readwrite", async (store) => {
-      await idbReq(store.delete(pageId));
+    await withStores("readwrite", async (pdfs, meta) => {
+      await idbReq(pdfs.delete(pageId));
+      if (meta) await idbReq(meta.delete(pageId));
     });
   } catch {
     /* ignore */

@@ -7,8 +7,10 @@ import {
 } from "@/lib/syncBackoff";
 
 const DB_NAME = "shelf-pending-uploads";
-const DB_VERSION = 1;
+/** v2: meta store so UI/count never getAll()s full file ArrayBuffers. */
+const DB_VERSION = 2;
 const STORE = "uploads";
+const META_STORE = "uploadMeta";
 
 /** Cap deferred upload copies so failed syncs cannot fill IndexedDB / RAM. */
 export const MAX_PENDING_UPLOADS = 3;
@@ -34,6 +36,11 @@ export type PendingUploadEntry = {
   lastError?: string;
 };
 
+/** Lightweight row for badges / sync panel (no file bytes). */
+export type PendingUploadSummary = Omit<PendingUploadEntry, "data"> & {
+  byteLength: number;
+};
+
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     if (typeof indexedDB === "undefined") {
@@ -43,12 +50,20 @@ function openDb(): Promise<IDBDatabase> {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onerror = () => reject(req.error ?? new Error("IDB open failed"));
     req.onsuccess = () => resolve(req.result);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (event) => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) {
         const store = db.createObjectStore(STORE, { keyPath: "pageId" });
         store.createIndex("byUser", "userId", { unique: false });
         store.createIndex("byNext", "nextAttemptAt", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(META_STORE)) {
+        const meta = db.createObjectStore(META_STORE, { keyPath: "pageId" });
+        meta.createIndex("byUser", "userId", { unique: false });
+        meta.createIndex("byNext", "nextAttemptAt", { unique: false });
+        // Do NOT cursor-migrate blob store here — reading every ArrayBuffer on
+        // upgrade freezes the tab. Meta is written on put; orphans are ignored.
+        void event;
       }
     };
   });
@@ -61,15 +76,24 @@ function idbReq<T>(req: IDBRequest<T>): Promise<T> {
   });
 }
 
-async function withStore<T>(
+function toSummary(entry: PendingUploadEntry): PendingUploadSummary {
+  const { data, ...rest } = entry;
+  return { ...rest, byteLength: data?.byteLength ?? 0 };
+}
+
+async function withStores<T>(
   mode: IDBTransactionMode,
-  fn: (store: IDBObjectStore) => Promise<T>
+  fn: (uploads: IDBObjectStore, meta: IDBObjectStore | null) => Promise<T>
 ): Promise<T> {
   const db = await openDb();
   try {
-    const tx = db.transaction(STORE, mode);
-    const store = tx.objectStore(STORE);
-    const result = await fn(store);
+    const hasMeta = db.objectStoreNames.contains(META_STORE);
+    const names = hasMeta ? [STORE, META_STORE] : [STORE];
+    const tx = db.transaction(names, mode);
+    const uploads = tx.objectStore(STORE);
+    // Never alias meta → uploads: getAll on uploads pulls full file bytes.
+    const meta = hasMeta ? tx.objectStore(META_STORE) : null;
+    const result = await fn(uploads, meta);
     await new Promise<void>((resolve, reject) => {
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error ?? new Error("IDB tx failed"));
@@ -89,22 +113,33 @@ export async function putPendingUpload(
   entry: PendingUploadEntry
 ): Promise<void> {
   try {
-    await withStore("readwrite", async (store) => {
-      const all = (await idbReq<PendingUploadEntry[]>(store.getAll())) ?? [];
-      const others = all.filter((r) => r.pageId !== entry.pageId);
-      others.sort((a, b) => a.createdAt - b.createdAt);
+    await withStores("readwrite", async (uploads, meta) => {
+      const summaries = meta
+        ? ((await idbReq<PendingUploadSummary[]>(
+            meta.index("byUser").getAll(entry.userId)
+          )) ?? [])
+        : [];
+      const others = summaries
+        .filter((r) => r.pageId !== entry.pageId)
+        .map((r) => ({
+          pageId: r.pageId,
+          createdAt: r.createdAt,
+          byteLength: r.byteLength || 0,
+        }))
+        .sort((a, b) => a.createdAt - b.createdAt);
 
-      // One oversized file: keep only it so retries still work.
       if (entry.data.byteLength > MAX_PENDING_UPLOAD_BYTES) {
         for (const r of others) {
-          store.delete(r.pageId);
+          uploads.delete(r.pageId);
+          meta?.delete(r.pageId);
         }
-        await idbReq(store.put(entry));
+        await idbReq(uploads.put(entry));
+        if (meta) await idbReq(meta.put(toSummary(entry)));
         return;
       }
 
       let total = entry.data.byteLength;
-      for (const r of others) total += r.data?.byteLength ?? 0;
+      for (const r of others) total += r.byteLength;
 
       while (
         (others.length >= MAX_PENDING_UPLOADS ||
@@ -112,11 +147,13 @@ export async function putPendingUpload(
         others.length > 0
       ) {
         const evict = others.shift()!;
-        total -= evict.data?.byteLength ?? 0;
-        store.delete(evict.pageId);
+        total -= evict.byteLength;
+        uploads.delete(evict.pageId);
+        meta?.delete(evict.pageId);
       }
 
-      await idbReq(store.put(entry));
+      await idbReq(uploads.put(entry));
+      if (meta) await idbReq(meta.put(toSummary(entry)));
     });
   } catch {
     /* quota / private mode */
@@ -127,8 +164,8 @@ export async function getPendingUpload(
   pageId: string
 ): Promise<PendingUploadEntry | null> {
   try {
-    return await withStore("readonly", async (store) => {
-      return (await idbReq(store.get(pageId))) ?? null;
+    return await withStores("readonly", async (uploads) => {
+      return (await idbReq(uploads.get(pageId))) ?? null;
     });
   } catch {
     return null;
@@ -137,20 +174,45 @@ export async function getPendingUpload(
 
 export async function removePendingUpload(pageId: string): Promise<void> {
   try {
-    await withStore("readwrite", async (store) => {
-      await idbReq(store.delete(pageId));
+    await withStores("readwrite", async (uploads, meta) => {
+      await idbReq(uploads.delete(pageId));
+      if (meta) await idbReq(meta.delete(pageId));
     });
   } catch {
     /* ignore */
   }
 }
 
+/** Metadata only — safe for badges / sync panel (no ArrayBuffer decode). */
+export async function listPendingUploadSummaries(
+  userId: string
+): Promise<PendingUploadSummary[]> {
+  try {
+    return await withStores("readonly", async (_uploads, meta) => {
+      if (!meta) return [];
+      const idx = meta.index("byUser");
+      const rows =
+        (await idbReq<PendingUploadSummary[]>(idx.getAll(userId))) ?? [];
+      return rows
+        .map((r) => ({
+          ...r,
+          byteLength: typeof r.byteLength === "number" ? r.byteLength : 0,
+        }))
+        .filter((r) => r.pageId)
+        .sort((a, b) => a.nextAttemptAt - b.nextAttemptAt);
+    });
+  } catch {
+    return [];
+  }
+}
+
+/** @deprecated Prefer listPendingUploadSummaries for UI; loads full blobs. */
 export async function listPendingUploads(
   userId: string
 ): Promise<PendingUploadEntry[]> {
   try {
-    return await withStore("readonly", async (store) => {
-      const idx = store.index("byUser");
+    return await withStores("readonly", async (uploads) => {
+      const idx = uploads.index("byUser");
       const rows = await idbReq(idx.getAll(userId));
       return (rows ?? []).sort((a, b) => a.nextAttemptAt - b.nextAttemptAt);
     });
@@ -163,27 +225,32 @@ export async function listDuePendingUploads(
   userId: string,
   now = Date.now()
 ): Promise<PendingUploadEntry[]> {
-  const all = await listPendingUploads(userId);
-  return all.filter((e) => {
-    if (isSyncRetryExhausted(e.attempts)) return false;
-    if (e.nextAttemptAt > now) return false;
-    if (e.nextAttemptAt >= Number.MAX_SAFE_INTEGER) return false;
-    // Already known CORS / unreachable — never auto-retry.
-    if (
-      e.lastError &&
-      /CORS|Cannot reach storage/i.test(e.lastError)
-    ) {
-      return false;
-    }
-    return true;
-  });
+  const summaries = await listPendingUploadSummaries(userId);
+  const dueIds = summaries
+    .filter((e) => {
+      if (isSyncRetryExhausted(e.attempts)) return false;
+      if (e.nextAttemptAt > now) return false;
+      if (e.nextAttemptAt >= Number.MAX_SAFE_INTEGER) return false;
+      if (e.lastError && /CORS|Cannot reach storage/i.test(e.lastError)) {
+        return false;
+      }
+      return true;
+    })
+    .map((e) => e.pageId);
+
+  const out: PendingUploadEntry[] = [];
+  for (const pageId of dueIds) {
+    const full = await getPendingUpload(pageId);
+    if (full) out.push(full);
+  }
+  return out;
 }
 
 export async function collectPendingUploadPageIds(
   userId: string
 ): Promise<Set<string>> {
   const ids = new Set<string>();
-  for (const e of await listPendingUploads(userId)) {
+  for (const e of await listPendingUploadSummaries(userId)) {
     ids.add(e.pageId);
   }
   return ids;
