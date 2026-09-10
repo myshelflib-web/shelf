@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { FolderUp } from "lucide-react";
 import clsx from "clsx";
-import { isUploadableFile } from "./myContentAddUtils";
+import { mergeUploadableFiles, relativeUploadPath } from "./myContentAddUtils";
 
 interface FolderUploadZoneProps {
   files: File[];
@@ -13,26 +13,9 @@ interface FolderUploadZoneProps {
 }
 
 function relativePath(file: File): string {
-  return (
-    (file as File & { webkitRelativePath?: string }).webkitRelativePath ||
-    file.name
-  );
+  return relativeUploadPath(file);
 }
 
-function mergeUploadableFiles(existing: File[], incoming: File[]): File[] {
-  const seen = new Set(
-    existing.map((f) => `${f.name}:${f.size}:${relativePath(f)}`)
-  );
-  const next = [...existing];
-  for (const file of incoming) {
-    if (!isUploadableFile(file)) continue;
-    const key = `${file.name}:${file.size}:${relativePath(file)}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    next.push(file);
-  }
-  return next;
-}
 
 export function FolderUploadZone({
   files,

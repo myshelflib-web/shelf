@@ -131,6 +131,7 @@ export function MyContentAddProvider({
   const [pageTitle, setPageTitle] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [uploadRejectedCount, setUploadRejectedCount] = useState(0);
   const [bulkProgress, setBulkProgress] = useState<{
     done: number;
     total: number;
@@ -156,6 +157,7 @@ export function MyContentAddProvider({
     setPageTitle("");
     setUploadFile(null);
     setBulkFiles([]);
+    setUploadRejectedCount(0);
     setBulkProgress(null);
     setPageLink("");
     setAddMode("file");
@@ -177,7 +179,7 @@ export function MyContentAddProvider({
       setAddMode(next.pageMode);
     }
     if (next.bulkFiles?.length) {
-      setAddMode("bulk");
+      setAddMode("file");
       setBulkFiles(next.bulkFiles);
     }
     setTarget({
@@ -309,7 +311,7 @@ export function MyContentAddProvider({
 
   const handleAddPage = async (e: FormEvent) => {
     e.preventDefault();
-    if (addMode === "bulk") {
+    if (addMode === "bulk" || (addMode === "file" && bulkFiles.length > 0)) {
       if (bulkFiles.length === 0) return;
       if (!requireOnline("Import folders")) return;
       const files = [...bulkFiles];
@@ -466,10 +468,19 @@ export function MyContentAddProvider({
           onNotebookDescChange={setNotebookDesc}
           onTopicTitleChange={setTopicTitle}
           onPageTitleChange={setPageTitle}
-          onAddModeChange={setAddMode}
+          onAddModeChange={(mode) => {
+            setAddMode(mode);
+            if (mode !== "file" && mode !== "bulk") {
+              setUploadFile(null);
+              setBulkFiles([]);
+              setUploadRejectedCount(0);
+            }
+          }}
           onPageLinkChange={setPageLink}
           onUploadFileChange={setUploadFile}
           onBulkFilesChange={setBulkFiles}
+          uploadRejectedCount={uploadRejectedCount}
+          onUploadRejectedCountChange={setUploadRejectedCount}
           sketchTemplate={sketchTemplate}
           sketchBg={sketchBg}
           onSketchTemplateChange={setSketchTemplate}
