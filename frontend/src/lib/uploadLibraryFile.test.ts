@@ -10,16 +10,6 @@ vi.mock("@/lib/seedPdfByteCache", () => ({
   seedPdfByteCache: vi.fn(async () => undefined),
 }));
 
-vi.mock("@/lib/pdfCompressDecision", () => ({
-  decidePdfCompress: () => ({ attempt: false, clientPacked: false }),
-  shouldAttemptPdfCompress: async () => false,
-}));
-
-vi.mock("@/lib/compressUploadFile", () => ({
-  compressUploadFile: async (f: File) => f,
-  shouldCompressUpload: () => false,
-}));
-
 const putPendingUpload = vi.fn(async (..._args: unknown[]) => undefined);
 const scheduleFlushPendingUploads = vi.fn((..._args: unknown[]) => undefined);
 

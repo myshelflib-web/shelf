@@ -1,8 +1,3 @@
-import { compressUploadFile, shouldCompressUpload } from "@/lib/compressUploadFile";
-import {
-  decidePdfCompress,
-  shouldAttemptPdfCompress,
-} from "@/lib/pdfCompressDecision";
 import {
   contentTypeFromUploadFile,
   earlyHtmlForUploadFile,
@@ -73,37 +68,12 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function prepareUploadFile(
-  file: File,
-  onProgress?: UploadProgressHandler
-): Promise<{ toUpload: File; clientPacked: boolean }> {
-  if (isPdfFile(file)) {
-    const decision = decidePdfCompress(file);
-    const attempt = decision.attempt && (await shouldAttemptPdfCompress(file));
-    if (attempt) {
-      onProgress?.({
-        loaded: 0,
-        total: file.size,
-        percent: 0,
-        phase: "compressing",
-      });
-      const toUpload = await compressUploadFile(file);
-      return { toUpload, clientPacked: true };
-    }
-    return { toUpload: file, clientPacked: decision.clientPacked };
-  }
-
-  const clientPacked = shouldCompressUpload(file);
-  if (clientPacked) {
-    onProgress?.({
-      loaded: 0,
-      total: file.size,
-      percent: 0,
-      phase: "compressing",
-    });
-  }
-  const toUpload = await compressUploadFile(file);
-  return { toUpload, clientPacked };
+/**
+ * Library uploads skip browser packing — S3 receives the original bytes and the
+ * API re-packs in the background after complete (including IndexedDB flushes).
+ */
+function prepareUploadFile(file: File): { toUpload: File; clientPacked: boolean } {
+  return { toUpload: file, clientPacked: false };
 }
 
 async function completeUploadWithRetry<T>(
@@ -236,7 +206,7 @@ export async function uploadLibraryFile(opts: {
     deletePage,
     onDraftAbandoned,
   } = opts;
-  const { toUpload, clientPacked } = await prepareUploadFile(file, onProgress);
+  const { toUpload, clientPacked } = prepareUploadFile(file);
   const contentType = contentTypeFromUploadFile(toUpload);
 
   const init = await request<{

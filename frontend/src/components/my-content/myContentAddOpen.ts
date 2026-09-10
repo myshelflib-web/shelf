@@ -3,8 +3,6 @@ import { emitOpenPage } from "@/lib/contentEvents";
 import { setOptimisticOpenSeed } from "@/lib/optimisticOpenSeed";
 import { isReaderHref } from "@/lib/softNavigate";
 import { scopeFromHref } from "@/components/my-content/reader/types";
-import { shouldCompressUpload } from "@/lib/compressUploadFile";
-import { decidePdfCompress } from "@/lib/pdfCompressDecision";
 import type { UploadProgress } from "@/lib/api";
 import type { AddPageOpenSeed } from "./myContentAddPageSubmit";
 
@@ -41,23 +39,13 @@ export function openCreatedLibraryPage(
   router.push(href);
 }
 
+/** Library uploads no longer pack in the browser — start in uploading phase. */
 export function initialUploadProgress(file: File): UploadProgress {
-  const name = file.name.toLowerCase();
-  const isPdf =
-    name.endsWith(".pdf") ||
-    (file.type || "").toLowerCase() === "application/pdf";
-  const phase = isPdf
-    ? decidePdfCompress(file).attempt
-      ? "compressing"
-      : "uploading"
-    : shouldCompressUpload(file)
-      ? "compressing"
-      : "uploading";
   return {
     loaded: 0,
     total: file.size,
     percent: 0,
-    phase,
+    phase: "uploading",
   };
 }
 

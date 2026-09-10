@@ -6,7 +6,7 @@ import {
   headObjectMeta,
 } from "../services/s3.js";
 import { validateUploadBuffer } from "../utils/contentFiles.js";
-import { recompressS3ObjectUnlessClientPacked } from "../utils/s3ObjectCompress.js";
+import { scheduleBackgroundS3Recompress } from "../utils/s3ObjectCompress.js";
 import type { DirectUploadClaims } from "../utils/directUpload.js";
 import { scheduleIndexPage } from "../services/libraryIndex.js";
 
@@ -101,10 +101,9 @@ export type FinalizePdfResult =
   | { ok: false; status: number; error: string };
 
 /**
- * Verify S3 object, optional recompress, charge (once), publish.
- * When `claims.pageId` is set, updates the draft from init; otherwise creates.
- * Publish uses a conditional DRAFT→PUBLISHED update so concurrent completes
- * cannot double-charge.
+ * Verify S3 object, publish immediately, charge for uploaded size.
+ * Lossless re-pack runs in the background after S3 has the bytes (including
+ * when the client flushed a deferred IndexedDB upload).
  */
 export async function finalizePdfDirectUpload(input: {
   claims: DirectUploadClaims;
@@ -145,12 +144,8 @@ export async function finalizePdfDirectUpload(input: {
     return failAndCleanup(400, invalid);
   }
 
-  const storedBytes = await recompressS3ObjectUnlessClientPacked(
-    claims.key,
-    "application/pdf",
-    meta.contentLength,
-    claims.clientPacked
-  );
+  // Publish on the raw PUT size — do not GetObject/recompress on the request path.
+  const storedBytes = meta.contentLength;
 
   if (claims.pageId) {
     const existing = await prisma.userTopic.findFirst({
@@ -236,6 +231,14 @@ export async function finalizePdfDirectUpload(input: {
       where: { id: existing.id },
       select: pdfUploadPageSelect,
     });
+    scheduleBackgroundS3Recompress({
+      key: claims.key,
+      contentType: "application/pdf",
+      currentLength: storedBytes,
+      pageId: page.id,
+      userId: input.userId,
+      clientPacked: claims.clientPacked,
+    });
     scheduleIndexPage(page.id);
     return {
       ok: true,
@@ -262,6 +265,14 @@ export async function finalizePdfDirectUpload(input: {
       order,
     },
     select: pdfUploadPageSelect,
+  });
+  scheduleBackgroundS3Recompress({
+    key: claims.key,
+    contentType: "application/pdf",
+    currentLength: storedBytes,
+    pageId: page.id,
+    userId: input.userId,
+    clientPacked: claims.clientPacked,
   });
   scheduleIndexPage(page.id);
   return {

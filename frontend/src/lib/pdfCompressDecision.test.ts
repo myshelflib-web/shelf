@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   COMPRESS_PDF_MAX_ATTEMPT_BYTES,
+  COMPRESS_PDF_MIN_ATTEMPT_BYTES,
   decidePdfCompress,
   pdfLooksAlreadyPacked,
 } from "./pdfCompressDecision";
-import { COMPRESS_MIN_FILE_BYTES } from "./compressUploadShared";
 
 describe("pdfLooksAlreadyPacked", () => {
   it("detects /ObjStm in the header probe window", () => {
@@ -19,11 +19,21 @@ describe("pdfLooksAlreadyPacked", () => {
 });
 
 describe("decidePdfCompress", () => {
-  it("skips tiny and oversized PDFs but marks clientPacked", () => {
+  it("skips tiny, sub-1MB, and oversized PDFs but marks clientPacked", () => {
     const tiny = new File([new Uint8Array(1024)], "a.pdf", {
       type: "application/pdf",
     });
     expect(decidePdfCompress(tiny)).toEqual({
+      attempt: false,
+      clientPacked: true,
+    });
+
+    const resume = new File(
+      [new Uint8Array(COMPRESS_PDF_MIN_ATTEMPT_BYTES - 1)],
+      "resume.pdf",
+      { type: "application/pdf" }
+    );
+    expect(decidePdfCompress(resume)).toEqual({
       attempt: false,
       clientPacked: true,
     });
@@ -41,7 +51,7 @@ describe("decidePdfCompress", () => {
 
   it("attempts mid-size PDFs", () => {
     const mid = new File(
-      [new Uint8Array(COMPRESS_MIN_FILE_BYTES + 64)],
+      [new Uint8Array(COMPRESS_PDF_MIN_ATTEMPT_BYTES + 64)],
       "c.pdf",
       { type: "application/pdf" }
     );

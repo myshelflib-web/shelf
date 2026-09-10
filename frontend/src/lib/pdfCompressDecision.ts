@@ -1,7 +1,14 @@
-import { COMPRESS_MIN_FILE_BYTES } from "./compressUploadShared";
+/**
+ * Skip client pdf-lib below this. Small PDFs (resumes, one-pagers) gain almost
+ * nothing, and pdf-lib rewrite can hang / OOM-crash the tab on some files.
+ */
+export const COMPRESS_PDF_MIN_ATTEMPT_BYTES = 1024 * 1024;
 
 /** Skip client pdf-lib pack above this — too slow for little gain on large files. */
 export const COMPRESS_PDF_MAX_ATTEMPT_BYTES = 12 * 1024 * 1024;
+
+/** Abort packing if pdf-lib has not finished within this window. */
+export const COMPRESS_PDF_TIMEOUT_MS = 5_000;
 
 const ALREADY_PACKED_PROBE = 64 * 1024;
 
@@ -40,7 +47,7 @@ export type PdfCompressDecision = {
 };
 
 export function decidePdfCompress(file: File): PdfCompressDecision {
-  if (file.size < COMPRESS_MIN_FILE_BYTES) {
+  if (file.size < COMPRESS_PDF_MIN_ATTEMPT_BYTES) {
     return { attempt: false, clientPacked: true };
   }
   if (file.size > COMPRESS_PDF_MAX_ATTEMPT_BYTES) {

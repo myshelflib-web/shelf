@@ -18,7 +18,7 @@ export type DirectUploadClaims = {
   userSubjectId: string | null;
   userTopicGroupId: string | null;
   folderId: string | null;
-  /** Client already lossless-packed; skip server GetObject recompress. */
+  /** Client already lossless-packed; skip server background recompress. */
   clientPacked?: boolean;
   /**
    * Library page created at init so the client can open while PUT + complete

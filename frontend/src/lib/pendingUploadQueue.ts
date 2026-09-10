@@ -10,6 +10,10 @@ const DB_NAME = "shelf-pending-uploads";
 const DB_VERSION = 1;
 const STORE = "uploads";
 
+/** Cap deferred upload copies so failed syncs cannot fill IndexedDB / RAM. */
+export const MAX_PENDING_UPLOADS = 3;
+export const MAX_PENDING_UPLOAD_BYTES = 40 * 1024 * 1024;
+
 export type PendingUploadEntry = {
   pageId: string;
   userId: string;
@@ -86,6 +90,32 @@ export async function putPendingUpload(
 ): Promise<void> {
   try {
     await withStore("readwrite", async (store) => {
+      const all = (await idbReq<PendingUploadEntry[]>(store.getAll())) ?? [];
+      const others = all.filter((r) => r.pageId !== entry.pageId);
+      others.sort((a, b) => a.createdAt - b.createdAt);
+
+      // One oversized file: keep only it so retries still work.
+      if (entry.data.byteLength > MAX_PENDING_UPLOAD_BYTES) {
+        for (const r of others) {
+          store.delete(r.pageId);
+        }
+        await idbReq(store.put(entry));
+        return;
+      }
+
+      let total = entry.data.byteLength;
+      for (const r of others) total += r.data?.byteLength ?? 0;
+
+      while (
+        (others.length >= MAX_PENDING_UPLOADS ||
+          total > MAX_PENDING_UPLOAD_BYTES) &&
+        others.length > 0
+      ) {
+        const evict = others.shift()!;
+        total -= evict.data?.byteLength ?? 0;
+        store.delete(evict.pageId);
+      }
+
       await idbReq(store.put(entry));
     });
   } catch {
