@@ -17,9 +17,11 @@ export function ItemSyncBadge({
     <span
       className={clsx(
         "pointer-events-none absolute -bottom-0.5 -right-0.5 flex h-[11px] w-[11px] items-center justify-center rounded-full border bg-[var(--bg-elevated)] shadow-sm",
-        status === "synced" && "border-emerald-600/70 text-emerald-500",
-        status === "pending" && "border-amber-500/70 text-amber-400",
-        status === "error" && "border-red-500/70 text-red-400",
+        status === "synced" &&
+          "border-[color-mix(in_srgb,var(--accent)_45%,var(--border))] text-[var(--accent)]",
+        status === "pending" &&
+          "border-[var(--border)] text-[var(--text-muted)]",
+        status === "error" && "border-red-500/35 text-red-400",
         className
       )}
       title={

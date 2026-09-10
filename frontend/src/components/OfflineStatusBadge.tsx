@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, Cloud, CloudOff, Loader2, Upload } from "lucide-react";
+import { Cloud, CloudOff, Loader2, Upload } from "lucide-react";
 import { countAllPending } from "@/lib/offline/outbox";
 import {
   OFFLINE_STATUS_EVENT,
@@ -189,7 +189,7 @@ export function OfflineStatusBadge() {
     view.icon === "error"
       ? "border-red-500/35 text-red-400"
       : view.icon === "ok"
-        ? "border-emerald-500/25 text-emerald-400/90"
+        ? "border-[color-mix(in_srgb,var(--accent)_28%,var(--border))] text-[var(--accent)]"
         : "border-[var(--border)] text-[var(--text-secondary)]";
 
   return (
@@ -201,16 +201,13 @@ export function OfflineStatusBadge() {
     >
       <Icon
         className={`h-3.5 w-3.5 shrink-0${
-          view.icon === "ok"
-            ? " text-emerald-400"
+          view.icon === "ok" || view.icon === "error"
+            ? ""
             : " text-[var(--text-muted)]"
         }${spinning ? " animate-spin" : ""}`}
         aria-hidden
       />
       {view.label}
-      {view.icon === "ok" ? (
-        <Check className="h-3 w-3 shrink-0 text-emerald-400" aria-hidden />
-      ) : null}
     </span>
   );
 }
