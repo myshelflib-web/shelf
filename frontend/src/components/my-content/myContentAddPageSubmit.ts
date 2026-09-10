@@ -116,6 +116,7 @@ export async function submitAddPage(input: {
   openSeed?: AddPageOpenSeed;
   openedEarly?: boolean;
   deferred?: boolean;
+  message?: string;
 }> {
   const { notebook, topic } = input;
   let page: UserPageSummary;
@@ -173,7 +174,14 @@ export async function submitAddPage(input: {
     if (!deferred) {
       emitPageCreated(page, href, notebook, topic);
     }
-    return { page, href, openSeed, openedEarly, deferred };
+    return {
+      page,
+      href,
+      openSeed,
+      openedEarly,
+      deferred,
+      message: uploadResult.message,
+    };
   } else if (
     input.addMode === "youtube" ||
     (input.addMode === "link" && isYoutubeUrl(input.pageLink))

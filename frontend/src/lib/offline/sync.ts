@@ -22,12 +22,13 @@ import { dispatchSyncStatus } from "@/lib/syncStatus";
 let flushAttempts = 0;
 
 function soonestRetryAt(
-  entries: { nextAttemptAt: number; attempts: number }[]
+  entries: { nextAttemptAt: number; attempts: number; lastError?: string }[]
 ): number | null {
   const active = entries.filter(
     (e) =>
       !isSyncRetryExhausted(e.attempts) &&
-      e.nextAttemptAt < SYNC_RETRY_EXHAUSTED_AT
+      e.nextAttemptAt < SYNC_RETRY_EXHAUSTED_AT &&
+      !(e.lastError && /CORS|Cannot reach storage/i.test(e.lastError))
   );
   if (active.length === 0) return null;
   return Math.min(...active.map((e) => e.nextAttemptAt));
@@ -35,7 +36,6 @@ function soonestRetryAt(
 
 export async function flushOfflineSync(): Promise<number> {
   if (!isOnline()) return 0;
-  dispatchSyncStatus({ state: "saving", label: "Syncing…" });
   try {
     const synced =
       (await flushOfflineTasks()) +
@@ -59,7 +59,7 @@ export async function flushOfflineSync(): Promise<number> {
       mutationRetryAt == null;
 
     if (uploadRetryAt != null) {
-      dispatchSyncStatus({ state: "uploading", label: "Upload pending…" });
+      dispatchSyncStatus({ state: "error", label: "Not synced" });
       // Respect entry backoff — never schedule an immediate re-flush (delay 0)
       // after a failed upload, which caused a tight retry loop on CORS errors.
       scheduleFlushOfflineSync(Math.max(250, uploadRetryAt - Date.now()));

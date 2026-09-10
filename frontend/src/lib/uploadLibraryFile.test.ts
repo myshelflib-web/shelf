@@ -99,7 +99,8 @@ describe("uploadLibraryFile deferred on PUT failure", () => {
     expect(result.deferred).toBe(true);
     expect(result.page.id).toBe("page-1");
     expect(putPendingUpload).toHaveBeenCalledOnce();
-    expect(scheduleFlushPendingUploads).toHaveBeenCalled();
+    // CORS cannot be fixed by retry — do not schedule background flushes.
+    expect(scheduleFlushPendingUploads).not.toHaveBeenCalled();
     expect(deletePage).not.toHaveBeenCalled();
     expect(onDraftAbandoned).not.toHaveBeenCalled();
   });

@@ -1,8 +1,9 @@
 "use client";
 
-import { Loader2, Upload, AlertCircle, Cloud } from "lucide-react";
+import { Loader2, Upload, AlertCircle, Cloud, X } from "lucide-react";
 import type { SyncActivityItem } from "@/lib/syncActivityStore";
 import { activityStatusLabel } from "@/lib/syncActivityStore";
+import { dismissSyncActivity } from "@/lib/dismissSyncActivity";
 
 function RowIcon({ item }: { item: SyncActivityItem }) {
   if (item.status === "error") {
@@ -12,7 +13,11 @@ function RowIcon({ item }: { item: SyncActivityItem }) {
     return <Cloud className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />;
   }
   if (item.kind === "upload" || item.kind === "retry") {
-    if (item.status === "uploading" || item.status === "preparing" || item.status === "finalizing") {
+    if (
+      item.status === "uploading" ||
+      item.status === "preparing" ||
+      item.status === "finalizing"
+    ) {
       return (
         <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--text-muted)]" />
       );
@@ -65,6 +70,8 @@ export function SyncActivityPanel({
                 item.status === "uploading" ||
                 item.status === "preparing" ||
                 item.status === "finalizing";
+              const canDismiss =
+                item.status === "error" || item.status === "pending";
               return (
                 <li
                   key={item.id}
@@ -90,6 +97,19 @@ export function SyncActivityPanel({
                       <ProgressBar percent={item.percent} />
                     ) : null}
                   </span>
+                  {canDismiss ? (
+                    <button
+                      type="button"
+                      className="mt-0.5 rounded p-0.5 text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-secondary)]"
+                      title="Dismiss"
+                      aria-label={`Dismiss ${item.title}`}
+                      onClick={() => {
+                        void dismissSyncActivity(item.id);
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  ) : null}
                 </li>
               );
             })}

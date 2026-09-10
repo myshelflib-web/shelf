@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MAX_SYNC_RETRY_ATTEMPTS,
+  isStorageCorsOrUnreachableError,
   isSyncRetryExhausted,
   syncBackoffMs,
   syncRetryExhaustedMessage,
@@ -23,5 +24,16 @@ describe("syncBackoff", () => {
   it("describes exhaustion", () => {
     expect(syncRetryExhaustedMessage("upload")).toContain("10");
     expect(syncRetryExhaustedMessage("sync")).toContain("10");
+  });
+
+  it("detects CORS / unreachable storage", () => {
+    expect(
+      isStorageCorsOrUnreachableError({ status: 0, message: "fail" })
+    ).toBe(true);
+    expect(
+      isStorageCorsOrUnreachableError(new Error("Cannot reach storage. CORS"))
+    ).toBe(true);
+    expect(isStorageCorsOrUnreachableError(new Error("timeout"))).toBe(false);
+    expect(isStorageCorsOrUnreachableError({ status: 500 })).toBe(false);
   });
 });

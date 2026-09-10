@@ -39,17 +39,20 @@ export function reportSyncUploadDone(activityId?: string | null): void {
   dispatchSyncStatus({ state: "synced", label: "Synced" });
 }
 
-/** Local bytes kept; background queue will retry PUT/complete. */
+/** Local bytes kept; background queue will retry PUT/complete (unless CORS). */
 export function reportSyncUploadDeferred(
   activityId?: string | null,
-  _detail?: string
+  detail?: string
 ): void {
   const id = activityId ?? getActiveUploadActivityId();
   // Live row is replaced by the durable queued-upload:* entry.
   if (id) removeSyncActivity(id);
+  const cors =
+    Boolean(detail) &&
+    /CORS|Cannot reach storage/i.test(detail!);
   dispatchSyncStatus({
-    state: "uploading",
-    label: "Upload pending…",
+    state: "error",
+    label: cors ? "Not synced" : "Upload pending…",
   });
 }
 

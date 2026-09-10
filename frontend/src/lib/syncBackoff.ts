@@ -20,3 +20,28 @@ export function syncRetryExhaustedMessage(kind: "upload" | "sync"): string {
     ? `Upload stopped after ${MAX_SYNC_RETRY_ATTEMPTS} tries`
     : `Sync stopped after ${MAX_SYNC_RETRY_ATTEMPTS} tries`;
 }
+
+/**
+ * Browser XHR/fetch failures against R2/MinIO (often CORS) surface as status 0.
+ * Retrying cannot fix CORS — park locally and stop the auto-flush loop.
+ */
+export const STORAGE_CORS_STOP_MESSAGE =
+  "Storage CORS blocked this site — fix the R2 bucket CORS origin, then re-upload.";
+
+export function isStorageCorsOrUnreachableError(err: unknown): boolean {
+  if (!err) return false;
+  let status: number | null = null;
+  if (
+    typeof err === "object" &&
+    err !== null &&
+    "status" in err &&
+    typeof (err as { status: unknown }).status === "number"
+  ) {
+    status = (err as { status: number }).status;
+  }
+  if (status === 0) return true;
+  const message = err instanceof Error ? err.message : String(err);
+  return /CORS|Cannot reach storage|Failed to fetch|NetworkError|ERR_FAILED/i.test(
+    message
+  );
+}

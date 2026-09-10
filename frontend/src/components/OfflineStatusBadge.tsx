@@ -36,7 +36,8 @@ function viewFromActivity(
   online: boolean,
   pending: number,
   activity: SyncStatusDetail | null,
-  stickyError: boolean
+  stickyError: boolean,
+  errorItems: number
 ): BadgeView {
   if (!online) {
     return {
@@ -49,7 +50,19 @@ function viewFromActivity(
     };
   }
 
-  if (activity?.state === "uploading") {
+  const parkedOnly =
+    pending > 0 && errorItems > 0 && errorItems >= pending;
+  const showFailure =
+    activity?.state === "error" ||
+    stickyError ||
+    parkedOnly ||
+    (pending > 0 && errorItems > 0 && activity?.state !== "uploading");
+
+  if (
+    activity?.state === "uploading" &&
+    !parkedOnly &&
+    errorItems < pending
+  ) {
     const pct =
       activity.percent != null && activity.percent > 0
         ? ` ${activity.percent}%`
@@ -61,7 +74,7 @@ function viewFromActivity(
     };
   }
 
-  if (activity?.state === "saving") {
+  if (activity?.state === "saving" && !showFailure) {
     return {
       label: activity.label ?? "Syncing…",
       title: "Saving changes — click for details",
@@ -69,13 +82,18 @@ function viewFromActivity(
     };
   }
 
-  if (activity?.state === "error" || (stickyError && pending > 0)) {
+  if (showFailure && pending > 0) {
     return {
-      label:
-        activity?.state === "error"
-          ? activity.label ?? "Not synced"
-          : "Not synced",
-      title: "Changes will keep retrying — click for details",
+      label: pending > 1 ? `Not synced · ${pending}` : "Not synced",
+      title: "Some changes could not sync — click for details",
+      icon: "error",
+    };
+  }
+
+  if (activity?.state === "error") {
+    return {
+      label: activity.label ?? "Not synced",
+      title: "Some changes could not sync — click for details",
       icon: "error",
     };
   }
@@ -194,8 +212,16 @@ export function OfflineStatusBadge() {
         return;
       }
       if (detail.state === "synced") {
-        setStickyError(false);
-        clearLater(2_400);
+        void countAllPending(user?.id).then((n) => {
+          if (n === 0) {
+            setStickyError(false);
+            clearLater(2_400);
+          } else {
+            // Pending parked failures remain — keep Not synced, don't flash Synced.
+            setStickyError(true);
+            setActivity({ state: "error", label: "Not synced" });
+          }
+        });
       }
       if (detail.state === "uploading" || detail.state === "saving") {
         if (clearTimer.current) clearTimeout(clearTimer.current);
@@ -227,7 +253,14 @@ export function OfflineStatusBadge() {
 
   if (!user) return null;
 
-  const view = viewFromActivity(online, pending, activity, stickyError);
+  const errorItems = items.filter((a) => a.status === "error").length;
+  const view = viewFromActivity(
+    online,
+    pending,
+    activity,
+    stickyError,
+    errorItems
+  );
   const liveCount = items.length || listSyncActivities().filter((a) => a.status !== "done").length;
 
   const Icon =

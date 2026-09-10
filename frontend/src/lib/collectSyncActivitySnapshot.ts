@@ -1,6 +1,7 @@
 import { getStoredUserId } from "@/lib/accountLocalState";
 import { listPendingMutations } from "@/lib/pendingMutationQueue";
 import { listPendingUploads } from "@/lib/pendingUploadQueue";
+import { MAX_SYNC_RETRY_ATTEMPTS, SYNC_RETRY_EXHAUSTED_AT } from "@/lib/syncBackoff";
 import {
   listSyncActivities,
   upsertQueuedMutationActivity,
@@ -31,11 +32,15 @@ export async function collectSyncActivitySnapshot(): Promise<SyncActivityItem[]>
       listPendingMutations(userId),
     ]);
     for (const u of uploads) {
+      const parked =
+        Boolean(u.lastError) ||
+        u.nextAttemptAt >= SYNC_RETRY_EXHAUSTED_AT ||
+        u.attempts >= MAX_SYNC_RETRY_ATTEMPTS;
       upsertQueuedUploadActivity({
         pageId: u.pageId,
         title: u.title || u.filename,
         detail: u.lastError ? u.lastError : "Waiting to upload…",
-        error: Boolean(u.lastError),
+        error: parked,
       });
     }
     for (const m of mutations) {

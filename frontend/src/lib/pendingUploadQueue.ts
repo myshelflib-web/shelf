@@ -134,12 +134,19 @@ export async function listDuePendingUploads(
   now = Date.now()
 ): Promise<PendingUploadEntry[]> {
   const all = await listPendingUploads(userId);
-  return all.filter(
-    (e) =>
-      e.nextAttemptAt <= now &&
-      e.nextAttemptAt < Number.MAX_SAFE_INTEGER &&
-      !isSyncRetryExhausted(e.attempts)
-  );
+  return all.filter((e) => {
+    if (isSyncRetryExhausted(e.attempts)) return false;
+    if (e.nextAttemptAt > now) return false;
+    if (e.nextAttemptAt >= Number.MAX_SAFE_INTEGER) return false;
+    // Already known CORS / unreachable — never auto-retry.
+    if (
+      e.lastError &&
+      /CORS|Cannot reach storage/i.test(e.lastError)
+    ) {
+      return false;
+    }
+    return true;
+  });
 }
 
 export async function collectPendingUploadPageIds(

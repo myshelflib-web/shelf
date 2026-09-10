@@ -16,6 +16,14 @@ import {
 import { scheduleFlushPendingUploads } from "@/lib/flushPendingUploads";
 import { markEntitiesFailed } from "@/lib/entitySyncState";
 import { upsertQueuedUploadActivity } from "@/lib/syncActivityStore";
+import {
+  MAX_SYNC_RETRY_ATTEMPTS,
+  STORAGE_CORS_STOP_MESSAGE,
+  SYNC_RETRY_EXHAUSTED_AT,
+  isStorageCorsOrUnreachableError,
+} from "@/lib/syncBackoff";
+import { dispatchOfflineSync } from "@/lib/offline/network";
+import { dispatchSyncStatus } from "@/lib/syncStatus";
 import type { UserContentType, UserPageSummary } from "@/types";
 
 export type UploadProgress = {
@@ -135,6 +143,8 @@ async function putWithBackoff(
       return;
     } catch (err) {
       lastErr = err;
+      // CORS / unreachable storage will not heal with another immediate PUT.
+      if (isStorageCorsOrUnreachableError(err)) throw err;
       if (i < attempts - 1) {
         await sleep(pendingUploadBackoffMs(i));
       }
@@ -154,38 +164,50 @@ async function enqueueDeferredUpload(input: {
   pdfCacheVersion?: string;
   clientPacked: boolean;
   putDone: boolean;
+  cause?: unknown;
   lastError?: string;
 }): Promise<void> {
   const userId = getStoredUserId();
   if (!userId) return;
   const data = await input.toUpload.arrayBuffer();
-    await putPendingUpload({
-      pageId: input.pageId,
-      userId,
-      token: input.token,
-      uploadUrl: input.uploadUrl,
-      contentTypeHeader: input.contentTypeHeader,
-      filename: input.toUpload.name,
-      title: input.title,
-      contentType: input.contentType,
-      pdfCacheVersion: input.pdfCacheVersion,
-      clientPacked: input.clientPacked,
-      putDone: input.putDone,
-      data,
-      createdAt: Date.now(),
-      attempts: 0,
-      nextAttemptAt: Date.now() + pendingUploadBackoffMs(0),
-      lastError: input.lastError,
-    });
-    markEntitiesFailed([`page:${input.pageId}`]);
-    upsertQueuedUploadActivity({
-      pageId: input.pageId,
-      title: input.title,
-      detail: input.lastError ?? "Will retry…",
-      error: Boolean(input.lastError),
-    });
+  const cors = isStorageCorsOrUnreachableError(input.cause);
+  const lastError = cors
+    ? STORAGE_CORS_STOP_MESSAGE
+    : input.lastError ?? "Upload failed";
+  await putPendingUpload({
+    pageId: input.pageId,
+    userId,
+    token: input.token,
+    uploadUrl: input.uploadUrl,
+    contentTypeHeader: input.contentTypeHeader,
+    filename: input.toUpload.name,
+    title: input.title,
+    contentType: input.contentType,
+    pdfCacheVersion: input.pdfCacheVersion,
+    clientPacked: input.clientPacked,
+    putDone: input.putDone,
+    data,
+    createdAt: Date.now(),
+    attempts: cors ? MAX_SYNC_RETRY_ATTEMPTS : 0,
+    nextAttemptAt: cors
+      ? SYNC_RETRY_EXHAUSTED_AT
+      : Date.now() + pendingUploadBackoffMs(0),
+    lastError,
+  });
+  markEntitiesFailed([`page:${input.pageId}`]);
+  upsertQueuedUploadActivity({
+    pageId: input.pageId,
+    title: input.title,
+    detail: lastError,
+    error: true,
+  });
+  dispatchSyncStatus({ state: "error", label: "Not synced" });
+  dispatchOfflineSync();
+  // CORS cannot be fixed by retry — do not schedule background flushes.
+  if (!cors) {
     scheduleFlushPendingUploads(pendingUploadBackoffMs(0));
   }
+}
 
 /**
  * Direct-to-S3 library upload. Opens the reader from local cache as soon as
@@ -280,7 +302,12 @@ export async function uploadLibraryFile(opts: {
     err: unknown
   ): Promise<UploadLibraryResult | null> => {
     if (!earlyPage?.id) return null;
-    const message = err instanceof Error ? err.message : "Upload failed";
+    const cors = isStorageCorsOrUnreachableError(err);
+    const message = cors
+      ? STORAGE_CORS_STOP_MESSAGE
+      : err instanceof Error
+        ? err.message
+        : "Upload failed";
     try {
       await enqueueDeferredUpload({
         pageId: earlyPage.id,
@@ -293,6 +320,7 @@ export async function uploadLibraryFile(opts: {
         pdfCacheVersion: earlyVersion,
         clientPacked,
         putDone,
+        cause: err,
         lastError: message,
       });
     } catch {
@@ -302,8 +330,9 @@ export async function uploadLibraryFile(opts: {
       page: earlyPage,
       pdfCacheVersion: earlyVersion,
       deferred: true,
-      message:
-        "Saved on this device. Upload will retry automatically when storage is reachable.",
+      message: cors
+        ? STORAGE_CORS_STOP_MESSAGE
+        : "Saved on this device. Upload will retry automatically when storage is reachable.",
     };
   };
 

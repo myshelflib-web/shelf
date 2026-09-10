@@ -19,6 +19,8 @@ import {
 import {
   MAX_SYNC_RETRY_ATTEMPTS,
   SYNC_RETRY_EXHAUSTED_AT,
+  STORAGE_CORS_STOP_MESSAGE,
+  isStorageCorsOrUnreachableError,
   isSyncRetryExhausted,
   syncRetryExhaustedMessage,
 } from "@/lib/syncBackoff";
@@ -33,7 +35,8 @@ function soonestUploadRetryAt(
   const active = entries.filter(
     (e) =>
       !isSyncRetryExhausted(e.attempts) &&
-      e.nextAttemptAt < SYNC_RETRY_EXHAUSTED_AT
+      e.nextAttemptAt < SYNC_RETRY_EXHAUSTED_AT &&
+      !(e.lastError && /CORS|Cannot reach storage/i.test(e.lastError))
   );
   if (active.length === 0) return null;
   return Math.min(...active.map((e) => e.nextAttemptAt));
@@ -71,21 +74,28 @@ async function bumpBackoff(
   entry: PendingUploadEntry,
   err: unknown
 ): Promise<number> {
-  const attempts = entry.attempts + 1;
-  const message = err instanceof Error ? err.message : "Upload retry failed";
+  const cors = isStorageCorsOrUnreachableError(err);
+  const attempts = cors ? MAX_SYNC_RETRY_ATTEMPTS : entry.attempts + 1;
+  const message = cors
+    ? STORAGE_CORS_STOP_MESSAGE
+    : err instanceof Error
+      ? err.message
+      : "Upload retry failed";
   markEntitiesFailed([`page:${entry.pageId}`]);
 
-  if (isSyncRetryExhausted(attempts)) {
+  if (cors || isSyncRetryExhausted(attempts)) {
     await putPendingUpload({
       ...entry,
-      attempts,
+      attempts: Math.max(attempts, MAX_SYNC_RETRY_ATTEMPTS),
       nextAttemptAt: SYNC_RETRY_EXHAUSTED_AT,
-      lastError: syncRetryExhaustedMessage("upload"),
+      lastError: cors ? STORAGE_CORS_STOP_MESSAGE : syncRetryExhaustedMessage("upload"),
     });
     upsertQueuedUploadActivity({
       pageId: entry.pageId,
       title: entry.title || entry.filename,
-      detail: syncRetryExhaustedMessage("upload"),
+      detail: cors
+        ? STORAGE_CORS_STOP_MESSAGE
+        : syncRetryExhaustedMessage("upload"),
       error: true,
     });
     dispatchSyncStatus({
@@ -111,7 +121,7 @@ async function bumpBackoff(
   });
   dispatchSyncStatus({
     state: "error",
-    label: "Upload retrying…",
+    label: "Not synced",
   });
   dispatchOfflineSync();
   return delayMs;
@@ -253,8 +263,8 @@ export async function flushPendingUploads(): Promise<number> {
       const nextAt = soonestUploadRetryAt(remaining);
       if (nextAt != null) {
         dispatchSyncStatus({
-          state: "uploading",
-          label: "Upload pending…",
+          state: "error",
+          label: "Not synced",
         });
         const fromQueue = Math.max(250, nextAt - Date.now());
         const delayMs =

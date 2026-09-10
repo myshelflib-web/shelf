@@ -362,7 +362,8 @@ export function MyContentAddProvider({
         setUploadProgress(initialUploadProgress(uploadFile));
         reportSyncFromUploadProgress(initialUploadProgress(uploadFile));
       }
-      const { page, href, openSeed, openedEarly, deferred } = await submitAddPage({
+      const { page, href, openSeed, openedEarly, deferred, message } =
+        await submitAddPage({
         addMode,
         pageTitle,
         pageLink,
@@ -393,7 +394,7 @@ export function MyContentAddProvider({
         });
       }
       if (deferred) {
-        reportSyncUploadDeferred(uploadActivityId);
+        reportSyncUploadDeferred(uploadActivityId, message);
       } else {
         reportSyncUploadDone(uploadActivityId);
       }
