@@ -27,6 +27,7 @@ export function FocusMediaToolbarButtons() {
             : withShortcut("Show Spotify focus audio", "\\")
         }
         aria-label={spotifyOpen ? "Hide Spotify" : "Show Spotify"}
+        data-tour-id="reader-spotify"
         onClick={toggleSpotify}
       >
         <SpotifyToolbarIcon className="block size-4 shrink-0" />

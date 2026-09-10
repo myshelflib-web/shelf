@@ -74,6 +74,18 @@ INTERNAL_SECRET=              # must match staging workers
 OTEL_DEPLOYMENT_ENVIRONMENT=staging
 ```
 
+Staging boot upserts a product-tour test account when `OTEL_DEPLOYMENT_ENVIRONMENT=staging`:
+
+| Email | Password | Purpose |
+|-------|----------|---------|
+| `tour@shelf.local` | `tour-tour-tour` | Replay spotlight tips (Settings → Product tour, or `?tour=1`) |
+
+Override with `TOUR_SEED_EMAIL` / `TOUR_SEED_PASSWORD`, or disable with `SEED_TOUR_USER=false`. To seed without waiting for a deploy:
+
+```bash
+DATABASE_URL="postgresql://…staging…" npm run seed:tour-user --prefix backend
+```
+
 Optional but recommended if using vectors:
 
 ```

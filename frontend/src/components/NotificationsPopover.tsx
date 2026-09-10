@@ -97,6 +97,7 @@ export function NotificationsPopover() {
         aria-label="Notifications"
         aria-expanded={open}
         title="Tasks due soon"
+        data-tour-id="hdr-notifications"
       >
         <Bell className="w-4 h-4" />
         {badge > 0 && (

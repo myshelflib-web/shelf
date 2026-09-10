@@ -26,6 +26,7 @@ export function DashboardStarter() {
             <button
               type="button"
               onClick={() => openAdd({ kind: "page", pageMode: "file" })}
+              data-tour-id="dash-add-material"
               className="rounded-lg bg-[var(--accent)] text-white text-xs font-semibold px-3.5 py-2 hover:opacity-90"
             >
               Add material

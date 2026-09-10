@@ -194,6 +194,7 @@ export function ReaderBottomBar({
               <button
                 type="button"
                 onClick={onScheduleRead}
+                data-tour-id="reader-schedule"
                 className={clsx(
                   pillBtn,
                   scheduled

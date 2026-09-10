@@ -14,6 +14,7 @@ import { ReadingGoalPicker } from "@/components/dashboard/ReadingGoalPicker";
 import { getReadingGoalMinutes } from "@/lib/readingStats";
 import { AffiliateSettingsCard } from "@/components/settings/AffiliateSettingsCard";
 import { TelegramSettingsCard } from "@/components/settings/TelegramSettingsCard";
+import { ProductTourSettingsCard } from "@/components/settings/ProductTourSettingsCard";
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import { StudyGoal } from "@/types";
 
@@ -186,6 +187,7 @@ export default function SettingsPage() {
         </form>
 
         <div className="mt-6 space-y-6">
+          <ProductTourSettingsCard />
           <TelegramSettingsCard />
           <AffiliateSettingsCard />
         </div>

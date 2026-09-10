@@ -3,6 +3,7 @@
 import {
   forwardRef,
   type ButtonHTMLAttributes,
+  type HTMLAttributes,
   type ReactNode,
 } from "react";
 import { clsx } from "clsx";
@@ -48,12 +49,16 @@ export function EditorToolbarShell({
 export function ToolGroup({
   children,
   className,
+  ...rest
 }: {
   children: ReactNode;
   className?: string;
-}) {
+} & HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={clsx("flex items-center gap-1 shrink-0", className)}>
+    <div
+      className={clsx("flex items-center gap-1 shrink-0", className)}
+      {...rest}
+    >
       {children}
     </div>
   );

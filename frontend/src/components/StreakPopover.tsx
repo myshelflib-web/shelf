@@ -68,6 +68,7 @@ export function StreakPopover() {
         className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-full border border-[color-mix(in_srgb,#b8a06a_35%,var(--border))] bg-[color-mix(in_srgb,#b8a06a_14%,var(--bg-elevated))] text-[#c9a066] text-[13px] font-medium tabular-nums"
         aria-expanded={open}
         aria-label={`${stats.streak} day streak`}
+        data-tour-id="hdr-streak"
       >
         <Flame className="w-3.5 h-3.5" fill="currentColor" />
         {stats.streak}

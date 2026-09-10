@@ -168,10 +168,12 @@ export function DocumentChromeActions({
           <Crop className="w-4 h-4" />
         </button>
       )}
-      {showShare && <ShareChromeButton onClick={onShare} />}
-      {showStar && (
-        <StarChromeButton starred={starred} onClick={onToggleStar} />
-      )}
+      <span data-tour-id="reader-star-share" className="inline-flex items-center gap-0.5">
+        {showShare && <ShareChromeButton onClick={onShare} />}
+        {showStar && (
+          <StarChromeButton starred={starred} onClick={onToggleStar} />
+        )}
+      </span>
       {showDelete && (
         <button
           type="button"

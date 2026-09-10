@@ -338,6 +338,7 @@ export function StudyCalendar({
           type="button"
           onClick={() => setCursor(startOfLocalDay(new Date()))}
           className="h-[34px] px-2.5 rounded-lg border border-[var(--border)] text-[11.5px] font-semibold"
+          data-tour-id="planner-today"
         >
           Today
         </button>
@@ -351,7 +352,10 @@ export function StudyCalendar({
           </span>
         )}
         <div className="flex-1" />
-        <div className="flex gap-1 p-0.5 rounded-lg bg-[var(--bg-primary)]">
+        <div
+          className="flex gap-1 p-0.5 rounded-lg bg-[var(--bg-primary)]"
+          data-tour-id="planner-view-toggle"
+        >
           {(["week", "month"] as const).map((v) => (
             <button
               key={v}

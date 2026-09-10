@@ -159,6 +159,7 @@ export function PlannerHeaderMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
+        data-tour-id="planner-create-menu"
         onClick={() => setOpen((v) => !v)}
         className={`w-[34px] h-[34px] rounded-[9px] text-[var(--text-muted)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] flex items-center justify-center ${
           open ? "bg-[var(--bg-elevated)] text-[var(--text-primary)]" : ""

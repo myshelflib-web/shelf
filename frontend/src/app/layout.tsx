@@ -12,6 +12,7 @@ import {
 } from "@/lib/publicConfig";
 import { FocusMediaProvider } from "@/hooks/useFocusMedia";
 import { HotkeysProvider } from "@/hooks/useHotkeys";
+import { ProductTourProvider } from "@/hooks/useProductTour";
 import { AppDialogProvider } from "@/hooks/useAppDialog";
 import { AppHotkeys } from "@/components/AppHotkeys";
 import { PwaInstallHint } from "@/components/PwaInstallHint";
@@ -70,6 +71,7 @@ export default function RootLayout({
               <AuthProvider>
                 <AnalyticsProvider>
                 <HotkeysProvider>
+                  <ProductTourProvider>
                   <FocusMediaProvider>
                   <AppDialogProvider>
                     <DeleteProgressProvider>
@@ -83,6 +85,7 @@ export default function RootLayout({
                     </DeleteProgressProvider>
                   </AppDialogProvider>
                   </FocusMediaProvider>
+                  </ProductTourProvider>
                 </HotkeysProvider>
                 </AnalyticsProvider>
               </AuthProvider>
