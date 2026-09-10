@@ -25,20 +25,20 @@ type BadgeView = {
   icon: "offline" | "upload" | "sync" | "ok" | "error";
 };
 
-const SYNCED_MS = 2_400;
-const ERROR_MS = 4_000;
+const ERROR_HOLD_MS = 6_000;
 
 function viewFromActivity(
   online: boolean,
   pending: number,
   activity: SyncStatusDetail | null
-): BadgeView | null {
+): BadgeView {
   if (!online) {
     return {
-      label: pending > 0 ? `Offline · ${pending} pending` : "Offline",
-      title: pending > 0
-        ? `${pending} change${pending === 1 ? "" : "s"} will sync when you're back online`
-        : "You're offline",
+      label: pending > 0 ? `Offline · ${pending}` : "Offline",
+      title:
+        pending > 0
+          ? `${pending} change${pending === 1 ? "" : "s"} will sync when you're back online`
+          : "You're offline",
       icon: "offline",
     };
   }
@@ -57,7 +57,7 @@ function viewFromActivity(
 
   if (activity?.state === "saving") {
     return {
-      label: activity.label ?? "Saving…",
+      label: activity.label ?? "Syncing…",
       title: "Saving changes",
       icon: "sync",
     };
@@ -81,18 +81,22 @@ function viewFromActivity(
 
   if (activity?.state === "synced") {
     return {
-      label: activity.label ?? "Synced",
+      label: "Synced",
       title: "All changes saved",
       icon: "ok",
     };
   }
 
-  return null;
+  return {
+    label: "Synced",
+    title: "All changes saved",
+    icon: "ok",
+  };
 }
 
 /**
- * Compact header chip: offline / uploading / syncing / brief synced or error.
- * Hidden when signed-out or idle online with nothing pending.
+ * Always-visible header cloud chip (signed-in): offline / uploading /
+ * syncing / synced / failed.
  */
 export function OfflineStatusBadge() {
   const { user } = useAuth();
@@ -135,25 +139,17 @@ export function OfflineStatusBadge() {
         return;
       }
       setActivity(detail);
-      if (detail.state === "synced") clearLater(SYNCED_MS);
-      if (detail.state === "error") clearLater(ERROR_MS);
+      // Keep "Synced" flash briefly, then fall back to idle Synced label.
+      if (detail.state === "synced") clearLater(2_400);
+      if (detail.state === "error") clearLater(ERROR_HOLD_MS);
       if (detail.state === "uploading" || detail.state === "saving") {
         if (clearTimer.current) clearTimeout(clearTimer.current);
       }
     };
 
-    const onActionError = (e: Event) => {
-      const message =
-        e instanceof CustomEvent &&
-        e.detail &&
-        typeof e.detail === "object" &&
-        "message" in e.detail &&
-        typeof (e.detail as { message: unknown }).message === "string"
-          ? (e.detail as { message: string }).message
-          : "Sync failed";
-      setActivity({ state: "error", label: "Not synced" });
-      clearLater(ERROR_MS);
-      void message;
+    const onActionError = () => {
+      setActivity({ state: "error", label: "Sync failed" });
+      clearLater(ERROR_HOLD_MS);
     };
 
     const onOfflineNotice = () => {
@@ -174,7 +170,6 @@ export function OfflineStatusBadge() {
   if (!user) return null;
 
   const view = viewFromActivity(online, pending, activity);
-  if (!view) return null;
 
   const Icon =
     view.icon === "offline"
@@ -182,7 +177,7 @@ export function OfflineStatusBadge() {
       : view.icon === "upload"
         ? Upload
         : view.icon === "ok"
-          ? Check
+          ? Cloud
           : view.icon === "error"
             ? CloudOff
             : view.icon === "sync"
@@ -193,7 +188,9 @@ export function OfflineStatusBadge() {
   const tone =
     view.icon === "error"
       ? "border-red-500/35 text-red-400"
-      : "border-[var(--border)] text-[var(--text-secondary)]";
+      : view.icon === "ok"
+        ? "border-emerald-500/25 text-emerald-400/90"
+        : "border-[var(--border)] text-[var(--text-secondary)]";
 
   return (
     <span
@@ -203,12 +200,17 @@ export function OfflineStatusBadge() {
       aria-live="polite"
     >
       <Icon
-        className={`h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]${
-          spinning ? " animate-spin" : ""
-        }`}
+        className={`h-3.5 w-3.5 shrink-0${
+          view.icon === "ok"
+            ? " text-emerald-400"
+            : " text-[var(--text-muted)]"
+        }${spinning ? " animate-spin" : ""}`}
         aria-hidden
       />
       {view.label}
+      {view.icon === "ok" ? (
+        <Check className="h-3 w-3 shrink-0 text-emerald-400" aria-hidden />
+      ) : null}
     </span>
   );
 }

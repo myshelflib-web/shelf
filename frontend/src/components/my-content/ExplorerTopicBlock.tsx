@@ -14,6 +14,9 @@ import {
   Loader2,
 } from "lucide-react";
 import { FolderMark } from "@/components/FolderMark";
+import { WithItemSyncBadge } from "@/components/ItemSyncBadge";
+import { useLibraryItemSync } from "@/components/LibraryItemSyncProvider";
+import { pageIdsInTopicGroup } from "@/lib/offline/pendingPageSync";
 import { ExplorerPageRow } from "@/components/my-content/ExplorerPageRow";
 import { ExplorerSelectionToggle } from "@/components/my-content/ExplorerSelectionToggle";
 import type { ExplorerDropHint } from "@/components/my-content/useExplorerReorderDrop";
@@ -114,6 +117,7 @@ export function ExplorerTopicBlock({
   expandedTopics,
 }: ExplorerTopicBlockProps) {
   const { prompt } = useAppDialog();
+  const { folderStatus } = useLibraryItemSync();
   const suppressClickRef = useRef(false);
   const topicKey = topicSelectionKey(nb.id, group.id);
   const topicDeleting = Boolean(
@@ -245,7 +249,9 @@ export function ExplorerTopicBlock({
             )}
           </span>
         )}
-        <FolderMark seed={group.id} size={14} />
+        <WithItemSyncBadge status={folderStatus(pageIdsInTopicGroup(group))}>
+          <FolderMark seed={group.id} size={14} />
+        </WithItemSyncBadge>
         <span className="flex-1 min-w-0 truncate text-[13px] font-medium pointer-events-none">
           {group.title}
         </span>
