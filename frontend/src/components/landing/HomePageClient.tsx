@@ -18,8 +18,10 @@ import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
 import { useAuth } from "@/hooks/useAuth";
 import {
   BookMarked,
+  BookOpen,
   CalendarDays,
   FolderOpen,
+  FolderPlus,
   Layers,
   ListChecks,
   NotebookPen,
@@ -70,9 +72,11 @@ export function HomePageClient() {
               </p>
               <div className="landing-hero-actions">
                 <Link href="/login" className="landing-btn landing-btn-primary">
+                  <FolderPlus className="w-4 h-4" strokeWidth={1.75} aria-hidden />
                   Create your library
                 </Link>
                 <Link href="/learn" className="landing-btn">
+                  <BookOpen className="w-4 h-4" strokeWidth={1.75} aria-hidden />
                   Browse free library
                 </Link>
               </div>
