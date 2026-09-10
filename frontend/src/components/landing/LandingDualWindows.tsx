@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { LandingWindow } from "./LandingWindow";
 
-/** Back window + overlapping front panel — matches Study AI showcase style. */
+/** Back panel + overlapping front panel — like explorer + Add modal. */
 export function LandingDualWindows({
   backTitle,
   back,

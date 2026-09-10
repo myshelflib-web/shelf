@@ -153,5 +153,15 @@
   }
   .landing-showcase-visual-layer {
     transition: none;
+    transform: none;
+  }
+  .landing-morph-layer {
+    transition: none;
+    transform: none;
+  }
+  .landing-floating-panel {
+    transition: none;
+    transform: none;
+    opacity: 1;
   }
 }

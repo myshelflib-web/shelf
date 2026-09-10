@@ -82,14 +82,14 @@ export function UploadMockup() {
       frames={[
         <LandingDualWindows
           key="upload-a"
-          backTitle="Shelf — Upload"
+          backTitle="Library"
           back={<UploadDropBack />}
           frontTitle="Import options"
           front={<UploadFormatFront />}
         />,
         <LandingDualWindows
           key="upload-b"
-          backTitle="Shelf — Library"
+          backTitle="Explorer"
           back={<UploadLibraryBack />}
           frontTitle="Upload complete"
           front={<UploadListFront />}
@@ -101,21 +101,22 @@ export function UploadMockup() {
 
 function CollectionBack() {
   return (
-    <div className="p-3 space-y-1.5 text-xs">
-      <p className="text-[10px] font-medium text-[var(--text-muted)] uppercase tracking-wide px-1">
+    <div className="p-2.5 space-y-0.5 text-xs">
+      <div className="flex items-center gap-1.5 px-1.5 py-1 text-[10px] font-semibold text-[var(--text-primary)]">
+        <BookOpen className="w-3.5 h-3.5 text-[var(--text-muted)]" />
         Organic chemistry
-      </p>
-      <div className="landing-mock-row">
-        <BookOpen className="w-3.5 h-3.5" />
-        <span className="flex-1">Lecture slides.pdf</span>
-      </div>
-      <div className="landing-mock-row landing-mock-row-active">
-        <NotebookPen className="w-3.5 h-3.5 text-[var(--accent)]" />
-        <span className="flex-1">Mechanism sketches</span>
       </div>
       <div className="landing-mock-row">
         <FileText className="w-3.5 h-3.5" />
-        <span className="flex-1">Reaction summary — doc</span>
+        <span className="flex-1 truncate">Lecture slides.pdf</span>
+      </div>
+      <div className="landing-mock-row landing-mock-row-active">
+        <NotebookPen className="w-3.5 h-3.5" />
+        <span className="flex-1 truncate">Mechanism sketches</span>
+      </div>
+      <div className="landing-mock-row">
+        <FileText className="w-3.5 h-3.5" />
+        <span className="flex-1 truncate">Reaction summary — doc</span>
       </div>
     </div>
   );
@@ -125,16 +126,16 @@ function AddPageFront() {
   return (
     <div className="p-3 space-y-2">
       <p className="text-[10px] text-[var(--text-muted)]">Add beside PDFs</p>
-      <div className="p-2.5 rounded-lg border border-[var(--accent)] bg-[var(--accent-subtle)] text-xs">
+      <div className="p-2.5 rounded-[10px] border border-[var(--accent)] bg-[var(--accent-subtle)] text-xs text-left">
         <PenLine className="w-4 h-4 text-[var(--accent)] mb-1.5" />
-        <p className="font-medium">Sketch notebook</p>
+        <p className="font-medium text-[var(--text-primary)]">Sketch notebook</p>
         <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
-          Multi-sheet ink & diagrams
+          Multi-sheet ink &amp; diagrams
         </p>
       </div>
-      <div className="p-2.5 rounded-lg border border-[var(--border)] text-xs">
+      <div className="p-2.5 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] text-xs text-left">
         <FileText className="w-4 h-4 text-[var(--accent)] mb-1.5" />
-        <p className="font-medium">Doc page</p>
+        <p className="font-medium text-[var(--text-primary)]">Doc page</p>
         <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
           Typed revision notes
         </p>
@@ -157,14 +158,14 @@ export function NotebooksMockup() {
       frames={[
         <LandingDualWindows
           key="nb-a"
-          backTitle="Shelf — Collection"
+          backTitle="Explorer"
           back={<CollectionBack />}
           frontTitle="Add file"
           front={<AddPageFront />}
         />,
         <LandingDualWindows
           key="nb-b"
-          backTitle="Shelf — Collection"
+          backTitle="Explorer"
           back={<CollectionBack />}
           frontTitle="Mechanism sketches"
           front={<SketchReaderFront />}

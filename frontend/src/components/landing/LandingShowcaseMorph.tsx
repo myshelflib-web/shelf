@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect, useState } from "react";
 
-const MORPH_MS = 3400;
+const MORPH_MS = 3200;
 
 /** Crossfades between two related dual-window compositions (visual only). */
 export function LandingShowcaseMorph({ frames }: { frames: [ReactNode, ReactNode] }) {
