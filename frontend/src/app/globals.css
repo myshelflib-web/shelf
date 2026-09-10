@@ -1083,7 +1083,6 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
-  width: auto;
   max-width: 100%;
   text-align: left;
   font: inherit;
