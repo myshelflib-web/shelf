@@ -13,6 +13,31 @@ export function parseCorsOrigins(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Origins written to the S3/R2 bucket CORS policy (browser PUT/GET).
+ * Separate from API CORS: R2 cannot use a regex for `*.vercel.app`.
+ * - `S3_CORS_ORIGINS` overrides when set (e.g. `*` on staging).
+ * - With `ALLOW_VERCEL_PREVIEW_CORS`, default to `*` so preview hosts work.
+ * - Otherwise mirror `CORS_ORIGIN`.
+ */
+export function resolveBucketCorsOrigins(
+  corsOrigin: string | undefined = process.env.CORS_ORIGIN,
+  allowVercelPreviews: boolean = allowVercelPreviewCors(),
+  s3CorsOrigins: string | undefined = process.env.S3_CORS_ORIGINS
+): string[] {
+  const override = s3CorsOrigins?.trim();
+  if (override) {
+    return override
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean);
+  }
+  if (allowVercelPreviews) {
+    return ["*"];
+  }
+  return parseCorsOrigins(corsOrigin);
+}
+
 export function allowVercelPreviewCors(
   raw: string | undefined = process.env.ALLOW_VERCEL_PREVIEW_CORS
 ): boolean {

@@ -67,12 +67,16 @@ S3_ENDPOINT=…                 # same account OK
 S3_ACCESS_KEY=…
 S3_SECRET_KEY=…
 S3_REGION=auto
-CORS_ORIGIN=https://your-staging-fe.vercel.app
+CORS_ORIGIN=https://staging.myshelflib.com
 ALLOW_VERCEL_PREVIEW_CORS=true
+# Optional: pin bucket CORS explicitly (default with ALLOW_VERCEL_PREVIEW_CORS is *)
+# S3_CORS_ORIGINS=*
 JWT_SECRET=                   # prefer staging-specific
 INTERNAL_SECRET=              # must match staging workers
 OTEL_DEPLOYMENT_ENVIRONMENT=staging
 ```
+
+With `ALLOW_VERCEL_PREVIEW_CORS=true`, boot writes bucket CORS `AllowedOrigins: ["*"]` so dynamic Vercel preview hosts can upload/read. Do **not** rely on the R2 dashboard alone — `ensureBucketCors` overwrites it from env on each deploy.
 
 Staging boot upserts a product-tour test account when `OTEL_DEPLOYMENT_ENVIRONMENT=staging`:
 
