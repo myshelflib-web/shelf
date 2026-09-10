@@ -13,6 +13,7 @@ import {
 import { useRouter } from "next/navigation";
 import { api, type UploadProgress, type UploadProgressHandler, getStoredUser } from "@/lib/api";
 import { shouldCompressUpload } from "@/lib/compressUploadFile";
+import { decidePdfCompress } from "@/lib/pdfCompressDecision";
 import { requireOnline } from "@/lib/offline/notice";
 import { getTopicGroups } from "@/lib/myContentTree";
 import { UserPageSummary, UserSubject, UserTopicGroup } from "@/types";
@@ -244,6 +245,7 @@ export function MyContentAddProvider({
           title: page.title,
           pageId: page.id,
           scope,
+          contentType: page.contentType,
         });
         return;
       }
@@ -351,11 +353,22 @@ export function MyContentAddProvider({
     }
     try {
       if (isFileUpload && uploadFile) {
+        const name = uploadFile.name.toLowerCase();
+        const isPdf =
+          name.endsWith(".pdf") ||
+          (uploadFile.type || "").toLowerCase() === "application/pdf";
+        const phase = isPdf
+          ? decidePdfCompress(uploadFile).attempt
+            ? "compressing"
+            : "uploading"
+          : shouldCompressUpload(uploadFile)
+            ? "compressing"
+            : "uploading";
         setUploadProgress({
           loaded: 0,
           total: uploadFile.size,
           percent: 0,
-          phase: shouldCompressUpload(uploadFile) ? "compressing" : "uploading",
+          phase,
         });
       }
       const { page, href } = await submitAddPage({

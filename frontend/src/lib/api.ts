@@ -1,9 +1,19 @@
 import { clearAccountLocalState } from "@/lib/accountLocalState";
-import { compressFormDataFiles, compressUploadFile, shouldCompressUpload } from "@/lib/compressUploadFile";
+import {
+  compressFormDataFiles,
+  compressUploadFile,
+} from "@/lib/compressUploadFile";
+import {
+  uploadLibraryFile as runLibraryUpload,
+  type UploadProgress,
+  type UploadProgressHandler,
+} from "@/lib/uploadLibraryFile";
 import { fetchWithRetry } from "@/lib/fetchRetry";
 import { reportApiFailure } from "@/lib/analytics/errors";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { toUserFacingError } from "@/lib/userFacingError";
+
+export type { UploadProgress, UploadProgressHandler };
 
 /** Production (Vercel): set NEXT_PUBLIC_API_URL to the Render backend, e.g. https://your-api.onrender.com */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -96,15 +106,6 @@ async function request<T>(
   }
   return JSON.parse(text) as T;
 }
-
-export type UploadProgress = {
-  loaded: number;
-  total: number;
-  percent: number;
-  phase?: "compressing" | "uploading";
-};
-
-export type UploadProgressHandler = (progress: UploadProgress) => void;
 
 export type PresignedPdf = {
   url: string;
@@ -205,42 +206,16 @@ async function uploadLibraryFile(
   scope: { subjectId?: string; topicGroupId?: string },
   onProgress?: UploadProgressHandler
 ) {
-  const clientPacked = shouldCompressUpload(file);
-  if (clientPacked) {
-    onProgress?.({
-      loaded: 0,
-      total: file.size,
-      percent: 0,
-      phase: "compressing",
-    });
-  }
-  const toUpload = await compressUploadFile(file);
-  const init = await request<{
-    uploadUrl: string;
-    headers: { "Content-Type": string };
-    token: string;
-  }>("/api/my-content/uploads/init", {
-    method: "POST",
-    body: JSON.stringify({
-      title,
-      filename: toUpload.name,
-      contentType: toUpload.type,
-      size: toUpload.size,
-      subjectId: scope.subjectId,
-      topicGroupId: scope.topicGroupId,
-      clientPacked,
-    }),
+  return runLibraryUpload({
+    file,
+    title,
+    scope,
+    onProgress,
+    request,
+    putToUrl,
+    deletePage: (id) =>
+      request(`/api/my-content/pages/${id}`, { method: "DELETE" }),
   });
-  await putToUrl(
-    init.uploadUrl,
-    toUpload,
-    init.headers["Content-Type"],
-    onProgress
-  );
-  return request<{ page: import("@/types").UserPageSummary; message?: string }>(
-    "/api/my-content/uploads/complete",
-    { method: "POST", body: JSON.stringify({ token: init.token }) }
-  );
 }
 
 type StudySseHandlers = {

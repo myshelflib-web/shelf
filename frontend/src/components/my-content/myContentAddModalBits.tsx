@@ -27,6 +27,7 @@ export function pageAddSubmitLabel(
   if (submitting && addMode === "bulk") return "Importing…";
   if (submitting && addMode === "file") {
     if (uploadProgress?.phase === "compressing") return "Compressing…";
+    if (uploadProgress?.phase === "finalizing") return "Opening…";
     if (uploadProgress && uploadProgress.percent < 100) {
       return `Uploading ${uploadProgress.percent}%`;
     }
@@ -77,21 +78,24 @@ export function pageAddSubmitLabel(
 
 export function AddUploadProgressBar({ progress }: { progress: UploadProgress }) {
   const compressing = progress.phase === "compressing";
-  const saving = !compressing && progress.percent >= 100;
+  const finalizing = progress.phase === "finalizing";
+  const saving = !compressing && !finalizing && progress.percent >= 100;
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
         <span>
           {compressing
             ? "Compressing…"
-            : saving
-              ? "Saving to library…"
-              : "Uploading"}
+            : finalizing
+              ? "Opening…"
+              : saving
+                ? "Saving to library…"
+                : "Uploading"}
         </span>
         <span className="tabular-nums text-[var(--text-secondary)]">
           {compressing
             ? "Preparing file"
-            : saving
+            : finalizing || saving
               ? "100%"
               : progress.total > 0
                 ? `${formatAddBytes(progress.loaded)} of ${formatAddBytes(progress.total)} · ${progress.percent}%`
@@ -111,7 +115,7 @@ export function AddUploadProgressBar({ progress }: { progress: UploadProgress })
           style={{
             width: compressing
               ? "18%"
-              : `${Math.max(saving ? 100 : progress.percent, 2)}%`,
+              : `${Math.max(finalizing || saving ? 100 : progress.percent, 2)}%`,
           }}
         />
       </div>

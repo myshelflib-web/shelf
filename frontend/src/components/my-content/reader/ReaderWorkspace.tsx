@@ -442,7 +442,12 @@ export function ReaderWorkspace({
       const paneId = focusedPane?.id ?? state.focusedPaneId;
       handleOpenTab(
         paneId,
-        tabFromScope(detail.scope, detail.title, detail.pageId)
+        tabFromScope(
+          detail.scope,
+          detail.title,
+          detail.pageId,
+          detail.contentType
+        )
       );
     };
     window.addEventListener(SHELF_OPEN_PAGE, onOpen);

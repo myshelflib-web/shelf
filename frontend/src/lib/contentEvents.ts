@@ -58,6 +58,7 @@ export type OpenPageDetail = {
   title: string;
   pageId: string;
   scope: PersonalPageReaderScope;
+  contentType?: import("@/types").UserContentType;
 };
 
 export function emitContentChanged(detail?: ContentChange) {

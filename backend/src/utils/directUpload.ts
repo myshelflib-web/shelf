@@ -20,6 +20,11 @@ export type DirectUploadClaims = {
   folderId: string | null;
   /** Client already lossless-packed; skip server GetObject recompress. */
   clientPacked?: boolean;
+  /**
+   * PDF row created at init so the client can open after PUT while complete
+   * finalizes (charge + publish) in the background.
+   */
+  pageId?: string;
 };
 
 export function contentTypeForKind(kind: DetectedFileKind): string {

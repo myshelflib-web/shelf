@@ -20,6 +20,8 @@ export type OpenTab = {
   title: string;
   scope: PersonalPageReaderScope;
   pageId?: string;
+  /** When known (e.g. just uploaded), lets DocumentPane mount PdfViewer before page JSON. */
+  contentType?: import("@/types").UserContentType;
 };
 
 export type ReaderPane = {
@@ -259,7 +261,8 @@ export function mergeReaderScope(
 export function tabFromScope(
   scope: PersonalPageReaderScope,
   title = "Untitled",
-  pageId?: string
+  pageId?: string,
+  contentType?: import("@/types").UserContentType
 ): OpenTab {
   const href = scopeHref(scope);
   return {
@@ -268,6 +271,7 @@ export function tabFromScope(
     title,
     scope,
     pageId,
+    contentType,
   };
 }
 

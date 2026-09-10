@@ -79,6 +79,10 @@ import {
   fetchDocumentPage,
   type LoadedPage,
 } from "./documentPaneFetch";
+import {
+  canOptimisticMountPdf,
+  optimisticPdfLoadedPage,
+} from "./optimisticPdfPage";
 import clsx from "clsx";
 import { isLiveEditorHtml } from "@/lib/pageKinds";
 import { isCurriculumReadOnlyHtml } from "@/lib/docEditor";
@@ -339,13 +343,33 @@ export function DocumentPane({
     const href = currentHref;
     const sameDocument =
       loadedHrefRef.current === href && pageIdRef.current != null;
-    if (!sameDocument) {
-      setLoading(true);
-      setHighlights([]);
-      setHighlightsHydrating(true);
-    }
 
     const knownPageId = tab.pageId;
+    const mountPdfEarly = canOptimisticMountPdf({
+      pageId: knownPageId,
+      contentType: tab.contentType,
+      scope,
+    });
+
+    if (!sameDocument) {
+      if (mountPdfEarly && knownPageId) {
+        const optimistic = optimisticPdfLoadedPage({
+          id: knownPageId,
+          title: tab.title,
+          scope,
+        });
+        setPageData(optimistic);
+        pageIdRef.current = knownPageId;
+        setLoading(false);
+        setHighlights([]);
+        setHighlightsHydrating(true);
+      } else {
+        setLoading(true);
+        setHighlights([]);
+        setHighlightsHydrating(true);
+      }
+    }
+
     if (
       knownPageId &&
       scope.kind !== "learn" &&
@@ -551,13 +575,19 @@ export function DocumentPane({
       })
       .catch(() => {
         if (gen !== pageLoadGen.current) return;
+        // Keep an optimistic PDF shell if metadata fails after upload open.
+        if (mountPdfEarly && knownPageId && pageIdRef.current === knownPageId) {
+          setLoading(false);
+          setHighlightsHydrating(false);
+          return;
+        }
         pageIdRef.current = null;
         loadedHrefRef.current = null;
         setPageData(null);
         setLiveReadPercent(0);
         setLoading(false);
       });
-  }, [scope, currentHref, tab.pageId]);
+  }, [scope, currentHref, tab.pageId, tab.contentType, tab.title]);
 
   useEffect(() => {
     reloadPage();

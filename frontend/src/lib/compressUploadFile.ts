@@ -6,6 +6,7 @@ import {
   fileFromBytes,
   looksWorthKeeping,
 } from "./compressUploadShared";
+import { shouldAttemptPdfCompress } from "./pdfCompressDecision";
 
 function extOf(file: File): string {
   const name = file.name.toLowerCase();
@@ -42,7 +43,7 @@ export async function compressUploadFile(file: File): Promise<File> {
 
   try {
     if (ext === ".pdf" || mime === "application/pdf") {
-      if (file.size < COMPRESS_MIN_FILE_BYTES) return file;
+      if (!(await shouldAttemptPdfCompress(file))) return file;
       const next = await compressPdfBytes(await file.arrayBuffer());
       if (!next || !looksWorthKeeping(next.byteLength, file.size)) return file;
       return fileFromBytes(next, file, "application/pdf");

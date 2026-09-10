@@ -228,8 +228,8 @@ async function downloadAndCachePdf(
 }
 
 /**
- * Fill IndexedDB in the background (deferred until idle) so revisits and
- * in-session page turns avoid extra S3 range requests.
+ * Fill IndexedDB in the background after first-page Ranges settle so the
+ * full GET does not contend with pdf.js Range traffic on open.
  */
 export function scheduleFullPdfCache(
   pageId: string,
@@ -244,15 +244,23 @@ export function scheduleFullPdfCache(
 
   let idleId: number | undefined;
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let delayId: ReturnType<typeof setTimeout> | undefined;
 
-  if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-    idleId = window.requestIdleCallback(run, { timeout: 8_000 });
-  } else {
-    timeoutId = setTimeout(run, 3_000);
-  }
+  const startIdle = () => {
+    if (cancelled) return;
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(run, { timeout: 20_000 });
+    } else {
+      timeoutId = setTimeout(run, 4_000);
+    }
+  };
+
+  // Let the first visible page(s) finish Range-fetching before a full GET.
+  delayId = setTimeout(startIdle, 12_000);
 
   return () => {
     cancelled = true;
+    if (delayId != null) clearTimeout(delayId);
     if (idleId != null && "cancelIdleCallback" in window) {
       window.cancelIdleCallback(idleId);
     }
