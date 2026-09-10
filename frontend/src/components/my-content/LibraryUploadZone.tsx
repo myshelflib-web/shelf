@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Upload } from "lucide-react";
+import { FolderUp, Upload } from "lucide-react";
 import clsx from "clsx";
 import {
   isUploadableFile,
@@ -31,7 +31,7 @@ export function LibraryUploadZone({
   files,
   onChange,
   disabled = false,
-  label = "Drop files or folders",
+  label = "Drop files or folders here",
 }: LibraryUploadZoneProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -105,12 +105,15 @@ export function LibraryUploadZone({
           e.target.value = "";
         }}
       />
+      {/* No accept= — directory pickers must allow selecting the folder itself. */}
       <input
         ref={folderInputRef}
         type="file"
         multiple
         // @ts-expect-error — non-standard directory picker (Chromium / Safari)
         webkitdirectory=""
+        // @ts-expect-error — Firefox directory attribute
+        directory=""
         disabled={disabled}
         className="sr-only"
         onChange={(e) => {
@@ -118,22 +121,17 @@ export function LibraryUploadZone({
           e.target.value = "";
         }}
       />
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => {
-          if (!disabled) fileInputRef.current?.click();
-        }}
+      <div
         className={clsx(
-          "file-upload-zone w-full group",
+          "file-upload-zone w-full",
           dragOver && !disabled && "file-upload-zone-active",
-          disabled && "pointer-events-none opacity-80"
+          disabled && "opacity-80"
         )}
       >
         <span className="file-upload-icon">
           <Upload className="w-5 h-5" />
         </span>
-        <span className="flex flex-col items-start min-w-0 text-left">
+        <span className="flex flex-col items-start min-w-0 text-left flex-1">
           <span className="font-medium text-sm text-[var(--text-primary)]">
             {files.length === 0
               ? label
@@ -144,46 +142,53 @@ export function LibraryUploadZone({
           <span className="text-xs text-[var(--text-muted)] truncate max-w-full">
             {files.length > 0
               ? multi
-                ? `${folderCount} folder${folderCount === 1 ? "" : "s"} · click to change`
-                : `${(files[0]!.size / 1024 / 1024).toFixed(2)} MB · click or drop to change`
+                ? `${folderCount} folder${folderCount === 1 ? "" : "s"} · PDF/TXT/MD/DOCX kept`
+                : `${(files[0]!.size / 1024 / 1024).toFixed(2)} MB`
               : dragOver
                 ? "Drop to upload"
-                : "Drag & drop or click · PDF, TXT, MD, DOCX"}
+                : "Images and other formats are skipped automatically"}
           </span>
         </span>
-      </button>
-      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[11px]">
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <button
           type="button"
           disabled={disabled}
-          className="text-[var(--accent)] hover:underline disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-2 text-[12px] text-[var(--text-primary)] hover:border-[var(--accent)]/40 hover:bg-[var(--accent-subtle)] disabled:opacity-50"
           onClick={() => {
             if (!disabled) fileInputRef.current?.click();
           }}
         >
+          <Upload className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
           Choose files
         </button>
         <button
           type="button"
           disabled={disabled}
-          className="text-[var(--accent)] hover:underline disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-2.5 py-2 text-[12px] text-[var(--text-primary)] hover:border-[var(--accent)]/40 hover:bg-[var(--accent-subtle)] disabled:opacity-50"
           onClick={() => {
             if (!disabled) folderInputRef.current?.click();
           }}
         >
+          <FolderUp className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" />
           Choose folders
         </button>
-        {files.length > 0 ? (
-          <button
-            type="button"
-            disabled={disabled}
-            className="text-[var(--text-muted)] hover:underline disabled:opacity-50"
-            onClick={() => onChange(null)}
-          >
-            Clear
-          </button>
-        ) : null}
       </div>
+      {files.length > 0 ? (
+        <button
+          type="button"
+          disabled={disabled}
+          className="mt-1.5 text-[11px] text-[var(--text-muted)] hover:underline disabled:opacity-50"
+          onClick={() => onChange(null)}
+        >
+          Clear selection
+        </button>
+      ) : (
+        <p className="mt-1.5 text-[11px] text-[var(--text-muted)]">
+          For a folder of mixed files, use Choose folders — only supported
+          formats upload.
+        </p>
+      )}
     </div>
   );
 }
