@@ -1,4 +1,4 @@
-import { ApiError, api, isNetworkError } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { getStoredUserId } from "@/lib/accountLocalState";
 import { seedPdfByteCache } from "@/lib/seedPdfByteCache";
 import {
@@ -70,7 +70,7 @@ function putBlob(
 async function bumpBackoff(
   entry: PendingUploadEntry,
   err: unknown
-): Promise<void> {
+): Promise<number> {
   const attempts = entry.attempts + 1;
   const message = err instanceof Error ? err.message : "Upload retry failed";
   markEntitiesFailed([`page:${entry.pageId}`]);
@@ -93,13 +93,14 @@ async function bumpBackoff(
       label: "Not synced",
     });
     dispatchOfflineSync();
-    return;
+    return -1;
   }
 
+  const delayMs = pendingUploadBackoffMs(attempts);
   await putPendingUpload({
     ...entry,
     attempts,
-    nextAttemptAt: Date.now() + pendingUploadBackoffMs(attempts),
+    nextAttemptAt: Date.now() + delayMs,
     lastError: message,
   });
   upsertQueuedUploadActivity({
@@ -113,7 +114,7 @@ async function bumpBackoff(
     label: "Upload retrying…",
   });
   dispatchOfflineSync();
-  scheduleFlushPendingUploads(pendingUploadBackoffMs(attempts));
+  return delayMs;
 }
 
 async function flushOne(entry: PendingUploadEntry): Promise<boolean> {
@@ -212,13 +213,15 @@ export async function flushPendingUploads(): Promise<number> {
   if (!userId || !isOnline() || flushing) return 0;
   flushing = true;
   let synced = 0;
+  let scheduledDelayMs: number | null = null;
   try {
     const due = await listDuePendingUploads(userId);
     if (due.length === 0) {
       const remaining = await listPendingUploads(userId);
       const nextAt = soonestUploadRetryAt(remaining);
       if (nextAt != null) {
-        scheduleFlushPendingUploads(Math.max(0, nextAt - Date.now()));
+        // Never use a 0 delay for a future-dated retry (clock skew / race).
+        scheduleFlushPendingUploads(Math.max(250, nextAt - Date.now()));
       }
       return 0;
     }
@@ -228,8 +231,16 @@ export async function flushPendingUploads(): Promise<number> {
       try {
         if (await flushOne(entry)) synced += 1;
       } catch (err) {
-        if (isNetworkError(err)) break;
-        await bumpBackoff(entry, err);
+        // Always apply backoff — CORS/network errors used to skip this and
+        // reschedule with delay 0, which hammered storage in a tight loop.
+        const delayMs = await bumpBackoff(entry, err);
+        if (delayMs > 0) {
+          scheduledDelayMs =
+            scheduledDelayMs == null
+              ? delayMs
+              : Math.min(scheduledDelayMs, delayMs);
+        }
+        if (!isOnline()) break;
       }
     }
 
@@ -245,7 +256,12 @@ export async function flushPendingUploads(): Promise<number> {
           state: "uploading",
           label: "Upload pending…",
         });
-        scheduleFlushPendingUploads(Math.max(0, nextAt - Date.now()));
+        const fromQueue = Math.max(250, nextAt - Date.now());
+        const delayMs =
+          scheduledDelayMs != null
+            ? Math.max(fromQueue, scheduledDelayMs)
+            : fromQueue;
+        scheduleFlushPendingUploads(delayMs);
       } else {
         dispatchSyncStatus({
           state: "error",

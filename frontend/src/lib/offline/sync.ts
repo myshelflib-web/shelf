@@ -60,11 +60,13 @@ export async function flushOfflineSync(): Promise<number> {
 
     if (uploadRetryAt != null) {
       dispatchSyncStatus({ state: "uploading", label: "Upload pending…" });
-      scheduleFlushOfflineSync(Math.max(0, uploadRetryAt - Date.now()));
+      // Respect entry backoff — never schedule an immediate re-flush (delay 0)
+      // after a failed upload, which caused a tight retry loop on CORS errors.
+      scheduleFlushOfflineSync(Math.max(250, uploadRetryAt - Date.now()));
       flushAttempts = 0;
     } else if (mutationRetryAt != null) {
       dispatchSyncStatus({ state: "error", label: "Not synced" });
-      scheduleFlushOfflineSync(Math.max(0, mutationRetryAt - Date.now()));
+      scheduleFlushOfflineSync(Math.max(250, mutationRetryAt - Date.now()));
       flushAttempts = 0;
     } else if (hasExhaustedOnly) {
       flushAttempts = 0;
