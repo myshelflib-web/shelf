@@ -15,7 +15,6 @@ import { LandingCtaBanner } from "@/components/landing/LandingCtaBanner";
 import { LandingQuizSection } from "@/components/landing/LandingQuizSection";
 import { LandingIntegrationsSection } from "@/components/landing/LandingIntegrationsSection";
 import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
-import { LandingPointerTorch } from "@/components/landing/LandingPointerTorch";
 import { useAuth } from "@/hooks/useAuth";
 import {
   BookMarked,
@@ -49,14 +48,12 @@ export function HomePageClient() {
       <Header />
 
       <main className="landing-page flex-1 min-h-0 overflow-y-auto">
-        <LandingPointerTorch />
         <section
-          className="landing-hero landing-torch-zone"
+          className="landing-hero"
           id="landing-hero"
           aria-labelledby="landing-hero-heading"
         >
           <div className="landing-hero-glow" aria-hidden />
-          <div className="landing-torch-local" aria-hidden />
           <RevealOnScroll>
             <div>
               <div className="landing-eyebrow">Your personal study library</div>
