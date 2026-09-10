@@ -1,14 +1,14 @@
 name: Deploy staging
 
-# Staging backend/workers (never production). Manual only:
-# - Label `deploy-staging` on a PR, or
-# - Actions → Deploy staging (workflow_dispatch)
-# Production: merge to main (ci.yml / docker-deploy.yml)
+# Staging backend/workers (never production).
+# - Automatic on PR backend/worker changes
+# - Or manual via Actions → Deploy staging (workflow_dispatch)
 # Frontend-only PRs: Vercel Preview only — do not run this
 
 on:
   pull_request:
-    types: [labeled]
+    branches: [main, master]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       backend:
@@ -33,7 +33,7 @@ env:
 
 jobs:
   gate:
-    name: Gate (manual + backend change)
+    name: Gate (backend change)
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -45,14 +45,13 @@ jobs:
       proceed: ${{ steps.out.outputs.proceed }}
     steps:
       - name: Checkout
-        if: github.event_name != 'pull_request' || github.event.label.name == 'deploy-staging'
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Detect changed apps (PR)
-        if: github.event_name == 'pull_request' && github.event.label.name == 'deploy-staging'
+        if: github.event_name == 'pull_request'
         uses: dorny/paths-filter@v4
         id: filter
         with:
@@ -73,23 +72,16 @@ jobs:
         id: out
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            if [ "${{ github.event.label.name }}" != "deploy-staging" ]; then
+            B="${{ steps.filter.outputs.backend }}"
+            P="${{ steps.filter.outputs.processing }}"
+            I="${{ steps.filter.outputs.ingestion }}"
+            if [ "$B" != "true" ] && [ "$P" != "true" ] && [ "$I" != "true" ]; then
+              echo "No backend/processor/ingestion changes. Frontend-only — use Vercel Preview."
               echo "proceed=false" >> "$GITHUB_OUTPUT"
               echo "backend=false" >> "$GITHUB_OUTPUT"
               echo "processing=false" >> "$GITHUB_OUTPUT"
               echo "ingestion=false" >> "$GITHUB_OUTPUT"
               exit 0
-            fi
-            B="${{ steps.filter.outputs.backend }}"
-            P="${{ steps.filter.outputs.processing }}"
-            I="${{ steps.filter.outputs.ingestion }}"
-            if [ "$B" != "true" ] && [ "$P" != "true" ] && [ "$I" != "true" ]; then
-              echo "::error::No backend/processor/ingestion changes. Frontend-only — use Vercel Preview."
-              echo "proceed=false" >> "$GITHUB_OUTPUT"
-              echo "backend=false" >> "$GITHUB_OUTPUT"
-              echo "processing=false" >> "$GITHUB_OUTPUT"
-              echo "ingestion=false" >> "$GITHUB_OUTPUT"
-              exit 1
             fi
             echo "backend=$B" >> "$GITHUB_OUTPUT"
             echo "processing=$P" >> "$GITHUB_OUTPUT"
@@ -297,33 +289,6 @@ jobs:
           curl -fsS -X POST "$HOOK" >/dev/null
           echo "Triggered staging ingestion"
 
-  cleanup-label:
-    name: Remove deploy-staging label
-    needs: [gate, staging-backend, staging-processor, staging-ingestion]
-    if: >-
-      always() &&
-      github.event_name == 'pull_request' &&
-      github.event.label.name == 'deploy-staging' &&
-      needs.gate.outputs.proceed == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    steps:
-      - uses: actions/github-script@v7
-        with:
-          script: |
-            try {
-              await github.rest.issues.removeLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                name: 'deploy-staging',
-              });
-              console.log('Removed deploy-staging label (re-add to deploy again)');
-            } catch (e) {
-              console.log('Label cleanup skipped:', e.message);
-            }
-
   comment-preview-url:
     name: Comment preview URL on PR
     needs: [gate, staging-backend, staging-processor, staging-ingestion]
@@ -440,7 +405,7 @@ jobs:
             }
             lines.push(
               '',
-              'Production was **not** changed. Re-add label `deploy-staging` to deploy again.'
+              'Production was **not** changed.'
             );
             const body = lines.join('\n');
 

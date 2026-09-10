@@ -188,26 +188,6 @@ jobs:
           NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID != '' && vars.NEXT_PUBLIC_GOOGLE_CLIENT_ID || 'ci-placeholder' }}
         run: npm run build
 
-  docker-deploy:
-    name: Docker + Render (production)
-    needs: [changes, ci-backend, ci-processing, ci-ingestion]
-    if: >-
-      always() &&
-      needs.changes.result == 'success' &&
-      github.event_name == 'push' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') &&
-      (
-        (needs.changes.outputs.backend == 'true' && needs.ci-backend.result == 'success') ||
-        (needs.changes.outputs.processing == 'true' && needs.ci-processing.result == 'success') ||
-        (needs.changes.outputs.ingestion == 'true' && needs.ci-ingestion.result == 'success')
-      )
-    uses: ./.github/workflows/docker-deploy.yml
-    secrets: inherit
-    with:
-      backend: ${{ needs.changes.outputs.backend == 'true' && needs.ci-backend.result == 'success' }}
-      processing: ${{ needs.changes.outputs.processing == 'true' && needs.ci-processing.result == 'success' }}
-      ingestion: ${{ needs.changes.outputs.ingestion == 'true' && needs.ci-ingestion.result == 'success' }}
-
   staging-manual-hint:
     name: Deploy guide on PR
     needs: changes
@@ -234,14 +214,14 @@ jobs:
             const runs = `https://github.com/${owner}/${repo}/actions`;
 
             const body = [
-              '### Deploy backend (manual)',
+              '### Deploy guide',
               '',
               '| Target | When | How |',
               '|--------|------|-----|',
-              '| **Staging** | When you choose | Add label `deploy-staging`, or [Run Deploy staging](' + stagingWf + ') |',
-              '| **Production** | **After merge** to `main` | Automatic on merge (CI). Optional: [Deploy production](' + prodWf + ') |',
+              '| **Staging** | On PR backend/worker changes | Automatic from this PR. Optional: [Run Deploy staging](' + stagingWf + ') |',
+              '| **Production** | When you choose | Manual only: [Deploy production](' + prodWf + ') |',
               '',
-              'Staging is **not** auto-deployed on commit. Production is **not** deployed from the open PR.',
+              'Frontend-only PRs still use the Vercel Preview link only. Open-PR production deploys stay disabled.',
               '',
               `- Actions: ${runs}`,
               '',
@@ -250,7 +230,7 @@ jobs:
               'Frontend: use the **Vercel Preview** link on this PR.',
             ].join('\n');
 
-            const marker = '### Deploy backend (manual)';
+            const marker = '### Deploy guide';
             const { data: comments } = await github.rest.issues.listComments({
               owner,
               repo,
