@@ -7,7 +7,7 @@ export function DashboardAddMaterial() {
   const { openAdd } = useAddContent();
 
   return (
-    <div className="mt-2.5 flex items-center">
+    <div className="mt-2.5 flex items-center" data-tour-id="dash-add-material">
       <button
         type="button"
         onClick={() => openAdd({ kind: "page" })}

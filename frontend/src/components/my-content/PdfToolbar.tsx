@@ -162,7 +162,7 @@ export function PdfToolbar(props: Props) {
 
       <ToolSep {...sep} />
 
-      <ToolGroup>
+      <ToolGroup data-tour-id="reader-pdf-modes">
         <ToolBtn
           {...btn}
           label={

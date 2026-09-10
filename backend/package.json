@@ -14,6 +14,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "seed:tour-user": "tsx scripts/seedTourUser.ts",
     "db:studio": "prisma studio",
     "vector:reindex": "tsx src/scripts/reindexLibrary.ts",
     "blog:seed": "tsx scripts/seedBlogPosts.ts",

@@ -23,7 +23,7 @@ export function DashboardNextUp({
     remaining > 0 ? `View planner · ${remaining} more →` : "View planner →";
 
   return (
-    <section>
+    <section data-tour-id="dash-next-up">
       <div className="flex items-center justify-between gap-4 mb-3">
         <h2 className="text-[15px] font-semibold tracking-tight">Next up</h2>
         <Link

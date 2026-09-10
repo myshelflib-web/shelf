@@ -780,6 +780,7 @@ export function ReaderWorkspace({
                           : "Open another page first to split the editor"
                     }
                     aria-label={isSplit ? "Unsplit editor" : "Split editor"}
+                    data-tour-id="reader-split"
                     disabled={!isSplit && !canSplit}
                     onClick={() => {
                       if (isSplit) {
@@ -857,6 +858,7 @@ export function ReaderWorkspace({
                     aria-label={
                       state.studyAICollapsed ? "Show Study AI" : "Hide Study AI"
                     }
+                    data-tour-id="reader-study-ai-panel"
                     onClick={() => {
                       if (state.studyAICollapsed) openStudyAIPanel();
                       else closeStudyAIPanel();

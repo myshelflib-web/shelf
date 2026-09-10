@@ -27,6 +27,7 @@ export function StudyAiWebSearchToggle({
       role="switch"
       aria-checked={enabled}
       aria-label="Web search"
+      data-tour-id="sai-web-search"
       title={
         enabled
           ? "Web search on — may search Google for facts outside this PDF"

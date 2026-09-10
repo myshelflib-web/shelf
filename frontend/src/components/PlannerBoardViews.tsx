@@ -63,6 +63,7 @@ export function PlannerMonthBoard({
             ? "border-[var(--accent)] bg-[var(--accent-light)]"
             : "border-[var(--border)]"
         }`}
+        data-tour-id="planner-to-plan"
         onDragEnter={(e) => enterDrop("backlog", e)}
         onDragOver={(e) => allowDrop("backlog", e)}
         onDragLeave={() => leaveDrop("backlog")}
@@ -116,6 +117,9 @@ export function PlannerMonthBoard({
             return (
               <div
                 key={key}
+                data-tour-id={
+                  !monthDays.slice(0, i).some(Boolean) ? "planner-drag-day" : undefined
+                }
                 onDragEnter={(e) => enterDrop(key, e)}
                 onDragOver={(e) => allowDrop(key, e)}
                 onDragLeave={() => leaveDrop(key)}
@@ -174,6 +178,7 @@ export function PlannerWeekBoard({
               ? "border-[var(--accent)] bg-[var(--accent-light)]"
               : "border-[var(--border)]"
           }`}
+          data-tour-id="planner-to-plan"
           onDragEnter={(e) => enterDrop("backlog", e)}
           onDragOver={(e) => allowDrop("backlog", e)}
           onDragLeave={() => leaveDrop("backlog")}
@@ -214,13 +219,14 @@ export function PlannerWeekBoard({
         <div className="min-h-0 min-w-0 flex flex-col">
           <div className="flex-1 min-h-0 overflow-x-auto rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)]">
             <div className="grid grid-cols-7 min-w-[52rem] h-full">
-              {days.map((day) => {
+              {days.map((day, dayIdx) => {
                 const dayTasks = itemsForDay(tasks, day, now);
                 const isToday = dayKey(day) === dayKey(now);
                 const key = dayKey(day);
                 return (
                   <div
                     key={key}
+                    data-tour-id={dayIdx === 0 ? "planner-drag-day" : undefined}
                     className={`min-h-0 h-full border-r border-[var(--border)] last:border-r-0 flex flex-col ${
                       dropTarget === key
                         ? "bg-[var(--accent-light)]"

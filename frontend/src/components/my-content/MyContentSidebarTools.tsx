@@ -76,6 +76,7 @@ export function MyContentSidebarTools({
               selectionMode ? "Exit selection mode" : "Select items to delete"
             }
             aria-label={selectionMode ? "Exit selection mode" : "Select items"}
+            data-tour-id="lib-select-mode"
             onClick={onToggleSelection}
             className={clsx(
               "p-1.5 rounded-md hover:bg-[var(--bg-elevated)]",
@@ -94,6 +95,7 @@ export function MyContentSidebarTools({
             type="button"
             title={withShortcut("Add a file to your library", "c p")}
             aria-label="Add file"
+            data-tour-id="lib-add-file"
             onClick={onAddPage}
             className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
           >
@@ -103,6 +105,7 @@ export function MyContentSidebarTools({
             type="button"
             title={withShortcut("Create a new folder", "c n")}
             aria-label="New folder"
+            data-tour-id="lib-add-folder"
             onClick={onAddNotebook}
             className="p-1.5 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]"
           >

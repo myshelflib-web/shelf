@@ -77,7 +77,7 @@ export function DashboardAskBar() {
   const showPanel = focused && (query.trim().length > 0 || aiError);
 
   return (
-    <div className="relative">
+    <div className="relative" data-tour-id="dash-ask">
       <form
         onSubmit={(e) => {
           e.preventDefault();

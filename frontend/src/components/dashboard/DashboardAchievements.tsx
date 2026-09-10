@@ -49,7 +49,7 @@ export function DashboardAchievements({
   const earned = rows.filter((r) => r.earned).length;
 
   return (
-    <section className="shrink-0">
+    <section className="shrink-0" data-tour-id="dash-achievements">
       <div className="flex items-center justify-between gap-4 mb-3">
         <h2 className="text-[15px] font-semibold tracking-tight">Achievements</h2>
         <span className="text-xs text-[var(--text-muted)] tabular-nums">

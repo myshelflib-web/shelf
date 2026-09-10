@@ -35,7 +35,7 @@ export function DashboardContinue({
     .join(" · ");
 
   return (
-    <section>
+    <section data-tour-id="dash-continue">
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[15px] font-semibold tracking-tight">
           Continue where you left off

@@ -280,6 +280,7 @@ export function Header() {
               className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
               aria-label="Search library"
               title={searchTitle}
+              data-tour-id="hdr-search"
               aria-keyshortcuts={
                 touchPrimary ? undefined : "Meta+K Control+K Slash"
               }
@@ -293,6 +294,7 @@ export function Header() {
               className="p-2 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
               aria-label="Keyboard shortcuts"
               title={withShortcut("Keyboard shortcuts", "?")}
+              data-tour-id="hdr-shortcuts"
             >
               <Keyboard className="w-4 h-4" />
             </button>

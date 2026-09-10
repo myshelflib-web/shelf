@@ -26,6 +26,7 @@ export function LibraryModeTabs({
       )}
       role="tablist"
       aria-label="Library source"
+      data-tour-id="lib-mode-tabs"
     >
       {(
         [

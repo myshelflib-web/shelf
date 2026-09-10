@@ -89,6 +89,12 @@ Curriculum **Subject → Topic → Article** is separate from collections.
 - `GET /api/tasks?from&to` **expands** recurring events into occurrences in range (`utils/recurrence.ts`). Occurrence ids look like `{uuid}::{yyyy-mm-dd}`. PATCH/DELETE must use `masterId()` (strip suffix). Ranged lists also return unscheduled items (`dueAt` null) and overdue incomplete tasks (before `from`) for the planner backlog.
 - New columns: migration `prisma/migrations/20260101000012_event_recurrence/`. After pull: `npx prisma migrate dev` (or `migrate deploy`).
 
+## Local seed accounts
+
+- `npm run db:seed` → `admin@shelf.local` / `admin123` (ADMIN) and `tour@shelf.local` / `tour-tour-tour` (STUDENT, product tour).
+- `npm run seed:tour-user` → upserts only the tour account (pass `DATABASE_URL` for staging Neon).
+- Staging backend boot also upserts the tour account when `OTEL_DEPLOYMENT_ENVIRONMENT=staging` (disable with `SEED_TOUR_USER=false`). In the app: **Settings → Product tour → Replay tour**, or open `/my-content?tour=1` / `?tour=all`.
+
 ## Conventions
 
 - ESM imports with `.js` suffix in TS source (`from "./foo.js"`).

@@ -225,6 +225,7 @@ export function StudyAiComposer({
               type="button"
               aria-label="Attach or set sources"
               title="Attach or set sources"
+              data-tour-id="sai-attach-sources"
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();
@@ -241,6 +242,7 @@ export function StudyAiComposer({
             </button>
             <input
               value={input}
+              data-tour-id="sai-slash"
               onChange={(e) => {
                 const v = e.target.value;
                 onInput(v);

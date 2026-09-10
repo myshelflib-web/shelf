@@ -87,7 +87,10 @@ export function StudyAiSuggestChips({
   const hintFade = useCrossfadeText(hint);
 
   return (
-    <div className={`study-ai-suggest ${className}`.trim()}>
+    <div
+      className={`study-ai-suggest ${className}`.trim()}
+      data-tour-id="sai-suggest-chips"
+    >
       {showHint && (
         <p
           className={`study-ai-suggest-hint text-[10px] uppercase tracking-[0.06em] text-[var(--text-muted)] mb-1.5 lively-line ${

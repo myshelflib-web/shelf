@@ -176,7 +176,10 @@ export function LibraryEmptyWorkspace() {
           />
         ) : null}
 
-        <label className={`relative w-full ${query.trim() ? "mt-8" : "mt-3"}`}>
+        <label
+          className={`relative w-full ${query.trim() ? "mt-8" : "mt-3"}`}
+          data-tour-id="lib-empty-search"
+        >
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
           <input
             value={query}
