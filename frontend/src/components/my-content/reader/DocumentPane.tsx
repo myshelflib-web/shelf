@@ -80,12 +80,26 @@ import {
   type LoadedPage,
 } from "./documentPaneFetch";
 import {
-  canOptimisticMountPdf,
-  optimisticPdfLoadedPage,
+  canOptimisticMount,
+  optimisticLoadedPage,
 } from "./optimisticPdfPage";
-import clsx from "clsx";
+import {
+  peekOptimisticOpenSeed,
+  takeOptimisticOpenSeed,
+} from "@/lib/optimisticOpenSeed";
 import { isLiveEditorHtml } from "@/lib/pageKinds";
 import { isCurriculumReadOnlyHtml } from "@/lib/docEditor";
+import clsx from "clsx";
+
+function isEmptyOrPlaceholderContent(content: string): boolean {
+  const t = content.trim();
+  return (
+    !t ||
+    t === "<p>Content not available yet.</p>" ||
+    t === "<p><br></p>" ||
+    t === "<p></p>"
+  );
+}
 import { curriculumHighlightToUser } from "@/components/my-content/persistHtmlHighlight";
 import { linkEmbedHint, shouldUseLinkEmbed } from "@/lib/linkEmbedPolicy";
 import { formatOfficialSourceAttribution } from "@/lib/officialSourceAttribution";
@@ -344,25 +358,46 @@ export function DocumentPane({
     const sameDocument =
       loadedHrefRef.current === href && pageIdRef.current != null;
 
-    const knownPageId = tab.pageId;
-    const mountPdfEarly = canOptimisticMountPdf({
+    const seed = peekOptimisticOpenSeed({
+      href,
+      pageId: tab.pageId,
+    });
+    const knownPageId = tab.pageId ?? seed?.pageId ?? null;
+    const knownType = tab.contentType ?? seed?.contentType ?? null;
+    const mountEarly = canOptimisticMount({
       pageId: knownPageId,
-      contentType: tab.contentType,
+      contentType: knownType,
       scope,
+      seed,
     });
 
     if (!sameDocument) {
-      if (mountPdfEarly && knownPageId) {
-        const optimistic = optimisticPdfLoadedPage({
+      if (mountEarly && knownPageId && knownType) {
+        const optimistic = optimisticLoadedPage({
           id: knownPageId,
-          title: tab.title,
+          title: seed?.title ?? tab.title,
           scope,
+          contentType: knownType,
+          content: seed?.content,
+          sourceUrl: seed?.sourceUrl,
         });
         setPageData(optimistic);
         pageIdRef.current = knownPageId;
         setLoading(false);
         setHighlights([]);
         setHighlightsHydrating(true);
+        if (
+          optimistic.contentType === "HTML" &&
+          isLiveEditorHtml(optimistic.content) &&
+          !isCurriculumReadOnlyHtml(optimistic.content)
+        ) {
+          draftContentRef.current = optimistic.content;
+          setDraftContent(optimistic.content);
+          setEditorSeed(optimistic.content);
+          lastSavedHtml.current = optimistic.content;
+          setEditing(true);
+          setSaveStatus("idle");
+        }
       } else {
         setLoading(true);
         setHighlights([]);
@@ -372,6 +407,7 @@ export function DocumentPane({
 
     if (
       knownPageId &&
+      knownType === "PDF" &&
       scope.kind !== "learn" &&
       !(scope.kind === "shared" && !scope.linkToken)
     ) {
@@ -406,6 +442,7 @@ export function DocumentPane({
         } = result;
         if (accessDenied) {
           loadedHrefRef.current = href;
+          takeOptimisticOpenSeed({ href, pageId: page.id });
           setPageData({
             id: page.id,
             title: page.title,
@@ -424,16 +461,31 @@ export function DocumentPane({
           setLoading(false);
           return;
         }
+        const serverContent =
+          page.content ??
+          (page.contentType === "PDF" || page.contentType === "LINK"
+            ? ""
+            : "<p>Content not available yet.</p>");
+        const localDraft = draftContentRef.current;
+        const keepLocalContent =
+          mountEarly &&
+          pageIdRef.current === page.id &&
+          Boolean(localDraft) &&
+          isLiveEditorHtml(localDraft) &&
+          isEmptyOrPlaceholderContent(serverContent);
+        const content = keepLocalContent ? localDraft : serverContent;
+        const sourceUrl =
+          page.sourceUrl ||
+          (mountEarly && pageIdRef.current === page.id
+            ? peekOptimisticOpenSeed({ pageId: page.id })?.sourceUrl
+            : undefined) ||
+          null;
         const loaded: LoadedPage = {
           id: page.id,
           title: page.title,
-          content:
-            page.content ??
-            (page.contentType === "PDF" || page.contentType === "LINK"
-              ? ""
-              : "<p>Content not available yet.</p>"),
+          content,
           contentType: page.contentType,
-          sourceUrl: page.sourceUrl,
+          sourceUrl,
           completed: page.completed ?? false,
           starred: page.starred ?? false,
           readPercent: page.readPercent ?? 0,
@@ -465,6 +517,7 @@ export function DocumentPane({
           subjectMeta: subjectMeta ?? null,
           access,
         };
+        takeOptimisticOpenSeed({ href, pageId: loaded.id });
         setPageData(loaded);
         setLiveReadPercent(loaded.readPercent);
         lastPersistedPercent.current = loaded.readPercent;
@@ -501,7 +554,14 @@ export function DocumentPane({
           setSavedView(merged);
         }
         onMetaRef.current({ title: loaded.title, pageId: loaded.id });
-        if (
+        const keepOptimisticLiveEditor =
+          mountEarly &&
+          loaded.contentType === "HTML" &&
+          isLiveEditorHtml(loaded.content) &&
+          (draftContentRef.current === loaded.content || keepLocalContent);
+        if (keepOptimisticLiveEditor) {
+          setSaveStatus("idle");
+        } else if (
           !isPreloaded &&
           loaded.contentType === "HTML" &&
           isLiveEditorHtml(loaded.content) &&
@@ -575,8 +635,8 @@ export function DocumentPane({
       })
       .catch(() => {
         if (gen !== pageLoadGen.current) return;
-        // Keep an optimistic PDF shell if metadata fails after upload open.
-        if (mountPdfEarly && knownPageId && pageIdRef.current === knownPageId) {
+        // Keep an optimistic shell if metadata fails after create/upload open.
+        if (mountEarly && knownPageId && pageIdRef.current === knownPageId) {
           setLoading(false);
           setHighlightsHydrating(false);
           return;

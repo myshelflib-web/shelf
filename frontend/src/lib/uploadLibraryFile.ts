@@ -66,10 +66,32 @@ async function prepareUploadFile(
   return { toUpload, clientPacked };
 }
 
+async function completeUploadWithRetry<T>(
+  request: RequestFn,
+  token: string,
+  attempts = 3
+): Promise<T> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      return await request<T>("/api/my-content/uploads/complete", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      });
+    } catch (err) {
+      lastErr = err;
+      if (i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 /**
- * Direct-to-S3 library upload. PDFs create a draft on init so we can seed the
- * byte cache and open the reader after PUT while complete finalizes in the
- * background.
+ * Direct-to-S3 library upload. PDFs create a draft on init (hidden from lists)
+ * so we can seed the byte cache; complete must succeed before we return so the
+ * explorer never sees a row that later vanishes.
  */
 export async function uploadLibraryFile(opts: {
   file: File;
@@ -79,8 +101,18 @@ export async function uploadLibraryFile(opts: {
   request: RequestFn;
   putToUrl: PutFn;
   deletePage?: (id: string) => Promise<unknown>;
+  onDraftAbandoned?: (pageId: string) => void;
 }): Promise<{ page: UserPageSummary; message?: string; pdfCacheVersion?: string }> {
-  const { file, title, scope, onProgress, request, putToUrl, deletePage } = opts;
+  const {
+    file,
+    title,
+    scope,
+    onProgress,
+    request,
+    putToUrl,
+    deletePage,
+    onDraftAbandoned,
+  } = opts;
   const { toUpload, clientPacked } = await prepareUploadFile(file, onProgress);
 
   const init = await request<{
@@ -102,6 +134,14 @@ export async function uploadLibraryFile(opts: {
     }),
   });
 
+  const abandonDraft = async () => {
+    if (!init.page?.id) return;
+    if (deletePage) {
+      await deletePage(init.page.id).catch(() => undefined);
+    }
+    onDraftAbandoned?.(init.page.id);
+  };
+
   try {
     await putToUrl(
       init.uploadUrl,
@@ -110,54 +150,12 @@ export async function uploadLibraryFile(opts: {
       onProgress
     );
   } catch (err) {
-    if (init.page?.id && deletePage) {
-      await deletePage(init.page.id).catch(() => undefined);
-    }
+    await abandonDraft();
     throw err;
   }
 
   const earlyPage = init.page;
   const earlyVersion = init.pdfCacheVersion;
-
-  if (earlyPage?.id && earlyVersion && isPdfFile(toUpload)) {
-    onProgress?.({
-      loaded: toUpload.size,
-      total: toUpload.size,
-      percent: 100,
-      phase: "finalizing",
-    });
-    const seedPromise = seedPdfByteCache(earlyPage.id, earlyVersion, toUpload);
-    void request<{
-      page: UserPageSummary;
-      message?: string;
-      pdfCacheVersion?: string;
-    }>("/api/my-content/uploads/complete", {
-      method: "POST",
-      body: JSON.stringify({ token: init.token }),
-    })
-      .then(async (done) => {
-        if (!done?.pdfCacheVersion || done.pdfCacheVersion === earlyVersion) {
-          return;
-        }
-        await seedPdfByteCache(earlyPage.id, done.pdfCacheVersion, toUpload);
-      })
-      .catch((err: unknown) => {
-        if (typeof console !== "undefined") {
-          console.warn(
-            "[shelf] upload complete failed",
-            err instanceof Error ? err.message : err
-          );
-        }
-      });
-
-    await seedPromise;
-
-    return {
-      page: earlyPage,
-      message: "PDF uploaded. Open the page to read it.",
-      pdfCacheVersion: earlyVersion,
-    };
-  }
 
   onProgress?.({
     loaded: toUpload.size,
@@ -165,18 +163,45 @@ export async function uploadLibraryFile(opts: {
     percent: 100,
     phase: "finalizing",
   });
-  const done = await request<{
-    page: UserPageSummary;
-    message?: string;
-    pdfCacheVersion?: string;
-  }>("/api/my-content/uploads/complete", {
-    method: "POST",
-    body: JSON.stringify({ token: init.token }),
-  });
 
-  if (done.page?.id && done.pdfCacheVersion && isPdfFile(toUpload)) {
-    await seedPdfByteCache(done.page.id, done.pdfCacheVersion, toUpload);
+  if (earlyPage?.id && earlyVersion && isPdfFile(toUpload)) {
+    const seedPromise = seedPdfByteCache(earlyPage.id, earlyVersion, toUpload);
+    try {
+      const done = await completeUploadWithRetry<{
+        page: UserPageSummary;
+        message?: string;
+        pdfCacheVersion?: string;
+      }>(request, init.token);
+      await seedPromise;
+      const version = done.pdfCacheVersion ?? earlyVersion;
+      if (version !== earlyVersion) {
+        await seedPdfByteCache(done.page.id, version, toUpload);
+      }
+      return {
+        page: { ...done.page, contentType: done.page.contentType ?? "PDF" },
+        message: done.message ?? "PDF uploaded. Open the page to read it.",
+        pdfCacheVersion: version,
+      };
+    } catch (err) {
+      await abandonDraft();
+      throw err;
+    }
   }
 
-  return done;
+  try {
+    const done = await completeUploadWithRetry<{
+      page: UserPageSummary;
+      message?: string;
+      pdfCacheVersion?: string;
+    }>(request, init.token);
+
+    if (done.page?.id && done.pdfCacheVersion && isPdfFile(toUpload)) {
+      await seedPdfByteCache(done.page.id, done.pdfCacheVersion, toUpload);
+    }
+
+    return done;
+  } catch (err) {
+    await abandonDraft();
+    throw err;
+  }
 }

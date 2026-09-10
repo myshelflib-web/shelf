@@ -16,6 +16,7 @@ import {
   PersonalPageReaderScope,
 } from "./types";
 import { AnalyticsEvents, track } from "@/lib/analytics";
+import { peekOptimisticOpenSeed } from "@/lib/optimisticOpenSeed";
 import { reorderOpenTabs } from "./reorderOpenTabs";
 
 function totalTabs(panes: ReaderPane[]): number {
@@ -195,7 +196,14 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
         };
       }
 
-      const tab = tabFromScope(scope, title ?? "Untitled");
+      const href = scopeHref(scope);
+      const seed = peekOptimisticOpenSeed({ href });
+      const tab = tabFromScope(
+        scope,
+        seed?.title ?? title ?? "Untitled",
+        seed?.pageId,
+        seed?.contentType
+      );
       const focused =
         prev.panes.find((p) => p.id === prev.focusedPaneId) ?? prev.panes[0];
       if (!focused) return emptyWorkspace(scope);

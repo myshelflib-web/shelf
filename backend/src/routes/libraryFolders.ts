@@ -12,6 +12,7 @@ import {
 } from "../services/libraryStore.js";
 import { fileSelect } from "../services/legacyLibraryTree.js";
 import { FolderDepthError } from "../utils/folderDepth.js";
+import { NOT_DRAFT } from "../utils/libraryVisiblePages.js";
 
 const router = Router();
 router.use(authMiddleware);
@@ -150,7 +151,7 @@ router.get("/files", async (req: Request, res: Response) => {
   }
 
   const files = await prisma.userTopic.findMany({
-    where: { userId, folderId },
+    where: { userId, folderId, status: NOT_DRAFT },
     select: fileSelect,
     orderBy: { order: "asc" },
   });

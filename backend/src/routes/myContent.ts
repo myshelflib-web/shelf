@@ -91,6 +91,7 @@ import {
   finalizePdfDirectUpload,
   pdfCacheVersion as pdfCacheVersionFor,
 } from "./myContentPdfDirectUpload.js";
+import { NOT_DRAFT } from "../utils/libraryVisiblePages.js";
 
 const router = Router();
 
@@ -865,32 +866,41 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
   }
 
   if (claims.kind === "pdf") {
-    const result = await finalizePdfDirectUpload({
-      claims,
-      parentFields: fileParentFields(parent),
-      userId: parent.userId,
-      chargeStorage,
-      nextPageOrder: () => nextPageOrder(parent.scope),
-      resolveSlug: async (preferred) =>
-        (await findPageBySlug(parent.scope, preferred))
-          ? await uniquePageSlug(parent.scope, claims.title)
-          : preferred,
-    });
-    if (!result.ok) {
-      res.status(result.status).json({ error: result.error });
-      return;
+    try {
+      const result = await finalizePdfDirectUpload({
+        claims,
+        parentFields: fileParentFields(parent),
+        userId: parent.userId,
+        chargeStorage,
+        nextPageOrder: () => nextPageOrder(parent.scope),
+        resolveSlug: async (preferred) =>
+          (await findPageBySlug(parent.scope, preferred))
+            ? await uniquePageSlug(parent.scope, claims.title)
+            : preferred,
+      });
+      if (!result.ok) {
+        res.status(result.status).json({ error: result.error });
+        return;
+      }
+      contentFlow.uploadComplete(reqLog(req), {
+        pageId: result.page.id,
+        kind: "pdf",
+        slug: result.page.slug,
+        bytes: result.bytes,
+      });
+      res.status(201).json({
+        page: result.page,
+        pdfCacheVersion: result.pdfCacheVersion,
+        message: "PDF uploaded. Open the page to read it.",
+      });
+    } catch (err) {
+      if (err instanceof QuotaError) {
+        res.status(err.status).json({ error: err.message });
+        return;
+      }
+      req.log?.error("my_content.upload_complete_pdf_failed", errorFields(err));
+      res.status(500).json({ error: "Could not finish upload" });
     }
-    contentFlow.uploadComplete(reqLog(req), {
-      pageId: result.page.id,
-      kind: "pdf",
-      slug: result.page.slug,
-      bytes: result.bytes,
-    });
-    res.status(201).json({
-      page: result.page,
-      pdfCacheVersion: result.pdfCacheVersion,
-      message: "PDF uploaded. Open the page to read it.",
-    });
     return;
   }
 
@@ -1082,6 +1092,7 @@ router.get("/subjects", async (req: Request, res: Response) => {
       where: {
         userId,
         folderId: null,
+        status: NOT_DRAFT,
       },
       orderBy: { order: "asc" },
       select: pageSelect,

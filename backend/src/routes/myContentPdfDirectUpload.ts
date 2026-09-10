@@ -38,6 +38,7 @@ type ParentFields = {
 /**
  * Create a DRAFT PDF row at init so the client can open after PUT while
  * complete charges storage and publishes. Processor ignores DRAFT.
+ * DRAFT rows are hidden from library list APIs until published.
  */
 export async function createDraftPdfPage(input: {
   userId: string;
@@ -64,6 +65,13 @@ export async function createDraftPdfPage(input: {
   });
 }
 
+async function deleteDraftUpload(pageId: string, pdfKey: string): Promise<void> {
+  await deleteFromS3(pdfKey).catch(() => undefined);
+  await prisma.userTopic
+    .deleteMany({ where: { id: pageId, status: "DRAFT" } })
+    .catch(() => undefined);
+}
+
 export type FinalizePdfResult =
   | {
       ok: true;
@@ -77,6 +85,8 @@ export type FinalizePdfResult =
 /**
  * Verify S3 object, optional recompress, charge (once), publish.
  * When `claims.pageId` is set, updates the draft from init; otherwise creates.
+ * Publish uses a conditional DRAFT→PUBLISHED update so concurrent completes
+ * cannot double-charge.
  */
 export async function finalizePdfDirectUpload(input: {
   claims: DirectUploadClaims;
@@ -87,31 +97,34 @@ export async function finalizePdfDirectUpload(input: {
   resolveSlug: (preferred: string) => Promise<string>;
 }): Promise<FinalizePdfResult> {
   const { claims } = input;
+
+  const failAndCleanup = async (
+    status: number,
+    error: string
+  ): Promise<FinalizePdfResult> => {
+    if (claims.pageId) {
+      await deleteDraftUpload(claims.pageId, claims.key);
+    } else {
+      await deleteFromS3(claims.key).catch(() => undefined);
+    }
+    return { ok: false, status, error };
+  };
+
   let meta;
   try {
     meta = await headObjectMeta(claims.key);
   } catch {
-    return {
-      ok: false,
-      status: 400,
-      error: "File did not reach storage. Try again.",
-    };
+    return failAndCleanup(400, "File did not reach storage. Try again.");
   }
 
   if (meta.contentLength <= 0 || meta.contentLength > claims.size + 1024) {
-    await deleteFromS3(claims.key).catch(() => undefined);
-    return {
-      ok: false,
-      status: 400,
-      error: "Uploaded file does not match the request",
-    };
+    return failAndCleanup(400, "Uploaded file does not match the request");
   }
 
   const head = await getObjectPrefix(claims.key, 8);
   const invalid = validateUploadBuffer("pdf", head);
   if (invalid) {
-    await deleteFromS3(claims.key).catch(() => undefined);
-    return { ok: false, status: 400, error: invalid };
+    return failAndCleanup(400, invalid);
   }
 
   const storedBytes = await recompressS3ObjectUnlessClientPacked(
@@ -135,6 +148,7 @@ export async function finalizePdfDirectUpload(input: {
       },
     });
     if (!existing) {
+      await deleteFromS3(claims.key).catch(() => undefined);
       return { ok: false, status: 400, error: "Upload page not found" };
     }
 
@@ -157,13 +171,51 @@ export async function finalizePdfDirectUpload(input: {
       };
     }
 
-    await input.chargeStorage(input.userId, storedBytes);
-    const page = await prisma.userTopic.update({
-      where: { id: existing.id },
+    // Claim DRAFT → PUBLISHED atomically (only one concurrent complete wins).
+    const claimed = await prisma.userTopic.updateMany({
+      where: {
+        id: existing.id,
+        userId: input.userId,
+        status: "DRAFT",
+        pdfKey: claims.key,
+      },
       data: {
         status: "PUBLISHED",
         fileSizeBytes: storedBytes,
       },
+    });
+
+    if (claimed.count === 0) {
+      const again = await prisma.userTopic.findFirst({
+        where: { id: existing.id, userId: input.userId },
+        select: { ...pdfUploadPageSelect, fileSizeBytes: true },
+      });
+      if (again?.status === "PUBLISHED") {
+        return {
+          ok: true,
+          page: again,
+          pdfCacheVersion: pdfCacheVersion(claims.key, again.fileSizeBytes),
+          bytes: again.fileSizeBytes,
+          created: false,
+        };
+      }
+      return { ok: false, status: 400, error: "Upload page not found" };
+    }
+
+    try {
+      await input.chargeStorage(input.userId, storedBytes);
+    } catch (err) {
+      await prisma.userTopic
+        .updateMany({
+          where: { id: existing.id, status: "PUBLISHED" },
+          data: { status: "FAILED" },
+        })
+        .catch(() => undefined);
+      throw err;
+    }
+
+    const page = await prisma.userTopic.findFirstOrThrow({
+      where: { id: existing.id },
       select: pdfUploadPageSelect,
     });
     scheduleIndexPage(page.id);

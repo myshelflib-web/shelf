@@ -11,6 +11,7 @@ import { uniqueFolderSlug } from "../utils/fileScope.js";
 import { assertCanNestUnder } from "../utils/folderPath.js";
 
 import type { SlimNotebook } from "../utils/notebookBrowse.js";
+import { NOT_DRAFT } from "../utils/libraryVisiblePages.js";
 
 export async function slimRootFolders(userId: string): Promise<SlimNotebook[]> {
   await ensureLegacyLibraryMapped(userId);
@@ -35,7 +36,7 @@ export async function slimRootFolders(userId: string): Promise<SlimNotebook[]> {
     select: { id: true, parentId: true },
   });
   const files = await prisma.userTopic.findMany({
-    where: { userId, folderId: { not: null } },
+    where: { userId, folderId: { not: null }, status: NOT_DRAFT },
     select: {
       folderId: true,
       title: true,
@@ -123,6 +124,7 @@ export async function loadLegacySubjectsForUser(
       : await prisma.userTopic.findMany({
           where: {
             userId,
+            status: NOT_DRAFT,
             OR: [
               ...(ids && ids.length > 0 ? [] : [{ folderId: null }]),
               ...(allFolderIds.length > 0
@@ -143,7 +145,7 @@ export async function loadLegacySubjectsForUser(
 export async function loadRootFiles(userId: string) {
   await ensureLegacyLibraryMapped(userId);
   return prisma.userTopic.findMany({
-    where: { userId, folderId: null },
+    where: { userId, folderId: null, status: NOT_DRAFT },
     select: fileSelect,
     orderBy: { order: "asc" },
   });
@@ -231,7 +233,7 @@ export async function loadFolderTree(userId: string) {
   });
 
   const files = await prisma.userTopic.findMany({
-    where: { userId },
+    where: { userId, status: NOT_DRAFT },
     select: { ...fileSelect, folderId: true },
     orderBy: { order: "asc" },
   });

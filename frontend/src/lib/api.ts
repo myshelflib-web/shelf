@@ -8,6 +8,7 @@ import {
   type UploadProgress,
   type UploadProgressHandler,
 } from "@/lib/uploadLibraryFile";
+import { emitPageDeleted } from "@/lib/contentEvents";
 import { fetchWithRetry } from "@/lib/fetchRetry";
 import { reportApiFailure } from "@/lib/analytics/errors";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
@@ -215,6 +216,9 @@ async function uploadLibraryFile(
     putToUrl,
     deletePage: (id) =>
       request(`/api/my-content/pages/${id}`, { method: "DELETE" }),
+    onDraftAbandoned: (pageId) => {
+      emitPageDeleted(pageId);
+    },
   });
 }
 

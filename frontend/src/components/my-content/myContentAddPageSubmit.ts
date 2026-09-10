@@ -5,11 +5,18 @@ import {
   createSketchNotebookHtml,
   type SketchTemplate,
 } from "@/lib/sketchNotebook";
-import type { UserPageSummary, UserSubject, UserTopicGroup } from "@/types";
+import type {
+  UserContentType,
+  UserPageSummary,
+  UserSubject,
+  UserTopicGroup,
+} from "@/types";
 import type { PageAddMode } from "./MyContentAddModal";
 import { runBulkFolderUpload, type BulkUploadProgress } from "./bulkFolderUpload";
 import { emitContentChanged } from "@/lib/contentEvents";
 import { isYoutubeUrl } from "@/lib/youtubeUrl";
+import { VIDEO_NOTES_HTML } from "@/lib/videoNotesHtml";
+import type { OptimisticOpenSeed } from "@/lib/optimisticOpenSeed";
 
 function assertUploadOk(file: File) {
   const name = file.name.toLowerCase();
@@ -19,6 +26,10 @@ function assertUploadOk(file: File) {
     );
   }
 }
+
+export type AddPageOpenSeed = Omit<OptimisticOpenSeed, "href" | "pageId"> & {
+  contentType: UserContentType;
+};
 
 export async function submitBulkFolderImport(input: {
   bulkFiles: File[];
@@ -72,9 +83,14 @@ export async function submitAddPage(input: {
   sketchBg: string;
   docTemplate?: DocTemplateId;
   reportUploadProgress: UploadProgressHandler;
-}): Promise<{ page: UserPageSummary; href: string }> {
+}): Promise<{
+  page: UserPageSummary;
+  href: string;
+  openSeed?: AddPageOpenSeed;
+}> {
   const { notebook, topic } = input;
   let page: UserPageSummary;
+  let openSeed: AddPageOpenSeed | undefined;
 
   if (input.addMode === "file" && input.uploadFile) {
     assertUploadOk(input.uploadFile);
@@ -100,6 +116,9 @@ export async function submitAddPage(input: {
         input.reportUploadProgress
       ));
     }
+    if (page.contentType === "PDF") {
+      openSeed = { contentType: "PDF", title: page.title };
+    }
   } else if (
     input.addMode === "youtube" ||
     (input.addMode === "link" && isYoutubeUrl(input.pageLink))
@@ -122,8 +141,14 @@ export async function submitAddPage(input: {
         topicId: result.topic?.id ?? topic?.id,
         topicSlug: result.topic?.slug ?? topic?.slug ?? null,
       });
+      openSeed = {
+        contentType: "VIDEO",
+        title: result.page.title,
+        sourceUrl: input.pageLink.trim(),
+        content: VIDEO_NOTES_HTML,
+      };
     }
-    return { page: result.page, href: result.href };
+    return { page: result.page, href: result.href, openSeed };
   } else if (input.addMode === "link") {
     const body = { title: input.pageTitle, sourceUrl: input.pageLink };
     if (notebook && topic) {
@@ -133,14 +158,17 @@ export async function submitAddPage(input: {
     } else {
       ({ page } = await api.myContent.createRootPage(body));
     }
+    openSeed = {
+      contentType: "LINK",
+      title: page.title,
+      sourceUrl: input.pageLink.trim(),
+    };
   } else if (input.addMode === "sketch") {
-    const body = {
-      title: input.pageTitle,
-      htmlContent: createSketchNotebookHtml({
-        bg: input.sketchBg,
-        template: input.sketchTemplate,
-      }),
-    };
+    const htmlContent = createSketchNotebookHtml({
+      bg: input.sketchBg,
+      template: input.sketchTemplate,
+    });
+    const body = { title: input.pageTitle, htmlContent };
     if (notebook && topic) {
       ({ page } = await api.myContent.createPage(notebook.id, topic.id, body));
     } else if (notebook) {
@@ -148,14 +176,17 @@ export async function submitAddPage(input: {
     } else {
       ({ page } = await api.myContent.createRootPage(body));
     }
+    openSeed = {
+      contentType: "HTML",
+      title: page.title,
+      content: htmlContent,
+    };
   } else if (input.addMode === "doc") {
-    const body = {
-      title: input.pageTitle,
-      htmlContent: htmlForDocTemplate(
-        input.docTemplate || "blank",
-        input.pageTitle
-      ),
-    };
+    const htmlContent = htmlForDocTemplate(
+      input.docTemplate || "blank",
+      input.pageTitle
+    );
+    const body = { title: input.pageTitle, htmlContent };
     if (notebook && topic) {
       ({ page } = await api.myContent.createPage(notebook.id, topic.id, body));
     } else if (notebook) {
@@ -163,6 +194,11 @@ export async function submitAddPage(input: {
     } else {
       ({ page } = await api.myContent.createRootPage(body));
     }
+    openSeed = {
+      contentType: "HTML",
+      title: page.title,
+      content: htmlContent,
+    };
   } else {
     throw new Error("Choose a page type to create.");
   }
@@ -177,5 +213,5 @@ export async function submitAddPage(input: {
     topicId: topic?.id,
     topicSlug: topic?.slug ?? null,
   });
-  return { page, href };
+  return { page, href, openSeed };
 }

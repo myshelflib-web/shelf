@@ -31,6 +31,8 @@ import {
   emitContentChanged,
   emitOpenPage,
 } from "@/lib/contentEvents";
+import { setOptimisticOpenSeed } from "@/lib/optimisticOpenSeed";
+import type { AddPageOpenSeed } from "./myContentAddPageSubmit";
 import {
   AnalyticsEvents,
   AnalyticsFirstTimeFlags,
@@ -237,7 +239,18 @@ export function MyContentAddProvider({
   }, []);
 
   const openCreatedPage = useCallback(
-    (href: string, page: UserPageSummary) => {
+    (href: string, page: UserPageSummary, openSeed?: AddPageOpenSeed) => {
+      const contentType = openSeed?.contentType ?? page.contentType;
+      if (contentType) {
+        setOptimisticOpenSeed({
+          pageId: page.id,
+          href,
+          contentType,
+          title: openSeed?.title ?? page.title,
+          content: openSeed?.content,
+          sourceUrl: openSeed?.sourceUrl,
+        });
+      }
       const scope = scopeFromHref(href);
       if (scope && isReaderHref(window.location.pathname)) {
         emitOpenPage({
@@ -245,7 +258,7 @@ export function MyContentAddProvider({
           title: page.title,
           pageId: page.id,
           scope,
-          contentType: page.contentType,
+          contentType,
         });
         return;
       }
@@ -371,7 +384,7 @@ export function MyContentAddProvider({
           phase,
         });
       }
-      const { page, href } = await submitAddPage({
+      const { page, href, openSeed } = await submitAddPage({
         addMode,
         pageTitle,
         pageLink,
@@ -390,7 +403,7 @@ export function MyContentAddProvider({
           contentType: page.contentType,
         });
       }
-      openCreatedPage(href, page);
+      openCreatedPage(href, page, openSeed);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to add page";
       setMessage(message);

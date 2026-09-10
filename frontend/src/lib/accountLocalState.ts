@@ -12,6 +12,7 @@ import { adoptUnkeyedReadingStats } from "@/lib/readingStats";
 import { clearPdfByteCache } from "@/lib/pdfByteCache";
 import { clearPdfDeleteUndos } from "@/lib/pdfDeleteUndo";
 import { clearOfflineDb } from "@/lib/offline/db";
+import { clearOptimisticOpenSeeds } from "@/lib/optimisticOpenSeed";
 
 /** Known account keys — wipe also deletes any other `shelf:*` key. */
 export const ACCOUNT_LOCAL_KEYS = [
@@ -80,6 +81,7 @@ export function clearAccountLocalState(): Promise<void> {
     wipeLocalAccountKeys();
     wipeSessionAccountKeys();
     clearDashboardHomeSession();
+    clearOptimisticOpenSeeds();
     window.dispatchEvent(new Event(WORKSPACE_CHANGED_EVENT));
     window.dispatchEvent(new Event("shelf:reading-stats-changed"));
     window.dispatchEvent(new Event("shelf:reading-goal-changed"));
