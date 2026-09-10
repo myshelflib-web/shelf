@@ -149,7 +149,7 @@ export function PreloadedSubjectBranch({
                   className={clsx(
                     "library-row group flex items-center gap-0.5 rounded-md text-[13px] min-w-0 px-1 py-1 cursor-pointer outline-none",
                     isActive
-                      ? "bg-[var(--bg-elevated)] text-[var(--text-primary)]"
+                      ? "library-row-active"
                       : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]"
                   )}
                 >

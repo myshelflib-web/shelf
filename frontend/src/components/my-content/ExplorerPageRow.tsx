@@ -223,7 +223,7 @@ export function ExplorerPageRow({
           ? "cursor-grab active:cursor-grabbing"
           : "cursor-pointer",
         isActive
-          ? "bg-[var(--bg-elevated)] text-[var(--text-primary)]"
+          ? "library-row-active"
           : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]",
         dragging && "opacity-40",
         deleting && "opacity-50 pointer-events-none",

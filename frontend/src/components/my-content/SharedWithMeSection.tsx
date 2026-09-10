@@ -136,7 +136,7 @@ export function SharedWithMeSection({
                 removed
                   ? "opacity-55"
                   : active
-                    ? "bg-[var(--bg-elevated)]"
+                    ? "library-row-active"
                     : "hover:bg-[var(--bg-elevated)] cursor-pointer"
               )}
               role={removed ? undefined : "button"}
