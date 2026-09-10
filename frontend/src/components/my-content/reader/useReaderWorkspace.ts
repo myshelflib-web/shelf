@@ -196,7 +196,7 @@ export function useReaderWorkspace(routeScope: PersonalPageReaderScope) {
         };
       }
 
-      const href = scopeHref(scope);
+      // Outer `href` — do not redeclare here (TDZ breaks findTab).
       const seed = peekOptimisticOpenSeed({ href });
       const tab = tabFromScope(
         scope,
