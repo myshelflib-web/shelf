@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { FolderUp, PenLine, FileText, Upload, Youtube } from "lucide-react";
+import { PenLine, FileText, Upload, Youtube } from "lucide-react";
 import type { UploadProgress } from "@/lib/api";
 
 export type PageAddMode = "file" | "bulk" | "sketch" | "doc" | "link" | "youtube";
@@ -10,23 +10,36 @@ export function formatAddBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export const PAGE_ADD_MODES: ReadonlyArray<readonly [PageAddMode, string]> = [
-  ["file", "Upload"],
-  ["bulk", "Folders"],
-  ["youtube", "YouTube"],
-  ["link", "Link"],
-  ["sketch", "Notebook"],
-  ["doc", "Doc"],
+/** Upload covers files + folders; Folders tab removed. */
+export const PAGE_ADD_MODE_ROWS: ReadonlyArray<
+  ReadonlyArray<readonly [PageAddMode, string]>
+> = [
+  [
+    ["file", "Upload"],
+    ["youtube", "YouTube"],
+    ["link", "Link"],
+  ],
+  [
+    ["sketch", "Notebook"],
+    ["doc", "Doc"],
+  ],
 ];
+
+/** @deprecated Prefer PAGE_ADD_MODE_ROWS — kept for any flat consumers. */
+export const PAGE_ADD_MODES: ReadonlyArray<readonly [PageAddMode, string]> =
+  PAGE_ADD_MODE_ROWS.flat();
 
 export function pageAddSubmitLabel(
   addMode: PageAddMode,
   submitting: boolean,
-  uploadProgress: UploadProgress | null
+  uploadProgress: UploadProgress | null,
+  opts?: { multiFile?: boolean }
 ): ReactNode {
-  if (submitting && addMode === "bulk") return "Importing…";
+  const multi = Boolean(opts?.multiFile) || addMode === "bulk";
+  if (submitting && multi) return "Importing…";
   if (submitting && addMode === "file") {
     if (uploadProgress?.phase === "compressing") return "Compressing…";
+    if (uploadProgress?.phase === "finalizing") return "Opening…";
     if (uploadProgress && uploadProgress.percent < 100) {
       return `Uploading ${uploadProgress.percent}%`;
     }
@@ -43,11 +56,11 @@ export function pageAddSubmitLabel(
     );
   }
   if (addMode === "link") return "Add link";
-  if (addMode === "bulk") {
+  if (multi) {
     return (
       <>
-        <FolderUp className="w-4 h-4" />
-        Import folders
+        <Upload className="w-4 h-4" />
+        Upload
       </>
     );
   }
@@ -77,21 +90,24 @@ export function pageAddSubmitLabel(
 
 export function AddUploadProgressBar({ progress }: { progress: UploadProgress }) {
   const compressing = progress.phase === "compressing";
-  const saving = !compressing && progress.percent >= 100;
+  const finalizing = progress.phase === "finalizing";
+  const saving = !compressing && !finalizing && progress.percent >= 100;
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
         <span>
           {compressing
             ? "Compressing…"
-            : saving
-              ? "Saving to library…"
-              : "Uploading"}
+            : finalizing
+              ? "Opening…"
+              : saving
+                ? "Saving to library…"
+                : "Uploading"}
         </span>
         <span className="tabular-nums text-[var(--text-secondary)]">
           {compressing
             ? "Preparing file"
-            : saving
+            : finalizing || saving
               ? "100%"
               : progress.total > 0
                 ? `${formatAddBytes(progress.loaded)} of ${formatAddBytes(progress.total)} · ${progress.percent}%`
@@ -111,7 +127,7 @@ export function AddUploadProgressBar({ progress }: { progress: UploadProgress })
           style={{
             width: compressing
               ? "18%"
-              : `${Math.max(saving ? 100 : progress.percent, 2)}%`,
+              : `${Math.max(finalizing || saving ? 100 : progress.percent, 2)}%`,
           }}
         />
       </div>

@@ -87,7 +87,12 @@ export function useMyContentSidebarLibrary({
         }
       }
       setSubjects(mergedTrees);
-      setRootPages(mergedPending.rootPages);
+      setRootPages((prev) => {
+        const server = mergedPending.rootPages;
+        const serverIds = new Set(server.map((p) => p.id));
+        const extras = prev.filter((p) => !serverIds.has(p.id));
+        return extras.length ? [...extras, ...server] : server;
+      });
       if (meta?.total != null) setTotalNotebooks(meta.total);
       if (meta?.totalPages != null) {
         setTotalNotebookPages(Math.max(1, meta.totalPages));
@@ -97,12 +102,15 @@ export function useMyContentSidebarLibrary({
   );
 
   const load = useCallback(
-    (opts?: { silent?: boolean }) => {
+    (opts?: { silent?: boolean; spin?: boolean }) => {
       const gen = ++loadGen.current;
       const silent = Boolean(opts?.silent);
+      const spin = Boolean(opts?.spin);
       const pageSize = SIDEBAR_NOTEBOOK_PAGE_SIZE;
 
-      if (!silent && !searching) {
+      if (spin && !silent) {
+        setLoading(true);
+      } else if (!silent && !searching) {
         const paintOpts = { sort, page: notebookPage };
         const mem = peekCachedLibrary(paintOpts);
         if (mem) {
@@ -221,7 +229,20 @@ export function useMyContentSidebarLibrary({
   useEffect(() => {
     load();
     const onChange = (e: Event) => {
-      applyExplorerContentChange(contentChangeFromEvent(e), {
+      const change = contentChangeFromEvent(e);
+      if (change?.type === "page-created") {
+        // Drop in-flight list responses that started before this insert so they
+        // cannot wipe the optimistic explorer row.
+        loadGen.current += 1;
+        if (change.notebookSlug) {
+          hydrateGen.current.set(
+            change.notebookSlug,
+            (hydrateGen.current.get(change.notebookSlug) ?? 0) + 1
+          );
+          hydratingSlugsRef.current.delete(change.notebookSlug);
+        }
+      }
+      applyExplorerContentChange(change, {
         setSubjects,
         setPinnedExtra,
         setRootPages,

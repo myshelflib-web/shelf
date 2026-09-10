@@ -1,9 +1,32 @@
 import { clearAccountLocalState } from "@/lib/accountLocalState";
-import { compressFormDataFiles, compressUploadFile, shouldCompressUpload } from "@/lib/compressUploadFile";
+import {
+  compressFormDataFiles,
+  compressUploadFile,
+} from "@/lib/compressUploadFile";
+import {
+  uploadLibraryFile as runLibraryUpload,
+  type UploadEarlyReady,
+  type UploadLibraryResult,
+  type UploadProgress,
+  type UploadProgressHandler,
+} from "@/lib/uploadLibraryFile";
+import {
+  beginApiSync,
+  endApiSync,
+  withApiSyncStatus,
+} from "@/lib/apiRequestSync";
 import { fetchWithRetry } from "@/lib/fetchRetry";
 import { reportApiFailure } from "@/lib/analytics/errors";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { toUserFacingError } from "@/lib/userFacingError";
+import { bindMutationFlushRequest } from "@/lib/flushPendingMutations";
+
+export type {
+  UploadEarlyReady,
+  UploadLibraryResult,
+  UploadProgress,
+  UploadProgressHandler,
+};
 
 /** Production (Vercel): set NEXT_PUBLIC_API_URL to the Render backend, e.g. https://your-api.onrender.com */
 export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -37,6 +60,22 @@ function newRequestId(): string {
 }
 
 async function request<T>(
+  path: string,
+  options: RequestInit & { skipSyncStatus?: boolean } = {}
+): Promise<T> {
+  const { skipSyncStatus, ...init } = options;
+  if (skipSyncStatus) {
+    return requestRaw<T>(path, init);
+  }
+  return withApiSyncStatus(
+    path,
+    init.method ?? "GET",
+    init.body ?? null,
+    () => requestRaw<T>(path, init)
+  );
+}
+
+async function requestRaw<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
@@ -96,15 +135,6 @@ async function request<T>(
   }
   return JSON.parse(text) as T;
 }
-
-export type UploadProgress = {
-  loaded: number;
-  total: number;
-  percent: number;
-  phase?: "compressing" | "uploading";
-};
-
-export type UploadProgressHandler = (progress: UploadProgress) => void;
 
 export type PresignedPdf = {
   url: string;
@@ -203,44 +233,29 @@ async function uploadLibraryFile(
   file: File,
   title: string,
   scope: { subjectId?: string; topicGroupId?: string },
-  onProgress?: UploadProgressHandler
+  onProgress?: UploadProgressHandler,
+  onEarlyReady?: (early: UploadEarlyReady) => void,
+  opts?: { seedPdfCache?: boolean }
 ) {
-  const clientPacked = shouldCompressUpload(file);
-  if (clientPacked) {
-    onProgress?.({
-      loaded: 0,
-      total: file.size,
-      percent: 0,
-      phase: "compressing",
-    });
-  }
-  const toUpload = await compressUploadFile(file);
-  const init = await request<{
-    uploadUrl: string;
-    headers: { "Content-Type": string };
-    token: string;
-  }>("/api/my-content/uploads/init", {
-    method: "POST",
-    body: JSON.stringify({
-      title,
-      filename: toUpload.name,
-      contentType: toUpload.type,
-      size: toUpload.size,
-      subjectId: scope.subjectId,
-      topicGroupId: scope.topicGroupId,
-      clientPacked,
-    }),
+  return runLibraryUpload({
+    file,
+    title,
+    scope,
+    onProgress,
+    onEarlyReady,
+    seedPdfCache: opts?.seedPdfCache,
+    request,
+    putToUrl,
+    deletePage: (id) =>
+      request(`/api/my-content/pages/${id}`, { method: "DELETE" }),
+    onDraftAbandoned: (pageId) => {
+      // Lazy import — a static contentEvents import here cycles with api via
+      // DocumentPane → useDocumentPaneFlags → api and blows up with TDZ.
+      void import("@/lib/contentEvents").then(({ emitPageDeleted }) => {
+        emitPageDeleted(pageId);
+      });
+    },
   });
-  await putToUrl(
-    init.uploadUrl,
-    toUpload,
-    init.headers["Content-Type"],
-    onProgress
-  );
-  return request<{ page: import("@/types").UserPageSummary; message?: string }>(
-    "/api/my-content/uploads/complete",
-    { method: "POST", body: JSON.stringify({ token: init.token }) }
-  );
 }
 
 type StudySseHandlers = {
@@ -1263,31 +1278,72 @@ export const api = {
       subjectId: string,
       topicGroupId: string,
       formData: FormData,
-      onProgress?: UploadProgressHandler
+      onProgress?: UploadProgressHandler,
+      onEarlyReady?: (early: UploadEarlyReady) => void,
+      opts?: { seedPdfCache?: boolean }
     ) => {
       const { file, title } = fileFromForm(formData);
       return uploadLibraryFile(
         file,
         title,
         { subjectId, topicGroupId },
-        onProgress
+        onProgress,
+        onEarlyReady,
+        opts
       );
     },
     uploadNotebookFile: (
       subjectId: string,
       formData: FormData,
-      onProgress?: UploadProgressHandler
+      onProgress?: UploadProgressHandler,
+      onEarlyReady?: (early: UploadEarlyReady) => void,
+      opts?: { seedPdfCache?: boolean }
     ) => {
       const { file, title } = fileFromForm(formData);
-      return uploadLibraryFile(file, title, { subjectId }, onProgress);
+      return uploadLibraryFile(
+        file,
+        title,
+        { subjectId },
+        onProgress,
+        onEarlyReady,
+        opts
+      );
     },
     uploadRootFile: (
       formData: FormData,
-      onProgress?: UploadProgressHandler
+      onProgress?: UploadProgressHandler,
+      onEarlyReady?: (early: UploadEarlyReady) => void,
+      opts?: { seedPdfCache?: boolean }
     ) => {
       const { file, title } = fileFromForm(formData);
-      return uploadLibraryFile(file, title, {}, onProgress);
+      return uploadLibraryFile(file, title, {}, onProgress, onEarlyReady, opts);
     },
+    resumeUpload: (
+      pageId: string,
+      opts?: { clientPacked?: boolean }
+    ) =>
+      request<{
+        uploadUrl: string;
+        headers: { "Content-Type": string };
+        token: string;
+        page: import("@/types").UserPageSummary;
+        pdfCacheVersion?: string;
+      }>("/api/my-content/uploads/resume", {
+        method: "POST",
+        body: JSON.stringify({
+          pageId,
+          clientPacked: Boolean(opts?.clientPacked),
+        }),
+      }),
+    completeUpload: (token: string) =>
+      request<{
+        page: import("@/types").UserPageSummary;
+        message?: string;
+        pdfCacheVersion?: string;
+      }>("/api/my-content/uploads/complete", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      }),
     createPage: (
       subjectId: string,
       topicGroupId: string,
@@ -1606,36 +1662,45 @@ export const api = {
       file: Blob,
       opts: { deletedPages: number[]; numPagesBefore: number }
     ) => {
-      const packed = await compressUploadFile(
-        file instanceof File
-          ? file
-          : new File([file], "source.pdf", { type: "application/pdf" })
-      );
-      const init = await request<{
-        uploadUrl: string;
-        headers: { "Content-Type": string };
-        token: string;
-      }>(`/api/my-content/pages/${id}/pdf/replace/init`, {
-        method: "POST",
-        body: JSON.stringify({
-          size: packed.size,
-          deletedPages: opts.deletedPages,
-          numPagesBefore: opts.numPagesBefore,
-        }),
-      });
-      await putToUrl(
-        init.uploadUrl,
-        packed,
-        init.headers["Content-Type"] || "application/pdf"
-      );
-      return request<{
-        success: boolean;
-        fileSizeBytes: number;
-        highlights: import("@/types").UserContentHighlight[];
-      }>(`/api/my-content/pages/${id}/pdf/replace/complete`, {
-        method: "POST",
-        body: JSON.stringify({ token: init.token }),
-      });
+      // Outer wrap keeps the chip on through the S3 PUT between init/complete.
+      beginApiSync("Saving…");
+      try {
+        const packed = await compressUploadFile(
+          file instanceof File
+            ? file
+            : new File([file], "source.pdf", { type: "application/pdf" })
+        );
+        const init = await request<{
+          uploadUrl: string;
+          headers: { "Content-Type": string };
+          token: string;
+        }>(`/api/my-content/pages/${id}/pdf/replace/init`, {
+          method: "POST",
+          body: JSON.stringify({
+            size: packed.size,
+            deletedPages: opts.deletedPages,
+            numPagesBefore: opts.numPagesBefore,
+          }),
+        });
+        await putToUrl(
+          init.uploadUrl,
+          packed,
+          init.headers["Content-Type"] || "application/pdf"
+        );
+        const result = await request<{
+          success: boolean;
+          fileSizeBytes: number;
+          highlights: import("@/types").UserContentHighlight[];
+        }>(`/api/my-content/pages/${id}/pdf/replace/complete`, {
+          method: "POST",
+          body: JSON.stringify({ token: init.token }),
+        });
+        endApiSync(true);
+        return result;
+      } catch (err) {
+        endApiSync(false);
+        throw err;
+      }
     },
     /** Restore a prior PDF snapshot (session undo after page delete). */
     restorePdfPages: async (
@@ -1646,34 +1711,42 @@ export const api = {
         viewPdfPage?: number;
       }
     ) => {
-      const init = await request<{
-        uploadUrl: string;
-        headers: { "Content-Type": string };
-        token: string;
-      }>(`/api/my-content/pages/${id}/pdf/replace/init`, {
-        method: "POST",
-        body: JSON.stringify({
-          size: file.size,
-          restore: true,
-        }),
-      });
-      await putToUrl(
-        init.uploadUrl,
-        file,
-        init.headers["Content-Type"] || "application/pdf"
-      );
-      return request<{
-        success: boolean;
-        fileSizeBytes: number;
-        highlights: import("@/types").UserContentHighlight[];
-      }>(`/api/my-content/pages/${id}/pdf/replace/complete`, {
-        method: "POST",
-        body: JSON.stringify({
-          token: init.token,
-          highlights: opts.highlights,
-          viewPdfPage: opts.viewPdfPage,
-        }),
-      });
+      beginApiSync("Saving…");
+      try {
+        const init = await request<{
+          uploadUrl: string;
+          headers: { "Content-Type": string };
+          token: string;
+        }>(`/api/my-content/pages/${id}/pdf/replace/init`, {
+          method: "POST",
+          body: JSON.stringify({
+            size: file.size,
+            restore: true,
+          }),
+        });
+        await putToUrl(
+          init.uploadUrl,
+          file,
+          init.headers["Content-Type"] || "application/pdf"
+        );
+        const result = await request<{
+          success: boolean;
+          fileSizeBytes: number;
+          highlights: import("@/types").UserContentHighlight[];
+        }>(`/api/my-content/pages/${id}/pdf/replace/complete`, {
+          method: "POST",
+          body: JSON.stringify({
+            token: init.token,
+            highlights: opts.highlights,
+            viewPdfPage: opts.viewPdfPage,
+          }),
+        });
+        endApiSync(true);
+        return result;
+      } catch (err) {
+        endApiSync(false);
+        throw err;
+      }
     },
     listHighlights: (topicId: string, linkToken?: string | null) => {
       const qs = linkToken ? `?t=${encodeURIComponent(linkToken)}` : "";
@@ -2178,3 +2251,5 @@ export function getStoredUser(): import("@/types").User | null {
   const raw = localStorage.getItem("user");
   return raw ? JSON.parse(raw) : null;
 }
+
+bindMutationFlushRequest(request);

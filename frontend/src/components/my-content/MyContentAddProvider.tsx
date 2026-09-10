@@ -12,7 +12,6 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { api, type UploadProgress, type UploadProgressHandler, getStoredUser } from "@/lib/api";
-import { shouldCompressUpload } from "@/lib/compressUploadFile";
 import { requireOnline } from "@/lib/offline/notice";
 import { getTopicGroups } from "@/lib/myContentTree";
 import { UserPageSummary, UserSubject, UserTopicGroup } from "@/types";
@@ -21,23 +20,30 @@ import { MyContentAddDropLayer } from "./MyContentAddDropLayer";
 import {
   submitAddPage,
   submitBulkFolderImport,
+  type AddPageOpenSeed,
 } from "./myContentAddPageSubmit";
+import {
+  initialUploadProgress,
+  openCreatedLibraryPage,
+} from "./myContentAddOpen";
 import { useMyContentAddDrop } from "./useMyContentAddDrop";
 import type { DocTemplateId } from "@/lib/docTemplates";
 import type { SketchTemplate } from "@/lib/sketchNotebook";
 import { SHELF_OPEN_ADD } from "@/lib/hotkeys";
+import { emitContentChanged } from "@/lib/contentEvents";
 import {
-  emitContentChanged,
-  emitOpenPage,
-} from "@/lib/contentEvents";
+  reportSyncFromUploadProgress,
+  reportSyncUploadDeferred,
+  reportSyncUploadDone,
+  reportSyncUploadFailed,
+  reportSyncUploadStarted,
+} from "@/lib/reportUploadSyncStatus";
 import {
   AnalyticsEvents,
   AnalyticsFirstTimeFlags,
   track,
   trackOncePerUser,
 } from "@/lib/analytics";
-import { isReaderHref } from "@/lib/softNavigate";
-import { scopeFromHref } from "@/components/my-content/reader/types";
 import { findCachedSubject } from "@/lib/offline/library";
 import {
   addContextFromPath,
@@ -125,6 +131,7 @@ export function MyContentAddProvider({
   const [pageTitle, setPageTitle] = useState("");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [uploadRejectedCount, setUploadRejectedCount] = useState(0);
   const [bulkProgress, setBulkProgress] = useState<{
     done: number;
     total: number;
@@ -150,6 +157,7 @@ export function MyContentAddProvider({
     setPageTitle("");
     setUploadFile(null);
     setBulkFiles([]);
+    setUploadRejectedCount(0);
     setBulkProgress(null);
     setPageLink("");
     setAddMode("file");
@@ -171,7 +179,7 @@ export function MyContentAddProvider({
       setAddMode(next.pageMode);
     }
     if (next.bulkFiles?.length) {
-      setAddMode("bulk");
+      setAddMode("file");
       setBulkFiles(next.bulkFiles);
     }
     setTarget({
@@ -233,21 +241,17 @@ export function MyContentAddProvider({
       percent: next.percent,
       phase: next.phase ?? prev?.phase,
     }));
+    reportSyncFromUploadProgress({
+      loaded: next.loaded ?? 0,
+      total: next.total ?? 0,
+      percent: next.percent,
+      phase: next.phase,
+    });
   }, []);
 
   const openCreatedPage = useCallback(
-    (href: string, page: UserPageSummary) => {
-      const scope = scopeFromHref(href);
-      if (scope && isReaderHref(window.location.pathname)) {
-        emitOpenPage({
-          href,
-          title: page.title,
-          pageId: page.id,
-          scope,
-        });
-        return;
-      }
-      router.push(href);
+    (href: string, page: UserPageSummary, openSeed?: AddPageOpenSeed) => {
+      openCreatedLibraryPage(router, href, page, openSeed);
     },
     [router]
   );
@@ -307,38 +311,40 @@ export function MyContentAddProvider({
 
   const handleAddPage = async (e: FormEvent) => {
     e.preventDefault();
-    if (addMode === "bulk") {
+    if (addMode === "bulk" || (addMode === "file" && bulkFiles.length > 0)) {
       if (bulkFiles.length === 0) return;
       if (!requireOnline("Import folders")) return;
-      setSubmitting(true);
-      setMessage("");
-      setBulkProgress({ done: 0, total: bulkFiles.length, label: "Starting…" });
+      const files = [...bulkFiles];
+      const notebook = target?.notebook;
+      const collectionName = notebookName;
       trackUploadAnalytics("started", { addMode: "bulk" });
-      try {
-        const result = await submitBulkFolderImport({
-          bulkFiles,
-          notebook: target?.notebook,
-          notebookName,
-          reportUploadProgress,
-          onProgress: setBulkProgress,
-        });
-        close();
-        if (result) {
+      // Close immediately — progress lives on the Sync chip so the UI stays usable.
+      close();
+      void (async () => {
+        try {
+          const result = await submitBulkFolderImport({
+            bulkFiles: files,
+            notebook,
+            notebookName: collectionName,
+            onProgress: () => {
+              /* Sync chip tracks batch progress */
+            },
+          });
           trackUploadAnalytics("completed", {
             addMode: "bulk",
-            contentType: result.page.contentType,
+            contentType: result.last?.page.contentType,
           });
-          openCreatedPage(result.href, result.page);
+          if (result.last && result.failed === 0) {
+            openCreatedPage(result.last.href, result.last.page);
+          }
+          // Partial imports stay on the Sync chip (summary + Retry failed).
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Folder import failed";
+          trackUploadAnalytics("failed", { addMode: "bulk", error: message });
+          reportSyncUploadFailed(message);
         }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Folder import failed";
-        setMessage(message);
-        trackUploadAnalytics("failed", { addMode: "bulk", error: message });
-      } finally {
-        setSubmitting(false);
-        setBulkProgress(null);
-        setUploadProgress(null);
-      }
+      })();
       return;
     }
     if (!pageTitle.trim() && addMode !== "youtube") return;
@@ -346,19 +352,20 @@ export function MyContentAddProvider({
     setSubmitting(true);
     setMessage("");
     const isFileUpload = addMode === "file" && Boolean(uploadFile);
+    let uploadActivityId: string | null = null;
     if (isFileUpload) {
       trackUploadAnalytics("started", { addMode });
     }
     try {
       if (isFileUpload && uploadFile) {
-        setUploadProgress({
-          loaded: 0,
-          total: uploadFile.size,
-          percent: 0,
-          phase: shouldCompressUpload(uploadFile) ? "compressing" : "uploading",
-        });
+        uploadActivityId = reportSyncUploadStarted(
+          pageTitle.trim() || uploadFile.name
+        );
+        setUploadProgress(initialUploadProgress(uploadFile));
+        reportSyncFromUploadProgress(initialUploadProgress(uploadFile));
       }
-      const { page, href } = await submitAddPage({
+      const { page, href, openSeed, openedEarly, deferred, message } =
+        await submitAddPage({
         addMode,
         pageTitle,
         pageLink,
@@ -369,18 +376,34 @@ export function MyContentAddProvider({
         sketchBg,
         docTemplate,
         reportUploadProgress,
+        onEarlyReady: (earlyReady) => {
+          close();
+          openCreatedPage(
+            earlyReady.href,
+            earlyReady.page,
+            earlyReady.openSeed
+          );
+        },
       });
-      close();
+      if (!openedEarly) {
+        close();
+        openCreatedPage(href, page, openSeed);
+      }
       if (isFileUpload) {
         trackUploadAnalytics("completed", {
           addMode,
           contentType: page.contentType,
         });
       }
-      openCreatedPage(href, page);
+      if (deferred) {
+        reportSyncUploadDeferred(uploadActivityId, message);
+      } else {
+        reportSyncUploadDone(uploadActivityId);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to add page";
       setMessage(message);
+      reportSyncUploadFailed(message, uploadActivityId);
       if (isFileUpload) {
         trackUploadAnalytics("failed", { addMode, error: message });
       } else {
@@ -445,10 +468,19 @@ export function MyContentAddProvider({
           onNotebookDescChange={setNotebookDesc}
           onTopicTitleChange={setTopicTitle}
           onPageTitleChange={setPageTitle}
-          onAddModeChange={setAddMode}
+          onAddModeChange={(mode) => {
+            setAddMode(mode);
+            if (mode !== "file" && mode !== "bulk") {
+              setUploadFile(null);
+              setBulkFiles([]);
+              setUploadRejectedCount(0);
+            }
+          }}
           onPageLinkChange={setPageLink}
           onUploadFileChange={setUploadFile}
           onBulkFilesChange={setBulkFiles}
+          uploadRejectedCount={uploadRejectedCount}
+          onUploadRejectedCountChange={setUploadRejectedCount}
           sketchTemplate={sketchTemplate}
           sketchBg={sketchBg}
           onSketchTemplateChange={setSketchTemplate}

@@ -14,6 +14,7 @@ import {
   useOtpResendCooldown,
 } from "@/hooks/useOtpResendCooldown";
 
+// TODO: This is a temporary type for the forgot password flow. We should use the AuthPage type instead.
 type Step = "email" | "reset";
 
 function ForgotPasswordForm() {

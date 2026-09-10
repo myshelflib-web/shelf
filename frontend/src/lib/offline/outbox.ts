@@ -10,6 +10,8 @@ import {
   progressQueueKey,
   withStore,
 } from "./db";
+import { listPendingUploadSummaries } from "@/lib/pendingUploadQueue";
+import { listPendingMutations } from "@/lib/pendingMutationQueue";
 
 function newOutboxId(): string {
   return crypto.randomUUID();
@@ -142,9 +144,22 @@ export async function mergeProgressQueue(
 export async function countAllPending(userId?: string | null): Promise<number> {
   const uid = userId ?? getStoredUserId();
   if (!uid) return 0;
-  const [outbox, progress] = await Promise.all([
+  const { countSessionDeferredUploads } = await import(
+    "@/lib/sessionDeferredUploads"
+  );
+  const { countFailedBulkUploads } = await import("@/lib/failedBulkUploads");
+  const [outbox, progress, uploads, mutations] = await Promise.all([
     readOutbox(uid),
     readProgressQueue(uid),
+    listPendingUploadSummaries(uid),
+    listPendingMutations(uid),
   ]);
-  return outbox.length + progress.length;
+  return (
+    outbox.length +
+    progress.length +
+    uploads.length +
+    mutations.length +
+    countSessionDeferredUploads(uid) +
+    countFailedBulkUploads()
+  );
 }

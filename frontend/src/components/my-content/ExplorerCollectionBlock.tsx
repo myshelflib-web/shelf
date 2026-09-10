@@ -15,6 +15,9 @@ import {
   Pencil,
 } from "lucide-react";
 import { FolderMark } from "@/components/FolderMark";
+import { WithItemSyncBadge } from "@/components/ItemSyncBadge";
+import { useLibraryItemSync } from "@/components/LibraryItemSyncProvider";
+import { pageIdsInSubject } from "@/lib/offline/pendingPageSync";
 import { ExplorerPageRow } from "@/components/my-content/ExplorerPageRow";
 import { ExplorerTopicBlock } from "@/components/my-content/ExplorerTopicBlock";
 import { ExplorerSelectionToggle } from "@/components/my-content/ExplorerSelectionToggle";
@@ -128,6 +131,7 @@ export function ExplorerCollectionBlock({
   onRenamePage,
   onDeletePage,
 }: ExplorerCollectionBlockProps) {
+  const { folderStatus } = useLibraryItemSync();
   const deletingKeys = useDeleteProgressOptional()?.deletingKeys;
   const loose = getNotebookPages(nb);
   const groups = getTopicGroups(nb);
@@ -205,7 +209,9 @@ export function ExplorerCollectionBlock({
             <ChevronRight className="w-3.5 h-3.5" />
           )}
         </span>
-        <FolderMark seed={nb.id} size={14} />
+        <WithItemSyncBadge status={folderStatus(pageIdsInSubject(nb), `subject:${nb.id}`)}>
+          <FolderMark seed={nb.id} size={14} />
+        </WithItemSyncBadge>
         <span className="flex-1 min-w-0 truncate text-[13px] font-medium text-[var(--text-primary)] text-left">
           {nb.name}
         </span>

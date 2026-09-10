@@ -115,23 +115,24 @@ export function ReaderWorkspace({
     unsplit,
   } = workspace;
 
+  const focusScope = focusedTab?.scope ?? routeScope;
   const pageSlug =
-    routeScope.kind === "learn"
-      ? routeScope.articleSlug
-      : routeScope.kind === "shared"
-        ? routeScope.pageId
-        : routeScope.pageSlug;
+    focusScope.kind === "learn"
+      ? focusScope.articleSlug
+      : focusScope.kind === "shared"
+        ? focusScope.pageId
+        : focusScope.pageSlug;
   const notebookSlug =
-    routeScope.kind === "root-file" ||
-    routeScope.kind === "learn" ||
-    routeScope.kind === "shared"
+    focusScope.kind === "root-file" ||
+    focusScope.kind === "learn" ||
+    focusScope.kind === "shared"
       ? null
-      : routeScope.notebookSlug;
+      : focusScope.notebookSlug;
   const topicSlug =
-    routeScope.kind === "topic"
-      ? routeScope.topicSlug
-      : routeScope.kind === "learn"
-        ? routeScope.topicSlug
+    focusScope.kind === "topic"
+      ? focusScope.topicSlug
+      : focusScope.kind === "learn"
+        ? focusScope.topicSlug
         : null;
 
   const scheduledHrefs = useScheduledPageHrefs(Boolean(user));
@@ -442,7 +443,12 @@ export function ReaderWorkspace({
       const paneId = focusedPane?.id ?? state.focusedPaneId;
       handleOpenTab(
         paneId,
-        tabFromScope(detail.scope, detail.title, detail.pageId)
+        tabFromScope(
+          detail.scope,
+          detail.title,
+          detail.pageId,
+          detail.contentType
+        )
       );
     };
     window.addEventListener(SHELF_OPEN_PAGE, onOpen);
@@ -665,7 +671,7 @@ export function ReaderWorkspace({
   if (authLoading || !user) return null;
 
   const pageData = focusedSnap?.pageData ?? null;
-  const currentHref = focusedSnap?.currentHref ?? scopeHref(routeScope);
+  const currentHref = focusedTab?.href ?? scopeHref(routeScope);
 
   const libraryExplorer = (
     <LibrarySidePanel
@@ -673,7 +679,7 @@ export function ReaderWorkspace({
       notebookSlug={notebookSlug ?? undefined}
       currentTopicSlug={topicSlug ?? undefined}
       currentPageSlug={pageSlug}
-      currentHref={scopeHref(routeScope)}
+      currentHref={currentHref}
       enablePageDrag
       workspaceMode
       onOpenPage={(payload) => {

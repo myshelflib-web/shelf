@@ -41,6 +41,7 @@ import {
   useMyContentSidebarLibrary,
 } from "@/components/my-content/useMyContentSidebarLibrary";
 import { MyContentSidebarTools } from "@/components/my-content/MyContentSidebarTools";
+import { LibraryItemSyncProvider } from "@/components/LibraryItemSyncProvider";
 import { mergeExplorerSubjectsForDisplay } from "@/lib/mergeExplorerSubjectsForDisplay";
 import {
   SIDEBAR_SORT_KEY,
@@ -305,6 +306,7 @@ export function MyContentSidebar({
   const sortDirTitle = directionTitle(sortCriterion, sortAscending);
 
   return (
+    <LibraryItemSyncProvider>
     <>
     <aside
       className={clsx(
@@ -320,7 +322,7 @@ export function MyContentSidebar({
         }
         onAddPage={() => openAdd({ kind: "page" })}
         onAddNotebook={() => openAdd({ kind: "notebook" })}
-        onRefresh={() => load()}
+        onRefresh={() => load({ spin: true })}
         loading={loading}
         onCollapseAll={collapseAll}
         workspaceMode={workspaceMode}
@@ -465,5 +467,6 @@ export function MyContentSidebar({
       onConfirm={handleBulkDelete}
     />
   </>
+    </LibraryItemSyncProvider>
   );
 }

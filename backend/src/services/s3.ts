@@ -16,6 +16,7 @@ import {
 import { withRetry } from "../utils/retry.js";
 import { metrics } from "../utils/metrics.js";
 import { errorFields, logger } from "../utils/logger.js";
+import { resolveBucketCorsOrigins } from "../utils/corsOrigin.js";
 
 const s3 = createS3Client();
 const browserS3 = createS3Client(browserS3Endpoint());
@@ -416,10 +417,7 @@ export async function getObjectPrefix(
 
 /** Best-effort CORS so the browser can PUT/GET to MinIO / R2. */
 export async function ensureBucketCors(): Promise<void> {
-  const origins = (process.env.CORS_ORIGIN ?? "http://localhost:3000")
-    .split(",")
-    .map((o) => o.trim())
-    .filter(Boolean);
+  const origins = resolveBucketCorsOrigins();
   if (!origins.length) return;
   await s3.send(
     new PutBucketCorsCommand({

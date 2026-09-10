@@ -34,7 +34,7 @@ export function useMyContentAddDrop({
 
   const openBulkImport = useCallback(
     (files: File[], notebook?: UserSubject) => {
-      openAdd({ kind: "page", notebook, pageMode: "bulk", bulkFiles: files });
+      openAdd({ kind: "page", notebook, pageMode: "file", bulkFiles: files });
     },
     [openAdd]
   );

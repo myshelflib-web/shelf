@@ -20,12 +20,15 @@ describe("directUpload", () => {
       contentType: "application/pdf",
       userSubjectId: null,
       userTopicGroupId: null,
+      folderId: null,
+      pageId: "page-1",
     });
     const claims = verifyDirectUpload(token);
     expect(claims.typ).toBe("direct-upload");
     expect(claims.userId).toBe("u1");
     expect(claims.kind).toBe("pdf");
     expect(claims.key).toContain("source.pdf");
+    expect(claims.pageId).toBe("page-1");
   });
 
   it("maps kinds to PUT content types and size caps", () => {

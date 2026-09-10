@@ -2,25 +2,14 @@
 
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
-import { FileUploadZone } from "@/components/FileUploadZone";
-import { FolderUploadZone } from "@/components/my-content/FolderUploadZone";
 import type { UploadProgress } from "@/lib/api";
-import {
-  SKETCH_BACKGROUNDS,
-  SKETCH_TEMPLATES,
-  type SketchTemplate,
-} from "@/lib/sketchNotebook";
-import { DOC_TEMPLATES, type DocTemplateId } from "@/lib/docTemplates";
-import {
-  AddUploadProgressBar,
-  PAGE_ADD_MODES,
-  pageAddSubmitLabel,
-  type PageAddMode,
-} from "./myContentAddModalBits";
+import type { SketchTemplate } from "@/lib/sketchNotebook";
+import type { DocTemplateId } from "@/lib/docTemplates";
+import type { PageAddMode } from "./myContentAddModalBits";
+import { MyContentAddPageForm } from "./MyContentAddPageForm";
 
 export type AddModalKind = "notebook" | "topic" | "page";
 export type { PageAddMode };
-
 
 interface MyContentAddModalProps {
   kind: AddModalKind;
@@ -39,6 +28,7 @@ interface MyContentAddModalProps {
   submitting: boolean;
   uploadProgress: UploadProgress | null;
   message: string;
+  uploadRejectedCount?: number;
   sketchTemplate: SketchTemplate;
   sketchBg: string;
   docTemplate: DocTemplateId;
@@ -50,6 +40,7 @@ interface MyContentAddModalProps {
   onPageLinkChange: (v: string) => void;
   onUploadFileChange: (f: File | null) => void;
   onBulkFilesChange: (files: File[]) => void;
+  onUploadRejectedCountChange?: (n: number) => void;
   onSketchTemplateChange: (t: SketchTemplate) => void;
   onSketchBgChange: (c: string) => void;
   onDocTemplateChange: (t: DocTemplateId) => void;
@@ -76,6 +67,7 @@ export function MyContentAddModal({
   submitting,
   uploadProgress,
   message,
+  uploadRejectedCount = 0,
   onNotebookNameChange,
   onNotebookDescChange,
   onTopicTitleChange,
@@ -84,6 +76,7 @@ export function MyContentAddModal({
   onPageLinkChange,
   onUploadFileChange,
   onBulkFilesChange,
+  onUploadRejectedCountChange,
   sketchTemplate,
   sketchBg,
   onSketchTemplateChange,
@@ -142,7 +135,7 @@ export function MyContentAddModal({
       <button
         type="button"
         aria-label="Close"
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/45"
         onClick={() => {
           if (!submitting) onClose();
         }}
@@ -151,303 +144,111 @@ export function MyContentAddModal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl p-5"
+        className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-[10px] border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl"
       >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-[var(--text-primary)]">{title}</h2>
+        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-[var(--border)]">
+          <h2 className="text-sm font-semibold text-[var(--text-primary)]">
+            {title}
+          </h2>
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="p-1.5 rounded-lg hover:bg-[var(--bg-secondary)] text-[var(--text-secondary)] disabled:opacity-40 disabled:pointer-events-none"
+            className="p-1.5 rounded-md hover:bg-[var(--bg-secondary)] text-[var(--text-muted)] hover:text-[var(--text-primary)] disabled:opacity-40 disabled:pointer-events-none"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {kind === "notebook" && (
-          <form ref={formRef} onSubmit={onSubmitNotebook} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Folder name (e.g. UPSC Polity)"
-              value={notebookNameInput}
-              onChange={(e) => onNotebookNameChange(e.target.value)}
-              required
-              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
-            />
-            <input
-              type="text"
-              placeholder="Description (optional)"
-              value={notebookDesc}
-              onChange={(e) => onNotebookDescChange(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
-            />
-            <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? "Creating…" : "Create folder"}
-            </button>
-          </form>
-        )}
-
-        {kind === "topic" && (
-          <form ref={formRef} onSubmit={onSubmitTopic} className="space-y-3">
-            <input
-              type="text"
-              placeholder="Folder name (e.g. Fundamental Rights)"
-              value={topicTitleInput}
-              onChange={(e) => onTopicTitleChange(e.target.value)}
-              required
-              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
-            />
-            <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? "Creating…" : "Create folder"}
-            </button>
-          </form>
-        )}
-
-        {kind === "page" && (
-          <form ref={formRef} onSubmit={onSubmitPage} className="space-y-3">
-            {needsTopicName && (
+        <div className="p-5">
+          {kind === "notebook" && (
+            <form
+              ref={formRef}
+              onSubmit={onSubmitNotebook}
+              className="space-y-3"
+            >
               <input
                 type="text"
-                placeholder="Folder name"
+                placeholder="Folder name (e.g. UPSC Polity)"
+                value={notebookNameInput}
+                onChange={(e) => onNotebookNameChange(e.target.value)}
+                required
+                className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+              />
+              <input
+                type="text"
+                placeholder="Description (optional)"
+                value={notebookDesc}
+                onChange={(e) => onNotebookDescChange(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+              />
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary"
+              >
+                {submitting ? "Creating…" : "Create folder"}
+              </button>
+            </form>
+          )}
+
+          {kind === "topic" && (
+            <form ref={formRef} onSubmit={onSubmitTopic} className="space-y-3">
+              <input
+                type="text"
+                placeholder="Folder name (e.g. Fundamental Rights)"
                 value={topicTitleInput}
                 onChange={(e) => onTopicTitleChange(e.target.value)}
                 required
-                className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)]"
+                className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
               />
-            )}
-            <div className="grid grid-cols-3 gap-2">
-              {PAGE_ADD_MODES.map(([mode, label]) => (
-                <button
-                  key={mode}
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => onAddModeChange(mode)}
-                  className={`py-2 rounded-lg text-sm border disabled:opacity-50 ${addMode === mode ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]" : "border-[var(--border)]"}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <input
-              type="text"
-              placeholder={
-                addMode === "youtube"
-                  ? "Title (optional — from YouTube)"
-                  : "File name"
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary"
+              >
+                {submitting ? "Creating…" : "Create folder"}
+              </button>
+            </form>
+          )}
+
+          {kind === "page" && (
+            <MyContentAddPageForm
+              notebookName={notebookName}
+              needsTopicName={needsTopicName}
+              notebookNameInput={notebookNameInput}
+              topicTitleInput={topicTitleInput}
+              pageTitle={pageTitle}
+              addMode={addMode}
+              pageLink={pageLink}
+              uploadFile={uploadFile}
+              bulkFiles={bulkFiles}
+              bulkProgress={bulkProgress}
+              submitting={submitting}
+              uploadProgress={uploadProgress}
+              message={message}
+              uploadRejectedCount={uploadRejectedCount}
+              sketchTemplate={sketchTemplate}
+              sketchBg={sketchBg}
+              docTemplate={docTemplate}
+              formRef={formRef}
+              onNotebookNameChange={onNotebookNameChange}
+              onTopicTitleChange={onTopicTitleChange}
+              onPageTitleChange={onPageTitleChange}
+              onAddModeChange={onAddModeChange}
+              onPageLinkChange={onPageLinkChange}
+              onUploadFileChange={onUploadFileChange}
+              onBulkFilesChange={onBulkFilesChange}
+              onUploadRejectedCountChange={
+                onUploadRejectedCountChange ?? (() => {})
               }
-              value={pageTitle}
-              onChange={(e) => onPageTitleChange(e.target.value)}
-              required={addMode !== "bulk" && addMode !== "youtube"}
-              disabled={submitting || addMode === "bulk"}
-              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
+              onSketchTemplateChange={onSketchTemplateChange}
+              onSketchBgChange={onSketchBgChange}
+              onDocTemplateChange={onDocTemplateChange}
+              onSubmitPage={onSubmitPage}
             />
-            {addMode === "bulk" && !notebookName ? (
-              <>
-                <input
-                  type="text"
-                  placeholder="Folder name for this import"
-                  value={notebookNameInput}
-                  onChange={(e) => onNotebookNameChange(e.target.value)}
-                  required
-                  disabled={submitting}
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
-                />
-                <p className="text-xs text-[var(--text-muted)]">
-                  Each selected folder becomes a subfolder; PDFs inside are uploaded as files.
-                </p>
-              </>
-            ) : null}
-            {addMode === "bulk" && notebookName ? (
-              <p className="text-xs text-[var(--text-muted)]">
-                Importing into {notebookName}. Folder names become subfolders; PDFs inside become files.
-              </p>
-            ) : null}
-            {addMode === "bulk" && (
-              <>
-                <FolderUploadZone
-                  files={bulkFiles}
-                  onChange={onBulkFilesChange}
-                  disabled={submitting}
-                />
-                {submitting && bulkProgress ? (
-                  <AddUploadProgressBar
-                    progress={{
-                      loaded: bulkProgress.done,
-                      total: bulkProgress.total,
-                      percent: Math.round(
-                        (bulkProgress.done / Math.max(bulkProgress.total, 1)) * 100
-                      ),
-                    }}
-                  />
-                ) : null}
-                {submitting && bulkProgress ? (
-                  <p className="text-xs text-[var(--text-muted)] truncate">
-                    {bulkProgress.label}
-                  </p>
-                ) : null}
-              </>
-            )}
-            {addMode === "file" && (
-              <>
-                <FileUploadZone
-                  file={uploadFile}
-                  onChange={onUploadFileChange}
-                  disabled={submitting}
-                  progress={uploadProgress}
-                  accept=".pdf,.txt,.md,.markdown,.docx,application/pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  label="Drop a file or click to browse"
-                />
-                {submitting && uploadProgress ? (
-                  <AddUploadProgressBar progress={uploadProgress} />
-                ) : (
-                  <p className="text-xs text-[var(--text-muted)]">
-                    Drag a file here, or click to browse. PDF, TXT, MD, or DOCX.
-                  </p>
-                )}
-                <p className="text-xs text-[var(--text-muted)]">
-                  By uploading you confirm you have the right to store this file
-                  (your own work or material you may legally use). See our{" "}
-                  <a href="/legal/copyright" className="text-[var(--accent)] hover:underline">
-                    copyright policy
-                  </a>
-                  .
-                </p>
-              </>
-            )}
-            {addMode === "youtube" && (
-              <>
-                <input
-                  type="url"
-                  placeholder="https://youtube.com/watch… or playlist"
-                  value={pageLink}
-                  onChange={(e) => onPageLinkChange(e.target.value)}
-                  required
-                  disabled={submitting}
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
-                />
-                <p className="text-xs text-[var(--text-muted)]">
-                  One lecture becomes a file. A playlist becomes a folder (or a
-                  top-level folder at library root) with a file per video — watch and
-                  take notes in the same reader.
-                </p>
-              </>
-            )}
-            {addMode === "link" && (
-              <>
-                <input
-                  type="url"
-                  placeholder="https://… website or PDF URL"
-                  value={pageLink}
-                  onChange={(e) => onPageLinkChange(e.target.value)}
-                  required
-                  disabled={submitting}
-                  className="w-full px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] disabled:opacity-60"
-                />
-                <p className="text-xs text-[var(--text-muted)]">
-                  Some sites block embedding — use Open in the reader. YouTube
-                  links should use the YouTube tab.
-                </p>
-              </>
-            )}
-            {addMode === "sketch" && (
-              <div className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] p-3">
-                <p className="text-xs text-[var(--text-muted)]">
-                  Draw on fixed pages — add more sheets as you go. Pick paper style and color.
-                </p>
-                <div>
-                  <span className="text-xs text-[var(--text-muted)] block mb-1.5">
-                    Paper style
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SKETCH_TEMPLATES.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        title={t.hint}
-                        disabled={submitting}
-                        onClick={() => onSketchTemplateChange(t.id)}
-                        className={`px-2.5 py-1 rounded-md text-xs border ${
-                          sketchTemplate === t.id
-                            ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]"
-                            : "border-[var(--border)] text-[var(--text-secondary)]"
-                        }`}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-xs text-[var(--text-muted)] block mb-1.5">
-                    Background
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SKETCH_BACKGROUNDS.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        title={c.label}
-                        disabled={submitting}
-                        onClick={() => onSketchBgChange(c.color)}
-                        className={`w-7 h-7 rounded-md border-2 ${
-                          sketchBg === c.color
-                            ? "border-[var(--accent)] scale-110"
-                            : "border-[var(--border)]"
-                        }`}
-                        style={{ background: c.color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-            {addMode === "doc" && (
-              <div className="space-y-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] px-3 py-2">
-                <p className="text-xs text-[var(--text-muted)]">
-                  Choose a research template — blank stays empty except for the title.
-                </p>
-                <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-                  {DOC_TEMPLATES.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => onDocTemplateChange(t.id)}
-                      className={`rounded-md border px-2 py-1.5 text-left transition-colors ${
-                        docTemplate === t.id
-                          ? "border-[var(--accent)] bg-[var(--accent-light)]"
-                          : "border-[var(--border)] bg-[var(--bg-elevated)]"
-                      }`}
-                    >
-                      <span className="block text-[11px] font-semibold text-[var(--text-primary)]">
-                        {t.name}
-                      </span>
-                      <span className="block text-[10px] text-[var(--text-muted)] line-clamp-2">
-                        {t.description}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            {message && <p className="text-sm text-red-500">{message}</p>}
-            <button
-              type="submit"
-              disabled={
-                submitting ||
-                (addMode === "file" && !uploadFile) ||
-                (addMode === "bulk" &&
-                  (bulkFiles.length === 0 ||
-                    (!notebookName && !notebookNameInput.trim()))) ||
-                ((addMode === "link" || addMode === "youtube") &&
-                  !pageLink.trim())
-              }
-              className="btn-primary w-full sm:w-auto"
-            >
-              {pageAddSubmitLabel(addMode, submitting, uploadProgress)}
-            </button>
-          </form>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );

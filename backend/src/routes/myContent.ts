@@ -2,9 +2,8 @@ import { Router, Request, Response } from "express";
 import multer from "multer";
 import { UserContentType } from "@prisma/client";
 import prisma from "../utils/prisma.js";
-import { uploadToS3, getFromS3, deleteFromS3, headObjectMeta, getObjectStream, getPresignedPutUrl, getPresignedPdfGetUrl, PDF_PRESIGN_EXPIRES_SEC, getObjectPrefix, getObjectBuffer } from "../services/s3.js";
+import { uploadToS3, getFromS3, deleteFromS3, headObjectMeta, getObjectStream, getPresignedPutUrl, getPresignedPdfGetUrl, PDF_PRESIGN_EXPIRES_SEC, getObjectBuffer } from "../services/s3.js";
 import { losslessCompressBuffer } from "../utils/losslessCompress.js";
-import { recompressS3ObjectUnlessClientPacked } from "../utils/s3ObjectCompress.js";
 import {
   listSubjectsIncludeTree,
   summarySubjectsForIds,
@@ -87,6 +86,13 @@ import {
 } from "../services/libraryStore.js";
 import { folderAncestors, folderIsUnderRoot, folderSlugPathById } from "../utils/folderPath.js";
 import { FolderDepthError } from "../utils/folderDepth.js";
+import {
+  createDraftUploadPage,
+  finalizePdfDirectUpload,
+  pdfCacheVersion as pdfCacheVersionFor,
+} from "./myContentPdfDirectUpload.js";
+import { resumeDraftUpload } from "./myContentUploadResume.js";
+import { NOT_DRAFT } from "../utils/libraryVisiblePages.js";
 
 const router = Router();
 
@@ -140,6 +146,8 @@ async function deletePageAssets(userId: string, page: {
   pdfKey: string | null;
   contentUrl: string | null;
   fileSizeBytes: number | null;
+  /** DRAFT uploads are not charged until complete — skip quota release. */
+  status?: string | null;
 }) {
   if (page.pdfKey) await deleteFromS3(page.pdfKey).catch(() => {});
   if (page.contentUrl && !/^https?:\/\//i.test(page.contentUrl)) {
@@ -147,7 +155,9 @@ async function deletePageAssets(userId: string, page: {
   } else if (page.pdfKey) {
     await deleteFromS3(contentKeyFromPdfKey(page.pdfKey)).catch(() => {});
   }
-  await releaseStorage(userId, page.fileSizeBytes ?? 0);
+  if (page.status !== "DRAFT") {
+    await releaseStorage(userId, page.fileSizeBytes ?? 0);
+  }
 }
 
 function contentTypeFromKind(kind: string): UserContentType {
@@ -721,6 +731,7 @@ router.post("/uploads/init", async (req: Request, res: Response) => {
   }
 
   const slug = await uniquePageSlug(parent.scope, title);
+  const order = await nextPageOrder(parent.scope);
   const docPrefix = userDocPrefix(
     parent.userId,
     parent.subjectSlug,
@@ -731,6 +742,50 @@ router.post("/uploads/init", async (req: Request, res: Response) => {
   const key =
     kind === "pdf" ? sourcePdfKey(docPrefix) : `${docPrefix}/upload.bin`;
 
+  let draftPage:
+    | {
+        id: string;
+        title: string;
+        slug: string;
+        status: string;
+        order: number;
+        completed: boolean;
+        starred: boolean;
+        contentType: string;
+      }
+    | undefined;
+  let pdfCacheVersion: string | undefined;
+
+  try {
+    const draftType = contentTypeFromKind(kind);
+    if (
+      draftType !== "PDF" &&
+      draftType !== "TEXT" &&
+      draftType !== "MARKDOWN" &&
+      draftType !== "DOCX"
+    ) {
+      res.status(400).json({ error: ALLOWED_UPLOAD_HINT });
+      return;
+    }
+    draftPage = await createDraftUploadPage({
+      userId: parent.userId,
+      parentFields: fileParentFields(parent),
+      title,
+      slug,
+      contentType: draftType,
+      ...(kind === "pdf" ? { pdfKey: key } : {}),
+      size,
+      order,
+    });
+    if (kind === "pdf") {
+      pdfCacheVersion = pdfCacheVersionFor(key, size);
+    }
+  } catch (err) {
+    req.log?.error("my_content.upload_init_draft_failed", errorFields(err));
+    res.status(500).json({ error: "Could not start upload" });
+    return;
+  }
+
   const token = signDirectUpload({
     userId: parent.userId,
     key,
@@ -740,6 +795,7 @@ router.post("/uploads/init", async (req: Request, res: Response) => {
     size,
     contentType: putType,
     clientPacked: Boolean(req.body?.clientPacked),
+    pageId: draftPage?.id,
     ...fileParentFields(parent),
   });
 
@@ -750,14 +806,26 @@ router.post("/uploads/init", async (req: Request, res: Response) => {
       size,
       slug,
       title,
+      pageId: draftPage?.id,
       ...fileParentFields(parent),
     });
     res.json({
       uploadUrl,
       headers: { "Content-Type": putType },
       token,
+      ...(draftPage
+        ? {
+            page: draftPage,
+            ...(pdfCacheVersion ? { pdfCacheVersion } : {}),
+          }
+        : {}),
     });
   } catch (err) {
+    if (draftPage?.id) {
+      await prisma.userTopic
+        .delete({ where: { id: draftPage.id } })
+        .catch(() => undefined);
+    }
     req.log?.error("my_content.upload_presign_failed", errorFields(err));
     res.status(500).json({ error: "Could not start upload" });
   }
@@ -812,6 +880,45 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
     }
   }
 
+  if (claims.kind === "pdf") {
+    try {
+      const result = await finalizePdfDirectUpload({
+        claims,
+        parentFields: fileParentFields(parent),
+        userId: parent.userId,
+        chargeStorage,
+        nextPageOrder: () => nextPageOrder(parent.scope),
+        resolveSlug: async (preferred) =>
+          (await findPageBySlug(parent.scope, preferred))
+            ? await uniquePageSlug(parent.scope, claims.title)
+            : preferred,
+      });
+      if (!result.ok) {
+        res.status(result.status).json({ error: result.error });
+        return;
+      }
+      contentFlow.uploadComplete(reqLog(req), {
+        pageId: result.page.id,
+        kind: "pdf",
+        slug: result.page.slug,
+        bytes: result.bytes,
+      });
+      res.status(201).json({
+        page: result.page,
+        pdfCacheVersion: result.pdfCacheVersion,
+        message: "PDF uploaded. Open the page to read it.",
+      });
+    } catch (err) {
+      if (err instanceof QuotaError) {
+        res.status(err.status).json({ error: err.message });
+        return;
+      }
+      req.log?.error("my_content.upload_complete_pdf_failed", errorFields(err));
+      res.status(500).json({ error: "Could not finish upload" });
+    }
+    return;
+  }
+
   let meta;
   try {
     meta = await headObjectMeta(claims.key);
@@ -833,50 +940,6 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
   let chargedBytes = 0;
 
   try {
-    if (claims.kind === "pdf") {
-      const head = await getObjectPrefix(claims.key, 8);
-      const invalid = validateUploadBuffer("pdf", head);
-      if (invalid) {
-        await deleteFromS3(claims.key).catch(() => undefined);
-        res.status(400).json({ error: invalid });
-        return;
-      }
-      const storedBytes = await recompressS3ObjectUnlessClientPacked(
-        claims.key,
-        "application/pdf",
-        meta.contentLength,
-        claims.clientPacked
-      );
-      await chargeStorage(parent.userId, storedBytes);
-      chargedBytes = storedBytes;
-      const page = await prisma.userTopic.create({
-        data: {
-          userId: parent.userId,
-          ...fileParentFields(parent),
-          title: claims.title,
-          slug,
-          pdfKey: claims.key,
-          contentType: "PDF",
-          fileSizeBytes: storedBytes,
-          status: "PUBLISHED",
-          order,
-        },
-        select: pageSelect,
-      });
-      scheduleIndexPage(page.id);
-      contentFlow.uploadComplete(reqLog(req), {
-        pageId: page.id,
-        kind: "pdf",
-        slug: page.slug,
-        bytes: storedBytes,
-      });
-      res.status(201).json({
-        page,
-        message: "PDF uploaded. Open the page to read it.",
-      });
-      return;
-    }
-
     const { buffer } = await getObjectBuffer(claims.key);
     const packed = await losslessCompressBuffer(
       buffer,
@@ -886,6 +949,11 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
     const invalid = validateUploadBuffer(claims.kind, packed);
     if (invalid) {
       await deleteFromS3(claims.key).catch(() => undefined);
+      if (claims.pageId) {
+        await prisma.userTopic
+          .deleteMany({ where: { id: claims.pageId, status: "DRAFT" } })
+          .catch(() => undefined);
+      }
       res.status(400).json({ error: invalid });
       return;
     }
@@ -898,25 +966,59 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
         parent.userId,
         parent.subjectSlug,
         parent.groupSlug,
-        slug
+        claims.pageId ? claims.slug : slug
       )
     );
     await uploadToS3(contentKey, html, "text/html");
     await deleteFromS3(claims.key).catch(() => undefined);
-    const page = await prisma.userTopic.create({
-      data: {
-        userId: parent.userId,
-        ...fileParentFields(parent),
-        title: claims.title,
-        slug,
-        contentUrl: contentKey,
-        contentType: contentTypeFromKind(claims.kind),
-        fileSizeBytes: htmlBytes,
-        status: "PUBLISHED",
-        order,
-      },
-      select: pageSelect,
-    });
+
+    let page;
+    if (claims.pageId) {
+      const published = await prisma.userTopic.updateMany({
+        where: { id: claims.pageId, userId: parent.userId, status: "DRAFT" },
+        data: {
+          contentUrl: contentKey,
+          contentType: contentTypeFromKind(claims.kind),
+          fileSizeBytes: htmlBytes,
+          status: "PUBLISHED",
+        },
+      });
+      if (published.count === 0) {
+        const existing = await prisma.userTopic.findFirst({
+          where: { id: claims.pageId, userId: parent.userId },
+          select: pageSelect,
+        });
+        if (existing?.status === "PUBLISHED") {
+          page = existing;
+        } else {
+          await releaseStorage(parent.userId, chargedBytes).catch(() => undefined);
+          chargedBytes = 0;
+          await deleteFromS3(contentKey).catch(() => undefined);
+          res.status(400).json({ error: "Upload draft is no longer available" });
+          return;
+        }
+      } else {
+        page = await prisma.userTopic.findUniqueOrThrow({
+          where: { id: claims.pageId },
+          select: pageSelect,
+        });
+      }
+    } else {
+      page = await prisma.userTopic.create({
+        data: {
+          userId: parent.userId,
+          ...fileParentFields(parent),
+          title: claims.title,
+          slug,
+          contentUrl: contentKey,
+          contentType: contentTypeFromKind(claims.kind),
+          fileSizeBytes: htmlBytes,
+          status: "PUBLISHED",
+          order,
+        },
+        select: pageSelect,
+      });
+    }
     scheduleIndexPage(page.id);
     contentFlow.uploadComplete(reqLog(req), {
       pageId: page.id,
@@ -928,6 +1030,11 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
   } catch (err) {
     if (chargedBytes > 0) {
       await releaseStorage(parent.userId, chargedBytes).catch(() => undefined);
+    }
+    if (claims.pageId) {
+      await prisma.userTopic
+        .deleteMany({ where: { id: claims.pageId, status: "DRAFT" } })
+        .catch(() => undefined);
     }
     if (err instanceof QuotaError) {
       await deleteFromS3(claims.key).catch(() => undefined);
@@ -946,6 +1053,10 @@ router.post("/uploads/complete", async (req: Request, res: Response) => {
     req.log?.error("my_content.upload_complete_failed", errorFields(err));
     res.status(500).json({ error: "Could not finish upload" });
   }
+});
+
+router.post("/uploads/resume", (req, res) => {
+  void resumeDraftUpload(req, res);
 });
 
 const LAST_READ_ROOT_KEY = "__root__";
@@ -1044,6 +1155,7 @@ router.get("/subjects", async (req: Request, res: Response) => {
       where: {
         userId,
         folderId: null,
+        status: NOT_DRAFT,
       },
       orderBy: { order: "asc" },
       select: pageSelect,

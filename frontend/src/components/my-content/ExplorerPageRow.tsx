@@ -30,6 +30,8 @@ import { useAppDialog } from "@/hooks/useAppDialog";
 import type { ExplorerDropHint } from "@/components/my-content/useExplorerReorderDrop";
 import type { ReorderDragPayload } from "@/lib/libraryReorder";
 import { useDeleteProgressOptional } from "@/components/DeleteProgressProvider";
+import { WithItemSyncBadge } from "@/components/ItemSyncBadge";
+import { useLibraryItemSync } from "@/components/LibraryItemSyncProvider";
 import {
   beforeIdForPlace,
   dropPlaceFromY,
@@ -93,6 +95,7 @@ export function ExplorerPageRow({
   onDeletePage,
 }: ExplorerPageRowProps) {
   const { prompt } = useAppDialog();
+  const { pageStatus } = useLibraryItemSync();
   const key = pageSelectionKey(page.id);
   const deleting = Boolean(useDeleteProgressOptional()?.deletingKeys.has(key));
   const isScheduled = scheduledHrefs.has(href);
@@ -220,7 +223,7 @@ export function ExplorerPageRow({
           ? "cursor-grab active:cursor-grabbing"
           : "cursor-pointer",
         isActive
-          ? "bg-[var(--bg-elevated)] text-[var(--text-primary)]"
+          ? "library-row-active"
           : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]",
         dragging && "opacity-40",
         deleting && "opacity-50 pointer-events-none",
@@ -235,13 +238,15 @@ export function ExplorerPageRow({
       ) : (
         <>
           <span className="relative flex items-center justify-center shrink-0 w-[18px] h-[18px]" />
-          {page.completed ? (
-            <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)] pointer-events-none" />
-          ) : page.contentType === "VIDEO" ? (
-            <Youtube className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)] pointer-events-none" />
-          ) : (
-            <FileText className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)] pointer-events-none" />
-          )}
+          <WithItemSyncBadge status={pageStatus(page.id)}>
+            {page.completed ? (
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)] pointer-events-none" />
+            ) : page.contentType === "VIDEO" ? (
+              <Youtube className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)] pointer-events-none" />
+            ) : (
+              <FileText className="w-3.5 h-3.5 shrink-0 text-[var(--text-muted)] pointer-events-none" />
+            )}
+          </WithItemSyncBadge>
         </>
       )}
       <span className="flex-1 min-w-0 truncate text-[13px] pointer-events-none">

@@ -1,24 +1,31 @@
 "use client";
 
 import { useEffect } from "react";
-import { flushOfflineSync } from "@/lib/offline/sync";
-import { OFFLINE_STATUS_EVENT, dispatchOfflineStatus } from "@/lib/offline/network";
+import { scheduleFlushOfflineSync } from "@/lib/flushPendingMutations";
+import { dispatchOfflineStatus } from "@/lib/offline/network";
 
-/** Flush queued mutations when the device comes back online. */
+/**
+ * Wake deferred upload/mutation flushes after load / reconnect.
+ * Intentionally does not flush on OFFLINE_STATUS_EVENT — that re-entered
+ * flush → status → flush and fought Upload after sync retries landed.
+ */
 export function OfflineSyncProvider() {
   useEffect(() => {
-    const run = () => {
-      void flushOfflineSync();
+    const onOnline = () => {
+      scheduleFlushOfflineSync(500);
+    };
+    const onOffline = () => {
+      dispatchOfflineStatus();
     };
 
-    run();
-    window.addEventListener("online", run);
-    window.addEventListener("offline", () => dispatchOfflineStatus());
-    window.addEventListener(OFFLINE_STATUS_EVENT, run);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    // Idle wake only — never block first paint / Upload click with an IDB flush.
+    scheduleFlushOfflineSync(5_000);
+
     return () => {
-      window.removeEventListener("online", run);
-      window.removeEventListener("offline", () => dispatchOfflineStatus());
-      window.removeEventListener(OFFLINE_STATUS_EVENT, run);
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
     };
   }, []);
 

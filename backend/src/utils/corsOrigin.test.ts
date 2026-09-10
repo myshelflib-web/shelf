@@ -4,6 +4,7 @@ import {
   isCorsOriginAllowed,
   isVercelPreviewOrigin,
   parseCorsOrigins,
+  resolveBucketCorsOrigins,
 } from "./corsOrigin.js";
 
 describe("parseCorsOrigins", () => {
@@ -16,6 +17,34 @@ describe("parseCorsOrigins", () => {
 
   it("defaults to localhost", () => {
     expect(parseCorsOrigins(undefined)).toEqual(["http://localhost:3000"]);
+  });
+});
+
+describe("resolveBucketCorsOrigins", () => {
+  it("uses S3_CORS_ORIGINS override when set", () => {
+    expect(
+      resolveBucketCorsOrigins(
+        "https://staging.myshelflib.com",
+        true,
+        "*,https://staging.myshelflib.com"
+      )
+    ).toEqual(["*", "https://staging.myshelflib.com"]);
+  });
+
+  it("uses * when Vercel preview CORS is enabled", () => {
+    expect(
+      resolveBucketCorsOrigins("https://staging.myshelflib.com", true, undefined)
+    ).toEqual(["*"]);
+  });
+
+  it("mirrors CORS_ORIGIN when previews are off", () => {
+    expect(
+      resolveBucketCorsOrigins(
+        "https://www.myshelflib.com,https://myshelflib.com",
+        false,
+        undefined
+      )
+    ).toEqual(["https://www.myshelflib.com", "https://myshelflib.com"]);
   });
 });
 

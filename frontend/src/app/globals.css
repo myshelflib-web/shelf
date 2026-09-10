@@ -912,11 +912,22 @@
 .library-row {
   transition:
     background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-    color 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .library-row:hover {
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+}
+
+.library-row-active {
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-secondary));
+  color: var(--text-primary);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.library-row-active:hover {
+  background: color-mix(in srgb, var(--accent) 20%, var(--bg-secondary));
 }
 
 .library-center-pane {
