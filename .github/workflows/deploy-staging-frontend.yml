@@ -21,9 +21,8 @@ jobs:
   staging-frontend:
     name: Staging frontend (Vercel)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
+    # Run Vercel CLI from the monorepo root. The Vercel project Root Directory is
+    # already `frontend`; cd'ing into frontend first causes frontend/frontend/...
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -40,7 +39,9 @@ jobs:
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
-      - if: steps.vercel.outputs.skip != 'true'
+      - name: Install frontend deps
+        if: steps.vercel.outputs.skip != 'true'
+        working-directory: frontend
         run: npm ci
       - name: Install Vercel CLI
         if: steps.vercel.outputs.skip != 'true'

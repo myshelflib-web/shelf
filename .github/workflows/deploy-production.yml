@@ -326,9 +326,8 @@ jobs:
     needs: [ci-frontend]
     if: inputs.frontend
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
+    # Run Vercel CLI from the monorepo root. The Vercel project Root Directory is
+    # already `frontend`; cd'ing into frontend first causes frontend/frontend/...
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -342,7 +341,9 @@ jobs:
             echo "::error::Missing VERCEL_TOKEN, VERCEL_ORG_ID, or VERCEL_PROJECT_ID"
             exit 1
           fi
-      - run: npm ci
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
       - name: Install Vercel CLI
         run: npm install -g vercel@latest
       - name: Pull Production env (prod API URL)
