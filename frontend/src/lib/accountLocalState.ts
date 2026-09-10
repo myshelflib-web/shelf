@@ -39,6 +39,20 @@ const AUTH_KEYS = ["token", "user"] as const;
 /** Device appearance only — not tied to an account. */
 const KEEP_LOCAL_KEYS = new Set(["theme"]);
 
+/**
+ * Per-user discovery flags that must survive logout on the same browser
+ * (keys already include userId). Cleared only if you wipe site data.
+ */
+const KEEP_LOCAL_PREFIXES = [
+  "shelf:product-tour:",
+  "shelf:onboarding-completed:",
+] as const;
+
+function shouldKeepLocalKey(key: string): boolean {
+  if (KEEP_LOCAL_KEYS.has(key)) return true;
+  return KEEP_LOCAL_PREFIXES.some((prefix) => key.startsWith(prefix));
+}
+
 export function getStoredUserId(): string | null {
   if (typeof window === "undefined") return null;
   try {
@@ -62,7 +76,7 @@ function collectKeys(storage: Storage, shouldRemove: (key: string) => boolean) {
 
 function wipeLocalAccountKeys() {
   const toRemove = collectKeys(localStorage, (key) => {
-    if (KEEP_LOCAL_KEYS.has(key)) return false;
+    if (shouldKeepLocalKey(key)) return false;
     if (AUTH_KEYS.includes(key as (typeof AUTH_KEYS)[number])) return true;
     return key.startsWith(ACCOUNT_KEY_PREFIX);
   });

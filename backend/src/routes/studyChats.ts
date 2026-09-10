@@ -16,6 +16,8 @@ import { reqLog, studyFlow } from "../utils/flowLog.js";
 const router = Router();
 router.use(authMiddleware);
 
+const MAX_PINNED_CHATS = 10;
+
 const threadContextSelect = {
   id: true,
   title: true,
@@ -24,6 +26,7 @@ const threadContextSelect = {
   contextTopicId: true,
   contextPageId: true,
   relevancyDocId: true,
+  pinnedAt: true,
   createdAt: true,
   updatedAt: true,
   relevancyDoc: {
@@ -38,7 +41,7 @@ router.get("/chats", async (req: Request, res: Response) => {
       userId: req.user!.userId,
       ...(pageId ? { contextKind: "PAGE", contextPageId: pageId } : {}),
     },
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ pinnedAt: "desc" }, { updatedAt: "desc" }],
     take: 80,
     select: threadContextSelect,
   });
@@ -108,6 +111,7 @@ router.patch("/chats/:id", async (req: Request, res: Response) => {
     contextTopicId?: string | null;
     contextPageId?: string | null;
     relevancyDocId?: string | null;
+    pinned?: boolean;
   };
 
   const data: {
@@ -117,11 +121,31 @@ router.patch("/chats/:id", async (req: Request, res: Response) => {
     contextTopicId?: string | null;
     contextPageId?: string | null;
     relevancyDocId?: string | null;
+    pinnedAt?: Date | null;
   } = {};
 
   if (body.title !== undefined) {
     const title = String(body.title).trim().slice(0, 120);
     if (title) data.title = title;
+  }
+
+  if (body.pinned !== undefined) {
+    if (body.pinned) {
+      if (!existing.pinnedAt) {
+        const pinnedCount = await prisma.chatThread.count({
+          where: { userId, pinnedAt: { not: null } },
+        });
+        if (pinnedCount >= MAX_PINNED_CHATS) {
+          res.status(400).json({
+            error: `You can pin up to ${MAX_PINNED_CHATS} chats`,
+          });
+          return;
+        }
+      }
+      data.pinnedAt = new Date();
+    } else {
+      data.pinnedAt = null;
+    }
   }
 
   if (body.contextKind !== undefined) {

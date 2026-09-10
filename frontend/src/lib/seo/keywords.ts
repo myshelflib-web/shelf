@@ -101,6 +101,12 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "mermaid diagram preview",
     "Google search study AI",
   ],
+  "pin-study-ai-chats": [
+    "pin AI chat",
+    "favorite study conversation",
+    "Study AI sidebar",
+    "save chat thread",
+  ],
   "study-ai-depth-modes": [
     "long PDF summary AI",
     "deep study AI analysis",

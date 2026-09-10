@@ -21,6 +21,7 @@ import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { studyAiSendParts } from "@/lib/studyAiCommands";
 import type { StudyDepth } from "@/lib/studyDepth";
 import { AnalyticsEvents, track } from "@/lib/analytics";
+import { useStudyAiThreadActions } from "@/hooks/useStudyAiThreadActions";
 
 export function useStudyAiChat({
   threadId,
@@ -369,78 +370,26 @@ export function useStudyAiChat({
     else window.history.replaceState(null, "", "/study-ai");
   }, [router, threadId]);
 
-  const removeThread = useCallback(
-    async (id: string) => {
-      await api.study.deleteChat(id).catch(() => {});
-      refreshThreads();
-      if (activeIdRef.current === id) startNewChat();
-    },
-    [refreshThreads, startNewChat]
-  );
-
-  const deleteMessage = useCallback(
-    async (id: string) => {
-      const chatId = activeIdRef.current;
-      if (!chatId || id.startsWith("tmp-")) return;
-      setMessages((prev) => {
-        const idx = prev.findIndex((m) => m.id === id);
-        if (idx < 0) return prev;
-        const drop = new Set([id]);
-        if (prev[idx].role === "user" && prev[idx + 1]?.role === "assistant") {
-          drop.add(prev[idx + 1].id);
-        }
-        return prev.filter((m) => !drop.has(m.id));
-      });
-      try {
-        const { deletedIds } = await api.study.deleteChatMessage(chatId, id);
-        setMessages((prev) => prev.filter((m) => !deletedIds.includes(m.id)));
-      } catch {
-        setError("Could not delete message");
-        const { thread } = await api.study.getChat(chatId).catch(() => ({
-          thread: null,
-        }));
-        if (thread) setMessages(thread.messages);
-      }
-    },
-    []
-  );
-
-  const editAndResubmit = useCallback(
-    async (messageId: string, text: string) => {
-      const chatId = activeIdRef.current;
-      const next = text.trim();
-      if (!chatId || !next || messageId.startsWith("tmp-")) return;
-
-      abortRef.current?.abort();
-      streamingRef.current = false;
-      queueRef.current = [];
-      setQueue([]);
-      setLoading(false);
-      setStatusEvents([]);
-      setLiveCitations(undefined);
-      setError("");
-
-      setMessages((prev) => {
-        const idx = prev.findIndex((m) => m.id === messageId);
-        if (idx < 0) return prev;
-        return prev.slice(0, idx);
-      });
-
-      try {
-        await api.study.truncateChatMessages(chatId, { messageId });
-      } catch {
-        setError("Could not edit message");
-        const { thread } = await api.study.getChat(chatId).catch(() => ({
-          thread: null,
-        }));
-        if (thread) setMessages(thread.messages);
-        return;
-      }
-
-      await send(next);
-    },
-    [send]
-  );
+  const { removeThread, togglePinThread, renameThread, deleteMessage, editAndResubmit } =
+    useStudyAiThreadActions({
+      threads,
+      threadMeta,
+      setThreads,
+      setThreadMeta,
+      setTitle,
+      setMessages,
+      setError,
+      setQueue,
+      setLoading,
+      setStatusEvents,
+      setLiveCitations,
+      queueRef,
+      activeIdRef,
+      abortRef,
+      streamingRef,
+      startNewChat,
+      send,
+    });
 
   return {
     threads,
@@ -464,6 +413,8 @@ export function useStudyAiChat({
     removeQueued,
     startNewChat,
     removeThread,
+    togglePinThread,
+    renameThread,
     deleteMessage,
     editAndResubmit,
     refreshThreads,

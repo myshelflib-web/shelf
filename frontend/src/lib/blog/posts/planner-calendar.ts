@@ -9,6 +9,7 @@ export const plannerCalendar = buildPost(
     excerpt:
       "Create tasks that open your PDFs, schedule events with external links, drag items between days, and never lose overdue work in the To plan column.",
     publishedAt: "2026-02-01",
+    updatedAt: "2026-09-11",
     tags: ["planner", "calendar", "tasks", "productivity"],
     readingMinutes: 7,
   },
@@ -23,7 +24,7 @@ export const plannerCalendar = buildPost(
     {
       heading: "Week board and month grid",
       paragraphs: [
-        "The week view is a Jira-style board: seven day columns plus a To plan backlog for unscheduled items. Drag cards from backlog onto a day to schedule them.",
+        "The week view is a Jira-style board: seven day columns plus a To plan backlog for unscheduled items. Drag cards from backlog onto a day to schedule them — the board updates immediately and the save syncs in the background, like moving pages in your library.",
         "Month view shows the current month only — no scrolling through adjacent months. Each cell shows up to two items with a \"+n more\" overflow indicator. Drop onto a day to assign a due date.",
       ],
     },

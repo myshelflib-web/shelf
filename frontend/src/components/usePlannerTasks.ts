@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
 import {
   createTask,
   deleteTask,
@@ -48,6 +48,8 @@ export function usePlannerTasks(
   const [tasks, setTasksState] = useState<StudyTask[]>(() => seeded ?? []);
   const [tasksLoading, setTasksLoading] = useState(() => seeded == null);
   const progress = useDeleteProgressOptional();
+  /** While true, background listTasks must not clobber optimistic moves. */
+  const mutationInFlightRef = useRef(0);
 
   const setTasks = useCallback(
     (next: SetStateAction<StudyTask[]>) => {
@@ -64,7 +66,7 @@ export function usePlannerTasks(
     (opts?: { silent?: boolean }) => {
       const cached = peekCachedTasks(fromIso, toIso);
       const silent = opts?.silent === true || cached != null;
-      if (cached) {
+      if (cached && mutationInFlightRef.current === 0) {
         setTasksState(cached);
         setTasksLoading(false);
       } else if (!silent) {
@@ -73,13 +75,16 @@ export function usePlannerTasks(
 
       let settled = false;
       void peekLocalTasks(fromIso, toIso).then((local) => {
-        if (settled || local.length === 0) return;
+        if (settled || local.length === 0 || mutationInFlightRef.current > 0) {
+          return;
+        }
         setTasksState(local);
         setTasksLoading(false);
       });
       listTasks(fromIso, toIso)
         .then((next) => {
           settled = true;
+          if (mutationInFlightRef.current > 0) return;
           setTasksState(next);
         })
         .catch(() => {
@@ -103,13 +108,24 @@ export function usePlannerTasks(
     loadTasks({ silent: false });
   }, [fromIso, toIso, loadTasks]);
 
+  const withMutationGuard = useCallback(async <T,>(work: () => Promise<T>) => {
+    mutationInFlightRef.current += 1;
+    try {
+      return await work();
+    } finally {
+      mutationInFlightRef.current = Math.max(0, mutationInFlightRef.current - 1);
+    }
+  }, []);
+
   const toggleDone = async (task: StudyTask) => {
     const next = !task.completed;
     setTasks((prev) =>
       prev.map((t) => (t.id === task.id ? { ...t, completed: next } : t))
     );
     try {
-      await updateTask(masterId(task.id), { completed: next });
+      await withMutationGuard(() =>
+        updateTask(masterId(task.id), { completed: next })
+      );
       if (next) {
         track(AnalyticsEvents.plannerTaskCompleted, {
           kind: task.kind ?? "TASK",
@@ -142,15 +158,17 @@ export function usePlannerTasks(
 
     const label = `Creating “${shortPlannerTitle(payload.title)}”…`;
     const work = async () => {
-      const created = await createTask({
-        title: payload.title,
-        dueAt: payload.dueAt,
-        endsAt: payload.endsAt ?? undefined,
-        kind: payload.kind,
-        href: payload.href ?? undefined,
-        recurrence: payload.recurrence,
-        recurUntil: payload.recurUntil,
-      });
+      const created = await withMutationGuard(() =>
+        createTask({
+          title: payload.title,
+          dueAt: payload.dueAt,
+          endsAt: payload.endsAt ?? undefined,
+          kind: payload.kind,
+          href: payload.href ?? undefined,
+          recurrence: payload.recurrence,
+          recurUntil: payload.recurUntil,
+        })
+      );
       setTasks((prev) => prev.map((t) => (t.id === tempId ? created : t)));
       window.dispatchEvent(new Event("shelf:tasks-changed"));
       return created;
@@ -199,7 +217,7 @@ export function usePlannerTasks(
       recurUntil: payload.recurUntil,
     };
     const work = async () => {
-      await updateTask(master, body);
+      await withMutationGuard(() => updateTask(master, body));
       window.dispatchEvent(new Event("shelf:tasks-changed"));
     };
 
@@ -229,7 +247,7 @@ export function usePlannerTasks(
       await motion.playExitThen(master, () => {
         setTasks((prev) => prev.filter((t) => masterId(t.id) !== master));
       });
-      await deleteTask(master);
+      await withMutationGuard(() => deleteTask(master));
       window.dispatchEvent(new Event("shelf:tasks-changed"));
     };
 
@@ -246,6 +264,14 @@ export function usePlannerTasks(
     }
   };
 
+  const beginMutation = useCallback(() => {
+    mutationInFlightRef.current += 1;
+  }, []);
+
+  const endMutation = useCallback(() => {
+    mutationInFlightRef.current = Math.max(0, mutationInFlightRef.current - 1);
+  }, []);
+
   return {
     tasks,
     setTasks,
@@ -255,5 +281,7 @@ export function usePlannerTasks(
     createItem,
     updateItem,
     remove,
+    beginMutation,
+    endMutation,
   };
 }

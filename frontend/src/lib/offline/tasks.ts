@@ -253,16 +253,8 @@ export async function updateTask(id: string, data: Partial<TaskWriteInput>): Pro
     localTasks.find((t) => t.id === id) ??
     localTasks.find((t) => masterTaskId(t.id) === master);
 
-  if (isOnline() && existing && !existing.localOnly) {
-    try {
-      const { task } = await api.tasks.update(master, data);
-      await putLocalTask(userId, toLocalTask(task));
-      return task;
-    } catch (err) {
-      if (!isNetworkError(err)) throw err;
-    }
-  }
-
+  // Local-first: write pending before any network call so list/refetch cannot
+  // clobber an in-flight drag (same pattern as library moves).
   const base = existing
     ? stripLocalMeta(existing)
     : ({
@@ -298,10 +290,25 @@ export async function updateTask(id: string, data: Partial<TaskWriteInput>): Pro
     } else {
       await enqueueOutbox(userId, "task", "update", master, { ...data });
     }
-  } else {
-    await enqueueOutbox(userId, "task", "update", master, { ...data });
+    dispatchOfflineSync();
+    return stripLocalMeta(next);
   }
 
+  if (isOnline()) {
+    try {
+      const { task } = await api.tasks.update(master, data);
+      await putLocalTask(userId, toLocalTask(task));
+      return task;
+    } catch (err) {
+      if (!isNetworkError(err)) {
+        if (existing) await putLocalTask(userId, existing);
+        else await deleteLocalTask(next.id);
+        throw err;
+      }
+    }
+  }
+
+  await enqueueOutbox(userId, "task", "update", master, { ...data });
   dispatchOfflineSync();
   return stripLocalMeta(next);
 }

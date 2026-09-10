@@ -7,7 +7,7 @@ export type WorkspaceMessage = ChatMessage & {
   clientKey?: string;
 };
 
-export type PopoverKind = "attach" | "chat" | null;
+export type PopoverKind = "attach" | null;
 
 export function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {

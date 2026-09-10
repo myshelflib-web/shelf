@@ -1,13 +1,87 @@
 "use client";
 
 import Link from "next/link";
-import { MoreHorizontal, Paperclip, Plus, Search } from "lucide-react";
+import {
+  Paperclip,
+  Pencil,
+  Pin,
+  PinOff,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
 import {
   filterThreads,
   groupThreadsByDate,
+  isThreadPinned,
 } from "@/lib/studyAiThreadGroups";
 import { threadSidebarMeta } from "@/lib/studyAiWorkspaceUtils";
 import { ChatThreadSummary } from "@/types";
+
+function ChatRowActions({
+  pinned,
+  onPin,
+  onRename,
+  onDelete,
+}: {
+  pinned: boolean;
+  onPin: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+}) {
+  const btn =
+    "w-6 h-6 shrink-0 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] flex items-center justify-center";
+  return (
+    <div className="flex items-center gap-0.5 shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
+      <button
+        type="button"
+        aria-label={pinned ? "Unpin chat" : "Pin chat"}
+        title={pinned ? "Unpin" : "Pin"}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onPin();
+        }}
+        className={`${btn} ${pinned ? "text-[var(--accent)] opacity-100" : ""}`}
+      >
+        {pinned ? (
+          <PinOff className="w-3.5 h-3.5" />
+        ) : (
+          <Pin className="w-3.5 h-3.5" />
+        )}
+      </button>
+      <button
+        type="button"
+        aria-label="Rename chat"
+        title="Rename"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onRename();
+        }}
+        className={btn}
+      >
+        <Pencil className="w-3.5 h-3.5" />
+      </button>
+      <button
+        type="button"
+        aria-label="Delete chat"
+        title="Delete"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onDelete();
+        }}
+        className={`${btn} hover:text-red-400`}
+      >
+        <Trash2 className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
 
 export function StudyAiSidebar({
   threads,
@@ -16,7 +90,9 @@ export function StudyAiSidebar({
   onSearchQuery,
   activeId,
   onNewChat,
-  onOpenMenu,
+  onPin,
+  onRename,
+  onDelete,
 }: {
   threads: ChatThreadSummary[];
   threadsLoading: boolean;
@@ -24,7 +100,9 @@ export function StudyAiSidebar({
   onSearchQuery: (q: string) => void;
   activeId?: string;
   onNewChat: () => void;
-  onOpenMenu: (el: HTMLElement, threadId: string) => void;
+  onPin: (threadId: string) => void;
+  onRename: (threadId: string, title: string) => void;
+  onDelete: (threadId: string) => void;
 }) {
   const filteredGroups = groupThreadsByDate(
     filterThreads(threads, searchQuery)
@@ -72,11 +150,13 @@ export function StudyAiSidebar({
             <ul className="space-y-0.5">
               {group.threads.map((t) => {
                 const meta = threadSidebarMeta(t);
+                const pinned = isThreadPinned(t);
+                const active = activeId === t.id;
                 return (
                   <li key={t.id}>
                     <div
                       className={`group flex items-start gap-1 min-h-[44px] px-1.5 py-1.5 rounded-[9px] transition-colors ${
-                        activeId === t.id
+                        active
                           ? "bg-[var(--bg-elevated)] text-[var(--text-primary)]"
                           : "text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)]/70"
                       }`}
@@ -92,18 +172,12 @@ export function StudyAiSidebar({
                           </span>
                         )}
                       </Link>
-                      <button
-                        type="button"
-                        aria-label="Chat options"
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenMenu(e.currentTarget, t.id);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 w-6 h-6 shrink-0 rounded-md text-[var(--text-muted)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)] flex items-center justify-center transition-opacity"
-                      >
-                        <MoreHorizontal className="w-3.5 h-3.5" />
-                      </button>
+                      <ChatRowActions
+                        pinned={pinned}
+                        onPin={() => onPin(t.id)}
+                        onRename={() => onRename(t.id, t.title)}
+                        onDelete={() => onDelete(t.id)}
+                      />
                     </div>
                   </li>
                 );
@@ -114,7 +188,7 @@ export function StudyAiSidebar({
       </div>
 
       <p className="shrink-0 px-3 py-3 border-t border-[var(--border)] text-[9px] text-[var(--text-muted)] leading-snug">
-        Chat titles are generated automatically. Rename them anytime.
+        Chat titles are generated automatically. Pin, rename, or delete anytime.
       </p>
     </aside>
   );

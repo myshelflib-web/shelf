@@ -1,7 +1,7 @@
 "use client";
 
 import type { RefObject } from "react";
-import { Library, Pencil, Trash2, Upload, X } from "lucide-react";
+import { Library, Upload, X } from "lucide-react";
 import type { PopoverKind } from "@/lib/studyAiWorkspaceUtils";
 
 export function StudyAiAttachMenu({
@@ -58,55 +58,14 @@ export function StudyAiAttachMenu({
   );
 }
 
-export function StudyAiChatMenu({
-  menuRef,
-  open,
-  onRename,
-  onDelete,
-}: {
-  menuRef: RefObject<HTMLDivElement | null>;
-  open: boolean;
-  onRename: () => void;
-  onDelete: () => void;
-}) {
-  return (
-    <div
-      ref={menuRef}
-      className={`study-ai-popover ${open ? "open" : ""}`}
-      onMouseDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <button type="button" onClick={onRename}>
-        <span className="study-ai-popicon">
-          <Pencil className="w-3.5 h-3.5" />
-        </span>
-        <span className="study-ai-popcopy">
-          <strong>Rename</strong>
-        </span>
-      </button>
-      <div className="study-ai-pop-divider" />
-      <button type="button" className="danger" onClick={onDelete}>
-        <span className="study-ai-popicon">
-          <Trash2 className="w-3.5 h-3.5" />
-        </span>
-        <span className="study-ai-popcopy">
-          <strong>Delete</strong>
-        </span>
-      </button>
-    </div>
-  );
-}
-
 export function StudyAiRenameModal({
   value,
   onChange,
-  renaming,
   onClose,
   onSave,
 }: {
   value: string;
   onChange: (v: string) => void;
-  renaming: boolean;
   onClose: () => void;
   onSave: () => void;
 }) {
@@ -156,11 +115,11 @@ export function StudyAiRenameModal({
           </button>
           <button
             type="button"
-            disabled={!value.trim() || renaming}
+            disabled={!value.trim()}
             onClick={onSave}
             className="px-3 py-2 text-[10.5px] font-semibold rounded-lg bg-[var(--accent)] text-white disabled:opacity-50"
           >
-            {renaming ? "Saving…" : "Save"}
+            Save
           </button>
         </div>
       </div>

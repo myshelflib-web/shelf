@@ -8,6 +8,10 @@ function startOfDay(d: Date): Date {
   return x;
 }
 
+export function isThreadPinned(t: ChatThreadSummary): boolean {
+  return Boolean(t.pinnedAt);
+}
+
 export function filterThreads(
   threads: ChatThreadSummary[],
   query: string
@@ -17,13 +21,31 @@ export function filterThreads(
   return threads.filter((t) => t.title.toLowerCase().includes(q));
 }
 
+function sortByUpdatedDesc(a: ChatThreadSummary, b: ChatThreadSummary): number {
+  return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+}
+
+function sortPinnedFirst(a: ChatThreadSummary, b: ChatThreadSummary): number {
+  const ap = a.pinnedAt ? new Date(a.pinnedAt).getTime() : 0;
+  const bp = b.pinnedAt ? new Date(b.pinnedAt).getTime() : 0;
+  if (ap !== bp) return bp - ap;
+  return sortByUpdatedDesc(a, b);
+}
+
 export function groupThreadsByDate(
   threads: ChatThreadSummary[]
 ): ThreadGroup[] {
-  const sorted = [...threads].sort(
-    (a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
+  const pinned = threads
+    .filter(isThreadPinned)
+    .sort(sortPinnedFirst);
+  const unpinned = threads
+    .filter((t) => !isThreadPinned(t))
+    .sort(sortByUpdatedDesc);
+
+  const groups: ThreadGroup[] = [];
+  if (pinned.length > 0) {
+    groups.push({ label: "Pinned", threads: pinned });
+  }
 
   const today = startOfDay(new Date());
   const yesterday = new Date(today);
@@ -38,7 +60,7 @@ export function groupThreadsByDate(
     Older: [],
   };
 
-  for (const t of sorted) {
+  for (const t of unpinned) {
     const d = startOfDay(new Date(t.updatedAt));
     if (d >= today) buckets.Today.push(t);
     else if (d >= yesterday) buckets.Yesterday.push(t);
@@ -46,7 +68,8 @@ export function groupThreadsByDate(
     else buckets.Older.push(t);
   }
 
-  return Object.entries(buckets)
-    .filter(([, items]) => items.length > 0)
-    .map(([label, items]) => ({ label, threads: items }));
+  for (const [label, items] of Object.entries(buckets)) {
+    if (items.length > 0) groups.push({ label, threads: items });
+  }
+  return groups;
 }
