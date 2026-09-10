@@ -210,6 +210,45 @@ export const READER_TOUR_STEPS: TourStep[] = [
   },
 ];
 
+export const QUIZ_TOUR_STEPS: TourStep[] = [
+  {
+    id: "quiz-home-tabs",
+    targetId: "quiz-home-tabs",
+    title: "New vs past",
+    body: "Build a new paper here, or open Past quizzes to review scores and analysis.",
+  },
+  {
+    id: "quiz-source",
+    targetId: "quiz-source",
+    title: "Pick a source",
+    body: "Choose My Library, Upload, or Previous Year Questions as the material for this quiz.",
+  },
+  {
+    id: "quiz-source-change",
+    targetId: "quiz-source-change",
+    title: "Configure source",
+    body: "Use Change to pick a folder or file, paste notes, or set PYQ subject and years.",
+  },
+  {
+    id: "quiz-mode",
+    targetId: "quiz-mode",
+    title: "Practice vs timed",
+    body: "Practice is casual self-testing. Timed assessment runs as a focused paper with a timer.",
+  },
+  {
+    id: "quiz-customize",
+    targetId: "quiz-customize",
+    title: "Customize quiz",
+    body: "Set question count, difficulty, MCQ vs written mix, and timer (timed mode).",
+  },
+  {
+    id: "quiz-generate",
+    targetId: "quiz-generate",
+    title: "Generate quiz",
+    body: "Creates the paper and opens it while questions are generated.",
+  },
+];
+
 export function stepsForSurface(surface: TourSurface): TourStep[] {
   switch (surface) {
     case "library":
@@ -222,6 +261,8 @@ export function stepsForSurface(surface: TourSurface): TourStep[] {
       return STUDY_AI_TOUR_STEPS;
     case "reader":
       return READER_TOUR_STEPS;
+    case "quiz":
+      return QUIZ_TOUR_STEPS;
     default:
       return [];
   }

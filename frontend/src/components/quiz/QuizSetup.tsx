@@ -372,7 +372,7 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
               </p>
             </div>
             
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-3" data-tour-id="quiz-source">
               {SOURCES.map((s) => (
                 <button
                   key={s.id}
@@ -401,7 +401,10 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
             </div>
 
             {/* Premium selection Display (selectedSource / Change popup trigger) */}
-            <div className="selected mt-4 border border-[var(--border)] bg-[var(--bg-secondary)]/30 dark:bg-[var(--bg-secondary)]/15 rounded-[12px] p-4 flex items-center justify-between shadow-sm">
+            <div
+              className="selected mt-4 border border-[var(--border)] bg-[var(--bg-secondary)]/30 dark:bg-[var(--bg-secondary)]/15 rounded-[12px] p-4 flex items-center justify-between shadow-sm"
+              data-tour-id="quiz-source-change"
+            >
               <div className="selMain flex-1 min-w-0 pr-4">
                 <div className="selName font-bold text-[12.5px] text-[var(--text-primary)] truncate">
                   {sourceDisplayTitle}
@@ -431,7 +434,7 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-2" data-tour-id="quiz-mode">
               <button
                 type="button"
                 onClick={() => setProctored(false)}
@@ -514,6 +517,7 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
           <button
             type="button"
             onClick={() => setCustomizeOpen(true)}
+            data-tour-id="quiz-customize"
             className="w-full min-h-[48px] border border-[var(--border)] bg-[var(--bg-elevated)] hover:border-[var(--accent)]/50 hover:bg-[var(--bg-secondary)] rounded-[12px] p-2.5 flex items-center gap-3 text-left transition-all duration-150 group shadow-sm"
           >
             <span className="w-[30px] h-[30px] rounded-[9px] bg-[var(--accent-subtle)] text-[var(--accent)] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
@@ -573,6 +577,7 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
             type="button"
             className={`${quizBtnPrimary} h-[39px] rounded-[10px] px-4 text-[12px] font-bold`}
             disabled={busy}
+            data-tour-id="quiz-generate"
             onClick={() => void start()}
           >
             {busy ? "Creating…" : "Generate quiz"}

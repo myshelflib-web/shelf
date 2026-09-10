@@ -16,7 +16,7 @@ export function ProductTourSettingsCard() {
           <h2 className="text-sm font-semibold">Product tour</h2>
           <p className="mt-1 text-xs leading-relaxed text-[var(--text-muted)]">
             Replay the skippable tips that explain Library, Dashboard, Planner,
-            Study AI, and Reader controls. You can also append{" "}
+            Study AI, Reader, and Quiz controls. You can also append{" "}
             <code className="text-[var(--text-secondary)]">?tour=1</code> to
             any of those pages.
           </p>

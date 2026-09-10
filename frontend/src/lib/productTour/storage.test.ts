@@ -69,6 +69,9 @@ describe("surfaceFromPathname", () => {
     expect(surfaceFromPathname("/calendar")).toBe("planner");
     expect(surfaceFromPathname("/study-ai")).toBe("study-ai");
     expect(surfaceFromPathname("/study-ai/abc")).toBe("study-ai");
+    expect(surfaceFromPathname("/quiz")).toBe("quiz");
+    expect(surfaceFromPathname("/quiz/")).toBe("quiz");
+    expect(surfaceFromPathname("/quiz/abc")).toBe(null);
     expect(surfaceFromPathname("/my-content")).toBe("library");
     expect(surfaceFromPathname("/my-content/file/page-1")).toBe("reader");
     expect(surfaceFromPathname("/my-content/n1/file/page-1")).toBe("reader");

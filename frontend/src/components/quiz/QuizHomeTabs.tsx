@@ -25,7 +25,12 @@ export function QuizHomeTabs({
   );
 
   return (
-    <div className="inline-flex gap-0.5 p-0.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] shrink-0">
+    <div
+      className="inline-flex gap-0.5 p-0.5 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] shrink-0"
+      data-tour-id="quiz-home-tabs"
+      role="tablist"
+      aria-label="Quiz home"
+    >
       {item("new", "New quiz")}
       {item("past", "Past quizzes")}
     </div>
