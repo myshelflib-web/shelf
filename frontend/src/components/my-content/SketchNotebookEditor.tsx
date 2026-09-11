@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
 import type { BlankPt, BlankStroke } from "@/lib/blankCanvas";
-import { canvasBgTone, canvasFgColor, pointsToPath } from "@/lib/blankCanvas";
+import { pointsToPath } from "@/lib/blankCanvas";
 import { parseSvgPathPoints, polylineHitsPoint } from "@/lib/eraseHit";
 import { useInkSurface } from "@/hooks/useInkSurface";
 import {
@@ -19,21 +19,24 @@ import {
   type SketchZoomCommands,
 } from "./useSketchNotebookZoom";
 import {
-  DEFAULT_PEN_COLOR,
   DEFAULT_PEN_SIZE,
+  defaultPenColorForBg,
+  penColorAfterBgChange,
   type DrawTool,
 } from "./BlankEditorToolbar";
 import { SketchToolbar } from "./SketchToolbar";
+import { SketchPageSurface } from "./SketchPageSurface";
 import {
-  SKETCH_PAGE_H,
-  SKETCH_PAGE_W,
   defaultSketchPage,
   parseSketchNotebook,
   serializeSketchNotebook,
-  sketchTemplateClass,
+  type SketchImage,
   type SketchNotebook,
   type SketchTemplate,
 } from "@/lib/sketchNotebook";
+import { useSketchImages, pageImages } from "./useSketchImages";
+
+type PageSnap = { paths: BlankStroke[]; images: SketchImage[] };
 
 interface SketchNotebookEditorProps {
   initialHtml: string;
@@ -79,9 +82,13 @@ export function SketchNotebookEditor({
   const [paths, setPaths] = useState<BlankStroke[]>(activePage?.paths ?? []);
   const pathsRef = useRef(paths);
   pathsRef.current = paths;
+  const imagesRef = useRef<SketchImage[]>(activePage?.images ?? []);
+  imagesRef.current = activePage?.images ?? [];
 
   const [drawTool, setDrawTool] = useState<DrawTool>("pen");
-  const [penColor, setPenColor] = useState(DEFAULT_PEN_COLOR);
+  const [penColor, setPenColor] = useState(() =>
+    defaultPenColorForBg(activePage?.bg ?? "#ffffff")
+  );
   const [penSize, setPenSize] = useState(DEFAULT_PEN_SIZE);
   const drawToolRef = useRef(drawTool);
   drawToolRef.current = drawTool;
@@ -94,8 +101,8 @@ export function SketchNotebookEditor({
   const strokePts = useRef<BlankPt[]>([]);
   const { draftPathRef, paintDraft } = useStrokeDraft(strokePts);
   const { beginStroke, bindLiveGroup, promoteLive, clearLive } = useWindowPenStroke();
-  const undoStack = useRef<BlankStroke[][]>([]);
-  const redoStack = useRef<BlankStroke[][]>([]);
+  const undoStack = useRef<PageSnap[]>([]);
+  const redoStack = useRef<PageSnap[]>([]);
   const gestureUndoPushed = useRef(false);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
@@ -105,12 +112,20 @@ export function SketchNotebookEditor({
     setCanRedo(redoStack.current.length > 0);
   }, []);
 
+  const snapshot = useCallback(
+    (): PageSnap => ({
+      paths: [...pathsRef.current],
+      images: [...imagesRef.current],
+    }),
+    []
+  );
+
   const pushUndo = useCallback(() => {
-    undoStack.current.push([...pathsRef.current]);
+    undoStack.current.push(snapshot());
     if (undoStack.current.length > 50) undoStack.current.shift();
     redoStack.current = [];
     refreshUndoUi();
-  }, [refreshUndoUi]);
+  }, [refreshUndoUi, snapshot]);
 
   useInkSurface(viewportRef, true);
   const setInkDrawing = useInkGestures(viewportEl, true);
@@ -142,7 +157,7 @@ export function SketchNotebookEditor({
       const nb = notebookRef.current;
       const idx = nb.activeIndex;
       const pages = nb.pages.map((p, i) =>
-        i === idx ? { ...p, paths: nextPaths } : p
+        i === idx ? { ...p, paths: nextPaths, images: imagesRef.current } : p
       );
       pathsRef.current = nextPaths;
       setPaths(nextPaths);
@@ -150,6 +165,46 @@ export function SketchNotebookEditor({
     },
     [emit, pushUndo]
   );
+
+  const applySnap = useCallback(
+    (snap: PageSnap) => {
+      const nb = notebookRef.current;
+      const idx = nb.activeIndex;
+      const pages = nb.pages.map((p, i) =>
+        i === idx ? { ...p, paths: snap.paths, images: snap.images } : p
+      );
+      pathsRef.current = snap.paths;
+      imagesRef.current = snap.images;
+      setPaths(snap.paths);
+      emit({ ...nb, pages });
+    },
+    [emit]
+  );
+
+  const commitImages = useCallback(
+    (nextImages: SketchImage[]) => {
+      pushUndo();
+      const nb = notebookRef.current;
+      const idx = nb.activeIndex;
+      const pages = nb.pages.map((p, i) =>
+        i === idx ? { ...p, images: nextImages } : p
+      );
+      imagesRef.current = nextImages;
+      emit({ ...nb, pages });
+    },
+    [emit, pushUndo]
+  );
+
+  const sketchImages = pageImages(activePage);
+  const {
+    busy: imageBusy,
+    insertFromFile,
+    eraseImageAt,
+  } = useSketchImages({
+    images: sketchImages,
+    onCommitImages: commitImages,
+    enabled: true,
+  });
 
   useEffect(() => {
     undoStack.current = [];
@@ -159,6 +214,7 @@ export function SketchNotebookEditor({
     const page = notebookRef.current.pages[notebookRef.current.activeIndex];
     if (page) {
       pathsRef.current = page.paths;
+      imagesRef.current = page.images ?? [];
       setPaths(page.paths);
     }
   }, [notebook.activeIndex]);
@@ -171,35 +227,35 @@ export function SketchNotebookEditor({
       if (e.shiftKey) {
         const next = redoStack.current.pop();
         if (!next) return;
-        undoStack.current.push([...pathsRef.current]);
-        syncActivePaths(next, { recordUndo: false });
+        undoStack.current.push(snapshot());
+        applySnap(next);
       } else {
         const prev = undoStack.current.pop();
         if (!prev) return;
-        redoStack.current.push([...pathsRef.current]);
-        syncActivePaths(prev, { recordUndo: false });
+        redoStack.current.push(snapshot());
+        applySnap(prev);
       }
       refreshUndoUi();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [refreshUndoUi, syncActivePaths]);
+  }, [applySnap, refreshUndoUi, snapshot]);
 
   const undo = useCallback(() => {
     const prev = undoStack.current.pop();
     if (!prev) return;
-    redoStack.current.push([...pathsRef.current]);
-    syncActivePaths(prev, { recordUndo: false });
+    redoStack.current.push(snapshot());
+    applySnap(prev);
     refreshUndoUi();
-  }, [refreshUndoUi, syncActivePaths]);
+  }, [applySnap, refreshUndoUi, snapshot]);
 
   const redo = useCallback(() => {
     const next = redoStack.current.pop();
     if (!next) return;
-    undoStack.current.push([...pathsRef.current]);
-    syncActivePaths(next, { recordUndo: false });
+    undoStack.current.push(snapshot());
+    applySnap(next);
     refreshUndoUi();
-  }, [refreshUndoUi, syncActivePaths]);
+  }, [applySnap, refreshUndoUi, snapshot]);
 
   const localPoint = (clientX: number, clientY: number): BlankPt =>
     clientToSketchPoint(surfaceRef.current, clientX, clientY);
@@ -299,6 +355,7 @@ export function SketchNotebookEditor({
   };
 
   const eraseObjectAt = (pt: BlankPt) => {
+    if (eraseImageAt(pt)) return;
     const strokeHit = pathsRef.current.findIndex((stroke) => {
       const pts = parseSvgPathPoints(stroke.d);
       return polylineHitsPoint(pts, pt, Math.max(16, stroke.width * 3));
@@ -358,7 +415,10 @@ export function SketchNotebookEditor({
         template={template}
         onTemplateChange={(t) => updateActivePageMeta({ template: t })}
         pageBg={bg}
-        onPageBgChange={(c) => updateActivePageMeta({ bg: c })}
+        onPageBgChange={(c) => {
+          setPenColor((prev) => penColorAfterBgChange(prev, c));
+          updateActivePageMeta({ bg: c });
+        }}
         pageIndex={notebook.activeIndex}
         pageCount={notebook.pages.length}
         onPrevPage={() => goPage(notebook.activeIndex - 1)}
@@ -370,6 +430,8 @@ export function SketchNotebookEditor({
         onRedo={redo}
         scale={scale}
         zoomBy={zoomBy}
+        onInsertImage={(file) => void insertFromFile(file)}
+        imageBusy={imageBusy}
       />
       <div
         ref={bindViewport}
@@ -389,72 +451,25 @@ export function SketchNotebookEditor({
           data-pdf-zoom-content
           className="flex items-start justify-center min-h-full p-6"
         >
-          <div
-            data-page={1}
-            className="relative shrink-0 overflow-hidden"
-            style={{
-              width: SKETCH_PAGE_W * scale,
-              height: SKETCH_PAGE_H * scale,
-            }}
-          >
-            <div
-              ref={surfaceRef}
-              className={`shelf-sketch-page sketch-page-sheet ${sketchTemplateClass(template)}`}
-              data-template={template}
-              data-bg={bg}
-              data-bg-tone={canvasBgTone(bg)}
-              data-w={SKETCH_PAGE_W}
-              data-h={SKETCH_PAGE_H}
-              style={{
-                width: SKETCH_PAGE_W,
-                height: SKETCH_PAGE_H,
-                backgroundColor: bg,
-                color: canvasFgColor(bg),
-                transform:
-                  Math.abs(scale - 1) < 0.0001 ? undefined : `scale(${scale})`,
-                transformOrigin: "top left",
-              }}
-              onPointerDown={onDrawDown}
-              onPointerMove={onDrawMove}
-              onPointerUp={onDrawUp}
-              onPointerCancel={onDrawUp}
-              onContextMenu={(e) => e.preventDefault()}
-            >
-              <svg
-                className="blank-draw-layer"
-                width={SKETCH_PAGE_W}
-                height={SKETCH_PAGE_H}
-                viewBox={`0 0 ${SKETCH_PAGE_W} ${SKETCH_PAGE_H}`}
-              >
-                {paths.map((p, i) => (
-                  <path
-                    key={i}
-                    className="blank-draw-stroke"
-                    d={p.d}
-                    fill="none"
-                    stroke={p.color}
-                    strokeWidth={p.width}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                ))}
-                <g ref={(el) => bindLiveGroup(0, el)} aria-hidden />
-                <path
-                  ref={draftPathRef}
-                  className="blank-draw-stroke opacity-80"
-                  fill="none"
-                  stroke={penColor}
-                  strokeWidth={penSize}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-          </div>
+          <SketchPageSurface
+            surfaceRef={surfaceRef}
+            scale={scale}
+            bg={bg}
+            template={template}
+            images={sketchImages}
+            paths={paths}
+            penColor={penColor}
+            penSize={penSize}
+            draftPathRef={draftPathRef}
+            bindLiveGroup={bindLiveGroup}
+            onPointerDown={onDrawDown}
+            onPointerMove={onDrawMove}
+            onPointerUp={onDrawUp}
+          />
         </div>
       </div>
       <p className="shrink-0 text-center text-[11px] text-[var(--text-muted)] py-1.5 border-t border-[var(--border)]">
-        Sketch notebook — draw on the page · pinch or Ctrl+scroll to zoom · add pages with + Page · autosaves
+        Sketch notebook — draw, paste or upload images · pinch or Ctrl+scroll to zoom · object eraser removes strokes and images · autosaves
       </p>
     </div>
   );

@@ -32,6 +32,7 @@ import {
   ToolSep,
 } from "./EditorToolbarChrome";
 import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
+import { EditorImageButton } from "./EditorImageButton";
 
 interface SketchToolbarProps {
   drawTool: DrawTool;
@@ -55,6 +56,8 @@ interface SketchToolbarProps {
   onRedo: () => void;
   scale: number;
   zoomBy: (delta: number) => void;
+  onInsertImage?: (file: File) => void;
+  imageBusy?: boolean;
 }
 
 export function SketchToolbar({
@@ -79,6 +82,8 @@ export function SketchToolbar({
   onRedo,
   scale,
   zoomBy,
+  onInsertImage,
+  imageBusy = false,
 }: SketchToolbarProps) {
   const penBtnRef = useRef<HTMLButtonElement>(null);
   const [penOpen, setPenOpen] = useState(false);
@@ -178,6 +183,15 @@ export function SketchToolbar({
           </ColorSwatchGrid>
         </ToolPopover>
       )}
+
+      {onInsertImage ? (
+        <>
+          <ToolSep />
+          <ToolGroup>
+            <EditorImageButton busy={imageBusy} onFile={onInsertImage} />
+          </ToolGroup>
+        </>
+      ) : null}
 
       <ToolSep />
 

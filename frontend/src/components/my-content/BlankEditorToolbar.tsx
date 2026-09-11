@@ -14,7 +14,7 @@ import {
   Palette,
   ALargeSmall,
 } from "lucide-react";
-import { CANVAS_BACKGROUNDS } from "@/lib/blankCanvas";
+import { CANVAS_BACKGROUNDS, canvasBgIsDark } from "@/lib/blankCanvas";
 import {
   EditorToolbarShell,
   ToolBtn,
@@ -93,6 +93,27 @@ export const DEFAULT_PEN_COLOR =
   PEN_COLORS.find((c) => c.id === "white")?.color ?? "#ffffff";
 export const DEFAULT_PEN_SIZE =
   PEN_SIZES.find((s) => s.id === "m")?.size ?? 4;
+
+const PEN_BLACK =
+  PEN_COLORS.find((c) => c.id === "black")?.color ?? "#1f2937";
+const PEN_WHITE =
+  PEN_COLORS.find((c) => c.id === "white")?.color ?? "#ffffff";
+
+/** Dark paper → light ink; light paper → dark ink. */
+export function defaultPenColorForBg(bg: string): string {
+  return canvasBgIsDark(bg) ? PEN_WHITE : PEN_BLACK;
+}
+
+/** Keep auto ink contrast when the user hasn't picked a custom color. */
+export function penColorAfterBgChange(
+  prevPen: string,
+  nextBg: string
+): string {
+  if (prevPen === PEN_BLACK || prevPen === PEN_WHITE) {
+    return defaultPenColorForBg(nextBg);
+  }
+  return prevPen;
+}
 
 interface BlankEditorToolbarProps {
   drawMode: boolean;

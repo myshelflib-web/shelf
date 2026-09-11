@@ -1,6 +1,7 @@
 "use client";
 
 import { LearnReaderWorkspace } from "@/components/learn/LearnReaderWorkspace";
+import { PreloadedBrowseProvider } from "@/components/learn/PreloadedBrowseContext";
 import { learnScope } from "@/lib/learnContent";
 
 export function LearnArticlePageClient({
@@ -13,8 +14,10 @@ export function LearnArticlePageClient({
   articleSlug: string;
 }) {
   return (
-    <LearnReaderWorkspace
-      scope={learnScope(subjectSlug, topicSlug, articleSlug)}
-    />
+    <PreloadedBrowseProvider>
+      <LearnReaderWorkspace
+        scope={learnScope(subjectSlug, topicSlug, articleSlug)}
+      />
+    </PreloadedBrowseProvider>
   );
 }

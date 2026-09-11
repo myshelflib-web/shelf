@@ -3,8 +3,9 @@
 import { useRef, useState, type MutableRefObject } from "react";
 import {
   BlankEditorToolbar,
-  DEFAULT_PEN_COLOR,
   DEFAULT_PEN_SIZE,
+  defaultPenColorForBg,
+  penColorAfterBgChange,
   type DrawTool,
 } from "./BlankEditorToolbar";
 import { BlankCanvasEditor } from "./BlankCanvasEditor";
@@ -65,9 +66,11 @@ export function LiveEditorRouter({
 
   const [drawMode, setDrawMode] = useState(false);
   const [drawTool, setDrawTool] = useState<DrawTool>("pen");
-  const [penColor, setPenColor] = useState(DEFAULT_PEN_COLOR);
-  const [penSize, setPenSize] = useState(DEFAULT_PEN_SIZE);
   const [canvasBg, setCanvasBg] = useState(() => readCanvasBg(seed));
+  const [penColor, setPenColor] = useState(() =>
+    defaultPenColorForBg(readCanvasBg(seed))
+  );
+  const [penSize, setPenSize] = useState(DEFAULT_PEN_SIZE);
   const runCmdRef = useRef<(cmd: string, value?: string) => void>(() => undefined);
 
   if (kind === "sketch") {
@@ -111,7 +114,10 @@ export function LiveEditorRouter({
         onPenColorChange={setPenColor}
         onPenSizeChange={setPenSize}
         canvasBg={canvasBg}
-        onCanvasBgChange={setCanvasBg}
+        onCanvasBgChange={(c) => {
+          setCanvasBg(c);
+          setPenColor((prev) => penColorAfterBgChange(prev, c));
+        }}
       />
       <BlankCanvasEditor
         key={userTopicId}

@@ -30,10 +30,39 @@ describe("sketchNotebook", () => {
               width: 3,
             },
           ],
+          images: [],
         },
       ],
     });
     expect(html).toContain('data-template="grid"');
     expect(html).toContain("blank-draw-stroke");
+  });
+
+  it("serializes pasted images on a page", () => {
+    const html = serializeSketchNotebook({
+      activeIndex: 0,
+      pages: [
+        {
+          index: 0,
+          bg: "#ffffff",
+          template: "blank",
+          paths: [],
+          images: [
+            {
+              id: "img-a1",
+              src: "data:image/jpeg;base64,/9j/4AAQ",
+              x: 40,
+              y: 60,
+              w: 200,
+              h: 150,
+            },
+          ],
+        },
+      ],
+    });
+    expect(html).toContain("shelf-sketch-image");
+    expect(html).toContain('data-id="img-a1"');
+    expect(html).toContain('data-w="200"');
+    expect(html).toContain("left:40px;top:60px;width:200px;height:150px");
   });
 });

@@ -221,7 +221,7 @@ function isSafeClass(value: string): boolean {
     .split(/\s+/)
     .filter(Boolean)
     .every((c) =>
-      /^(doc-masthead|highlight-(yellow|green|blue|pink|orange)|has-note|personal-content|blank-draw-layer|blank-draw-stroke|shelf-blank-canvas|shelf-blank-text|shelf-blank-textboxes|shelf-text-box|shelf-sketch-notebook|shelf-sketch-page|shelf-doc-editor|shelf-doc-body|blank-canvas-surface|blank-page-editor|prose-content|sketch-template-blank|sketch-template-ruled|sketch-template-grid|sketch-page-sheet)$/.test(
+      /^(doc-masthead|highlight-(yellow|green|blue|pink|orange)|has-note|personal-content|blank-draw-layer|blank-draw-stroke|shelf-blank-canvas|shelf-blank-text|shelf-blank-textboxes|shelf-text-box|shelf-sketch-notebook|shelf-sketch-page|shelf-sketch-image|shelf-doc-image|shelf-doc-editor|shelf-doc-body|blank-canvas-surface|blank-page-editor|prose-content|sketch-template-blank|sketch-template-ruled|sketch-template-grid|sketch-page-sheet)$/.test(
         c
       )
     );
@@ -259,6 +259,16 @@ function filterAttrs(tag: string, raw: string): string {
         /^left:\s*-?\d{1,5}px;\s*top:\s*-?\d{1,5}px;\s*width:\s*\d{2,4}px;?$/i.test(
           value.trim()
         ))
+    ) {
+      out.push(`style="${escapeHtml(value.trim())}"`);
+      continue;
+    }
+    if (
+      name === "style" &&
+      tag === "img" &&
+      /^left:\s*-?\d{1,5}px;\s*top:\s*-?\d{1,5}px;\s*width:\s*\d{1,4}px;\s*height:\s*\d{1,4}px;?$/i.test(
+        value.trim()
+      )
     ) {
       out.push(`style="${escapeHtml(value.trim())}"`);
       continue;

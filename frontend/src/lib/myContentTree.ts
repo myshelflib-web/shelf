@@ -38,6 +38,20 @@ export function pageHref(
   return `/my-content/${notebookSlug}/${topicSlug}/${pageSlug}`;
 }
 
+/**
+ * Left-pane highlight for a personal page. When `currentHref` is set (reader),
+ * only exact href matches — so a preloaded tab does not keep a stale personal
+ * highlight via route slug fallbacks.
+ */
+export function isExplorerPageActive(
+  pageHrefValue: string,
+  currentHref: string | undefined,
+  slugFallback: boolean
+): boolean {
+  if (currentHref) return currentHref === pageHrefValue;
+  return slugFallback;
+}
+
 export type FlattenedPage = {
   page: UserPageSummary;
   topicSlug: string | null;

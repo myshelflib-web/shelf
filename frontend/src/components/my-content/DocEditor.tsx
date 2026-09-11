@@ -9,6 +9,11 @@ import {
 } from "@/lib/docEditor";
 import { insertHtmlAtSelection } from "@/lib/docResearchMarkup";
 import {
+  buildDocImageHtml,
+  fileToEditorDataUrl,
+  imageFileFromClipboard,
+} from "@/lib/editorImages";
+import {
   openOriginalityFromSelection,
   openParaphraseFromSelection,
 } from "@/lib/openWritingAssistFromSelection";
@@ -65,6 +70,7 @@ export function DocEditor({
   const scheduleRef = useRef<(html: string) => void>(() => undefined);
   const refreshStatsRef = useRef<() => void>(() => undefined);
   const [importBusy, setImportBusy] = useState(false);
+  const [imageBusy, setImageBusy] = useState(false);
 
   const emit = useCallback(() => {
     const el = bodyRef.current;
@@ -144,6 +150,46 @@ export function DocEditor({
     emit();
   };
 
+  const insertImageFile = useCallback(
+    async (file: File) => {
+      const el = bodyRef.current;
+      if (!el || imageBusy) return;
+      setImageBusy(true);
+      try {
+        const { dataUrl } = await fileToEditorDataUrl(file);
+        el.focus();
+        const html = buildDocImageHtml(dataUrl, file.name || "Image");
+        if (!insertHtmlAtSelection(html)) {
+          el.insertAdjacentHTML("beforeend", html);
+        }
+        emit();
+      } catch (e) {
+        await alert({
+          title: "Could not insert image",
+          message: e instanceof Error ? e.message : "Try another file",
+        });
+      } finally {
+        setImageBusy(false);
+      }
+    },
+    [alert, emit, imageBusy]
+  );
+
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const el = bodyRef.current;
+      if (!el) return;
+      const t = e.target as Node | null;
+      if (!t || (t !== el && !el.contains(t))) return;
+      const file = imageFileFromClipboard(e.clipboardData);
+      if (!file) return;
+      e.preventDefault();
+      void insertImageFile(file);
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [insertImageFile]);
+
   const importFile = useCallback(
     async (file: File) => {
       const el = bodyRef.current;
@@ -178,6 +224,8 @@ export function DocEditor({
       <DocToolbar
         onCommand={runCommand}
         compact={compact}
+        onInsertImage={(file) => void insertImageFile(file)}
+        imageBusy={imageBusy}
         onParaphrase={() => {
           openParaphraseFromSelection(selectedOrBodyText(bodyRef.current), {
             pageId,

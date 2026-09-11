@@ -72,13 +72,21 @@ describe("sanitizeStoredHtml", () => {
     expect(out).toContain("#dc2626");
   });
 
-  it("keeps blank-page canvas background", () => {
-    const html = `<div class="shelf-blank-canvas" data-w="4800" data-h="6400" data-bg="#0c0c0d" data-bg-tone="dark" style="width: 4800px; height: 6400px; background-color: #0c0c0d; color: #ececee;"><div class="shelf-blank-textboxes"></div><svg class="blank-draw-layer" width="4800" height="6400" viewBox="0 0 4800 6400"></svg></div>`;
+  it("keeps sketch notebook images", () => {
+    const html = `<div class="shelf-sketch-notebook" data-active="0"><div class="shelf-sketch-page" data-index="0" data-bg="#ffffff" data-template="ruled" data-bg-tone="light" data-w="794" data-h="1123" style="width:794px;height:1123px;background-color:#ffffff;color:#1a1a18;"><img class="shelf-sketch-image" data-id="img-a1" data-x="40" data-y="60" data-w="200" data-h="150" src="data:image/jpeg;base64,/9j/4AAQ" alt="" style="left:40px;top:60px;width:200px;height:150px;" /><svg class="blank-draw-layer" width="794" height="1123" viewBox="0 0 794 1123"></svg></div></div>`;
     const out = sanitizeStoredHtml(html);
-    expect(out).toContain('data-bg="#0c0c0d"');
-    expect(out).toContain('data-bg-tone="dark"');
-    expect(out).toContain("background-color: #0c0c0d");
-    expect(out).toContain("color: #ececee");
+    expect(out).toContain("shelf-sketch-image");
+    expect(out).toContain('data-id="img-a1"');
+    expect(out).toContain("data:image/jpeg;base64,/9j/4AAQ");
+    expect(out).toContain("left:40px;top:60px;width:200px;height:150px");
+  });
+
+  it("keeps doc inline images", () => {
+    const html = `<div class="shelf-doc-editor"><div class="shelf-doc-body"><p><img class="shelf-doc-image" src="data:image/png;base64,iVBORw0KGgo=" alt="Shot" /></p></div></div>`;
+    const out = sanitizeStoredHtml(html);
+    expect(out).toContain("shelf-doc-image");
+    expect(out).toContain("data:image/png;base64,iVBORw0KGgo=");
+    expect(out).toContain('alt="Shot"');
   });
 });
 

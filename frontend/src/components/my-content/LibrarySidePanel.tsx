@@ -11,10 +11,10 @@ import { useLibraryMode } from "@/hooks/useLibraryMode";
 import { useAuth } from "@/hooks/useAuth";
 import { PersonalPageReaderScope } from "@/components/my-content/reader/types";
 import { StudyGoal, UserSubject } from "@/types";
-import { inferLibraryModeFromHref, LibraryMode } from "@/lib/libraryMode";
+import { LibraryMode } from "@/lib/libraryMode";
 import type { ExploreAreaId } from "@/lib/exploreCatalog";
 import { useOptionalPreloadedBrowse } from "@/components/learn/PreloadedBrowseContext";
-import { browseHref } from "@/lib/preloadedBrowse";
+import { browseHref, browsePathFromHref } from "@/lib/preloadedBrowse";
 
 interface LibrarySidePanelProps {
   notebook?: UserSubject;
@@ -42,7 +42,9 @@ interface LibrarySidePanelProps {
 /**
  * Personal vs Preloaded explorer. Tabs appear for all study goals.
  * Guests stay on Preloaded; Personal opens a sign-in prompt.
- * When a reader tab is open, the active tab follows the document source.
+ * Mode is user-controlled so you can browse either library while a file
+ * from the other side stays open; selection follows the open document
+ * only within the matching library tab.
  */
 export function LibrarySidePanel(props: LibrarySidePanelProps) {
   const {
@@ -59,13 +61,15 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
   const { user, loading: authLoading } = useAuth();
   const { mode, setMode, showPreloaded, goal, isGuest } = useLibraryMode();
   const browse = useOptionalPreloadedBrowse();
-  const resolvedHref = browse?.interceptFolderNav
-    ? browseHref(browse.path)
-    : currentHref ?? (browse ? browseHref(browse.path) : undefined);
+  // Reader passes the open document; library home falls back to browse folder.
+  const documentHref = currentHref;
+  const browseFolderHref = browse ? browseHref(browse.path) : undefined;
+  const resolvedHref = documentHref ?? browseFolderHref;
   const resolvedExploreArea = browse?.interceptFolderNav
     ? browse.path.areaId ?? null
     : exploreArea ?? browse?.path.areaId ?? null;
   const [signInFeature, setSignInFeature] = useState<string | null>(null);
+  const setBrowsePath = browse?.setPath;
 
   const handleModeChange = useCallback(
     (next: LibraryMode) => {
@@ -82,10 +86,17 @@ export function LibrarySidePanel(props: LibrarySidePanelProps) {
     [user, authLoading, onGuestPersonalClick, setMode]
   );
 
+  // When a preloaded article is focused, expand its folder in the tree so the
+  // selection is visible — without forcing the Personal/Preloaded tab.
   useEffect(() => {
-    const inferred = inferLibraryModeFromHref(resolvedHref);
-    if (inferred) setMode(inferred);
-  }, [resolvedHref, setMode]);
+    if (!setBrowsePath || !documentHref) return;
+    const path = browsePathFromHref(documentHref);
+    if (!path.articleSlug || !path.subjectSlug || !path.topicSlug) return;
+    setBrowsePath({
+      subjectSlug: path.subjectSlug,
+      topicSlug: path.topicSlug,
+    });
+  }, [setBrowsePath, documentHref]);
 
   const tabs: ReactNode = showPreloaded ? (
     <LibraryModeTabs

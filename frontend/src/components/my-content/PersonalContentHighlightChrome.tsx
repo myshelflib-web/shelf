@@ -6,11 +6,6 @@ import { updateHighlight } from "@/lib/offline/highlights";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { HighlightToolbar } from "../HighlightToolbar";
 import { HighlightNoteModal } from "../HighlightNoteModal";
-import {
-  openOriginalityFromSelection,
-  openParaphraseFromSelection,
-} from "@/lib/openWritingAssistFromSelection";
-import { citeInOpenDoc } from "@/lib/citeInOpenDoc";
 import type { HtmlTextPick } from "./htmlPageSelection";
 
 type SelectionState = HtmlTextPick;
@@ -51,7 +46,8 @@ type Props = {
   ) => void;
 };
 
-/** Selection / active-highlight toolbars + note modal for HTML content. */
+/** Selection / active-highlight toolbars + note modal for HTML content.
+ *  Paraphrase / Originality / Cite live only on Docs (DocToolbar). */
 export function PersonalContentHighlightChrome({
   userTopicId,
   highlights,
@@ -102,28 +98,6 @@ export function PersonalContentHighlightChrome({
                 }
               : undefined
           }
-          onParaphrase={() => {
-            const draft = selectionRef.current ?? selection;
-            openParaphraseFromSelection(draft.text, { pageId: userTopicId });
-            setSelection(null);
-            window.getSelection()?.removeAllRanges();
-          }}
-          onOriginality={() => {
-            const draft = selectionRef.current ?? selection;
-            openOriginalityFromSelection(draft.text, { pageId: userTopicId });
-            setSelection(null);
-            window.getSelection()?.removeAllRanges();
-          }}
-          onCiteInDoc={() => {
-            const draft = selectionRef.current ?? selection;
-            citeInOpenDoc({
-              quote: draft.text,
-              sourcePageId: userTopicId,
-              pageNumber: null,
-            });
-            setSelection(null);
-            window.getSelection()?.removeAllRanges();
-          }}
           onClose={() => {
             selectionRef.current = null;
             setSelection(null);
@@ -173,26 +147,6 @@ export function PersonalContentHighlightChrome({
                 }
               : undefined
           }
-          onParaphrase={() => {
-            openParaphraseFromSelection(activeHighlight.highlight.text, {
-              pageId: userTopicId,
-            });
-            setActiveHighlight(null);
-          }}
-          onOriginality={() => {
-            openOriginalityFromSelection(activeHighlight.highlight.text, {
-              pageId: userTopicId,
-            });
-            setActiveHighlight(null);
-          }}
-          onCiteInDoc={() => {
-            citeInOpenDoc({
-              quote: activeHighlight.highlight.text,
-              sourcePageId: userTopicId,
-              pageNumber: activeHighlight.highlight.pageNumber,
-            });
-            setActiveHighlight(null);
-          }}
           onRemove={() => {
             removeHighlightNow(activeHighlight.highlight.id);
           }}

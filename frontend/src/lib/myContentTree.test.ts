@@ -1,6 +1,34 @@
 import { describe, expect, it } from "vitest";
 import { UserSubject } from "@/types";
-import { insertPageInTree, insertTopicInTree } from "./myContentTree";
+import {
+  insertPageInTree,
+  insertTopicInTree,
+  isExplorerPageActive,
+} from "./myContentTree";
+
+describe("isExplorerPageActive", () => {
+  it("matches only the open href when currentHref is set", () => {
+    expect(
+      isExplorerPageActive("/my-content/file/notes", "/my-content/file/notes", true)
+    ).toBe(true);
+    expect(
+      isExplorerPageActive(
+        "/my-content/file/notes",
+        "/learn/polity/constitution/preamble",
+        true
+      )
+    ).toBe(false);
+  });
+
+  it("uses slug fallback only when currentHref is missing", () => {
+    expect(isExplorerPageActive("/my-content/file/notes", undefined, true)).toBe(
+      true
+    );
+    expect(isExplorerPageActive("/my-content/file/notes", undefined, false)).toBe(
+      false
+    );
+  });
+});
 
 const notebook = (id = "nb1"): UserSubject => ({
   id,
