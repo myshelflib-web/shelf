@@ -4,6 +4,7 @@ import {
   isSyncRetryExhausted,
   syncBackoffMs,
 } from "@/lib/syncBackoff";
+import { randomId } from "@/lib/randomId";
 
 const DB_NAME = "shelf-pending-mutations";
 const DB_VERSION = 1;
@@ -143,7 +144,7 @@ export async function enqueuePendingMutation(input: {
   const attempts =
     prior && !isSyncRetryExhausted(prior.attempts) ? prior.attempts : 0;
   await putPendingMutation({
-    id: prior?.id ?? crypto.randomUUID(),
+    id: prior?.id ?? randomId(),
     userId: input.userId,
     path: input.path,
     method,

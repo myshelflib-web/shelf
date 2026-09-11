@@ -12,9 +12,10 @@ import { useCompactPortrait } from "@/hooks/useCompactPortrait";
 import { useIsPhone } from "@/hooks/useIsPhone";
 import { ShelfDrawer } from "@/components/ShelfDrawer";
 import { ShelfExplorerFab } from "@/components/ShelfExplorerFab";
-import { ThinkingIndicator } from "@/components/GreetingAccent";
+import { ShelfLoading } from "@/components/ShelfLoading";
 import { api } from "@/lib/api";
 import { consumeGuestLearnImport } from "@/lib/consumeGuestLearnImport";
+import { SHELF_OPEN_LIBRARY_EXPLORER } from "@/lib/contentEvents";
 import { getFocusedWorkspaceHref } from "@/components/my-content/reader/types";
 import { isLearnReaderHref } from "@/lib/learnContent";
 
@@ -32,11 +33,22 @@ function MyContentDashboard() {
     if (!authLoading && !user) router.push("/login");
   }, [user, authLoading, router]);
 
-  // Resume open reader tabs without waiting for paint (avoids blank flash).
-  // Prefer linking straight to the tab from Header (`getLibraryHref`) so this
-  // is only a fallback for bookmarks / cold loads of `/my-content`.
+  // Tablet compact: FAB / event opens drawer. Phone uses explorer as the main screen.
+  useEffect(() => {
+    if (!compactPortrait || isPhone) return;
+    const onOpen = () => setExplorerOpen(true);
+    window.addEventListener(SHELF_OPEN_LIBRARY_EXPLORER, onOpen);
+    return () => window.removeEventListener(SHELF_OPEN_LIBRARY_EXPLORER, onOpen);
+  }, [compactPortrait, isPhone]);
+
+  // Resume open reader tabs (desktop/tablet). Phone Library stays on the list —
+  // open a file for single-doc reading instead of jumping into a mid-pane empty state.
   useLayoutEffect(() => {
     if (authLoading || !user) return;
+    if (isPhone) {
+      setRestoringTabs(false);
+      return;
+    }
     if (searchParams.get("add")) {
       setRestoringTabs(false);
       return;
@@ -58,9 +70,8 @@ function MyContentDashboard() {
     return () => {
       cancelled = true;
     };
-  }, [authLoading, user, router, searchParams]);
+  }, [authLoading, user, router, searchParams, isPhone]);
 
-  // Deep-link ?add=… from older URLs
   useEffect(() => {
     const add = searchParams.get("add");
     if (!add || !user) return;
@@ -91,34 +102,40 @@ function MyContentDashboard() {
   if (authLoading || !user || restoringTabs) {
     return (
       <div className="h-full flex items-center justify-center">
-        <ThinkingIndicator label="Loading" />
+        <ShelfLoading label="Opening your library" />
       </div>
     );
   }
 
   return (
     <PreloadedBrowseShell>
-    <div className="h-full flex flex-col overflow-hidden">
-      <Header />
-      <div className="flex flex-1 overflow-hidden min-h-0">
-        {!compactPortrait ? <LibrarySidePanel /> : null}
-        <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg-primary)] relative">
-          {compactPortrait && !explorerOpen ? (
-            <ShelfExplorerFab onClick={() => setExplorerOpen(true)} />
-          ) : null}
-          <LibraryCenterPane />
-        </main>
+      <div className="h-full flex flex-col overflow-hidden">
+        <Header />
+        {isPhone ? (
+          <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg-primary)]">
+            <LibrarySidePanel className="w-full border-r-0 h-full" />
+          </main>
+        ) : (
+          <>
+            <div className="flex flex-1 overflow-hidden min-h-0">
+              {!compactPortrait ? <LibrarySidePanel /> : null}
+              <main className="flex-1 min-h-0 overflow-hidden bg-[var(--bg-primary)] relative">
+                {compactPortrait && !explorerOpen ? (
+                  <ShelfExplorerFab onClick={() => setExplorerOpen(true)} />
+                ) : null}
+                <LibraryCenterPane />
+              </main>
+            </div>
+            <ShelfDrawer
+              open={compactPortrait && explorerOpen}
+              onClose={() => setExplorerOpen(false)}
+              title="Explorer"
+            >
+              <LibrarySidePanel className="w-full border-r-0" />
+            </ShelfDrawer>
+          </>
+        )}
       </div>
-
-      <ShelfDrawer
-        open={compactPortrait && explorerOpen}
-        onClose={() => setExplorerOpen(false)}
-        title="Explorer"
-        fullScreen={isPhone}
-      >
-        <LibrarySidePanel className="w-full border-r-0" />
-      </ShelfDrawer>
-    </div>
     </PreloadedBrowseShell>
   );
 }
@@ -128,7 +145,7 @@ export default function MyContentPage() {
     <Suspense
       fallback={
         <div className="h-full flex items-center justify-center">
-          <ThinkingIndicator label="Loading" />
+          <ShelfLoading />
         </div>
       }
     >

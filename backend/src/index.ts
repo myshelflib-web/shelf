@@ -51,6 +51,7 @@ import { logger } from "./utils/logger.js";
 import { metrics } from "./utils/metrics.js";
 import { errorFields } from "./utils/logger.js";
 import {
+  allowLanDevCors,
   allowVercelPreviewCors,
   isCorsOriginAllowed,
   parseCorsOrigins,
@@ -69,11 +70,13 @@ const app = express();
 const PORT = process.env.PORT ?? 4000;
 const corsOrigins = parseCorsOrigins(process.env.CORS_ORIGIN);
 const vercelPreviewCors = allowVercelPreviewCors();
+const lanDevCors = allowLanDevCors();
 
 logger.info("cors.config", {
-  CORS_ORIGIN: process.env.CORS_ORIGIN ?? "(default http://localhost:3000)",
+  CORS_ORIGIN: process.env.CORS_ORIGIN ?? "(default http://localhost:3000,http://10.0.2.2:3000)",
   allowedOrigins: corsOrigins,
   ALLOW_VERCEL_PREVIEW_CORS: vercelPreviewCors,
+  ALLOW_LAN_CORS: lanDevCors,
 });
 
 app.use((req, _res, next) => {
@@ -85,12 +88,18 @@ app.use((req, _res, next) => {
   if (origin || preflightOrigin || req.method === "OPTIONS") {
     const checkOrigin = origin ?? preflightOrigin;
     logger.info("cors.request", {
-      CORS_ORIGIN: process.env.CORS_ORIGIN ?? "(default http://localhost:3000)",
+      CORS_ORIGIN: process.env.CORS_ORIGIN ?? "(default http://localhost:3000,http://10.0.2.2:3000)",
       allowedOrigins: corsOrigins,
       ALLOW_VERCEL_PREVIEW_CORS: vercelPreviewCors,
+      ALLOW_LAN_CORS: lanDevCors,
       requestOrigin: checkOrigin ?? null,
       allowed: checkOrigin
-        ? isCorsOriginAllowed(checkOrigin, corsOrigins, vercelPreviewCors)
+        ? isCorsOriginAllowed(
+            checkOrigin,
+            corsOrigins,
+            vercelPreviewCors,
+            lanDevCors
+          )
         : null,
       method: req.method,
       path: req.originalUrl,
@@ -108,20 +117,29 @@ app.use(
         callback(null, true);
         return;
       }
-      if (isCorsOriginAllowed(origin, corsOrigins, vercelPreviewCors)) {
+      if (
+        isCorsOriginAllowed(
+          origin,
+          corsOrigins,
+          vercelPreviewCors,
+          lanDevCors
+        )
+      ) {
         logger.info("cors.allowed", {
           requestOrigin: origin,
           allowedOrigins: corsOrigins,
           ALLOW_VERCEL_PREVIEW_CORS: vercelPreviewCors,
+          ALLOW_LAN_CORS: lanDevCors,
         });
         callback(null, true);
         return;
       }
       logger.info("cors.rejected", {
         requestOrigin: origin,
-        CORS_ORIGIN: process.env.CORS_ORIGIN ?? "(default http://localhost:3000)",
+        CORS_ORIGIN: process.env.CORS_ORIGIN ?? "(default http://localhost:3000,http://10.0.2.2:3000)",
         allowedOrigins: corsOrigins,
         ALLOW_VERCEL_PREVIEW_CORS: vercelPreviewCors,
+        ALLOW_LAN_CORS: lanDevCors,
       });
       callback(new Error(`CORS blocked for origin: ${origin}`));
     },

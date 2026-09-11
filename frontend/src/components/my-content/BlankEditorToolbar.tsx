@@ -26,6 +26,7 @@ import {
 import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import { shelfSelectToolbarClass } from "@/lib/ui/fieldClasses";
 import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
+import { useIsPhone } from "@/hooks/useIsPhone";
 
 export type DrawTool = "pen" | "stroke-erase" | "object-erase";
 
@@ -131,9 +132,10 @@ export function BlankEditorToolbar({
   const colorBtnRef = useRef<HTMLButtonElement>(null);
   const highlightBtnRef = useRef<HTMLButtonElement>(null);
   const penBtnRef = useRef<HTMLButtonElement>(null);
+  const isPhone = useIsPhone();
 
   return (
-    <EditorToolbarShell>
+    <EditorToolbarShell phone={isPhone}>
       <ToolGroup>
         <ToolBtn
           label="Type text"

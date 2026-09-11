@@ -8,6 +8,7 @@ import { consumeGuestLearnImport } from "@/lib/consumeGuestLearnImport";
 import {
   destinationAfterOnboarding,
   destinationAfterSignIn,
+  navigateAfterAuth,
 } from "./postAuthNavigation";
 
 describe("postAuthNavigation", () => {
@@ -37,5 +38,35 @@ describe("postAuthNavigation", () => {
     await expect(
       destinationAfterOnboarding("/my-content", "GENERAL")
     ).resolves.toBe("/my-content");
+  });
+
+  it("hard-navigates on Android emulator host", () => {
+    const assign = vi.fn();
+    const soft = vi.fn();
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: {
+        location: { hostname: "10.0.2.2", assign },
+        Capacitor: undefined,
+      },
+    });
+    navigateAfterAuth("/my-content", soft);
+    expect(assign).toHaveBeenCalledWith("/my-content");
+    expect(soft).not.toHaveBeenCalled();
+  });
+
+  it("soft-navigates on localhost", () => {
+    const assign = vi.fn();
+    const soft = vi.fn();
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: {
+        location: { hostname: "localhost", assign },
+        Capacitor: undefined,
+      },
+    });
+    navigateAfterAuth("/my-content", soft);
+    expect(soft).toHaveBeenCalledWith("/my-content");
+    expect(assign).not.toHaveBeenCalled();
   });
 });

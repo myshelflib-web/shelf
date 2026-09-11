@@ -14,6 +14,7 @@ import {
   PlannerMonthBoard,
   PlannerWeekBoard,
 } from "@/components/PlannerBoardViews";
+import { PlannerPhoneAgenda } from "@/components/PlannerPhoneAgenda";
 import { PlannerTaskCard } from "@/components/PlannerTaskCard";
 import { PlannerFlashToast } from "@/components/PlannerFlashToast";
 import { usePlannerDragDrop } from "@/components/usePlannerDragDrop";
@@ -21,6 +22,7 @@ import { usePlannerCardMotion } from "@/components/usePlannerCardMotion";
 import { usePlannerTasks } from "@/components/usePlannerTasks";
 import { localDateTimeAtNine } from "@/components/ui/ShelfDateTimeField";
 import { toUserFacingError } from "@/lib/userFacingError";
+import { useIsPhone } from "@/hooks/useIsPhone";
 import {
   addDays,
   formatWeekRange,
@@ -106,7 +108,9 @@ export function StudyCalendar({
     allowDrop,
     leaveDrop,
     finishDrop,
+    moveTask,
   } = usePlannerDragDrop(tasks, setTasks, motion, dragMutationGuard);
+  const isPhone = useIsPhone();
 
   const flashError = dropError ?? actionError;
   const clearFlashError = useCallback(() => {
@@ -166,7 +170,7 @@ export function StudyCalendar({
   }, []);
 
   const shift = (dir: number) => {
-    if (view === "week") setCursor((c) => addDays(c, dir * 7));
+    if (isPhone || view === "week") setCursor((c) => addDays(c, dir * (isPhone ? 1 : 7)));
     else setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + dir, 1));
   };
 
@@ -292,8 +296,13 @@ export function StudyCalendar({
   };
 
   const now = new Date();
-  const label =
-    view === "week"
+  const label = isPhone
+    ? cursor.toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      })
+    : view === "week"
       ? formatWeekRange(startOfWeek(cursor))
       : cursor.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 
@@ -358,6 +367,7 @@ export function StudyCalendar({
           </span>
         )}
         <div className="flex-1" />
+        {!isPhone && (
         <div
           className="flex gap-1 p-0.5 rounded-lg bg-[var(--bg-primary)]"
           data-tour-id="planner-view-toggle"
@@ -377,6 +387,7 @@ export function StudyCalendar({
             </button>
           ))}
         </div>
+        )}
       </div>
 
       {showForm && (
@@ -417,10 +428,22 @@ export function StudyCalendar({
         />
       )}
 
-      {view === "month" ? (
+      {isPhone ? (
+        <PlannerPhoneAgenda
+          cursor={cursor}
+          setCursor={setCursor}
+          tasks={tasks}
+          now={now}
+          renderCard={renderCard}
+          openForm={openForm}
+          onMoveTask={(taskId, day) => moveTask(day, taskId)}
+        />
+      ) : view === "month" ? (
         <PlannerMonthBoard {...boardProps} />
       ) : (
-        <PlannerWeekBoard {...boardProps} />
+        <div className="planner-week-board-desktop flex-1 min-h-0 flex flex-col">
+          <PlannerWeekBoard {...boardProps} />
+        </div>
       )}
 
       {focusedDay && (

@@ -8,6 +8,7 @@ import { isDevEnvironment, toUserFacingError } from "@/lib/userFacingError";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSocialSignInWidth } from "@/hooks/useSocialSignInWidth";
+import { usePreferAppChrome } from "@/hooks/usePreferAppChrome";
 
 interface GoogleSignInButtonProps {
   onError?: (message: string) => void;
@@ -55,6 +56,7 @@ export function GoogleSignInButton({
   const { ref: containerRef, width: buttonWidth } = useSocialSignInWidth();
   const [loading, setLoading] = useState(false);
   const clientId = useGoogleClientId();
+  const appChrome = usePreferAppChrome();
 
   const handleSuccess = async (response: CredentialResponse) => {
     if (!response.credential) {
@@ -81,7 +83,7 @@ export function GoogleSignInButton({
   };
 
   if (!clientId || clientId.includes("your-google-client-id")) {
-    if (!isDevEnvironment()) return null;
+    if (!isDevEnvironment() || appChrome) return null;
     return (
       <div className="space-y-2">
         <button

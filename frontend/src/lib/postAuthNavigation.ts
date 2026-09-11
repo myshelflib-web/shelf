@@ -29,3 +29,37 @@ export async function destinationAfterOnboarding(
   }
   return nextPath;
 }
+
+/**
+ * Leave the auth screen. Soft App Router navigations often stall in Capacitor /
+ * Android emulator Next dev (cross-origin /_next). Hard assign is reliable.
+ */
+export function navigateAfterAuth(
+  href: string,
+  softNavigate?: (href: string) => void
+): void {
+  if (typeof window === "undefined") {
+    softNavigate?.(href);
+    return;
+  }
+  const host = window.location.hostname;
+  const useHardNav =
+    host === "10.0.2.2" ||
+    (host !== "localhost" && host !== "127.0.0.1") ||
+    Boolean(
+      (
+        window as Window & {
+          Capacitor?: { isNativePlatform?: () => boolean };
+        }
+      ).Capacitor?.isNativePlatform?.()
+    );
+  if (useHardNav) {
+    window.location.assign(href);
+    return;
+  }
+  if (softNavigate) {
+    softNavigate(href);
+    return;
+  }
+  window.location.assign(href);
+}

@@ -17,6 +17,7 @@ import {
   groupFilesForBulkUpload,
   titleFromFile,
 } from "./myContentAddUtils";
+import { randomId } from "@/lib/randomId";
 
 /** Parallel PUTs — enough for snappy batches without saturating the tab. */
 export const BULK_UPLOAD_CONCURRENCY = 3;
@@ -121,7 +122,7 @@ export async function runBulkFolderUpload(
     }
   }
 
-  const batchId = `bulk:${crypto.randomUUID()}`;
+  const batchId = `bulk:${randomId()}`;
   beginUploadActivity(
     jobs.length === 1
       ? jobs[0]!.title

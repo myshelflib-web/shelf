@@ -46,6 +46,7 @@ import {
   DocumentChromeActions,
   SharedByBanner,
 } from "./SharedDocChrome";
+import { DocPhoneActionsBar } from "./DocPhoneActionsBar";
 import { PreloadedSaveBanner } from "./PreloadedSaveBanner";
 import { PreloadedOfficialOpenBar } from "@/components/learn/PreloadedOfficialOpenBar";
 import {
@@ -1470,6 +1471,26 @@ export function DocumentPane({
               />
             </div>
           )}
+
+          {isPhone &&
+            showChrome &&
+            !isPdf &&
+            !isPreloadedDoc && (
+              <DocPhoneActionsBar
+                starred={pageData.starred}
+                onToggleStar={() => void handleToggleStar()}
+                onShare={
+                  !pageData.access || pageData.access.isOwner
+                    ? () => setShareOpen(true)
+                    : undefined
+                }
+                onDelete={
+                  !pageData.access || pageData.access.isOwner
+                    ? () => void handleDelete()
+                    : undefined
+                }
+              />
+            )}
 
           {isPreloadedDoc && showChrome && scope.kind === "learn" && (
             <PreloadedSaveBanner

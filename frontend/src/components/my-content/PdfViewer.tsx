@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback, type MutableRefObject } from "react";
 import * as pdfjs from "pdfjs-dist";
 import { api } from "@/lib/api";
+import { randomId } from "@/lib/randomId";
 import {
   createHighlight,
   deleteHighlight,
@@ -1398,7 +1399,7 @@ export function PdfViewer({
     if (blocked("Highlight and annotate")) return;
     const source = from ?? toolbar;
     if (!source) return;
-    const tempId = `tmp-${crypto.randomUUID()}`;
+    const tempId = `tmp-${randomId()}`;
     const optimistic: UserContentHighlight = {
       id: tempId,
       userTopicId,

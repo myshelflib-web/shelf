@@ -13,7 +13,10 @@
     "build": "npm run build --prefix backend && npm run build --prefix processing-service && npm run build --prefix ingestion-service && npm run build --prefix frontend",
     "check": "npm run lint && npm run typecheck && npm run test",
     "ci": "npm run check && npm run build",
-    "install:all": "npm ci --prefix backend && npm ci --prefix processing-service && npm ci --prefix ingestion-service && npm ci --prefix frontend",
+    "install:all": "npm ci --prefix backend && npm ci --prefix processing-service && npm ci --prefix ingestion-service && npm ci --prefix frontend && npm ci --prefix mobile",
+    "mobile:sync": "npm run sync --prefix mobile",
+    "mobile:adb-reverse": "npm run adb-reverse --prefix mobile",
+    "mobile:android": "npm run android --prefix mobile",
     "hooks:install": "sh scripts/install-git-hooks.sh"
   }
 }

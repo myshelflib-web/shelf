@@ -4,6 +4,7 @@ import type { Highlight, UserContentHighlight } from "@/types";
 import { createHighlight, deleteHighlight } from "@/lib/offline/highlights";
 import type { HighlightWriteInput } from "@/lib/offline/highlights";
 import type { HtmlTextPick } from "./htmlPageSelection";
+import { randomId } from "@/lib/randomId";
 
 /** Select → color: TEXT wash (CSS/mark) with rects for hit-testing. */
 export function textHighlightDraft(
@@ -13,7 +14,7 @@ export function textHighlightDraft(
   note?: string
 ): UserContentHighlight {
   return {
-    id: `tmp-${crypto.randomUUID()}`,
+    id: `tmp-${randomId()}`,
     userTopicId,
     text: sel.text,
     startOffset: sel.startOffset,
@@ -35,7 +36,7 @@ export function strokeHighlightDraft(
   opacity: number
 ): UserContentHighlight {
   return {
-    id: `tmp-${crypto.randomUUID()}`,
+    id: `tmp-${randomId()}`,
     userTopicId,
     text: "Highlighted region",
     startOffset: 0,

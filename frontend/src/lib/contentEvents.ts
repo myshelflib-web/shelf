@@ -8,6 +8,8 @@ import { pushPendingExplorerDelete } from "@/lib/pendingExplorerDeletes";
 
 export const SHELF_CONTENT_CHANGED = "shelf:content-changed";
 export const SHELF_OPEN_PAGE = "shelf:open-page";
+/** Compact-portrait / phone: open the Library explorer drawer. */
+export const SHELF_OPEN_LIBRARY_EXPLORER = "shelf:open-library-explorer";
 
 export type ContentChange =
   | { type: "notebook-created"; subject: UserSubject }
@@ -101,6 +103,11 @@ export function emitOpenPage(detail: OpenPageDetail) {
   window.dispatchEvent(
     new CustomEvent<OpenPageDetail>(SHELF_OPEN_PAGE, { detail })
   );
+}
+
+export function emitOpenLibraryExplorer() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(SHELF_OPEN_LIBRARY_EXPLORER));
 }
 
 export function contentChangeFromEvent(e: Event): ContentChange | undefined {

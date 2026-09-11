@@ -1,6 +1,7 @@
 /** Session undo stack for PDF page deletes (IndexedDB, max 2 per document). */
 
 import type { UserContentHighlight } from "@/types";
+import { randomId } from "@/lib/randomId";
 
 const DB_NAME = "shelf-pdf-delete-undo";
 const DB_VERSION = 1;
@@ -78,7 +79,7 @@ export async function pushPdfDeleteUndo(
 ): Promise<PdfDeleteUndoEntry | null> {
   try {
     const row: PdfDeleteUndoEntry = {
-      id: entry.id ?? crypto.randomUUID(),
+      id: entry.id ?? randomId(),
       createdAt: entry.createdAt ?? Date.now(),
       pageId: entry.pageId,
       deletedPages: entry.deletedPages,

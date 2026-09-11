@@ -254,7 +254,7 @@ export function ExplorerPageRow({
       </span>
       {!selectionMode && (
         <span
-          className="flex items-center gap-0.5 shrink-0"
+          className="explorer-row-actions flex items-center gap-0.5 shrink-0"
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
         >

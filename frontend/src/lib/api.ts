@@ -20,6 +20,8 @@ import { reportApiFailure } from "@/lib/analytics/errors";
 import { toUserStudyAiError } from "@/lib/studyAiErrors";
 import { toUserFacingError } from "@/lib/userFacingError";
 import { bindMutationFlushRequest } from "@/lib/flushPendingMutations";
+import { getApiUrl } from "@/lib/apiBaseUrl";
+import { randomId } from "@/lib/randomId";
 
 export type {
   UploadEarlyReady,
@@ -29,7 +31,7 @@ export type {
 };
 
 /** Production (Vercel): set NEXT_PUBLIC_API_URL to the Render backend, e.g. https://your-api.onrender.com */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+export { API_URL, getApiUrl } from "@/lib/apiBaseUrl";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -53,10 +55,7 @@ function getToken(): string | null {
 }
 
 function newRequestId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return randomId();
 }
 
 async function request<T>(
@@ -95,7 +94,7 @@ async function requestRaw<T>(
 
   const requestId = headers["x-request-id"];
 
-  const res = await fetchWithRetry(`${API_URL}${path}`, {
+  const res = await fetchWithRetry(`${getApiUrl()}${path}`, {
     cache: "no-store",
     ...options,
     headers,
@@ -356,7 +355,7 @@ async function postStudySse(
   const requestId = newRequestId();
   let res: Response;
   try {
-    res = await fetchWithRetry(`${API_URL}${path}`, {
+    res = await fetchWithRetry(`${getApiUrl()}${path}`, {
       method: "POST",
       cache: "no-store",
       signal: handlers.signal,

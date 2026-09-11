@@ -218,7 +218,7 @@ export function ExplorerCollectionBlock({
         {!selectionMode && (
           <span
             className={clsx(
-              "flex items-center shrink-0 transition-opacity",
+              "explorer-row-actions flex items-center shrink-0 transition-opacity",
               isCurrentNotebook ? "opacity-100" : "opacity-0 group-hover:opacity-100"
             )}
             onClick={(e) => e.stopPropagation()}

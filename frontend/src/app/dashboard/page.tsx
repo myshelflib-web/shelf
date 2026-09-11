@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
 import { GreetingBlock } from "@/components/GreetingBlock";
 import { LivelyLine } from "@/components/LivelyLine";
-import { ThinkingIndicator } from "@/components/GreetingAccent";
+import { ShelfLoading } from "@/components/ShelfLoading";
 import { DashboardAskBar } from "@/components/dashboard/DashboardAskBar";
 import { DashboardAddMaterial } from "@/components/dashboard/DashboardAddMaterial";
 import { DashboardContinue } from "@/components/dashboard/DashboardContinue";
@@ -210,7 +210,7 @@ export default function DashboardPage() {
   if (authLoading || !user) {
     return (
       <div className="h-full flex items-center justify-center">
-        <ThinkingIndicator label="Loading" />
+        <ShelfLoading />
       </div>
     );
   }

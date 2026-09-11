@@ -1,24 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 const PHONE_MQ = "(max-width: 767px)";
 
+function subscribePhone(onChange: () => void) {
+  const mq = window.matchMedia(PHONE_MQ);
+  mq.addEventListener("change", onChange);
+  window.addEventListener("orientationchange", onChange);
+  return () => {
+    mq.removeEventListener("change", onChange);
+    window.removeEventListener("orientationchange", onChange);
+  };
+}
+
+function getPhoneSnapshot() {
+  return window.matchMedia(PHONE_MQ).matches;
+}
+
+function getPhoneServerSnapshot() {
+  return false;
+}
+
 /** True on phone-width viewports only — not iPad / tablet. */
 export function useIsPhone(): boolean {
-  const [phone, setPhone] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia(PHONE_MQ);
-    const sync = () => setPhone(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    window.addEventListener("orientationchange", sync);
-    return () => {
-      mq.removeEventListener("change", sync);
-      window.removeEventListener("orientationchange", sync);
-    };
-  }, []);
+  const phone = useSyncExternalStore(
+    subscribePhone,
+    getPhoneSnapshot,
+    getPhoneServerSnapshot
+  );
 
   useEffect(() => {
     const root = document.documentElement;

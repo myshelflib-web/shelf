@@ -43,15 +43,26 @@ export function GreetingDots({
 export function ThinkingIndicator({
   label = "Thinking",
   className = "",
+  size = "md",
 }: {
   label?: string;
   className?: string;
+  /** `lg` for full-screen phone / app loading. */
+  size?: "md" | "lg";
 }) {
+  const large = size === "lg";
   return (
     <div
-      className={`flex items-center gap-2.5 text-sm text-[var(--text-muted)] ${className}`}
+      className={`flex items-center text-[var(--text-muted)] ${
+        large
+          ? "w-full justify-center gap-3.5 text-base sm:text-lg"
+          : "gap-2.5 text-sm"
+      } ${className}`}
     >
-      <span className="thinking-bars" aria-hidden>
+      <span
+        className={`thinking-bars${large ? " thinking-bars-lg" : ""}`}
+        aria-hidden
+      >
         <span />
         <span />
         <span />

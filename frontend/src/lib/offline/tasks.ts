@@ -25,6 +25,7 @@ import {
   toLocalTask,
 } from "./taskMerge";
 import { isCacheFresh } from "@/lib/cacheTtl";
+import { randomId } from "@/lib/randomId";
 
 export type TaskWriteInput = {
   title: string;
@@ -70,7 +71,7 @@ export function rememberTasks(
 }
 
 function newLocalId(): string {
-  return `local-${crypto.randomUUID()}`;
+  return `local-${randomId()}`;
 }
 
 async function readAllLocalTasks(userId: string): Promise<LocalTask[]> {

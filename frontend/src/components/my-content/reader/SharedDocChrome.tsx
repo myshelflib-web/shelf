@@ -84,7 +84,12 @@ export function StarChromeButton({
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={() => {
+        void import("@/lib/capacitorNative").then(({ hapticLight }) =>
+          hapticLight()
+        );
+        onClick();
+      }}
       className={clsx(
         "p-2 rounded-lg",
         starred

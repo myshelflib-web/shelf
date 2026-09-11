@@ -118,6 +118,179 @@ npm run dev
 
 Frontend runs at `http://localhost:3000`
 
+## Mobile (Capacitor — Android emulator)
+
+Native iOS/Android shell that loads your **running Next.js app** in a WebView (not a static export). Package: [`mobile/`](mobile/). Full notes: [`docs/MOBILE.md`](docs/MOBILE.md).
+
+### Prerequisites
+
+- Node **22** (`nvm use` from repo root)
+- **JDK 21** for Android: `brew install --cask temurin@21`
+- Android Studio + an AVD (emulator) running
+- Backend + frontend already running (sections above)
+
+### One-time setup
+
+```bash
+source ~/.zshrc && nvm use
+cd mobile
+npm install
+# Only if native projects are missing:
+# npx cap add android && npx cap add ios
+```
+
+### Every session — Android emulator (recommended)
+
+**Most reliable:** tunnel host ports into the emulator with `adb reverse`, then load `http://localhost:3000` (same as a browser on your Mac).
+
+**Terminal A — backend** (if not already up):
+
+```bash
+cd backend && npm run dev
+```
+
+**Terminal B — frontend:**
+
+```bash
+source ~/.zshrc && nvm use
+npm run dev --prefix frontend
+```
+
+**Terminal C — reverse ports + Capacitor:**
+
+```bash
+source ~/.zshrc && nvm use
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+export PATH="$PATH:$HOME/Library/Android/sdk/platform-tools"
+
+# Emulator must already be running (Android Studio → Device Manager → Play)
+adb devices
+npm run mobile:adb-reverse   # same as: adb reverse tcp:3000 + tcp:4000
+
+cd mobile
+SHELF_MOBILE_URL=http://localhost:3000 npx cap sync android
+SHELF_MOBILE_URL=http://localhost:3000 npx cap run android
+# or from repo root after reverse: npm run mobile:android
+```
+
+Re-run `npm run mobile:adb-reverse` after cold-booting the emulator (reverses reset). If you see **Shelf couldn’t connect**, the tunnel dropped — reverse again, then open the app or tap Try again.
+
+**Fallbacks** if you cannot use `adb reverse`:
+
+```bash
+# Emulator loopback to host:
+SHELF_MOBILE_URL=http://10.0.2.2:3000 npx cap sync android && SHELF_MOBILE_URL=http://10.0.2.2:3000 npx cap run android
+
+# Or Mac LAN IP (also set SHELF_DEV_ORIGINS=<ip> on the frontend):
+LAN=$(ipconfig getifaddr en0)
+SHELF_MOBILE_URL=http://$LAN:3000 npx cap sync android && SHELF_MOBILE_URL=http://$LAN:3000 npx cap run android
+```
+
+### Login (local seed)
+
+```bash
+npm run db:seed --prefix backend
+```
+
+- Student: `tour@shelf.local` / `tour-tour-tour`
+- Admin: `admin@shelf.local` / `admin123`
+
+Keep `frontend/.env.local` as `NEXT_PUBLIC_API_URL=http://localhost:4000` — the app rewrites `localhost` → the WebView host (`10.0.2.2` or your LAN IP) automatically.
+
+### Other targets
+
+| Target | `SHELF_MOBILE_URL` |
+|--------|-------------------|
+| Android emulator (**preferred**) | `http://localhost:3000` + `adb reverse tcp:3000 tcp:3000` and `tcp:4000` |
+| Android emulator (alias) | `http://10.0.2.2:3000` |
+| Android / USB (LAN) | `http://<Mac-LAN-IP>:3000` |
+| iOS Simulator | `http://localhost:3000` |
+| Physical phone (same Wi‑Fi) | `http://<Mac-LAN-IP>:3000` |
+| Prod-like | `https://www.myshelflib.com` |
+
+**iOS Simulator:**
+
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)   # not required for iOS; Node 22 is
+cd mobile
+SHELF_MOBILE_URL=http://localhost:3000 npx cap sync ios
+npx cap run ios
+```
+
+**Physical Android (USB + same Wi‑Fi):** enable USB debugging, then:
+
+```bash
+ipconfig getifaddr en0
+export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+cd mobile
+SHELF_MOBILE_URL=http://192.168.1.4:3000 npx cap sync android
+SHELF_MOBILE_URL=http://192.168.1.4:3000 npx cap run android
+```
+
+**Prod-like shell** (no local Next):
+
+```bash
+cd mobile
+SHELF_MOBILE_URL=https://www.myshelflib.com npx cap sync
+npx cap run android   # or: npx cap run ios
+```
+
+### Handy scripts
+
+```bash
+cd mobile
+npm run sync
+npm run android
+npm run ios
+npm run open:android   # Android Studio
+npm run open:ios       # Xcode
+```
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `Webpage not available` / `ERR_ADDRESS_UNREACHABLE` | Use **adb reverse** + `SHELF_MOBILE_URL=http://localhost:3000` (see above). Confirm `adb devices` shows the emulator. |
+| Login: “Cannot reach the server” / API URL | Backend running; with adb reverse also run `adb reverse tcp:4000 tcp:4000` |
+| Cleartext / HTTP blocked | App enables cleartext via `AndroidManifest` + `network_security_config.xml` — rebuild after pull |
+| `Node >= 22` / Capacitor CLI fails | `nvm use` (Node 22) |
+| Gradle / Java errors | `export JAVA_HOME=$(/usr/libexec/java_home -v 21)` |
+| Stuck after login on first open | Wait for Next to finish compiling `/my-content` (slow once in dev) |
+| **Something went wrong** / `SyntaxError: Unexpected token '{'` | Emulator **System WebView is too old** (e.g. Chrome 91 on API 31). Update **Android System WebView** in Play Store on the emulator, or use an **API 34+** AVD. Next 15 needs a modern Chromium. |
+| Need console / network / JS stack | See **Debugging the WebView** below |
+
+### Debugging the WebView (logs + network)
+
+The native shell only hosts a Chromium WebView. JS errors and `fetch` calls live in that WebView — not in Gradle.
+
+**1. Chrome DevTools (best — Console + Network)**
+
+1. Emulator running with Shelf open  
+2. On your Mac, open Chrome → `chrome://inspect/#devices`  
+3. Under the emulator, click **inspect** next to `http://localhost:3000/...`  
+4. Use **Console** (errors/stack) and **Network** (API calls to `:4000`)
+
+Debug builds enable WebView inspection by default. If the device doesn’t appear: `adb devices` must show the emulator, and Chrome must be up to date.
+
+**2. Logcat (quick JS console mirror)**
+
+```bash
+# Live Capacitor / Chromium console (errors are tag Capacitor/Console level E)
+adb logcat -s Capacitor:V Capacitor/Console:V chromium:E
+
+# Or filter after the fact:
+adb logcat -d | rg "Capacitor/Console|SyntaxError|ERR_"
+```
+
+**3. Next + API terminals**
+
+- Frontend terminal: compile errors / `GET /my-content`  
+- Backend terminal: CORS + `/api/...` status codes  
+
+**4. On-device badge**
+
+The **N · Issues** pill is Next.js dev overlay — tap it when visible for the same error Chrome DevTools shows.
+
 ## Google Sign-In Setup
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/apis/credentials)

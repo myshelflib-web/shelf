@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  allowLanDevCors,
   allowVercelPreviewCors,
   isCorsOriginAllowed,
+  isPrivateLanHttpOrigin,
   isVercelPreviewOrigin,
   parseCorsOrigins,
   resolveBucketCorsOrigins,
@@ -15,8 +17,11 @@ describe("parseCorsOrigins", () => {
     ]);
   });
 
-  it("defaults to localhost", () => {
-    expect(parseCorsOrigins(undefined)).toEqual(["http://localhost:3000"]);
+  it("defaults to localhost and Android emulator alias", () => {
+    expect(parseCorsOrigins(undefined)).toEqual([
+      "http://localhost:3000",
+      "http://10.0.2.2:3000",
+    ]);
   });
 });
 
@@ -62,6 +67,42 @@ describe("allowVercelPreviewCors", () => {
   });
 });
 
+describe("allowLanDevCors", () => {
+  it("defaults on for local (non-production)", () => {
+    expect(allowLanDevCors(undefined, "development", undefined)).toBe(true);
+    expect(allowLanDevCors(undefined, undefined, undefined)).toBe(true);
+  });
+
+  it("defaults off for production", () => {
+    expect(allowLanDevCors(undefined, "production", undefined)).toBe(false);
+    expect(allowLanDevCors(undefined, "development", "production")).toBe(false);
+  });
+
+  it("respects explicit flag", () => {
+    expect(allowLanDevCors("true", "production", "production")).toBe(true);
+    expect(allowLanDevCors("false", "development", undefined)).toBe(false);
+  });
+});
+
+describe("isPrivateLanHttpOrigin", () => {
+  it("allows localhost and emulator alias", () => {
+    expect(isPrivateLanHttpOrigin("http://localhost:3000")).toBe(true);
+    expect(isPrivateLanHttpOrigin("http://10.0.2.2:3000")).toBe(true);
+  });
+
+  it("allows RFC1918 LAN http origins", () => {
+    expect(isPrivateLanHttpOrigin("http://192.168.1.4:3000")).toBe(true);
+    expect(isPrivateLanHttpOrigin("http://10.0.0.5:3000")).toBe(true);
+    expect(isPrivateLanHttpOrigin("http://172.16.0.2:3000")).toBe(true);
+  });
+
+  it("rejects public and https LAN", () => {
+    expect(isPrivateLanHttpOrigin("https://192.168.1.4:3000")).toBe(false);
+    expect(isPrivateLanHttpOrigin("http://8.8.8.8:3000")).toBe(false);
+    expect(isPrivateLanHttpOrigin("http://evil.com")).toBe(false);
+  });
+});
+
 describe("isVercelPreviewOrigin", () => {
   it("allows https vercel.app hosts", () => {
     expect(isVercelPreviewOrigin("https://shelf-git-feat-team.vercel.app")).toBe(
@@ -100,5 +141,17 @@ describe("isCorsOriginAllowed", () => {
     expect(
       isCorsOriginAllowed("https://x-git-branch.vercel.app", allowed, true)
     ).toBe(true);
+  });
+
+  it("allows LAN http when lan flag on", () => {
+    expect(
+      isCorsOriginAllowed("http://192.168.1.4:3000", allowed, false, true)
+    ).toBe(true);
+  });
+
+  it("rejects LAN http when lan flag off", () => {
+    expect(
+      isCorsOriginAllowed("http://192.168.1.4:3000", allowed, false, false)
+    ).toBe(false);
   });
 });

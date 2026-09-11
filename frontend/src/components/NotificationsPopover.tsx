@@ -11,6 +11,8 @@ import {
 import { listTasks, peekLocalTasks } from "@/lib/offline/tasks";
 import { upcomingOpenTasks } from "@/lib/upcomingTasks";
 import { StudyTask } from "@/types";
+import { PhoneBottomSheet } from "@/components/PhoneBottomSheet";
+import { useIsPhone } from "@/hooks/useIsPhone";
 
 function formatWhen(iso: string) {
   const d = new Date(iso);
@@ -30,6 +32,7 @@ export function NotificationsPopover() {
   const [tasks, setTasks] = useState<StudyTask[]>([]);
   const [loading, setLoading] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const isPhone = useIsPhone();
 
   useEffect(() => {
     let cancelled = false;
@@ -67,7 +70,7 @@ export function NotificationsPopover() {
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isPhone) return;
     const onDoc = (e: MouseEvent) => {
       if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
     };
@@ -80,7 +83,7 @@ export function NotificationsPopover() {
       document.removeEventListener("mousedown", onDoc);
       window.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, isPhone]);
 
   const overdue = tasks.filter((t) => {
     if (!t.dueAt) return false;
@@ -107,7 +110,79 @@ export function NotificationsPopover() {
         )}
       </button>
 
-      {open && (
+      {isPhone ? (
+        <PhoneBottomSheet
+          open={open}
+          onClose={() => setOpen(false)}
+          title="Notifications"
+        >
+          <p className="text-[11px] text-[var(--text-muted)] mb-2 -mt-1">
+            Open tasks due in the next 7 days
+          </p>
+          <div className="max-h-[50dvh] overflow-y-auto -mx-1">
+            {loading && tasks.length === 0 ? (
+              <p className="flex items-center justify-center gap-2 py-8 text-[13px] text-[var(--text-muted)]">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading…
+              </p>
+            ) : tasks.length === 0 ? (
+              <p className="px-1 py-8 text-center text-[13px] text-[var(--text-muted)]">
+                No upcoming tasks. Add one from the planner.
+              </p>
+            ) : (
+              <ul>
+                {tasks.map((task) => {
+                  const late = task.dueAt
+                    ? new Date(task.dueAt).getTime() < Date.now()
+                    : false;
+                  const dateKey = task.dueAt ? task.dueAt.slice(0, 10) : "";
+                  return (
+                    <li key={task.id}>
+                      <Link
+                        href={
+                          dateKey
+                            ? `/planner?date=${dateKey}&edit=${task.id}`
+                            : `/planner?edit=${task.id}`
+                        }
+                        onClick={() => setOpen(false)}
+                        className="flex items-start gap-2 px-2 py-2.5 rounded-lg hover:bg-[var(--bg-secondary)]"
+                      >
+                        <CheckCircle2
+                          className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${
+                            late ? "text-red-400" : "text-[var(--text-muted)]"
+                          }`}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13px] truncate text-[var(--text-primary)]">
+                            {task.title}
+                          </span>
+                          <span
+                            className={`text-[11px] ${
+                              late ? "text-red-400" : "text-[var(--text-muted)]"
+                            }`}
+                          >
+                            {late ? "Overdue · " : "Due · "}
+                            {task.dueAt ? formatWhen(task.dueAt) : "Unscheduled"}
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <Link
+            href="/planner"
+            onClick={() => setOpen(false)}
+            className="mt-3 inline-flex items-center gap-1.5 h-11 text-[13px] font-medium text-[var(--accent)]"
+          >
+            <CalendarDays className="w-4 h-4" />
+            View all tasks
+          </Link>
+        </PhoneBottomSheet>
+      ) : (
+        open && (
         <div className="absolute right-0 top-[calc(100%+0.5rem)] z-[60] w-[18rem] rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-xl overflow-hidden">
           <div className="px-3.5 py-2.5 border-b border-[var(--border)]">
             <p className="text-sm font-semibold">Notifications</p>
@@ -181,6 +256,7 @@ export function NotificationsPopover() {
             </Link>
           </div>
         </div>
+        )
       )}
     </div>
   );

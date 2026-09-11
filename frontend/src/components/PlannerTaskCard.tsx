@@ -104,6 +104,9 @@ export function PlannerTaskCard({
             draggable={false}
             onClick={(e) => {
               e.stopPropagation();
+              void import("@/lib/capacitorNative").then(({ hapticLight }) =>
+                hapticLight()
+              );
               onToggleDone(task);
             }}
             className="mt-0.5 shrink-0 rounded-full text-[var(--text-muted)] hover:text-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"

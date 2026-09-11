@@ -10,8 +10,9 @@ Read the package `AGENTS.md` for the area you are changing:
 | Backend | [`backend/AGENTS.md`](backend/AGENTS.md) | Express API + Prisma + Postgres |
 | Processing service | [`processing-service/AGENTS.md`](processing-service/AGENTS.md) | Async PDF → HTML worker |
 | Ingestion service | [`ingestion-service/AGENTS.md`](ingestion-service/AGENTS.md) | SQS current-affairs + official doc pipeline |
+| Mobile | [`mobile/`](mobile/) | Capacitor iOS/Android shell (WebView → live Next URL) |
 
-Deploy notes: [`docs/DEPLOY.md`](docs/DEPLOY.md), [`docs/DOCKER.md`](docs/DOCKER.md), staging isolation [`docs/STAGING.md`](docs/STAGING.md).
+Deploy notes: [`docs/DEPLOY.md`](docs/DEPLOY.md), [`docs/DOCKER.md`](docs/DOCKER.md), staging isolation [`docs/STAGING.md`](docs/STAGING.md), mobile [`docs/MOBILE.md`](docs/MOBILE.md).
 
 ## Layout
 
@@ -20,6 +21,7 @@ frontend/          Next.js (port 3000)
 backend/           Express (port 4000)
 processing-service/ Worker + health server (port 4001)
 ingestion-service/  SQS ingest worker (port 4002)
+mobile/            Capacitor shell (loads hosted Next; see docs/MOBILE.md)
 docs/              Human deploy docs
 ```
 
