@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/Header";
-import { ThinkingIndicator, GreetingDots } from "@/components/GreetingAccent";
+import { GreetingDots } from "@/components/GreetingAccent";
+import { ShelfLoading } from "@/components/ShelfLoading";
 import { useAuth } from "@/hooks/useAuth";
 import { quizApi } from "@/lib/quiz/api";
 import type { Quiz, QuizLaunch, QuizSummary } from "@/lib/quiz/types";
@@ -111,7 +112,7 @@ export function QuizWorkspace({
   if (authLoading || !user) {
     return (
       <div className="h-full flex items-center justify-center">
-        <ThinkingIndicator label="Loading" />
+        <ShelfLoading />
       </div>
     );
   }

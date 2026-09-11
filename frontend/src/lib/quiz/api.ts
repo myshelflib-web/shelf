@@ -1,8 +1,9 @@
-import { API_URL, ApiError } from "@/lib/api";
+import { ApiError, getApiUrl } from "@/lib/api";
 import { reportApiFailure } from "@/lib/analytics/errors";
 import { compressUploadFile } from "@/lib/compressUploadFile";
 import { fetchWithRetry } from "@/lib/fetchRetry";
 import { toUserFacingError } from "@/lib/userFacingError";
+import { randomId } from "@/lib/randomId";
 import type { Quiz, QuizSummary } from "./types";
 
 function getToken(): string | null {
@@ -11,10 +12,7 @@ function getToken(): string | null {
 }
 
 function newRequestId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return randomId();
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -29,7 +27,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   }
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetchWithRetry(`${API_URL}${path}`, {
+  const res = await fetchWithRetry(`${getApiUrl()}${path}`, {
     cache: "no-store",
     ...options,
     headers,

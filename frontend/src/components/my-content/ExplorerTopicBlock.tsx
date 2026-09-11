@@ -265,7 +265,7 @@ export function ExplorerTopicBlock({
         </span>
         {!selectionMode && (
           <span
-            className="flex items-center shrink-0 opacity-0 group-hover:opacity-100"
+            className="explorer-row-actions flex items-center shrink-0 opacity-0 group-hover:opacity-100"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
           >

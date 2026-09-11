@@ -11,13 +11,107 @@ import {
 } from "lucide-react";
 import { ActivityMonthGrid } from "@/components/ActivityMonthGrid";
 import { StudyShareLauncher } from "@/components/study-share/StudyShareLauncher";
+import { PhoneBottomSheet } from "@/components/PhoneBottomSheet";
 import { getReadingStats } from "@/lib/readingStats";
 import { earnedMedals } from "@/lib/streakMedals";
 import { localYmd } from "@/lib/monthGrid";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsPhone } from "@/hooks/useIsPhone";
+
+function StreakPanelBody({
+  stats,
+  medals,
+  year,
+  month,
+  monthLabel,
+  today,
+  setCursor,
+}: {
+  stats: ReturnType<typeof getReadingStats>;
+  medals: number;
+  year: number;
+  month: number;
+  monthLabel: string;
+  today: string;
+  setCursor: React.Dispatch<React.SetStateAction<Date>>;
+}) {
+  return (
+    <>
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <span className="w-9 h-9 rounded-full bg-[var(--accent-light)] text-[var(--accent)] inline-flex items-center justify-center shrink-0">
+            <Flame className="w-4 h-4" fill="currentColor" strokeWidth={1.6} />
+          </span>
+          <div>
+            <p className="text-lg font-semibold leading-tight tabular-nums">
+              {stats.streak} {stats.streak === 1 ? "day" : "days"}
+            </p>
+            <p className="text-[12px] text-[var(--text-muted)]">Current streak</p>
+          </div>
+        </div>
+        <span className="inline-flex items-center gap-1 text-[12px] text-[var(--accent)] tabular-nums">
+          <Trophy className="w-3.5 h-3.5" />
+          {medals}
+        </span>
+      </div>
+
+      <div className="flex items-center justify-between mb-2">
+        <button
+          type="button"
+          className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+          aria-label="Previous month"
+          onClick={() => setCursor(new Date(year, month - 1, 1))}
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <p className="text-[13px] font-medium">{monthLabel}</p>
+        <button
+          type="button"
+          className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
+          aria-label="Next month"
+          onClick={() => setCursor(new Date(year, month + 1, 1))}
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      <ActivityMonthGrid
+        year={year}
+        month={month}
+        activeDates={stats.activeDates}
+        today={today}
+      />
+
+      <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] pt-3 mt-3 border-t border-[var(--border)]">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
+          Active days
+        </span>
+        <span className="inline-flex items-center gap-1.5 tabular-nums">
+          <CalendarDays className="w-3 h-3" />
+          {stats.activeDates.length} total
+        </span>
+      </div>
+
+      <StudyShareLauncher
+        renderTrigger={(openShare) => (
+          <button
+            type="button"
+            onClick={openShare}
+            className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[13px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors"
+          >
+            <Share2 className="w-3.5 h-3.5 text-[var(--accent)]" />
+            Share streak card
+          </button>
+        )}
+      />
+    </>
+  );
+}
 
 export function StreakPopover() {
   const { user } = useAuth();
+  const isPhone = useIsPhone();
   const [open, setOpen] = useState(false);
   const [cursor, setCursor] = useState(() => new Date());
   const [stats, setStats] = useState(() =>
@@ -39,7 +133,7 @@ export function StreakPopover() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isPhone) return;
     const onDoc = (e: MouseEvent) => {
       if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
     };
@@ -52,13 +146,25 @@ export function StreakPopover() {
       document.removeEventListener("mousedown", onDoc);
       window.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, isPhone]);
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
   const today = localYmd(new Date());
   const medals = earnedMedals(stats.streak).length;
   const monthLabel = cursor.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+  const body = (
+    <StreakPanelBody
+      stats={stats}
+      medals={medals}
+      year={year}
+      month={month}
+      monthLabel={monthLabel}
+      today={today}
+      setCursor={setCursor}
+    />
+  );
 
   return (
     <div className="relative" ref={wrapRef}>
@@ -74,77 +180,16 @@ export function StreakPopover() {
         {stats.streak}
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-[calc(100%+0.5rem)] z-[60] w-[20rem] rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 shadow-xl">
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-9 h-9 rounded-full bg-[var(--accent-light)] text-[var(--accent)] inline-flex items-center justify-center shrink-0">
-                <Flame className="w-4 h-4" fill="currentColor" strokeWidth={1.6} />
-              </span>
-              <div>
-                <p className="text-lg font-semibold leading-tight tabular-nums">
-                  {stats.streak} {stats.streak === 1 ? "day" : "days"}
-                </p>
-                <p className="text-[12px] text-[var(--text-muted)]">Current streak</p>
-              </div>
-            </div>
-            <span className="inline-flex items-center gap-1 text-[12px] text-[var(--accent)] tabular-nums">
-              <Trophy className="w-3.5 h-3.5" />
-              {medals}
-            </span>
+      {isPhone ? (
+        <PhoneBottomSheet open={open} onClose={() => setOpen(false)} title="Streak">
+          {body}
+        </PhoneBottomSheet>
+      ) : (
+        open && (
+          <div className="absolute right-0 top-[calc(100%+0.5rem)] z-[60] w-[20rem] rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] p-4 shadow-xl">
+            {body}
           </div>
-
-          <div className="flex items-center justify-between mb-2">
-            <button
-              type="button"
-              className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-              aria-label="Previous month"
-              onClick={() => setCursor(new Date(year, month - 1, 1))}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <p className="text-[13px] font-medium">{monthLabel}</p>
-            <button
-              type="button"
-              className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]"
-              aria-label="Next month"
-              onClick={() => setCursor(new Date(year, month + 1, 1))}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          <ActivityMonthGrid
-            year={year}
-            month={month}
-            activeDates={stats.activeDates}
-            today={today}
-          />
-
-          <div className="flex items-center justify-between text-[11px] text-[var(--text-muted)] pt-3 mt-3 border-t border-[var(--border)]">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
-              Active days
-            </span>
-            <span className="inline-flex items-center gap-1.5 tabular-nums">
-              <CalendarDays className="w-3 h-3" />
-              {stats.activeDates.length} total
-            </span>
-          </div>
-
-          <StudyShareLauncher
-            renderTrigger={(open) => (
-              <button
-                type="button"
-                onClick={open}
-                className="mt-3 w-full inline-flex items-center justify-center gap-2 py-2 rounded-lg border border-[var(--border)] bg-[var(--bg-secondary)] text-[13px] font-medium text-[var(--text-primary)] hover:bg-[var(--bg-primary)] transition-colors"
-              >
-                <Share2 className="w-3.5 h-3.5 text-[var(--accent)]" />
-                Share streak card
-              </button>
-            )}
-          />
-        </div>
+        )
       )}
     </div>
   );

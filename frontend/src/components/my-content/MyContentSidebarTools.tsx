@@ -62,14 +62,14 @@ export function MyContentSidebarTools({
   libraryMoveEnabled: boolean;
 }) {
   return (
-    <div className="p-2 border-b border-[var(--border)] space-y-2">
+    <div className="p-2 border-b border-[var(--border)] space-y-2 explorer-sidebar-tools">
       {libraryModeTabs}
-      <div className="flex items-center gap-1 min-w-0 px-1">
+      <div className="flex items-center gap-1 min-w-0 px-1 explorer-sidebar-tools-title">
         <FolderOpen className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
         <h2 className="font-semibold text-sm truncate flex-1 min-w-0">
           Explorer
         </h2>
-        <div className="flex items-center shrink-0">
+        <div className="flex items-center shrink-0 explorer-sidebar-tools-actions">
           <button
             type="button"
             title={

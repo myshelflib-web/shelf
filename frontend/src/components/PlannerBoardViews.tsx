@@ -171,7 +171,7 @@ export function PlannerWeekBoard({
 
   return (
     <div className="flex-1 min-h-0 overflow-x-auto">
-      <div className="h-full min-w-[1100px] grid grid-cols-[260px_minmax(0,1fr)] gap-3">
+      <div className="h-full min-w-[1100px] grid grid-cols-[260px_minmax(0,1fr)] gap-3 planner-week-board-desktop">
         <aside
           className={`min-h-0 flex flex-col rounded-[10px] border bg-[var(--bg-secondary)] overflow-hidden ${
             dropTarget === "backlog"

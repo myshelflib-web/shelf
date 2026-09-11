@@ -14,6 +14,7 @@ import {
 import { dispatchOfflineSync } from "@/lib/offline/network";
 import { dispatchSyncStatus } from "@/lib/syncStatus";
 import { api } from "@/lib/api";
+import { randomId } from "@/lib/randomId";
 import type { UserPageSummary } from "@/types";
 
 export const FAILED_BULK_ACTIVITY_PREFIX = "failed-bulk:";
@@ -42,7 +43,7 @@ export function rememberFailedBulkUpload(
 ): FailedBulkUpload {
   const entry: FailedBulkUpload = {
     ...input,
-    id: input.id ?? crypto.randomUUID(),
+    id: input.id ?? randomId(),
     createdAt: Date.now(),
   };
   byId.set(entry.id, entry);

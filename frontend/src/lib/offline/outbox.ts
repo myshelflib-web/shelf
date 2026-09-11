@@ -12,9 +12,10 @@ import {
 } from "./db";
 import { listPendingUploadSummaries } from "@/lib/pendingUploadQueue";
 import { listPendingMutations } from "@/lib/pendingMutationQueue";
+import { randomId } from "@/lib/randomId";
 
 function newOutboxId(): string {
-  return crypto.randomUUID();
+  return randomId();
 }
 
 export async function readOutbox(userId: string): Promise<OutboxEntry[]> {

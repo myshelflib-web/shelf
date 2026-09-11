@@ -1918,6 +1918,51 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   animation-delay: 0.3s;
 }
 
+.thinking-bars-lg {
+  height: 28px;
+  gap: 4px;
+}
+
+.thinking-bars-lg span {
+  width: 4px;
+}
+
+.thinking-bars-lg span:nth-child(1) {
+  height: 14px;
+}
+
+.thinking-bars-lg span:nth-child(2) {
+  height: 24px;
+}
+
+.thinking-bars-lg span:nth-child(3) {
+  height: 16px;
+}
+
+/* Phone: large bars from first paint (media), avoids md→lg flash after JS hydrate. */
+@media (max-width: 767px) {
+  .thinking-bars:not(.thinking-bars-sm) {
+    height: 28px;
+    gap: 4px;
+  }
+
+  .thinking-bars:not(.thinking-bars-sm) span {
+    width: 4px;
+  }
+
+  .thinking-bars:not(.thinking-bars-sm) span:nth-child(1) {
+    height: 14px;
+  }
+
+  .thinking-bars:not(.thinking-bars-sm) span:nth-child(2) {
+    height: 24px;
+  }
+
+  .thinking-bars:not(.thinking-bars-sm) span:nth-child(3) {
+    height: 16px;
+  }
+}
+
 .lively-line {
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
@@ -1930,6 +1975,110 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .lively-line-out {
   opacity: 0;
   transform: translateY(2px);
+}
+
+/* Brand route loader — lively Shelf mark */
+@keyframes shelf-logo-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes shelf-logo-book-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.6px);
+  }
+}
+
+@keyframes shelf-logo-spark-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.25);
+  }
+}
+
+@keyframes shelf-loading-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+.shelf-logo-lively {
+  animation: shelf-logo-float 2.4s ease-in-out infinite;
+  transform-origin: center bottom;
+  overflow: visible;
+}
+
+.shelf-logo-lively .shelf-logo-book {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: shelf-logo-book-bob 1.35s ease-in-out infinite;
+}
+
+.shelf-logo-lively .shelf-logo-book-a {
+  animation-delay: 0s;
+}
+
+.shelf-logo-lively .shelf-logo-book-b {
+  animation-delay: 0.18s;
+}
+
+.shelf-logo-lively .shelf-logo-book-c {
+  animation-delay: 0.36s;
+}
+
+.shelf-logo-lively .shelf-logo-spark {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: shelf-logo-spark-pulse 1.6s ease-in-out infinite;
+}
+
+.shelf-loading-ellipsis {
+  display: inline-flex;
+  margin-left: 1px;
+  letter-spacing: 0.02em;
+}
+
+.shelf-loading-ellipsis span {
+  animation: shelf-loading-dot 1.2s ease-in-out infinite;
+}
+
+.shelf-loading-ellipsis span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.shelf-loading-ellipsis span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shelf-logo-lively,
+  .shelf-logo-lively .shelf-logo-book,
+  .shelf-logo-lively .shelf-logo-spark,
+  .shelf-loading-ellipsis span {
+    animation: none;
+  }
+  .shelf-logo-lively .shelf-logo-spark {
+    opacity: 0.7;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

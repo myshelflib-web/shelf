@@ -118,6 +118,16 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
   const copyUrl = useCallback(async (path: string) => {
     const url = `${window.location.origin}${path}`;
     try {
+      const { shareNative } = await import("@/lib/capacitorNative");
+      if (await shareNative({ title: pageTitle, url, dialogTitle: "Share page" })) {
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1600);
+        return true;
+      }
+    } catch {
+      /* fall through to clipboard */
+    }
+    try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
@@ -126,7 +136,7 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
       setError("Could not copy link — select and copy it manually");
       return false;
     }
-  }, []);
+  }, [pageTitle]);
 
   if (!open) return null;
 
@@ -206,14 +216,14 @@ export function SharePageModal({ open, pageId, pageTitle, onClose }: Props) {
 
   return (
     <div
-      className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 max-md:items-end max-md:p-0"
       onClick={onClose}
       role="presentation"
     >
       <div
         role="dialog"
         aria-labelledby="share-modal-title"
-        className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl"
+        className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl max-md:max-w-none max-md:rounded-t-2xl max-md:rounded-b-none max-md:pb-[env(safe-area-inset-bottom,0px)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4 border-b border-[var(--border)]">

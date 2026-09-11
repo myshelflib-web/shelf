@@ -162,7 +162,7 @@ export function SearchModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-start justify-center pt-[12vh] px-4">
+    <div className="fixed inset-0 z-[80] flex items-start justify-center pt-[12vh] px-4 max-md:items-end max-md:pt-0 max-md:px-0">
       <button
         type="button"
         className="absolute inset-0 bg-black/55"
@@ -173,7 +173,7 @@ export function SearchModal({
         role="dialog"
         aria-modal="true"
         aria-label="Search library"
-        className="relative w-full max-w-xl overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl"
+        className="relative w-full max-w-xl overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl search-modal-panel"
       >
         <div className="flex items-center gap-2.5 px-3.5 py-2.5 border-b border-[var(--border)]">
           <Search className="w-4 h-4 text-[var(--text-muted)] shrink-0" />

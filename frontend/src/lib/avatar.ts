@@ -1,4 +1,4 @@
-import { API_URL } from "@/lib/api";
+import { getApiUrl } from "@/lib/api";
 import { User } from "@/types";
 
 export function avatarSrc(user: Pick<User, "id" | "name" | "avatarUrl">): string | null {
@@ -9,5 +9,5 @@ export function avatarSrc(user: Pick<User, "id" | "name" | "avatarUrl">): string
   ) {
     return user.avatarUrl;
   }
-  return `${API_URL}/api/auth/avatar/${user.id}?v=${encodeURIComponent(user.avatarUrl)}`;
+  return `${getApiUrl()}/api/auth/avatar/${user.id}?v=${encodeURIComponent(user.avatarUrl)}`;
 }

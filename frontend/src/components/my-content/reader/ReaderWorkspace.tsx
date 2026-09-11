@@ -36,6 +36,10 @@ import {
 import { DocumentPane, DocumentPaneHandlers, DocumentPaneSnapshot, LoadedPage } from "./DocumentPane";
 import { ReaderRightPanel } from "./ReaderRightPanel";
 import { ReaderTabStrip } from "./ReaderTabStrip";
+import {
+  ReaderOpenDocsButton,
+  ReaderOpenDocsSheet,
+} from "./ReaderOpenDocsSheet";
 import { useReaderWorkspace } from "./useReaderWorkspace";
 import { useHotkey } from "@/hooks/useHotkeys";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
@@ -83,6 +87,7 @@ export function ReaderWorkspace({
   const [clipImage, setClipImage] = useState<string | null>(null);
   const [clipPage, setClipPage] = useState<LoadedPage | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [openDocsOpen, setOpenDocsOpen] = useState(false);
   const [snapshots, setSnapshots] = useState<
     Record<string, DocumentPaneSnapshot>
   >({});
@@ -817,13 +822,15 @@ export function ReaderWorkspace({
 
                 {panesToRender.length === 1 && panesToRender[0] ? (
                   isPhone ? (
-                    <div className="flex-1 min-w-0 px-2 flex items-center">
-                      <span className="text-xs font-medium text-[var(--text-primary)] truncate">
-                        {panesToRender[0].tabs.find(
+                    <ReaderOpenDocsButton
+                      title={
+                        panesToRender[0].tabs.find(
                           (t) => t.key === panesToRender[0].activeTabKey
-                        )?.title ?? "Document"}
-                      </span>
-                    </div>
+                        )?.title ?? "Document"
+                      }
+                      tabCount={panesToRender[0].tabs.length}
+                      onClick={() => setOpenDocsOpen(true)}
+                    />
                   ) : (
                     <div className="reader-workspace-tabs flex-1 min-w-0">
                       <ReaderTabStrip
@@ -1097,6 +1104,20 @@ export function ReaderWorkspace({
           }}
         />
       )}
+
+      {isPhone && panesToRender[0] ? (
+        <ReaderOpenDocsSheet
+          open={openDocsOpen}
+          onClose={() => setOpenDocsOpen(false)}
+          tabs={panesToRender[0].tabs}
+          activeTabKey={panesToRender[0].activeTabKey}
+          onActivate={(key) => handleActivateTab(panesToRender[0].id, key)}
+          onCloseTab={(key) => {
+            handleCloseTab(panesToRender[0].id, key);
+            if (panesToRender[0].tabs.length <= 1) setOpenDocsOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

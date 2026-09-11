@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Shelf</title>
+    <style>
+      :root {
+        --bg: #0c0c0d;
+        --bg2: #161618;
+        --text: #f2f2f3;
+        --muted: #8a8a92;
+        --secondary: #b4b4bc;
+        --border: #2a2a2e;
+        --accent: #7c6cf0;
+        --accent-hover: #6354d6;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      main {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: max(1.5rem, env(safe-area-inset-top)) 1.5rem
+          max(1.5rem, env(safe-area-inset-bottom));
+      }
+      h1 {
+        margin: 1.25rem 0 0;
+        font-size: 1.35rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      p {
+        margin: 0.65rem 0 0;
+        max-width: 20rem;
+        line-height: 1.5;
+        color: var(--secondary);
+        font-size: 0.95rem;
+      }
+      p.hint {
+        max-width: 22rem;
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      p.hint code {
+        font-size: 0.75rem;
+        color: var(--text);
+        word-break: break-all;
+      }
+      .actions {
+        margin-top: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+        width: min(100%, 16rem);
+      }
+      button,
+      a.btn {
+        appearance: none;
+        border: none;
+        border-radius: 10px;
+        min-height: 2.75rem;
+        padding: 0.65rem 1.1rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      button.primary {
+        background: var(--accent);
+        color: #fff;
+      }
+      button.primary:active {
+        background: var(--accent-hover);
+      }
+      a.btn.secondary {
+        background: var(--bg2);
+        color: var(--text);
+        border: 1px solid var(--border);
+      }
+      .email {
+        margin-top: 1rem;
+        font-size: 0.75rem;
+        color: var(--muted);
+      }
+      .email a {
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main role="alert">
+      <svg width="88" height="88" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+        <circle cx="32" cy="32" r="28" fill="#161618" stroke="#2a2a2e" stroke-width="1.25" />
+        <g transform="rotate(-18 22 34)">
+          <rect x="14" y="22" width="10" height="20" rx="2" fill="#8fba86" opacity="0.85" />
+        </g>
+        <g transform="rotate(12 32 30)">
+          <rect x="27" y="16" width="10" height="26" rx="2" fill="#7c6cf0" />
+        </g>
+        <g transform="rotate(28 44 36)">
+          <rect x="39" y="26" width="10" height="16" rx="2" fill="#c4a07a" opacity="0.9" />
+        </g>
+        <path d="M12 48.5h16.5" stroke="#7c6cf0" stroke-width="3" stroke-linecap="round" />
+        <path
+          d="M35.5 48.5H52"
+          stroke="#7c6cf0"
+          stroke-width="3"
+          stroke-linecap="round"
+          opacity="0.55"
+        />
+        <path
+          d="M28.5 47.5l3.5 3 3.5-3"
+          stroke="#8a8a92"
+          stroke-width="1.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          fill="none"
+        />
+      </svg>
+      <h1>Shelf couldn’t connect</h1>
+      <p>
+        We couldn’t reach the Shelf servers. Check your connection, then try
+        again. If it keeps happening, contact support.
+      </p>
+      <p class="hint">
+        Android emulator: on your Mac run
+        <code>npm run mobile:adb-reverse</code>
+        (tunnels ports 3000 + 4000), then Try again.
+      </p>
+      <div class="actions">
+        <button type="button" class="primary" id="retry">Try again</button>
+        <a class="btn secondary" href="mailto:hello@shelf.study?subject=Shelf%20support%20%E2%80%94%20connection">
+          Contact support
+        </a>
+      </div>
+      <p class="email">
+        <a href="mailto:hello@shelf.study">hello@shelf.study</a>
+      </p>
+    </main>
+    <script>
+      (function () {
+        var DEFAULT_URLS = [
+          "http://localhost:3000",
+          "http://10.0.2.2:3000",
+          "http://127.0.0.1:3000",
+        ];
+        function serverUrlFromConfig() {
+          try {
+            var cfg =
+              window.Capacitor &&
+              typeof window.Capacitor.getConfig === "function"
+                ? window.Capacitor.getConfig()
+                : null;
+            return cfg && cfg.server && cfg.server.url
+              ? String(cfg.server.url)
+              : "";
+          } catch (e) {
+            return "";
+          }
+        }
+        var btn = document.getElementById("retry");
+        if (!btn) return;
+        btn.addEventListener("click", function () {
+          var url = serverUrlFromConfig() || DEFAULT_URLS[0];
+          // Prefer navigating to the remote app — reload() stays on offline.html.
+          window.location.replace(url);
+        });
+      })();
+    </script>
+  </body>
+</html>

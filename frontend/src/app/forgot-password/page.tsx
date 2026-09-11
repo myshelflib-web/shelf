@@ -13,6 +13,7 @@ import {
   otpResendLabel,
   useOtpResendCooldown,
 } from "@/hooks/useOtpResendCooldown";
+import { usePreferAppChrome } from "@/hooks/usePreferAppChrome";
 
 // TODO: This is a temporary type for the forgot password flow. We should use the AuthPage type instead.
 type Step = "email" | "reset";
@@ -219,10 +220,18 @@ function ForgotPasswordForm() {
 }
 
 export default function ForgotPasswordPage() {
+  const appChrome = usePreferAppChrome();
+
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      <Header />
-      <main className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center px-4 py-8">
+    <div className="h-full flex flex-col overflow-hidden bg-[var(--bg-primary)]">
+      {!appChrome ? <Header /> : null}
+      <main
+        className={`flex-1 min-h-0 overflow-y-auto flex justify-center px-5 py-8 ${
+          appChrome
+            ? "items-stretch pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+            : "items-center"
+        }`}
+      >
         <Suspense fallback={<ThinkingIndicator label="Loading" />}>
           <ForgotPasswordForm />
         </Suspense>

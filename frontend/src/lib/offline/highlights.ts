@@ -17,6 +17,7 @@ import { isOfflineMetaFresh, offlineMetaKey, touchOfflineMeta } from "./cacheMet
 import { isOnline, dispatchOfflineSync } from "./network";
 import { mergeHighlightLists, stripHighlightMeta, toLocalHighlight } from "./highlightMerge";
 import { AnalyticsEvents, track } from "@/lib/analytics";
+import { randomId } from "@/lib/randomId";
 
 export type HighlightWriteInput = {
   userTopicId: string;
@@ -31,7 +32,7 @@ export type HighlightWriteInput = {
 };
 
 function newLocalId(): string {
-  return `local-${crypto.randomUUID()}`;
+  return `local-${randomId()}`;
 }
 
 async function readHighlightsForPage(userId: string, pageId: string): Promise<LocalHighlight[]> {

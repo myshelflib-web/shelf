@@ -27,6 +27,8 @@ import {
   Shield,
   Newspaper,
   Info,
+  Settings,
+  UserRound,
   type LucideIcon,
 } from "lucide-react";
 import { StreakPopover } from "@/components/StreakPopover";
@@ -39,6 +41,13 @@ import {
   HeaderMobileNav,
   type HeaderMobileNavItem,
 } from "@/components/HeaderMobileNav";
+import { PhoneBottomNav } from "@/components/PhoneBottomNav";
+import { useIsPhone } from "@/hooks/useIsPhone";
+import {
+  PhoneAppHeaderActions,
+  PhoneAppHeaderBrand,
+  phoneHeaderTitle,
+} from "@/components/PhoneAppHeaderChrome";
 
 function NavItem({
   href,
@@ -121,6 +130,7 @@ export function Header() {
   const photo = user ? avatarSrc(user) : null;
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const isPhone = useIsPhone();
   const { openSearch, openHelp } = useHotkeysController();
   const touchPrimary = useTouchPrimaryUi();
   const searchTitle = touchPrimary
@@ -143,22 +153,37 @@ export function Header() {
     }
   };
 
-  const mobileNavItems: HeaderMobileNavItem[] = user
+  const signedInMoreItems: HeaderMobileNavItem[] = user
     ? [
-        {
-          href: libraryHref,
-          icon: BookOpen,
-          label: "Library",
-          onNavigate: onLibraryClick,
-        },
-        { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-        { href: "/planner", icon: CalendarDays, label: "Planner" },
         { href: "/quiz", icon: ListChecks, label: "Quiz" },
-        { href: "/study-ai", icon: MessageSquareText, label: "Study AI" },
+        { href: "/learn", icon: BookOpen, label: "Learn" },
+        { href: "/settings", icon: Settings, label: "Settings" },
+        { href: "/profile", icon: UserRound, label: "Profile" },
+        { href: "/blog", icon: Newspaper, label: "Blog" },
         ...(user.role === "ADMIN"
           ? [{ href: "/admin", icon: Shield, label: "Admin" }]
           : []),
       ]
+    : [];
+
+  const mobileNavItems: HeaderMobileNavItem[] = user
+    ? isPhone
+      ? signedInMoreItems
+      : [
+          {
+            href: libraryHref,
+            icon: BookOpen,
+            label: "Library",
+            onNavigate: onLibraryClick,
+          },
+          { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+          { href: "/planner", icon: CalendarDays, label: "Planner" },
+          { href: "/quiz", icon: ListChecks, label: "Quiz" },
+          { href: "/study-ai", icon: MessageSquareText, label: "Study AI" },
+          ...(user.role === "ADMIN"
+            ? [{ href: "/admin", icon: Shield, label: "Admin" }]
+            : []),
+        ]
     : [
         { href: "/learn", icon: BookOpen, label: "Library" },
         { href: "/blog", icon: Newspaper, label: "Blog" },
@@ -169,16 +194,63 @@ export function Header() {
       ];
 
   const mobileNavFooter = user ? (
-    !premium ? (
-      <Link
-        href="/subscribe"
-        onClick={() => setMobileNavOpen(false)}
-        className="flex items-center justify-center gap-1.5 rounded-[10px] bg-[var(--accent-subtle)] px-3 py-2.5 text-sm font-semibold text-[var(--accent)]"
-      >
-        <Sparkles className="w-4 h-4" />
-        Upgrade
-      </Link>
-    ) : null
+    <>
+      {isPhone ? (
+        <div className="flex items-center justify-between gap-2 px-1 pb-1">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="phone-hdr-icon-btn"
+              aria-label="Toggle theme"
+              title="Toggle theme"
+            >
+              {theme === "dark" ? (
+                <Sun className="w-5 h-5" />
+              ) : (
+                <Moon className="w-5 h-5" />
+              )}
+            </button>
+            <OfflineStatusBadge />
+            <StreakPopover />
+            <NotificationsPopover />
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileNavOpen(false);
+              setProfileOpen(true);
+            }}
+            title="Account"
+            className="shrink-0"
+          >
+            {photo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={photo}
+                alt={user.name}
+                className="w-9 h-9 rounded-full object-cover ring-1 ring-[var(--border)]"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-[var(--accent)] flex items-center justify-center text-white text-sm font-medium">
+                {user.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </button>
+        </div>
+      ) : null}
+      {!premium ? (
+        <Link
+          href="/subscribe"
+          onClick={() => setMobileNavOpen(false)}
+          className="flex items-center justify-center gap-1.5 rounded-[10px] bg-[var(--accent-subtle)] px-3 py-2.5 text-sm font-semibold text-[var(--accent)]"
+        >
+          <Sparkles className="w-4 h-4" />
+          Upgrade
+        </Link>
+      ) : null}
+    </>
   ) : (
     <>
       <Link
@@ -198,10 +270,16 @@ export function Header() {
     </>
   );
 
+  const phoneTitle = phoneHeaderTitle(pathname);
+  const phoneChrome = isPhone && !!user;
+
   return (
     <>
     <header className="app-header shrink-0 border-b border-[var(--border)] bg-[var(--bg-primary)] sticky top-0 z-[80]">
       <div className="app-header-inner w-full px-4 sm:px-6">
+        {phoneChrome ? (
+          <PhoneAppHeaderBrand title={phoneTitle} />
+        ) : (
         <div className="app-header-brand min-w-0">
           <Link
             href={user ? libraryHref : "/"}
@@ -215,12 +293,14 @@ export function Header() {
           </Link>
 
           {user ? (
+            !isPhone ? (
             <div className="app-header-menu-slot md:hidden">
               <HeaderMenuButton
                 open={mobileNavOpen}
                 onClick={() => setMobileNavOpen((open) => !open)}
               />
             </div>
+            ) : null
           ) : null}
 
           <nav className="hidden md:flex items-center gap-1 text-[13px] text-[var(--text-secondary)] min-w-0">
@@ -269,7 +349,15 @@ export function Header() {
             )}
           </nav>
         </div>
+        )}
 
+        {phoneChrome ? (
+          <PhoneAppHeaderActions
+            onSearch={openSearch}
+            moreOpen={mobileNavOpen}
+            onMoreClick={() => setMobileNavOpen((open) => !open)}
+          />
+        ) : (
         <div className="app-header-actions">
           {user && (
             <>
@@ -378,8 +466,15 @@ export function Header() {
             </>
           )}
         </div>
+        )}
       </div>
     </header>
+    {user ? (
+      <PhoneBottomNav
+        moreOpen={mobileNavOpen}
+        onMoreClick={() => setMobileNavOpen((open) => !open)}
+      />
+    ) : null}
     <HeaderMobileNav
       open={mobileNavOpen}
       onClose={() => setMobileNavOpen(false)}

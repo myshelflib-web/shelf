@@ -111,12 +111,15 @@ export function StudyAiComposer({
   };
 
   return (
-    <div className="study-ai-composer-shell pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-3 sm:px-6">
+    <div className="study-ai-composer-shell study-ai-composer-dock pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center px-3 sm:px-6">
       <div className="pointer-events-auto w-full max-w-[820px]">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             if (!canSend) return;
+            void import("@/lib/capacitorNative").then(({ hapticLight }) =>
+              hapticLight()
+            );
             const text = input;
             const image = attachImage;
             onInput("");
@@ -205,7 +208,7 @@ export function StudyAiComposer({
             </div>
           )}
 
-          <div className="flex items-center gap-1 h-12 rounded-full border border-[var(--border)] bg-[var(--bg-elevated)] pl-2 pr-2 shadow-[0_8px_28px_rgba(0,0,0,0.14)] transition-shadow focus-within:border-[var(--accent)] focus-within:shadow-[0_8px_28px_rgba(0,0,0,0.14),0_0_0_3px_var(--ring)]">
+          <div className="study-ai-composer-bar flex items-center gap-1 h-12 rounded-full border border-[var(--border)] bg-[var(--bg-elevated)] pl-2 pr-2 shadow-[0_8px_28px_rgba(0,0,0,0.14)] transition-shadow focus-within:border-[var(--accent)] focus-within:shadow-[0_8px_28px_rgba(0,0,0,0.14),0_0_0_3px_var(--ring)]">
             <input
               ref={fileRef}
               type="file"
@@ -267,20 +270,22 @@ export function StudyAiComposer({
                   setCommandsOpen(true);
                 }}
               />
-              <StudyAiThinkingMenu
-                value={depth}
-                onChange={onDepthChange}
-                isPremium={isPremium}
-                disabled={loading}
-                iconOnly
-              />
-              <StudyAiWebSearchToggle
-                scope="library"
-                enabled={webSearch}
-                onChange={onWebSearchChange}
-                disabled={loading}
-                iconOnly
-              />
+              <div className="study-ai-composer-secondary-tools flex items-center gap-0.5">
+                <StudyAiThinkingMenu
+                  value={depth}
+                  onChange={onDepthChange}
+                  isPremium={isPremium}
+                  disabled={loading}
+                  iconOnly
+                />
+                <StudyAiWebSearchToggle
+                  scope="library"
+                  enabled={webSearch}
+                  onChange={onWebSearchChange}
+                  disabled={loading}
+                  iconOnly
+                />
+              </div>
               {loading && (
                 <button
                   type="button"

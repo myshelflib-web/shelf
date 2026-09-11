@@ -3,14 +3,14 @@
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/Header";
-import { ThinkingIndicator } from "@/components/GreetingAccent";
+import { ShelfLoading } from "@/components/ShelfLoading";
 import {
   OnboardingWizard,
   safeNextPath,
 } from "@/components/onboarding/OnboardingWizard";
 import { useAuth } from "@/hooks/useAuth";
 import { needsOnboarding } from "@/lib/onboarding";
-import { destinationAfterSignIn } from "@/lib/postAuthNavigation";
+import { destinationAfterSignIn, navigateAfterAuth } from "@/lib/postAuthNavigation";
 
 function OnboardingContent() {
   const router = useRouter();
@@ -21,12 +21,15 @@ function OnboardingContent() {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace(`/login?next=${encodeURIComponent("/onboarding")}`);
+      navigateAfterAuth(
+        `/login?next=${encodeURIComponent("/onboarding")}`,
+        (h) => router.replace(h)
+      );
       return;
     }
     if (!needsOnboarding(user)) {
       void destinationAfterSignIn(nextPath).then((href) => {
-        router.replace(href);
+        navigateAfterAuth(href, (h) => router.replace(h));
       });
     }
   }, [user, loading, router, nextPath]);
@@ -34,7 +37,7 @@ function OnboardingContent() {
   if (loading || !user) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <ThinkingIndicator label="Loading" />
+        <ShelfLoading />
       </div>
     );
   }
@@ -42,7 +45,7 @@ function OnboardingContent() {
   if (!needsOnboarding(user)) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <ThinkingIndicator label="Opening library" />
+        <ShelfLoading label="Opening your library" />
       </div>
     );
   }
@@ -58,7 +61,7 @@ export default function OnboardingPage() {
         <Suspense
           fallback={
             <div className="flex items-center justify-center py-24">
-              <ThinkingIndicator label="Loading" />
+              <ShelfLoading />
             </div>
           }
         >

@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { AppErrorFallback } from "@/components/AppErrorFallback";
 import { captureComponentError } from "@/lib/analytics/errors";
 
 type Props = {
@@ -11,30 +12,26 @@ type State = {
   error: Error | null;
 };
 
-function ErrorFallback({
-  error,
-  onReload,
-}: {
-  error: Error;
-  onReload: () => void;
-}) {
-  return (
-    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-      <p className="text-lg font-medium text-[var(--text-primary)]">
-        Something went wrong
-      </p>
-      <p className="max-w-md text-sm text-[var(--text-muted)]">
-        {error.message || "This part of Shelf failed to load."}
-      </p>
-      <button
-        type="button"
-        onClick={onReload}
-        className="rounded-[10px] bg-[var(--accent)] px-4 py-2 text-sm font-medium text-white"
-      >
-        Reload page
-      </button>
-    </div>
-  );
+const CHUNK_RELOAD_KEY = "shelf:chunk-reload-at";
+
+function maybeAutoReloadChunkError(error: Error): boolean {
+  if (typeof window === "undefined") return false;
+  const name = error.name || "";
+  const msg = error.message || "";
+  const isChunk =
+    name === "ChunkLoadError" || /Loading chunk .+ failed/i.test(msg);
+  if (!isChunk) return false;
+  try {
+    const last = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY) || "0");
+    if (Number.isFinite(last) && Date.now() - last < 15_000) {
+      return false;
+    }
+    sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
+    window.location.reload();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export class ClientErrorBoundary extends Component<Props, State> {
@@ -46,14 +43,19 @@ export class ClientErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     captureComponentError(error, info.componentStack ?? undefined);
+    maybeAutoReloadChunkError(error);
   }
 
   render(): ReactNode {
     if (this.state.error) {
       return (
-        <ErrorFallback
+        <AppErrorFallback
           error={this.state.error}
-          onReload={() => window.location.reload()}
+          fullScreen
+          onRetry={() => {
+            this.setState({ error: null });
+            window.location.reload();
+          }}
         />
       );
     }

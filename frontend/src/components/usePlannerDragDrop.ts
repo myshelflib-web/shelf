@@ -206,5 +206,6 @@ export function usePlannerDragDrop(
     allowDrop,
     leaveDrop,
     finishDrop,
+    moveTask: applyDrop,
   };
 }

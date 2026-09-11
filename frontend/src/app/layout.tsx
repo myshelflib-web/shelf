@@ -21,6 +21,7 @@ import { DeleteProgressProvider } from "@/components/DeleteProgressProvider";
 import { OfflineSyncProvider } from "@/components/OfflineSyncProvider";
 import { OfflineNotice } from "@/components/OfflineNotice";
 import { CompactPortraitSync } from "@/components/CompactPortraitSync";
+import { CapacitorProvider } from "@/components/CapacitorProvider";
 import { AnalyticsProvider } from "@/components/AnalyticsProvider";
 import { rootLayoutMetadata } from "@/lib/seo/metadata";
 
@@ -66,6 +67,7 @@ export default function RootLayout({
     <html lang="en-IN" className={`dark h-full ${sans.variable} ${serif.variable} ${display.variable}`} suppressHydrationWarning>
       <body className="h-full antialiased" suppressHydrationWarning>
         <ThemeProvider>
+          <CapacitorProvider>
           <GoogleAuthProvider clientId={googleClientId}>
             <TelegramAuthProvider botUsername={telegramBotUsername}>
               <AuthProvider>
@@ -91,6 +93,7 @@ export default function RootLayout({
               </AuthProvider>
             </TelegramAuthProvider>
           </GoogleAuthProvider>
+          </CapacitorProvider>
         </ThemeProvider>
       </body>
     </html>

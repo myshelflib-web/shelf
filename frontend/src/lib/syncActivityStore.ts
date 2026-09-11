@@ -1,6 +1,7 @@
 /** In-memory list of background sync/upload jobs for the header dropdown. */
 
 import type { UploadProgress } from "@/lib/uploadLibraryFile";
+import { randomId } from "@/lib/randomId";
 
 export const SYNC_ACTIVITY_EVENT = "shelf:sync-activity";
 
@@ -112,7 +113,7 @@ function scheduleRemove(id: string, ms: number) {
 }
 
 /** Start tracking a live file upload; subsequent progress maps to this id. */
-export function beginUploadActivity(title: string, id = crypto.randomUUID()): string {
+export function beginUploadActivity(title: string, id = randomId()): string {
   activeUploadId = id;
   lastProgressEmitAt = 0;
   lastProgressPercent = -1;

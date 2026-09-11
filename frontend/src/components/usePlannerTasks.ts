@@ -17,6 +17,7 @@ import {
 } from "@/components/DeleteProgressProvider";
 import { shortPlannerTitle } from "@/components/PlannerFlashToast";
 import type { usePlannerCardMotion } from "@/components/usePlannerCardMotion";
+import { randomId } from "@/lib/randomId";
 
 function masterId(id: string) {
   return id.split("::")[0];
@@ -141,7 +142,7 @@ export function usePlannerTasks(
   };
 
   const createItem = async (payload: PlannerCreateInput) => {
-    const tempId = `optimistic-${crypto.randomUUID()}`;
+    const tempId = `optimistic-${randomId()}`;
     const optimistic: StudyTask = {
       id: tempId,
       title: payload.title,

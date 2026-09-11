@@ -56,7 +56,7 @@ export function DashboardAchievements({
           {earned} / {rows.length}
         </span>
       </div>
-      <div className="grid grid-cols-8 gap-2">
+      <div className="dashboard-achievements-row grid grid-cols-8 gap-2">
         {rows.map((row) => {
           const Icon = ICONS[row.id];
           return (

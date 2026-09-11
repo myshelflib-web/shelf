@@ -2,6 +2,7 @@
 
 import { Share, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { isNativeCapacitor } from "@/lib/capacitorNative";
 
 const DISMISS_KEY = "shelf:pwa-install-hint-dismissed";
 
@@ -18,7 +19,8 @@ function isStandaloneDisplay() {
   if (typeof window === "undefined") return false;
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
-    ("standalone" in navigator && (navigator as Navigator & { standalone?: boolean }).standalone === true)
+    ("standalone" in navigator &&
+      (navigator as Navigator & { standalone?: boolean }).standalone === true)
   );
 }
 
@@ -26,6 +28,7 @@ export function PwaInstallHint() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
+    if (isNativeCapacitor()) return;
     if (!isIosDevice() || isStandaloneDisplay()) return;
     if (window.localStorage.getItem(DISMISS_KEY) === "1") return;
     setVisible(true);

@@ -20,12 +20,13 @@ import { getStoredStudyDepth, resolveStudyDepth, type StudyDepth } from "@/lib/s
 import { getStoredStudyWebSearch } from "@/lib/studyWebSearch";
 import { normalizeContextKind } from "@/lib/studyAiContextLabel";
 import { Download, PanelLeft, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
-import { ThinkingIndicator } from "@/components/GreetingAccent";
+import { ShelfLoading } from "@/components/ShelfLoading";
 import { GreetingBlock } from "@/components/GreetingBlock";
 import { LivelyLine } from "@/components/LivelyLine";
 import { ShelfLogo } from "@/components/ShelfLogo";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
 import { useIsPhone } from "@/hooks/useIsPhone";
+import { StudyAiPhoneThreadMenu } from "@/components/study-ai/StudyAiPhoneThreadMenu";
 
 export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   const router = useRouter();
@@ -200,7 +201,7 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
   if (authLoading || !user) {
     return (
       <div className="h-full flex items-center justify-center">
-        <ThinkingIndicator label="Loading" />
+        <ShelfLoading />
       </div>
     );
   }
@@ -265,6 +266,19 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
                 />
               </div>
               <div className="ml-auto flex items-center gap-1.5">
+                {isPhone ? (
+                  <StudyAiPhoneThreadMenu
+                    canExport={canExport}
+                    exportingChat={exportingChat}
+                    onExport={() => void exportChat()}
+                    activeId={chat.activeId ?? null}
+                    activePinned={activePinned}
+                    onTogglePin={() => chat.togglePinThread(chat.activeId!)}
+                    onRename={() => openRename(chat.activeId!, chat.title)}
+                    onDelete={() => chat.removeThread(chat.activeId!)}
+                  />
+                ) : (
+                  <>
                 <button
                   type="button"
                   disabled={!canExport || exportingChat}
@@ -315,6 +329,8 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
                     </button>
                   </>
                 )}
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -323,7 +339,7 @@ export function StudyAIWorkspace({ threadId }: { threadId?: string }) {
             <div className="max-w-[820px] mx-auto space-y-7">
               {chat.threadLoading && chat.messages.length === 0 && (
                 <div className="flex justify-center items-center min-h-[min(40vh,22rem)]">
-                  <ThinkingIndicator label="Loading" />
+                  <ShelfLoading size={72} label="Shelf is loading" />
                 </div>
               )}
 

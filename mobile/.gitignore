@@ -1,0 +1,12 @@
+node_modules/
+.DS_Store
+*.log
+
+# Capacitor native projects (generated / large) — keep if you prefer committing them.
+# Uncomment to ignore after local `cap add`:
+# ios/
+# android/
+
+# Local env overrides
+.env
+.env.local

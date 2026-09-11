@@ -32,6 +32,7 @@ import {
   ToolSep,
 } from "./EditorToolbarChrome";
 import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
+import { useIsPhone } from "@/hooks/useIsPhone";
 
 interface SketchToolbarProps {
   drawTool: DrawTool;
@@ -82,9 +83,10 @@ export function SketchToolbar({
 }: SketchToolbarProps) {
   const penBtnRef = useRef<HTMLButtonElement>(null);
   const [penOpen, setPenOpen] = useState(false);
+  const isPhone = useIsPhone();
 
   return (
-    <EditorToolbarShell>
+    <EditorToolbarShell phone={isPhone}>
       <ToolGroup>
         <ToolBtn
           label="Previous page"

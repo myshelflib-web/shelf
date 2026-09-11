@@ -372,7 +372,7 @@ export function QuizSetup({ launch }: { launch?: QuizLaunch }) {
               </p>
             </div>
             
-            <div className="grid gap-3 sm:grid-cols-3" data-tour-id="quiz-source">
+            <div className="quiz-setup-grid grid gap-3 sm:grid-cols-3" data-tour-id="quiz-source">
               {SOURCES.map((s) => (
                 <button
                   key={s.id}

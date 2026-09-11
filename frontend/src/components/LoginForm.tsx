@@ -11,7 +11,7 @@ import { useGoogleClientId } from "@/components/GoogleAuthProvider";
 import { TelegramSignInButton } from "@/components/TelegramSignInButton";
 import { isDevEnvironment } from "@/lib/userFacingError";
 import { ShelfLogo } from "@/components/ShelfLogo";
-import { ThinkingIndicator } from "@/components/GreetingAccent";
+import { ShelfLoading } from "@/components/ShelfLoading";
 import { api, ApiError } from "@/lib/api";
 import { OtpDigitInput } from "@/components/OtpDigitInput";
 import { isValidEmailFormat } from "@/lib/email";
@@ -20,8 +20,14 @@ import {
   useOtpResendCooldown,
 } from "@/hooks/useOtpResendCooldown";
 import { needsOnboarding } from "@/lib/onboarding";
-import { destinationAfterSignIn } from "@/lib/postAuthNavigation";
+import { destinationAfterSignIn, navigateAfterAuth } from "@/lib/postAuthNavigation";
 import { SignupTermsAccept } from "@/components/legal/SignupTermsAccept";
+
+const FIELD =
+  "w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]";
+
+const FIELD_APP =
+  "w-full min-h-12 px-3.5 py-3 rounded-[10px] bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-primary)] text-[16px] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]";
 
 export function safeNextPath(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/my-content";
@@ -33,12 +39,15 @@ export function LoginForm({
   embedded = false,
   title,
   subtitle,
+  appShell = false,
 }: {
   nextPath?: string;
   /** Overlay on a share link — stay on this URL after sign-in. */
   embedded?: boolean;
   title?: string;
   subtitle?: string;
+  /** Phone / Capacitor: full-bleed form, no card chrome. */
+  appShell?: boolean;
 }) {
   const router = useRouter();
   const [nextPath, setNextPath] = useState(nextPathProp ?? "/my-content");
@@ -86,17 +95,26 @@ export function LoginForm({
   };
 
   useEffect(() => {
-    if (embedded || !user || handledAuthRef.current) return;
-    handledAuthRef.current = true;
+    if (embedded || !user) return;
     let cancelled = false;
-    void destinationAfterSignIn(nextPath).then((href) => {
-      if (cancelled) return;
-      if (needsOnboarding(user)) {
-        router.replace(`/onboarding?next=${encodeURIComponent(href)}`);
-        return;
-      }
-      router.replace(href);
-    });
+    void destinationAfterSignIn(nextPath)
+      .then((href) => {
+        if (cancelled || handledAuthRef.current) return;
+        handledAuthRef.current = true;
+        if (needsOnboarding(user)) {
+          navigateAfterAuth(
+            `/onboarding?next=${encodeURIComponent(href)}`,
+            (h) => router.replace(h)
+          );
+          return;
+        }
+        navigateAfterAuth(href, (h) => router.replace(h));
+      })
+      .catch(() => {
+        if (cancelled || handledAuthRef.current) return;
+        handledAuthRef.current = true;
+        navigateAfterAuth(nextPath, (h) => router.replace(h));
+      });
     return () => {
       cancelled = true;
     };
@@ -169,10 +187,13 @@ export function LoginForm({
       }
       const dest = await destinationAfterSignIn(nextPath);
       if (isRegister) {
-        router.push(`/onboarding?next=${encodeURIComponent(dest)}`);
+        navigateAfterAuth(
+          `/onboarding?next=${encodeURIComponent(dest)}`,
+          (h) => router.push(h)
+        );
         return;
       }
-      if (!embedded) router.push(dest);
+      if (!embedded) navigateAfterAuth(dest, (h) => router.push(h));
     } catch (err) {
       handledAuthRef.current = false;
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -193,32 +214,35 @@ export function LoginForm({
 
   if (showSignInLoading) {
     const loadingLabel = socialSigningIn
-      ? "Signing in"
+      ? "Signing you in"
       : user
-        ? "Opening library"
-        : "Loading";
+        ? "Opening your library"
+        : "Shelf is loading";
     return (
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-3">
-            <ShelfLogo size={40} />
-          </div>
-          <ThinkingIndicator label={loadingLabel} className="justify-center" />
-        </div>
+      <div
+        className={`w-full max-w-md flex flex-col items-center justify-center ${
+          appShell ? "min-h-full py-2" : ""
+        }`}
+      >
+        <ShelfLoading label={loadingLabel} size={appShell ? 104 : 96} />
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-md">
-      <div className="text-center mb-8">
+    <div
+      className={`w-full max-w-md ${
+        appShell ? "flex flex-col justify-center min-h-full py-2" : ""
+      }`}
+    >
+      <div className={`text-center ${appShell ? "mb-6" : "mb-8"}`}>
         <div className="flex justify-center mb-3">
-          <ShelfLogo size={40} />
+          <ShelfLogo size={appShell ? 48 : 40} />
         </div>
-        <h1 className="text-2xl font-bold">
+        <h1 className={appShell ? "text-[1.75rem] font-bold tracking-tight" : "text-2xl font-bold"}>
           {title ?? (isRegister ? "Create Account" : "Welcome Back")}
         </h1>
-        <p className="text-[var(--text-secondary)] mt-1">
+        <p className="text-[var(--text-secondary)] mt-1 text-[15px]">
           {subtitle ??
             (isRegister
               ? otpSent
@@ -228,7 +252,13 @@ export function LoginForm({
         </p>
       </div>
 
-      <div className="p-6 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] space-y-4 shadow-2xl">
+      <div
+        className={
+          appShell
+            ? "space-y-4"
+            : "p-6 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] space-y-4 shadow-2xl"
+        }
+      >
         <form onSubmit={handleSubmit} className="space-y-4">
           {isRegister && (
             <div>
@@ -241,7 +271,7 @@ export function LoginForm({
                   resetRegisterOtp();
                 }}
                 required
-                className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+                className={appShell ? FIELD_APP : FIELD}
               />
             </div>
           )}
@@ -256,7 +286,8 @@ export function LoginForm({
                 resetRegisterOtp();
               }}
               required
-              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              autoComplete="email"
+              className={appShell ? FIELD_APP : FIELD}
             />
           </div>
 
@@ -271,7 +302,8 @@ export function LoginForm({
               }}
               required
               minLength={6}
-              className="w-full px-3 py-2 rounded-lg bg-[var(--bg-primary)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:ring-1 focus:ring-[var(--accent)]"
+              autoComplete={isRegister ? "new-password" : "current-password"}
+              className={appShell ? FIELD_APP : FIELD}
             />
           </div>
 
@@ -319,7 +351,9 @@ export function LoginForm({
           <button
             type="submit"
             disabled={loading || sendingOtp || (isRegister && !agreedToTerms)}
-            className="w-full py-2.5 rounded-lg bg-[var(--accent)] text-white font-medium hover:bg-[var(--accent-hover)] transition disabled:opacity-50"
+            className={`w-full rounded-lg bg-[var(--accent)] text-white font-medium hover:bg-[var(--accent-hover)] transition disabled:opacity-50 ${
+              appShell ? "min-h-12 py-3 text-[15px]" : "py-2.5"
+            }`}
           >
             {loading || sendingOtp
               ? "Please wait..."
@@ -348,7 +382,11 @@ export function LoginForm({
               <div className="w-full border-t border-[var(--border)]" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[var(--bg-secondary)] px-2 text-[var(--text-muted)]">
+              <span
+                className={`px-2 text-[var(--text-muted)] ${
+                  appShell ? "bg-[var(--bg-primary)]" : "bg-[var(--bg-secondary)]"
+                }`}
+              >
                 or continue with
               </span>
             </div>

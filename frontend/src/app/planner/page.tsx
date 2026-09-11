@@ -13,7 +13,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { getStoredUser } from "@/lib/api";
 import { listSubjects, peekCachedLibrary } from "@/lib/offline/library";
 import { UserSubject } from "@/types";
-import { ThinkingIndicator, GreetingDots } from "@/components/GreetingAccent";
+import { GreetingDots } from "@/components/GreetingAccent";
+import { ShelfLoading } from "@/components/ShelfLoading";
 
 function PlannerShell({
   children,
@@ -76,7 +77,7 @@ function PlannerInner() {
   if (!sessionUser) {
     return (
       <div className="h-full flex items-center justify-center">
-        <ThinkingIndicator label="Loading" />
+        <ShelfLoading />
       </div>
     );
   }

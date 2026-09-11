@@ -16,6 +16,8 @@ import { LandingQuizSection } from "@/components/landing/LandingQuizSection";
 import { LandingIntegrationsSection } from "@/components/landing/LandingIntegrationsSection";
 import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
 import { useAuth } from "@/hooks/useAuth";
+import { usePreferAppChrome } from "@/hooks/usePreferAppChrome";
+import { navigateAfterAuth } from "@/lib/postAuthNavigation";
 import {
   BookMarked,
   BookOpen,
@@ -27,20 +29,29 @@ import {
   NotebookPen,
   Sparkles,
 } from "lucide-react";
-import { ThinkingIndicator } from "@/components/GreetingAccent";
+import { ShelfLoading } from "@/components/ShelfLoading";
 
 export function HomePageClient() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const appChrome = usePreferAppChrome();
 
   useEffect(() => {
-    if (!loading && user) router.replace("/my-content");
-  }, [user, loading, router]);
+    if (loading) return;
+    if (user) {
+      navigateAfterAuth("/my-content", (h) => router.replace(h));
+      return;
+    }
+    // Phone / native: skip marketing landing — go straight to sign-in like a standard app.
+    if (appChrome) {
+      navigateAfterAuth("/login", (h) => router.replace(h));
+    }
+  }, [user, loading, router, appChrome]);
 
-  if (loading || user) {
+  if (loading || user || appChrome) {
     return (
       <div className="h-full flex items-center justify-center">
-        <ThinkingIndicator label="Loading" />
+        <ShelfLoading />
       </div>
     );
   }

@@ -12,6 +12,7 @@ import {
 import { isDevEnvironment, toUserFacingError } from "@/lib/userFacingError";
 import { useRouter } from "next/navigation";
 import { useLayoutEffect, useEffect, useRef, useState } from "react";
+import { usePreferAppChrome } from "@/hooks/usePreferAppChrome";
 
 export type TelegramAuthUser = {
   id: number;
@@ -67,6 +68,7 @@ export function TelegramSignInButton({
   const [widgetReady, setWidgetReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [widgetScale, setWidgetScale] = useState(1);
+  const appChrome = usePreferAppChrome();
 
   onErrorRef.current = onError;
   onSigningInChangeRef.current = onSigningInChange;
@@ -189,7 +191,7 @@ export function TelegramSignInButton({
   };
 
   if (!username) {
-    if (!fetchDone || !isDevEnvironment()) return null;
+    if (!fetchDone || !isDevEnvironment() || appChrome) return null;
     return (
       <p className="text-xs text-center text-[var(--text-muted)]">
         Set{" "}
