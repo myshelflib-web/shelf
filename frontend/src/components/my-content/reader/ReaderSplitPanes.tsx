@@ -114,7 +114,7 @@ function PaneBody({
 
   return (
     <div
-      className="flex flex-col h-full min-w-0 min-h-0 overflow-hidden"
+      className="flex flex-col flex-1 w-full h-full min-w-0 min-h-0 overflow-hidden"
       onMouseDown={() => onFocusPane(pane.id)}
     >
       {showTabStrip ? (
@@ -226,7 +226,7 @@ export function ReaderSplitPanes(props: Props) {
       className="flex-1 flex min-h-0 overflow-hidden min-w-0"
       id="reader-split-panes"
     >
-      <Panel id={`split-${first.id}`} defaultSize="50%" minSize="18%" className="min-w-0">
+      <Panel id={`split-${first.id}`} defaultSize="50%" minSize="18%" className="min-w-0 flex flex-col">
         <PaneBody {...paneProps(props, first, true)} />
       </Panel>
       <Separator className="w-1.5 bg-[var(--border)] data-[separator]:hover:bg-[var(--accent)]/40 data-[separator]:active:bg-[var(--accent)]/50 cursor-col-resize" />
@@ -235,7 +235,7 @@ export function ReaderSplitPanes(props: Props) {
           id={`split-${second.id}`}
           defaultSize="50%"
           minSize="18%"
-          className="min-w-0"
+          className="min-w-0 flex flex-col"
         >
           <PaneBody {...paneProps(props, second, true)} />
         </Panel>
