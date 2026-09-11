@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { UserSubject, UserTopicGroup, UserPageSummary } from "@/types";
-import { getTopicChildren, pageHref } from "@/lib/myContentTree";
+import { getTopicChildren, isExplorerPageActive, pageHref } from "@/lib/myContentTree";
 import { MAX_FOLDER_DEPTH } from "@/lib/folderDepth";
 import {
   ChevronDown,
@@ -326,11 +326,13 @@ export function ExplorerTopicBlock({
         <div className="ml-6 pl-3 border-l border-[var(--border)] space-y-0.5 mt-0.5">
           {group.pages.map((page) => {
             const href = pageHref(nb.slug, group.slug, page.slug);
-            const isActive =
-              currentHref === href ||
-              (notebookSlug === nb.slug &&
+            const isActive = isExplorerPageActive(
+              href,
+              currentHref,
+              notebookSlug === nb.slug &&
                 currentTopicSlug === group.slug &&
-                currentPageSlug === page.slug);
+                currentPageSlug === page.slug
+            );
             return (
               <ExplorerPageRow
                 key={page.id}

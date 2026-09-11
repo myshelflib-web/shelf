@@ -13,11 +13,6 @@ import { UserContentHighlight } from "@/types";
 import type { AnnotationGate } from "@/lib/preloadedReadOnly";
 import { HighlightToolbar } from "../HighlightToolbar";
 import { HighlightNoteModal } from "../HighlightNoteModal";
-import {
-  openOriginalityFromSelection,
-  openParaphraseFromSelection,
-} from "@/lib/openWritingAssistFromSelection";
-import { citeInOpenDoc } from "@/lib/citeInOpenDoc";
 import { Loader2 } from "lucide-react";
 import { DEFAULT_PEN_WIDTH, DEFAULT_INK_WIDTH, penCursorPx, penHitWidthPx, penStrokeWidthPx, straightenStroke } from "@/lib/straightenStroke";
 import { polylineHitsPoint, rectHitsPoint } from "@/lib/eraseHit";
@@ -2179,29 +2174,6 @@ export function PdfViewer({
                 }
               : undefined
           }
-          onParaphrase={() => {
-            openParaphraseFromSelection(toolbar.text, {
-              pageId: userTopicId,
-            });
-            paintDraft(toolbar.pageNumber, []);
-            setToolbar(null);
-          }}
-          onOriginality={() => {
-            openOriginalityFromSelection(toolbar.text, {
-              pageId: userTopicId,
-            });
-            paintDraft(toolbar.pageNumber, []);
-            setToolbar(null);
-          }}
-          onCiteInDoc={() => {
-            citeInOpenDoc({
-              quote: toolbar.text,
-              sourcePageId: userTopicId,
-              pageNumber: toolbar.pageNumber,
-            });
-            paintDraft(toolbar.pageNumber, []);
-            setToolbar(null);
-          }}
           onClose={() => {
             if (toolbar) paintDraft(toolbar.pageNumber, []);
             setToolbar(null);
@@ -2233,26 +2205,6 @@ export function PdfViewer({
                 }
               : undefined
           }
-          onParaphrase={() => {
-            openParaphraseFromSelection(activeHighlight.highlight.text, {
-              pageId: userTopicId,
-            });
-            setActiveHighlight(null);
-          }}
-          onOriginality={() => {
-            openOriginalityFromSelection(activeHighlight.highlight.text, {
-              pageId: userTopicId,
-            });
-            setActiveHighlight(null);
-          }}
-          onCiteInDoc={() => {
-            citeInOpenDoc({
-              quote: activeHighlight.highlight.text,
-              sourcePageId: userTopicId,
-              pageNumber: activeHighlight.highlight.pageNumber,
-            });
-            setActiveHighlight(null);
-          }}
           onRemove={() => {
             removeHighlight(activeHighlight.highlight.id);
           }}

@@ -18,7 +18,6 @@ import { useReadingTimer } from "@/hooks/useReadingTimer";
 import { useScheduledPageHrefs } from "@/hooks/useScheduledPageHrefs";
 import { api, ApiError } from "@/lib/api";
 import {
-  getTopicGroups,
   insertPageInTree,
   insertTopicInTree,
   syncPageInTree,
@@ -36,6 +35,7 @@ import {
 import { DocumentPane, DocumentPaneHandlers, DocumentPaneSnapshot, LoadedPage } from "./DocumentPane";
 import { ReaderRightPanel } from "./ReaderRightPanel";
 import { ReaderTabStrip } from "./ReaderTabStrip";
+import { ReaderSplitPanes } from "./ReaderSplitPanes";
 import { useReaderWorkspace } from "./useReaderWorkspace";
 import { useHotkey } from "@/hooks/useHotkeys";
 import { useCompactPortrait } from "@/hooks/useCompactPortrait";
@@ -81,7 +81,6 @@ export function ReaderWorkspace({
   >();
   const [studyEmbed, setStudyEmbed] = useState(false);
   const [clipImage, setClipImage] = useState<string | null>(null);
-  const [clipPage, setClipPage] = useState<LoadedPage | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [snapshots, setSnapshots] = useState<
     Record<string, DocumentPaneSnapshot>
@@ -482,19 +481,13 @@ export function ReaderWorkspace({
     [openStudyAIPanel]
   );
 
-  const onClipImage = useCallback((data: string, page: LoadedPage) => {
+  const onClipImage = useCallback((data: string, _page: LoadedPage) => {
     setClipImage(data);
-    setClipPage(page);
   }, []);
 
   const onReadPercent = useCallback((_pageId: string, _percent: number) => {
     /* persisted inside DocumentPane */
   }, []);
-
-  const currentTopic =
-    notebook && topicSlug
-      ? getTopicGroups(notebook).find((g) => g.slug === topicSlug)
-      : undefined;
 
   const [isNarrow, setIsNarrow] = useState(false);
   useEffect(() => {
@@ -880,121 +873,60 @@ export function ReaderWorkspace({
               </div>
 
               <div className="flex-1 flex min-h-0 overflow-hidden">
-                <div className="flex-1 flex min-h-0 overflow-hidden min-w-0">
-                {panesToRender.map((pane, idx) => {
-                  const active =
-                    pane.tabs.find((t) => t.key === pane.activeTabKey) ??
-                    pane.tabs[0];
-                  if (!active) return null;
-                  const focused = pane.id === state.focusedPaneId;
-                  return (
-                    <div
-                      key={pane.id}
-                      className={`flex flex-col min-w-0 min-h-0 overflow-hidden ${
-                        panesToRender.length > 1 ? "flex-1" : "flex-1"
-                      } ${idx > 0 ? "border-l border-[var(--border)]" : ""}`}
-                      onMouseDown={() => focusPane(pane.id)}
-                    >
-                      {panesToRender.length > 1 && (
-                        <ReaderTabStrip
-                          paneId={pane.id}
-                          tabs={pane.tabs}
-                          activeTabKey={pane.activeTabKey}
-                          focused={focused}
-                          onActivate={(key) => handleActivateTab(pane.id, key)}
-                          onClose={(key) => handleCloseTab(pane.id, key)}
-                          onFocusPane={() => focusPane(pane.id)}
-                          onDropPage={(tab) => handleOpenTab(pane.id, tab)}
-                          onReorderTabs={(fromKey, toKey, place) =>
-                            reorderTabs(pane.id, fromKey, toKey, place)
-                          }
-                        />
-                      )}
-                      <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-                        {pane.tabs.map((tab) => {
-                          const isActive = tab.key === active.key;
-                          const warm = (warmKeys[pane.id] ?? []).includes(
-                            tab.key
-                          );
-                          if (!isActive && !warm) return null;
-                          return (
-                            <div
-                              key={tab.key}
-                              className={
-                                isActive
-                                  ? "flex-1 flex flex-col min-h-0 overflow-hidden"
-                                  : "hidden"
-                              }
-                              aria-hidden={!isActive}
-                            >
-                              <DocumentPane
-                                tab={tab}
-                                paneId={pane.id}
-                                focused={focused && isActive}
-                                notebook={notebook}
-                                onMeta={(patch) =>
-                                  updateTabMeta(pane.id, tab.key, patch)
-                                }
-                                onNotebookPatch={setNotebook}
-                                onSnapshot={(snap) => {
-                                  if (!isActive) return;
-                                  setSnapshots((prev) => {
-                                    const old = prev[pane.id];
-                                    if (
-                                      old &&
-                                      old.tabKey === snap.tabKey &&
-                                      old.loading === snap.loading &&
-                                      old.editing === snap.editing &&
-                                      old.liveEdit === snap.liveEdit &&
-                                      old.readOnlyCurriculum ===
-                                        snap.readOnlyCurriculum &&
-                                      old.saving === snap.saving &&
-                                      old.htmlClip === snap.htmlClip &&
-                                      old.pageData?.id === snap.pageData?.id &&
-                                      old.pageData?.title ===
-                                        snap.pageData?.title &&
-                                      old.pageData?.completed ===
-                                        snap.pageData?.completed &&
-                                      old.pageData?.starred ===
-                                        snap.pageData?.starred &&
-                                      old.pageData?.content ===
-                                        snap.pageData?.content &&
-                                      old.scrollContainer ===
-                                        snap.scrollContainer &&
-                                      old.contentRoot === snap.contentRoot &&
-                                      old.pdfPage === snap.pdfPage &&
-                                      old.pdfNumPages === snap.pdfNumPages &&
-                                      old.highlights === snap.highlights &&
-                                      old.highlightsHydrating ===
-                                        snap.highlightsHydrating
-                                    ) {
-                                      return prev;
-                                    }
-                                    return { ...prev, [pane.id]: snap };
-                                  });
-                                }}
-                                onHandlers={(h) => {
-                                  if (isActive) {
-                                    handlersRef.current[pane.id] = h;
-                                  }
-                                }}
-                                onAskStudyAI={onAskStudyAI}
-                                workspaceStudyAIOpen={!state.studyAICollapsed}
-                                onCloseStudyAI={closeStudyAIPanel}
-                                onClipImage={onClipImage}
-                                onNavigate={onNavigate}
-                                onPageDeleted={() => handleCloseTab(pane.id, tab.key)}
-                                onDropPage={(t) => handleOpenTab(pane.id, t)}
-                                onReadPercent={onReadPercent}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-                </div>
+                <ReaderSplitPanes
+                  panes={panesToRender}
+                  focusedPaneId={state.focusedPaneId}
+                  warmKeys={warmKeys}
+                  notebook={notebook}
+                  studyAIOpen={!state.studyAICollapsed}
+                  onFocusPane={focusPane}
+                  onActivateTab={handleActivateTab}
+                  onCloseTab={handleCloseTab}
+                  onOpenTab={handleOpenTab}
+                  onReorderTabs={reorderTabs}
+                  onUpdateTabMeta={updateTabMeta}
+                  onNotebookPatch={setNotebook}
+                  onSnapshot={(paneId, snap, isActive) => {
+                    if (!isActive) return;
+                    setSnapshots((prev) => {
+                      const old = prev[paneId];
+                      if (
+                        old &&
+                        old.tabKey === snap.tabKey &&
+                        old.loading === snap.loading &&
+                        old.editing === snap.editing &&
+                        old.liveEdit === snap.liveEdit &&
+                        old.readOnlyCurriculum === snap.readOnlyCurriculum &&
+                        old.saving === snap.saving &&
+                        old.htmlClip === snap.htmlClip &&
+                        old.pageData?.id === snap.pageData?.id &&
+                        old.pageData?.title === snap.pageData?.title &&
+                        old.pageData?.completed === snap.pageData?.completed &&
+                        old.pageData?.starred === snap.pageData?.starred &&
+                        old.pageData?.content === snap.pageData?.content &&
+                        old.scrollContainer === snap.scrollContainer &&
+                        old.contentRoot === snap.contentRoot &&
+                        old.pdfPage === snap.pdfPage &&
+                        old.pdfNumPages === snap.pdfNumPages &&
+                        old.highlights === snap.highlights &&
+                        old.highlightsHydrating === snap.highlightsHydrating
+                      ) {
+                        return prev;
+                      }
+                      return { ...prev, [paneId]: snap };
+                    });
+                  }}
+                  onHandlers={(paneId, h, isActive) => {
+                    if (isActive) {
+                      handlersRef.current[paneId] = h;
+                    }
+                  }}
+                  onAskStudyAI={onAskStudyAI}
+                  onCloseStudyAI={closeStudyAIPanel}
+                  onClipImage={onClipImage}
+                  onNavigate={onNavigate}
+                  onReadPercent={onReadPercent}
+                />
               </div>
 
               {pageData && focusedHandlers && (
@@ -1075,26 +1007,10 @@ export function ReaderWorkspace({
         />
       )}
 
-      {clipImage && clipPage && (
+      {clipImage && (
         <ClipSaveModal
           imageDataUrl={clipImage}
-          notebook={notebook}
-          topic={currentTopic}
-          currentPageId={clipPage.id}
-          currentContent={clipPage.content}
-          canAppend={
-            clipPage.contentType !== "PDF" && clipPage.contentType !== "LINK"
-          }
-          onClose={() => {
-            setClipImage(null);
-            setClipPage(null);
-          }}
-          onSaved={(href) => {
-            setClipImage(null);
-            setClipPage(null);
-            if (href) router.push(href);
-            else focusedHandlers?.reloadPage();
-          }}
+          onClose={() => setClipImage(null)}
         />
       )}
     </div>

@@ -29,6 +29,7 @@ import { ShelfSelect } from "@/components/ui/ShelfSelect";
 import { ShelfTooltip } from "@/components/ShelfTooltip";
 import { shelfSelectToolbarClass } from "@/lib/ui/fieldClasses";
 import { ColorSwatch, ColorSwatchGrid, ToolPopover } from "./ToolPopover";
+import { EditorImageButton } from "./EditorImageButton";
 
 const FONTS = [
   { id: "default", label: "Default", value: "" },
@@ -70,6 +71,8 @@ interface DocToolbarProps {
   onOriginality?: () => void;
   /** Research suite controls (Docs only). */
   researchSlot?: ReactNode;
+  onInsertImage?: (file: File) => void;
+  imageBusy?: boolean;
 }
 
 export function DocToolbar({
@@ -78,6 +81,8 @@ export function DocToolbar({
   onParaphrase,
   onOriginality,
   researchSlot,
+  onInsertImage,
+  imageBusy = false,
 }: DocToolbarProps) {
   const [fontValue, setFontValue] = useState("");
   const [fontSize, setFontSize] = useState("16px");
@@ -384,6 +389,19 @@ export function DocToolbar({
           ))}
         </ColorSwatchGrid>
       </ToolPopover>
+
+      {onInsertImage ? (
+        <>
+          <ToolSep compact={compact} />
+          <ToolGroup>
+            <EditorImageButton
+              compact={compact}
+              busy={imageBusy}
+              onFile={onInsertImage}
+            />
+          </ToolGroup>
+        </>
+      ) : null}
 
       {(onParaphrase || onOriginality) && (
         <>

@@ -56,7 +56,7 @@ export function resolveLibraryMode(
   return "preloaded";
 }
 
-/** When a reader tab is open, pick Personal vs Preloaded from the URL. */
+/** Map an open reader URL to Personal vs Preloaded (callers decide when to apply). */
 export function inferLibraryModeFromHref(
   href?: string | null
 ): LibraryMode | null {

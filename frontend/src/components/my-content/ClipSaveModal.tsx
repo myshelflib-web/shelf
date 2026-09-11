@@ -1,106 +1,40 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
-import { api } from "@/lib/api";
-import { UserSubject, UserTopicGroup } from "@/types";
-import { getNotebookPages, getTopicGroups, pageHref } from "@/lib/myContentTree";
-import { peekCachedLibrary } from "@/lib/offline/library";
-import { ShelfSelect } from "@/components/ui/ShelfSelect";
-import {
-  clipTargetLabel,
-  clipTargetsFromRootPages,
-  clipTargetsFromSubject,
-  groupClipTargets,
-  isClipNotePage,
-  mergeClipTargets,
-  type ClipTarget,
-} from "@/lib/clipSaveTargets";
-
-const COLLECTION_SCOPE = "__collection__";
-
-function cachedClipTargets(): ClipTarget[] {
-  const cached = peekCachedLibrary();
-  if (!cached) return [];
-  return mergeClipTargets(
-    ...cached.subjects.map(clipTargetsFromSubject),
-    clipTargetsFromRootPages(cached.rootPages)
-  );
-}
+import { useEffect, useState } from "react";
+import { Check, Copy, Download, X } from "lucide-react";
 
 interface ClipSaveModalProps {
   imageDataUrl: string;
-  notebook?: UserSubject | null;
-  topic?: UserTopicGroup | null;
-  currentPageId: string;
-  currentContent?: string;
-  canAppend: boolean;
   onClose: () => void;
-  onSaved: (href?: string) => void;
 }
 
-export function ClipSaveModal({
-  imageDataUrl,
-  notebook,
-  topic,
-  currentPageId,
-  currentContent = "",
-  canAppend,
-  onClose,
-  onSaved,
-}: ClipSaveModalProps) {
-  const groups = useMemo(
-    () => (notebook ? getTopicGroups(notebook) : []),
-    [notebook]
-  );
-  const collectionPages = useMemo(
-    () =>
-      notebook ? getNotebookPages(notebook).filter(isClipNotePage) : [],
-    [notebook]
-  );
-  const notebookTargets = useMemo(
-    () => (notebook ? clipTargetsFromSubject(notebook) : []),
-    [notebook]
-  );
-  const [libraryTargets, setLibraryTargets] = useState(cachedClipTargets);
-  const clipPages = useMemo(
-    () => mergeClipTargets(notebookTargets, libraryTargets),
-    [notebookTargets, libraryTargets]
-  );
+function downloadDataUrl(dataUrl: string, filename: string) {
+  const a = document.createElement("a");
+  a.href = dataUrl;
+  a.download = filename;
+  a.rel = "noopener";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
 
-  const scopeOptions = useMemo(() => {
-    const opts: { id: string; label: string }[] = [];
-    if (notebook) opts.push({ id: COLLECTION_SCOPE, label: "Collection" });
-    for (const g of groups) {
-      opts.push({ id: g.id, label: g.title });
-    }
-    return opts;
-  }, [notebook, groups]);
+async function copyDataUrlToClipboard(dataUrl: string): Promise<void> {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+    await navigator.clipboard.write([
+      new ClipboardItem({ [blob.type || "image/png"]: blob }),
+    ]);
+    return;
+  }
+  throw new Error("Clipboard image copy is not supported in this browser.");
+}
 
-  const initialScope = useMemo(() => {
-    if (topic?.id) return topic.id;
-    if (collectionPages.some((p) => p.id === currentPageId)) {
-      return COLLECTION_SCOPE;
-    }
-    if (groups[0]?.id) return groups[0].id;
-    if (notebook) return COLLECTION_SCOPE;
-    return "";
-  }, [topic, collectionPages, groups, currentPageId, notebook]);
-
-  const [title, setTitle] = useState("Clip");
-  const [mode, setMode] = useState<"new" | "append">(() =>
-    canAppend || notebookTargets.length > 0 || cachedClipTargets().length > 0
-      ? "append"
-      : "new"
-  );
-  const [scopeId, setScopeId] = useState(initialScope);
-  const [appendId, setAppendId] = useState("");
-  const [busy, setBusy] = useState(false);
+/** Snapshot preview with download + copy only (no library save). */
+export function ClipSaveModal({ imageDataUrl, onClose }: ClipSaveModalProps) {
+  const [busy, setBusy] = useState<"download" | "copy" | null>(null);
+  const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    setLibraryTargets(cachedClipTargets());
-  }, []);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -111,94 +45,36 @@ export function ClipSaveModal({
   }, [onClose]);
 
   useEffect(() => {
-    if (appendId && clipPages.some((p) => p.id === appendId)) return;
-    if (canAppend) {
-      setAppendId(currentPageId);
-      return;
-    }
-    setAppendId(clipPages[0]?.id ?? "");
-  }, [appendId, canAppend, clipPages, currentPageId]);
+    if (!copied) return;
+    const t = window.setTimeout(() => setCopied(false), 1600);
+    return () => window.clearTimeout(t);
+  }, [copied]);
 
-  const grouped = useMemo(() => groupClipTargets(clipPages), [clipPages]);
-  const hasExisting = clipPages.length > 0 || canAppend;
-  const imgHtml = `<p><img src="${imageDataUrl}" alt="${title.replace(/"/g, "")}" /></p>`;
-
-  const save = async () => {
-    setBusy(true);
+  const download = () => {
     setError("");
+    setBusy("download");
     try {
-      if (mode === "append") {
-        const id = appendId || (canAppend ? currentPageId : "");
-        if (!id) throw new Error("Choose a note page to add to.");
-        if (id === currentPageId && canAppend) {
-          await api.myContent.updateContent(
-            currentPageId,
-            `${currentContent}${imgHtml}`
-          );
-          onSaved();
-          onClose();
-          return;
-        }
-        const { page } = await api.myContent.getPageById(id);
-        if (page.contentType === "PDF" || page.contentType === "LINK") {
-          throw new Error("Clips can only be added to note pages.");
-        }
-        await api.myContent.updateContent(
-          page.id,
-          `${page.content ?? ""}${imgHtml}`
-        );
-        onSaved(
-          pageHref(
-            page.notebook?.slug ?? null,
-            page.topic?.slug ?? null,
-            page.slug
-          )
-        );
-        onClose();
-        return;
-      }
-
-      const body = {
-        title: title.trim() || "Clip",
-        htmlContent: `<h2>${title.trim() || "Clip"}</h2>${imgHtml}`,
-      };
-
-      if (notebook && scopeId && scopeId !== COLLECTION_SCOPE) {
-        const group =
-          groups.find((g) => g.id === scopeId) ?? topic ?? groups[0];
-        if (group) {
-          const { page } = await api.myContent.createPage(
-            notebook.id,
-            group.id,
-            body
-          );
-          onSaved(pageHref(notebook.slug, group.slug, page.slug));
-          onClose();
-          return;
-        }
-      }
-
-      if (notebook) {
-        const { page } = await api.myContent.createNotebookPage(
-          notebook.id,
-          body
-        );
-        onSaved(pageHref(notebook.slug, null, page.slug));
-        onClose();
-        return;
-      }
-
-      const { page } = await api.myContent.createRootPage(body);
-      onSaved(pageHref(null, null, page.slug));
-      onClose();
+      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+      downloadDataUrl(imageDataUrl, `shelf-clip-${stamp}.png`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save clip");
+      setError(err instanceof Error ? err.message : "Could not download clip");
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
-  const showScopePicker = scopeOptions.length > 0;
+  const copy = async () => {
+    setError("");
+    setBusy("copy");
+    try {
+      await copyDataUrlToClipboard(imageDataUrl);
+      setCopied(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not copy clip");
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
@@ -210,10 +86,13 @@ export function ClipSaveModal({
       />
       <div
         role="dialog"
+        aria-labelledby="clip-modal-title"
         className="relative w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] shadow-2xl p-5"
       >
         <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold">Save clip</h2>
+          <h2 id="clip-modal-title" className="font-semibold">
+            Clip
+          </h2>
           <button type="button" onClick={onClose} className="p-1.5 rounded-lg">
             <X className="w-4 h-4" />
           </button>
@@ -223,94 +102,33 @@ export function ClipSaveModal({
         <img
           src={imageDataUrl}
           alt="Clip preview"
-          className="w-full max-h-40 object-contain rounded-lg border border-[var(--border)] mb-3 bg-[var(--bg-secondary)]"
+          className="w-full max-h-48 object-contain rounded-lg border border-[var(--border)] mb-4 bg-[var(--bg-secondary)]"
         />
-        <div className="flex gap-2 mb-3">
+        {error ? <p className="text-xs text-red-400 mb-3">{error}</p> : null}
+        <div className="flex gap-2">
           <button
             type="button"
-            className={`flex-1 py-2 rounded-lg text-sm border ${mode === "new" ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]" : "border-[var(--border)]"}`}
-            onClick={() => setMode("new")}
+            disabled={busy !== null}
+            className="btn-primary flex-1 inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+            onClick={download}
           >
-            New file
+            <Download className="w-4 h-4" />
+            {busy === "download" ? "Downloading…" : "Download"}
           </button>
           <button
             type="button"
-            className={`flex-1 py-2 rounded-lg text-sm border ${mode === "append" ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent-light)]" : "border-[var(--border)]"}`}
-            onClick={() => setMode("append")}
+            disabled={busy !== null}
+            className="btn-secondary flex-1 inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+            onClick={() => void copy()}
           >
-            Existing file
+            {copied ? (
+              <Check className="w-4 h-4 text-[var(--accent)]" />
+            ) : (
+              <Copy className="w-4 h-4" />
+            )}
+            {busy === "copy" ? "Copying…" : copied ? "Copied" : "Copy"}
           </button>
         </div>
-        {mode === "new" ? (
-          <>
-            {showScopePicker ? (
-              <>
-                <label className="block text-xs text-[var(--text-muted)] mb-1">
-                  {scopeOptions.length > 1 ? "Folder" : "Location"}
-                </label>
-                <ShelfSelect
-                  value={scopeId}
-                  options={scopeOptions.map((opt) => ({
-                    value: opt.id,
-                    label: opt.label,
-                  }))}
-                  className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
-                  aria-label={scopeOptions.length > 1 ? "Folder" : "Location"}
-                  onChange={setScopeId}
-                />
-              </>
-            ) : null}
-            <label className="block text-xs text-[var(--text-muted)] mb-1">
-              New file title
-            </label>
-            <input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="File title"
-              className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
-            />
-          </>
-        ) : hasExisting ? (
-          <>
-            <label className="block text-xs text-[var(--text-muted)] mb-1">
-              File
-            </label>
-            <ShelfSelect
-              value={appendId}
-              options={
-                canAppend && !clipPages.some((p) => p.id === currentPageId)
-                  ? [{ value: currentPageId, label: "This file" }]
-                  : undefined
-              }
-              groups={grouped.map((g) => ({
-                label: g.label,
-                options: g.pages.map((p) => ({
-                  value: p.id,
-                  label: `${clipTargetLabel(p)}${p.id === currentPageId ? " (this file)" : ""}`,
-                })),
-              }))}
-              className="w-full px-3 py-2 mb-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border)] text-sm"
-              aria-label="File"
-              onChange={setAppendId}
-            />
-          </>
-        ) : (
-          <p className="text-sm text-[var(--text-muted)] mb-2">
-            No note files yet. Use New file to create one, then clips can be
-            added to it.
-          </p>
-        )}
-        {error && <p className="text-xs text-red-400 mb-2">{error}</p>}
-        <button
-          type="button"
-          disabled={
-            busy || (mode === "append" && !hasExisting && !canAppend)
-          }
-          className="btn-primary"
-          onClick={() => void save()}
-        >
-          {busy ? "Saving…" : "Save clip"}
-        </button>
       </div>
     </div>
   );

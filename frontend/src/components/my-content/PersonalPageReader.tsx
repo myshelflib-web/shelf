@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { SharedLinkSignInGate } from "@/components/my-content/SharedLinkSignInGate";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
+import { PreloadedBrowseProvider } from "@/components/learn/PreloadedBrowseContext";
 
 export type { PersonalPageReaderScope };
 
@@ -48,5 +49,9 @@ export function PersonalPageReader({
     }
   }
 
-  return <ReaderWorkspace scope={scope} />;
+  return (
+    <PreloadedBrowseProvider>
+      <ReaderWorkspace scope={scope} />
+    </PreloadedBrowseProvider>
+  );
 }

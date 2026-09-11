@@ -1,0 +1,50 @@
+{
+	"appId": "com.myshelflib.shelf",
+	"appName": "Shelf",
+	"webDir": "www",
+	"server": {
+		"url": "http://localhost:3000",
+		"cleartext": true,
+		"allowNavigation": [
+			"localhost",
+			"127.0.0.1",
+			"10.0.2.2",
+			"*.myshelflib.com",
+			"myshelflib.com",
+			"www.myshelflib.com",
+			"staging.myshelflib.com"
+		]
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchAutoHide": true,
+			"launchShowDuration": 400,
+			"backgroundColor": "#0c0c0d",
+			"showSpinner": false
+		},
+		"StatusBar": {
+			"style": "DARK",
+			"backgroundColor": "#0c0c0d"
+		},
+		"Keyboard": {
+			"resize": "body",
+			"resizeOnFullScreen": true
+		}
+	},
+	"ios": {
+		"contentInset": "automatic",
+		"preferredContentMode": "mobile"
+	},
+	"android": {
+		"allowMixedContent": true
+	},
+	"packageClassList": [
+		"AppPlugin",
+		"CAPBrowserPlugin",
+		"HapticsPlugin",
+		"KeyboardPlugin",
+		"SharePlugin",
+		"SplashScreenPlugin",
+		"StatusBarPlugin"
+	]
+}

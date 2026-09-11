@@ -4,6 +4,7 @@ import { UserSubject, UserTopicGroup } from "@/types";
 import {
   getNotebookPages,
   getTopicGroups,
+  isExplorerPageActive,
   pageHref,
 } from "@/lib/myContentTree";
 import {
@@ -265,11 +266,13 @@ export function ExplorerCollectionBlock({
           )}
           {loose.map((page) => {
             const href = pageHref(nb.slug, null, page.slug);
-            const isActive =
-              currentHref === href ||
-              (notebookSlug === nb.slug &&
+            const isActive = isExplorerPageActive(
+              href,
+              currentHref,
+              notebookSlug === nb.slug &&
                 !currentTopicSlug &&
-                currentPageSlug === page.slug);
+                currentPageSlug === page.slug
+            );
             return (
               <ExplorerPageRow
                 key={page.id}

@@ -81,16 +81,22 @@ export function PreloadedLibrarySidebar({
   const activeSubject =
     folderBrowse?.path.subjectSlug ?? fromHref.subjectSlug;
   const activeTopic = folderBrowse?.path.topicSlug ?? fromHref.topicSlug;
-  const tabScope =
+  const openLearnScope =
     openFiles?.activeTab && isCurriculumScope(openFiles.activeTab.scope)
       ? openFiles.activeTab.scope
-      : null;
+      : fromHref.articleSlug && fromHref.subjectSlug && fromHref.topicSlug
+        ? {
+            subjectSlug: fromHref.subjectSlug,
+            topicSlug: fromHref.topicSlug,
+            articleSlug: fromHref.articleSlug,
+          }
+        : null;
   const activeArticle =
-    tabScope &&
-    tabScope.subjectSlug === activeSubject &&
-    tabScope.topicSlug === activeTopic
-      ? tabScope.articleSlug
-      : folderBrowse?.path.articleSlug ?? fromHref.articleSlug;
+    openLearnScope &&
+    openLearnScope.subjectSlug === activeSubject &&
+    openLearnScope.topicSlug === activeTopic
+      ? openLearnScope.articleSlug
+      : folderBrowse?.path.articleSlug;
   const explorer = preloadedExplorerMode({ workspaceMode, activeSubject });
   const isReaderCollection = explorer === "collection";
   const isScopedCollection = isReaderCollection;

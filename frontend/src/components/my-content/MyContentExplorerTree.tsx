@@ -1,7 +1,7 @@
 "use client";
 
 import { UserSubject, UserPageSummary, UserTopicGroup } from "@/types";
-import { pageHref } from "@/lib/myContentTree";
+import { isExplorerPageActive, pageHref } from "@/lib/myContentTree";
 import {
   ChevronLeft,
   ChevronRight,
@@ -215,9 +215,11 @@ export function MyContentExplorerTree(props: MyContentExplorerTreeProps) {
           </div>
           {visibleRootPages.map((page) => {
             const href = pageHref(null, null, page.slug);
-            const isActive =
-              currentHref === href ||
-              (!currentHref && currentPageSlug === page.slug);
+            const isActive = isExplorerPageActive(
+              href,
+              currentHref,
+              currentPageSlug === page.slug
+            );
             return (
               <ExplorerPageRow
                 key={page.id}
