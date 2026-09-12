@@ -125,125 +125,120 @@
   }
 }
 
-/* Feature grid on landing — animated category showcase */
+/* Feature marquee on landing — continuous moving cards */
 .landing-features-section {
   position: relative;
-  padding: 88px 64px;
+  padding: 88px 0 72px;
   border-top: 1px solid var(--border-subtle);
+  overflow: hidden;
 }
 
-.landing-features-section .landing-value-title {
-  margin-bottom: 8px;
+.landing-features-marquee-section .landing-features-head {
+  max-width: 40rem;
+  margin: 0 auto 36px;
+  padding: 0 64px;
+  text-align: center;
 }
 
-.landing-feature-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 28px;
+.landing-features-marquee-section .landing-kicker {
+  justify-content: center;
 }
 
-.landing-feature-tab {
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-secondary);
-  border-radius: 999px;
-  padding: 8px 14px;
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease;
+.landing-features-marquee-section .landing-value-title {
+  margin-bottom: 12px;
 }
 
-.landing-feature-tab:hover {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
-  color: var(--text-primary);
-}
-
-.landing-feature-tab-active {
-  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--text-primary);
-}
-
-.landing-feature-stage {
-  position: relative;
-  margin-top: 20px;
-  min-height: 220px;
-}
-
-.landing-feature-panel {
-  display: none;
-}
-
-.landing-feature-panel-active {
-  display: block;
-}
-
-.landing-feature-panel-blurb {
-  font-size: 13px;
+.landing-features-lead {
+  margin: 0 auto;
+  max-width: 36rem;
+  font-size: 14px;
   color: var(--text-muted);
-  margin-bottom: 14px;
-  line-height: 1.5;
+  line-height: 1.65;
 }
 
-.landing-feature-card-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
-  align-items: stretch;
-}
-
-.landing-feature-card {
+.landing-feature-marquee {
   display: flex;
   flex-direction: column;
-  background: transparent;
+  gap: 14px;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 6%,
+    #000 94%,
+    transparent
+  );
+}
+
+.landing-feature-marquee-row {
+  overflow: hidden;
+  width: 100%;
+}
+
+.landing-feature-marquee-track {
+  display: flex;
+  align-items: stretch;
+  width: max-content;
+  gap: 14px;
+  padding-inline: 14px;
+  will-change: transform;
+}
+
+.landing-feature-marquee-left .landing-feature-marquee-track {
+  animation: landing-feature-marquee-left var(--marquee-duration, 48s) linear
+    infinite;
+}
+
+.landing-feature-marquee-right .landing-feature-marquee-track {
+  animation: landing-feature-marquee-right var(--marquee-duration, 56s) linear
+    infinite;
+}
+
+.landing-feature-marquee:hover .landing-feature-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes landing-feature-marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes landing-feature-marquee-right {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.landing-feature-marquee-card {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 280px;
+  width: 280px;
+  height: 176px;
+  background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 20px;
+  padding: 18px;
   box-shadow: none;
-  height: 100%;
-  min-height: 168px;
   transition:
-    transform 0.22s ease,
     border-color 0.18s ease,
     box-shadow 0.22s ease,
     background 0.18s ease;
 }
 
-.landing-feature-card-animated {
-  animation: landing-feature-card-in 0.45s ease both;
-}
-
-@keyframes landing-feature-card-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.landing-feature-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(38, 35, 29, 0.07);
+.landing-feature-marquee-card:hover {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
-  background: color-mix(in srgb, var(--bg-elevated) 70%, transparent);
+  background: color-mix(in srgb, var(--bg-elevated) 85%, transparent);
+  box-shadow: 0 12px 28px rgba(38, 35, 29, 0.07);
 }
 
-.landing-feature-card:focus-within {
-  outline: none;
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  box-shadow: 0 0 0 3px var(--ring);
-}
-
-.landing-feature-card svg {
+.landing-feature-marquee-card svg {
   width: 16px;
   height: 16px;
   color: var(--accent);
@@ -251,7 +246,7 @@
   flex-shrink: 0;
 }
 
-.landing-feature-card h3 {
+.landing-feature-marquee-card h3 {
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 6px;
@@ -259,7 +254,7 @@
   flex-shrink: 0;
 }
 
-.landing-feature-card p {
+.landing-feature-marquee-card p {
   font-size: 13px;
   color: var(--text-muted);
   line-height: 1.55;
@@ -270,9 +265,27 @@
   flex: 1;
 }
 
-.landing-feature-step-nav {
-  position: static;
-  margin-top: 22px;
+.landing-feature-static-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  padding: 0 64px;
+  margin-top: 8px;
+}
+
+.landing-feature-static-grid .landing-feature-marquee-card {
+  width: 100%;
+  flex: none;
+}
+
+.landing-feature-card {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: none;
+  min-height: 0;
+  height: 100%;
 }
 
 .landing-feature-seo-list {
