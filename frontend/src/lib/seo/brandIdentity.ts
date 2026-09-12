@@ -135,19 +135,19 @@ export const BRAND_KEYWORDS: string[] = Array.from(
 );
 
 export const BRAND_TAGLINE =
-  "Free AI study workspace: chat with PDF, AI tutor, summarizer, quizzes, Docs, and planner — all-in-one like Notion + NotebookLM + Obsidian.";
+  "Free AI study workspace: chat with PDF, AI tutor, summaries, quizzes, Docs, and a planner — in one place.";
 
 export const BRAND_HOME_TITLE =
   "Chat with PDF, AI Tutor & Study Apps — All-in-One Workspace | Shelf";
 
 export const BRAND_HOME_DESCRIPTION =
-  "Shelf (myshelflib) is a free AI study tool for students and teachers: chat with PDF, AI tutor from your notes, flashcards & quizzes, Docs, and planner — Premium from ~₹149/mo.";
+  "Shelf (myshelflib) is a free AI study tool for students and teachers: chat with PDF, AI tutor from your notes, flashcards and quizzes, Docs, and a planner — Premium from ~₹149/mo.";
 
 export const BRAND_FAQS = [
   {
     question: "What is Shelf / myshelflib?",
     answer:
-      "Shelf (myshelflib.com) is an all-in-one study workspace: personal PDF library, typed Docs and notebooks, Study AI (an LLM grounded in your uploads), exam-style quizzes, Share Shelf, and a planner — like Notion, NotebookLM, Obsidian, and Docs combined for study.",
+      "Shelf (myshelflib.com) is an all-in-one study workspace: personal PDF library, typed Docs and notebooks, Study AI (an LLM grounded in your uploads), exam-style quizzes, Share Shelf, and a planner.",
   },
   {
     question: "Is Shelf a student study tool?",

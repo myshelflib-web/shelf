@@ -66,10 +66,10 @@ export function HomePageClient() {
                 <span className="landing-em">In one Shelf.</span>
               </h1>
               <p className="landing-lead">
-                Chat with PDF, AI tutor from your notes, summaries &amp; mind maps,
-                flashcards and quizzes, Docs, and a planner — the study stack
-                students search for (NotebookLM + Notion + Obsidian) in one free
-                workspace. Teachers prepare tests from the same library.
+                Chat with PDF, ask an AI tutor from your notes, get summaries and
+                mind maps, practice with flashcards and quizzes, write Docs, and
+                plan revision — all in one free workspace. Teachers prepare tests
+                from the same library.
               </p>
               <div className="landing-hero-actions">
                 <Link href="/login" className="landing-btn landing-btn-primary">

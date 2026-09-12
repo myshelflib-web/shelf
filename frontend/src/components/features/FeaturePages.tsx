@@ -121,8 +121,8 @@ export function FeaturesHub() {
             </h1>
             <p className="text-[var(--text-secondary)] leading-relaxed max-w-2xl mx-auto">
               Granular guides to PDF libraries, Study AI, quizzes, teacher test
-              prep, comparisons vs NotebookLM / Notion / Obsidian, and more —
-              for students, teachers, and professionals.
+              prep, Docs, planner, and more — for students, teachers, and
+              professionals.
             </p>
           </RevealOnScroll>
         </section>

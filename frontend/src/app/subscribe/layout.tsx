@@ -4,7 +4,7 @@ import { buildPageMetadata } from "@/lib/seo/metadata";
 export const metadata: Metadata = buildPageMetadata({
   title: "Pricing — Free Study AI & Quiz, Premium from ₹149/mo | Shelf",
   description:
-    "Start free with library, Study AI, and quizzes. Upgrade to Premium (~₹149/mo or ~₹1299/yr, UPI) for more storage and deeper AI — better stack value than paying for NotebookLM + Notion + quiz tools separately.",
+    "Start free with library, Study AI, and quizzes. Upgrade to Premium (~₹149/mo or ~₹1299/yr, UPI) for more storage and deeper AI when Shelf becomes your daily study home.";
   path: "/subscribe",
   keywords: [
     "Shelf Premium",

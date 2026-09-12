@@ -378,7 +378,7 @@ export const HOME_TITLE =
   "Chat with PDF, AI Tutor & Study Apps — All-in-One Workspace | Shelf";
 
 export const HOME_DESCRIPTION =
-  "Shelf is a free AI study workspace: chat with PDF, AI tutor from your notes, summarizer, flashcards & quizzes, Docs, and planner — NotebookLM + Notion + Obsidian-style tools in one app (myshelflib).";
+  "Shelf is a free AI study workspace: chat with PDF, AI tutor from your notes, summaries and mind maps, flashcards and quizzes, Docs, and a planner — all in one app (myshelflib).";
 
 /** Homepage meta keywords — brand discovery (incl. misspellings) + product. */
 export const HOME_PAGE_KEYWORDS: string[] = [

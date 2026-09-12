@@ -9,7 +9,7 @@ export const INTENT_CLUSTERS_STUDY_TOOLS: IntentCluster[] = [
     id: "all-in-one-study-workspace",
     label: "All-in-one study workspace (notes, PDFs, LLM, docs)",
     answer:
-      "Shelf combines a personal library, typed Docs, sketch notebooks, PDF reader, Study AI (LLM), quizzes, and a planner in one workspace — the Notion + NotebookLM + Obsidian + Docs combo students and teachers search for.",
+      "Shelf combines a personal library, typed Docs, sketch notebooks, PDF reader, Study AI (LLM), quizzes, and a planner in one workspace for students and teachers.",
     queries: [
       "all in one study app",
       "all in one study workspace",

@@ -6,7 +6,7 @@ export const LIBRARY_FEATURES: ShelfFeature[] = [
     category: "library",
     title: "All-in-One Study Workspace — Notes, PDFs, LLM, Docs & Quizzes | Shelf",
     metaDescription:
-      "Shelf combines Notion-style Docs, NotebookLM-style Study AI, Obsidian-style notes, and a PDF library with quizzes and a planner — one study workspace for students and teachers.",
+      "One study workspace for students and teachers: PDF library, Docs and notebooks, Study AI, quizzes, and a planner — store your material and study without juggling five apps.",
     keywords: [
       "all in one study workspace",
       "all in one study app",
@@ -15,9 +15,9 @@ export const LIBRARY_FEATURES: ShelfFeature[] = [
       "unified study workspace",
       "second brain for students",
     ],
-    headline: "Notion + NotebookLM + Obsidian + Docs — in one Shelf",
+    headline: "Notes, PDFs, AI, quizzes, and a planner — in one Shelf",
     subhead:
-      "Stop bouncing between a notes app, a PDF folder, a chatbot, and a quiz site. Shelf is the study workspace that stores your material, lets you write Docs, ask an LLM grounded in your library, practice with quizzes, and plan revision.",
+      "Stop bouncing between a notes app, a PDF folder, a chatbot, and a quiz site. Shelf stores your material, lets you write Docs, ask Study AI grounded in your library, practice with quizzes, and plan revision.",
     bullets: [
       "Personal PDF library with highlights, tabs, and split view",
       "Typed Docs and sketch notebooks beside your sources",
@@ -25,7 +25,7 @@ export const LIBRARY_FEATURES: ShelfFeature[] = [
       "Exam-style quizzes and a revision planner in the same account",
     ],
     paragraphs: [
-      "Searchers looking for “the Notion and NotebookLM combo” or “Obsidian with PDFs and AI” usually need one product that does filing, reading, writing, and grounded Q&A. That is Shelf’s design center.",
+      "Shelf’s design center is one product for filing, reading, writing, and grounded Q&A — so your notes and PDFs stay with the AI and quizzes you use to revise.",
       "Teachers prepare lesson PDFs and tests; students ask Study AI about class notes and sit practice papers — without exporting files into five tools.",
     ],
     relatedBlogSlug: "all-in-one-study-workspace",
