@@ -7,6 +7,10 @@ import { BRAND_KEYWORDS } from "./brandIdentity";
 export const SEO_KEYWORDS = {
   product: [
     "personal study library",
+    "all in one study workspace",
+    "store notes and PDFs",
+    "ask LLM about PDFs",
+    "student study tool",
     "PDF reader with highlights",
     "research paper writing app",
     "APA MLA citation tool",
@@ -21,6 +25,8 @@ export const SEO_KEYWORDS = {
   ],
   audiences: [
     "college study notes app",
+    "student study tool",
+    "teacher tool for preparing tests",
     "law student PDF library",
     "medical student notes",
     "research paper reader",
@@ -34,6 +40,13 @@ export const SEO_KEYWORDS = {
   longTail: [
     "organize coaching PDFs",
     "study AI from your own notes",
+    "ask LLM about my notes",
+    "student ask question to LLM",
+    "store all my notes and PDFs",
+    "LLM grounded in my library",
+    "Notion NotebookLM Obsidian alternative",
+    "teacher quiz maker from notes",
+    "homework help from my notes",
     "offline PDF study app",
     "split screen PDF reader",
     "revision calendar for students",
@@ -53,24 +66,24 @@ export const SEO_KEYWORDS = {
 
 /** Default meta keywords (≤20, product-first). */
 export const DEFAULT_KEYWORDS: string[] = [
-  "personal study library",
-  "PDF reader with highlights",
-  "research paper writing",
-  "APA MLA citations",
-  "Study AI",
-  "AI study assistant",
-  "PDF annotation",
-  "organize PDF notes",
-  "study planner app",
   "chat with PDF",
-  "digital notebook",
-  "mind map from PDF",
-  "exam preparation",
+  "AI tutor for students",
+  "AI PDF summarizer",
+  "all in one study workspace",
+  "NotebookLM alternatives",
+  "best study apps for students",
+  "free AI study tools",
+  "student study tool",
+  "Study AI",
+  "ask LLM about PDFs",
+  "AI flashcards from PDF",
+  "teacher tool for preparing tests",
+  "personal study library",
+  "Quizlet alternative",
+  "study planner app",
   "exam quiz",
-  "revision calendar",
-  "offline PDF reader",
-  "college notes app",
-  "private study workspace",
+  "Obsidian alternative students",
+  "affordable AI study app India",
 ];
 
 /** Per-blog-slug extra SEO tags merged at read time. */
@@ -89,11 +102,60 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "chat with PDF",
     "AI study assistant",
     "ask AI from PDF notes",
+    "ask LLM about PDFs",
   ],
   "study-ai-library-wide-chat": [
     "AI library search",
     "PDF question answering",
     "cross document AI chat",
+    "ask LLM across notes",
+  ],
+  "store-notes-pdfs-ask-llm": [
+    "store notes and PDFs",
+    "ask LLM about my notes",
+    "PDF notes library with AI",
+    "LLM grounded in uploads",
+  ],
+  "shelf-vs-notebooklm": [
+    "NotebookLM alternative",
+    "Shelf vs NotebookLM",
+    "ask AI about PDFs",
+  ],
+  "shelf-vs-chatpdf": [
+    "ChatPDF alternative",
+    "Shelf vs ChatPDF",
+    "chat with multiple PDFs",
+  ],
+  "shelf-vs-notion-ai": [
+    "Notion AI alternative for PDFs",
+    "Shelf vs Notion AI",
+    "PDF library with LLM",
+  ],
+  "shelf-vs-obsidian": [
+    "Obsidian alternative for students",
+    "Shelf vs Obsidian",
+    "notes app with PDF AI",
+  ],
+  "all-in-one-study-workspace": [
+    "all in one study app",
+    "Notion NotebookLM Obsidian alternative",
+    "unified study workspace",
+  ],
+  "teacher-tool-prepare-tests": [
+    "teacher tool for preparing tests",
+    "teacher quiz maker from notes",
+    "create quiz from lesson PDF",
+  ],
+  "student-study-tool-ask-llm": [
+    "student study tool",
+    "student ask question to LLM",
+    "AI tutor for my notes",
+  ],
+  "shelf-vs-alternatives-features-pricing": [
+    "Shelf vs alternatives",
+    "best study app pricing India",
+    "NotebookLM Notion Obsidian comparison",
+    "affordable AI study app",
   ],
   "study-ai-stop-queue-diagrams": [
     "stop AI generation",
@@ -275,6 +337,7 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
     "AI grounded in your notes",
     "chat with your PDFs vs ChatGPT",
     "study AI from uploads only",
+    "ask LLM vs ChatGPT for notes",
   ],
   "dark-mode-focused-reading": [
     "dark mode PDF reader",
@@ -312,45 +375,47 @@ export const BLOG_SEO_KEYWORDS: Record<string, string[]> = {
 };
 
 export const HOME_TITLE =
-  "Shelf (myshelflib) — Personal Study Library | PDFs, Study AI & Planner";
+  "Chat with PDF, AI Tutor & Study Apps — All-in-One Workspace | Shelf";
 
 export const HOME_DESCRIPTION =
-  "Shelf — also called My Shelf Lib / myshelflib — is a personal study library: upload PDFs and YouTube lectures, highlight as you read, ask Study AI from your notes, Share Shelf with classmates, and plan on one calendar.";
+  "Shelf is a free AI study workspace: chat with PDF, AI tutor from your notes, summaries and mind maps, flashcards and quizzes, Docs, and a planner — all in one app (myshelflib).";
 
 /** Homepage meta keywords — brand discovery (incl. misspellings) + product. */
 export const HOME_PAGE_KEYWORDS: string[] = [
   ...BRAND_KEYWORDS,
   ...DEFAULT_KEYWORDS,
-  "share shelf",
-  "chat with PDF",
-  "YouTube lecture notes",
-  "Telegram PDF import and send",
-  "exam quiz from notes",
-  "study planner app",
-  "teacher resources for lesson notes",
+  "chat with PDF AI free",
+  "NotebookLM alternatives",
+  "AI flashcards from PDF",
+  "best study apps 2026",
+  "free AI for students",
+  "student ask question to LLM",
+  "teacher tool for preparing tests",
+  "store all my notes and PDFs",
+  "GoodNotes alternative web",
+  "RemNote alternative",
 ];
 
 export const FEATURES_HUB_TITLE =
-  "Shelf Features — PDF Library, Research Docs, Study AI, Quiz & More";
+  "Shelf Features — All-in-One Study Tool for Students & Teachers";
 
 export const FEATURES_HUB_DESCRIPTION =
-  "Explore every Shelf feature: personal PDF library, research Doc writing with citations, Share Shelf, YouTube lectures, highlights, Study AI, paraphrase & originality, exam quizzes, Telegram, Spotify, teacher lesson prep, planner, and offline PWA.";
+  "Explore Shelf’s all-in-one study workspace: PDF library, Docs, Study AI (LLM), teacher test prep, student quizzes, Share Shelf, YouTube, planner, and offline PWA.";
 
 export const FEATURES_HUB_KEYWORDS = [
   "Shelf features",
+  "all in one study workspace",
+  "student study tool",
+  "teacher tool for preparing tests",
+  "store notes and PDFs",
+  "ask LLM about PDFs",
   "personal study library",
-  "research doc writing",
-  "APA MLA citation tool",
   "share shelf",
   "chat with PDF",
-  "PDF reader with highlights",
   "Study AI features",
-  "paraphrase and originality",
   "exam quiz from notes",
   "study planner app",
   "YouTube lecture notes",
-  "Telegram PDF import",
-  "teacher lesson resources",
   "offline study app",
 ];
 
@@ -358,23 +423,23 @@ export const LEARN_DESCRIPTION =
   "Browse free curriculum packs for GATE, UPSC, State PCS, Judiciary, CA, and NEET PG — official PDFs, previous papers, bare acts, and open textbooks. Open without signing up; sign in for highlights and a private library.";
 
 export const BLOG_INDEX_DESCRIPTION =
-  "Long-form guides to Shelf: personal PDF libraries, research Doc writing, YouTube lectures, highlights, Study AI, paraphrase & originality, Share Shelf, planner, reader workspace, and workflows for students, teachers, researchers, and professionals.";
+  "High-traffic guides: NotebookLM alternatives, chat with PDF, AI tutor, PDF summarizer, flashcards, free AI study tools, best study apps, RemNote/Quizlet alternatives, and Shelf vs competitors.";
 
 export const QUIZ_TITLE =
-  "Exam-Style Quiz from Your Notes — MCQ, Written & PYQ Practice | Shelf";
+  "Teacher & Student Quizzes from Your Notes — MCQ, Written & PYQ | Shelf";
 
 export const QUIZ_DESCRIPTION =
-  "Sit exam-style MCQs, written answers, and photo working from your Shelf library, uploads, or PYQ-style banks. Proctored or practice sittings, then a per-quiz analysis board.";
+  "Prepare tests or practice as a student: exam-style MCQs, written answers, and photo working from Shelf library notes. Teachers generate papers from lesson PDFs; students revise with analysis.";
 
 export const QUIZ_KEYWORDS = [
   "exam quiz app",
+  "teacher tool for preparing tests",
+  "teacher quiz maker from notes",
   "MCQ from PDF",
+  "student study quiz",
   "PYQ practice quiz",
   "written answer quiz",
   "exam-style quiz from notes",
-  "syllabus mapped quiz",
-  "UPSC MCQ practice",
-  "GATE numerical quiz",
+  "create quiz from lesson PDF",
   "study quiz from PDFs",
-  "photo of working quiz",
 ];

@@ -219,7 +219,7 @@ export function TelegramSignInButton({
         ref={widgetHostRef}
         className="absolute left-0 top-0 z-10 h-10 origin-top-left overflow-hidden"
         style={{
-          opacity: widgetReady && !loading ? 0.02 : 0,
+          opacity: 0,
           pointerEvents: widgetReady && !loading ? "auto" : "none",
           transform:
             widgetReady && widgetScale > 0 ? `scale(${widgetScale})` : undefined,

@@ -6,6 +6,7 @@ import {
   PRODUCT_INTENT_CLUSTERS,
   type IntentCluster,
 } from "@/lib/seo/intentCoverage";
+import { iconForIntentCluster } from "@/lib/seo/intentClusterIcons";
 
 /** Crawlable map of product intents — exam curriculum stays on /learn. */
 export function IntentCoverageSection({
@@ -34,23 +35,31 @@ export function IntentCoverageSection({
         </p>
       </RevealOnScroll>
       <ul className="grid gap-3 sm:grid-cols-2">
-        {clusters.map((cluster, i) => (
-          <li key={cluster.id} className="list-none">
-            <RevealOnScroll delay={Math.min(i * 20, 200)}>
-              <Link
-                href={cluster.path}
-                className="block h-full p-4 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)] transition"
-              >
-                <span className="font-semibold text-sm text-[var(--text-primary)]">
-                  {cluster.label}
-                </span>
-                <span className="mt-1.5 block text-xs text-[var(--text-muted)] leading-relaxed line-clamp-2">
-                  {cluster.queries.slice(0, 3).join(" · ")}
-                </span>
-              </Link>
-            </RevealOnScroll>
-          </li>
-        ))}
+        {clusters.map((cluster, i) => {
+          const Icon = iconForIntentCluster(cluster.id);
+          return (
+            <li key={cluster.id} className="list-none">
+              <RevealOnScroll delay={Math.min(i * 20, 200)}>
+                <Link
+                  href={cluster.path}
+                  className="flex gap-3 h-full p-4 rounded-[10px] border border-[var(--border)] bg-[var(--bg-secondary)] hover:border-[var(--accent)] transition"
+                >
+                  <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-subtle)] text-[var(--accent)]">
+                    <Icon className="size-4" aria-hidden />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="font-semibold text-sm text-[var(--text-primary)] block">
+                      {cluster.label}
+                    </span>
+                    <span className="mt-1.5 block text-xs text-[var(--text-muted)] leading-relaxed line-clamp-2">
+                      {cluster.queries.slice(0, 3).join(" · ")}
+                    </span>
+                  </span>
+                </Link>
+              </RevealOnScroll>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );

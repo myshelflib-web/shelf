@@ -49,16 +49,20 @@ export function intentFaqs(
 
 /** Homepage FAQ — product intents only (no named exams). */
 export const HOME_INTENT_FAQ_IDS = [
-  "personal-library",
+  "all-in-one-study-workspace",
+  "chat-with-pdf",
+  "ai-tutor",
+  "ai-pdf-summarizer",
+  "ai-flashcards-quiz",
+  "notebooklm-alternatives",
+  "best-study-apps",
+  "free-ai-study",
+  "vs-alternatives-pricing",
+  "notes-pdfs-ask-llm",
+  "student-study-tool",
+  "teacher-prepare-tests",
   "study-ai",
-  "share-shelf",
-  "teachers",
   "exam-quiz",
-  "youtube-lectures",
-  "telegram",
-  "pdf-highlights",
-  "planner",
-  "offline",
   "privacy",
 ] as const;
 

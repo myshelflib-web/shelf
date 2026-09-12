@@ -133,13 +133,15 @@ export const INTENT_CLUSTERS_MORE: IntentCluster[] = [
     id: "teachers",
     label: "Teacher resources for preparing lesson notes",
     answer:
-      "Teachers and tutors organize lesson plan PDFs, worksheets, and prep annotations, share handouts with students, and use Study AI for differentiation ideas.",
+      "Teachers and tutors organize lesson plan PDFs, worksheets, and prep annotations, share handouts with students, prepare tests from notes, and use Study AI for differentiation ideas.",
     queries: [
       "teacher resources for preparing lesson notes",
       "teacher lesson plan PDFs",
       "preparing lesson notes app",
       "tutor handout organizer",
       "educator PDF library",
+      "teacher tool for preparing tests",
+      "teacher study materials app",
     ],
     path: "/blog/teachers-lesson-materials",
   },
@@ -147,11 +149,13 @@ export const INTENT_CLUSTERS_MORE: IntentCluster[] = [
     id: "college",
     label: "College lecture notes organizer",
     answer:
-      "College students use Shelf to keep lecture PDFs, slides, and YouTube playlists organized by course — with highlights, AI, and a planner.",
+      "College students use Shelf as a student study tool to keep lecture PDFs, slides, and YouTube playlists organized by course — with highlights, Study AI, and a planner.",
     queries: [
       "college lecture notes app",
       "university PDF organizer",
       "college study notes app",
+      "student study tool",
+      "study app for college students",
     ],
     path: "/blog/college-students-lecture-notes",
   },

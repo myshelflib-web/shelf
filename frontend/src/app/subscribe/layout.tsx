@@ -2,16 +2,18 @@ import type { Metadata } from "next";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = buildPageMetadata({
-  title: "Pricing — Free & Premium plans",
+  title: "Pricing — Free Study AI & Quiz, Premium from ₹149/mo | Shelf",
   description:
-    "Start free with your private study library. Upgrade to Premium when you're ready for more space, deeper Study AI, and daily exam workflows. Pay with Razorpay UPI Autopay.",
+    "Start free with library, Study AI, and quizzes. Upgrade to Premium (~₹149/mo or ~₹1299/yr, UPI) for more storage and deeper AI when Shelf becomes your daily study home.",
   path: "/subscribe",
   keywords: [
     "Shelf Premium",
     "study app pricing India",
+    "affordable AI study app",
+    "free Study AI plan",
     "AI study subscription",
     "PDF library premium",
-    "UPSC study app cost",
+    "Shelf vs alternatives pricing",
     "Razorpay UPI study app",
   ],
 });

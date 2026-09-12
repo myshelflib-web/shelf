@@ -125,21 +125,163 @@
   }
 }
 
-/* Feature grid on landing */
+/* Feature marquee on landing — continuous moving cards */
 .landing-features-section {
-  padding: 88px 64px;
+  position: relative;
+  padding: 88px 0 72px;
   border-top: 1px solid var(--border-subtle);
+  overflow: hidden;
 }
 
-.landing-features-section .landing-value-title {
-  margin-bottom: 8px;
+.landing-features-marquee-section .landing-features-head {
+  max-width: 40rem;
+  margin: 0 auto 36px;
+  padding: 0 64px;
+  text-align: center;
 }
 
-.landing-feature-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+.landing-features-marquee-section .landing-kicker {
+  justify-content: center;
+}
+
+.landing-features-marquee-section .landing-value-title {
+  margin-bottom: 12px;
+}
+
+.landing-features-lead {
+  margin: 0 auto;
+  max-width: 36rem;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.landing-feature-marquee {
+  display: flex;
+  flex-direction: column;
   gap: 14px;
-  margin-top: 24px;
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 6%,
+    #000 94%,
+    transparent
+  );
+}
+
+.landing-feature-marquee-row {
+  overflow: hidden;
+  width: 100%;
+}
+
+.landing-feature-marquee-track {
+  display: flex;
+  align-items: stretch;
+  width: max-content;
+  gap: 14px;
+  padding-inline: 14px;
+  will-change: transform;
+}
+
+.landing-feature-marquee-left .landing-feature-marquee-track {
+  animation: landing-feature-marquee-left var(--marquee-duration, 48s) linear
+    infinite;
+}
+
+.landing-feature-marquee-right .landing-feature-marquee-track {
+  animation: landing-feature-marquee-right var(--marquee-duration, 56s) linear
+    infinite;
+}
+
+.landing-feature-marquee:hover .landing-feature-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes landing-feature-marquee-left {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes landing-feature-marquee-right {
+  from {
+    transform: translateX(-50%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.landing-feature-marquee-card {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 280px;
+  box-sizing: border-box;
+  width: 280px;
+  height: 176px;
+  min-height: 176px;
+  max-height: 176px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg-elevated) 55%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.22s ease,
+    background 0.18s ease;
+}
+
+.landing-feature-marquee-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  background: color-mix(in srgb, var(--bg-elevated) 85%, transparent);
+  box-shadow: 0 12px 28px rgba(38, 35, 29, 0.07);
+}
+
+.landing-feature-marquee-card svg {
+  width: 16px;
+  height: 16px;
+  color: var(--accent);
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.landing-feature-marquee-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+}
+
+.landing-feature-marquee-card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.landing-feature-static-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  padding: 0 64px;
+  margin-top: 8px;
+}
+
+.landing-feature-static-grid .landing-feature-marquee-card {
+  width: 100%;
+  flex: none;
 }
 
 .landing-feature-card {
@@ -150,44 +292,33 @@
   box-shadow: none;
   min-height: 0;
   height: 100%;
-  transition:
-    transform 0.22s ease,
-    border-color 0.18s ease,
-    box-shadow 0.22s ease,
-    background 0.18s ease;
 }
 
-.landing-feature-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(38, 35, 29, 0.07);
-  border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
-  background: color-mix(in srgb, var(--bg-elevated) 70%, transparent);
+/* Win over .landing-feature-card { height: 100% } — both classes are on marquee cards */
+.landing-feature-card.landing-feature-marquee-card {
+  height: 176px;
+  min-height: 176px;
+  max-height: 176px;
+  padding: 18px;
 }
 
-.landing-feature-card:focus-within {
-  outline: none;
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  box-shadow: 0 0 0 3px var(--ring);
+.landing-feature-seo-list {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-.landing-feature-card svg {
-  width: 16px;
-  height: 16px;
-  color: var(--accent);
-  margin-bottom: 10px;
-}
-
-.landing-feature-card h3 {
-  font-size: 14px;
-  font-weight: 600;
-  margin-bottom: 6px;
-  letter-spacing: -0.01em;
-}
-
-.landing-feature-card p {
-  font-size: 13px;
-  color: var(--text-muted);
-  line-height: 1.55;
+.landing-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 24px;
 }
 
 .landing-mid-cta {

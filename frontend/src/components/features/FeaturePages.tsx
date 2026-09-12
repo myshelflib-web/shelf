@@ -3,15 +3,19 @@ import { Header } from "@/components/Header";
 import { MarketingFooter } from "@/components/MarketingFooter";
 import { RevealOnScroll } from "@/components/RevealOnScroll";
 import { IntentCoverageSection } from "@/components/seo/IntentCoverageSection";
+import { FeatureComparisonSection } from "@/components/features/FeatureComparisonSection";
 import type { ShelfFeature } from "@/lib/seo/featureTypes";
 import { FEATURE_CATEGORIES } from "@/lib/seo/featureCategories";
 import {
   SHELF_FEATURES,
   featurePagePath,
 } from "@/lib/seo/featureCatalog";
+import { iconForFeature } from "@/lib/seo/featureCatalogIcons";
 import { ArrowRight, BookOpen } from "lucide-react";
 
 export function FeatureLanding({ feature }: { feature: ShelfFeature }) {
+  const showComparison = feature.slug === "shelf-vs-alternatives";
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <Header />
@@ -65,6 +69,8 @@ export function FeatureLanding({ feature }: { feature: ShelfFeature }) {
           </ul>
         </section>
 
+        {showComparison ? <FeatureComparisonSection /> : null}
+
         {feature.paragraphs.map((paragraph, i) => (
           <section
             key={paragraph.slice(0, 40)}
@@ -115,17 +121,14 @@ export function FeaturesHub() {
               Every Shelf feature
             </h1>
             <p className="text-[var(--text-secondary)] leading-relaxed max-w-2xl mx-auto">
-              Granular guides to PDF libraries, YouTube lectures, Study AI, Quiz,
-              Telegram import and send, Spotify focus audio, sharing, planner,
-              and more — for students, teachers, and professionals.
+              Granular guides to PDF libraries, Study AI, quizzes, teacher test
+              prep, Docs, planner, and more — for students, teachers, and
+              professionals.
             </p>
           </RevealOnScroll>
         </section>
 
-        <IntentCoverageSection />
-
-        <div className="px-4 sm:px-6 pb-20 max-w-4xl mx-auto space-y-14">
-          <h2 className="text-xl font-semibold">Browse by product area</h2>
+        <div className="px-4 sm:px-6 pb-14 max-w-4xl mx-auto space-y-14">
           {FEATURE_CATEGORIES.map((category) => {
             const items = SHELF_FEATURES.filter(
               (f) => f.category === category.id
@@ -140,24 +143,39 @@ export function FeaturesHub() {
                   </p>
                 </RevealOnScroll>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {items.map((feature, i) => (
-                    <RevealOnScroll key={feature.slug} delay={i * 40}>
-                      <Link
-                        href={featurePagePath(feature)}
-                        className="feature-card block p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] h-full hover:border-[var(--accent)] transition"
-                      >
-                        <h3 className="font-semibold mb-2">{feature.headline}</h3>
-                        <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
-                          {feature.subhead}
-                        </p>
-                      </Link>
-                    </RevealOnScroll>
-                  ))}
+                  {items.map((feature, i) => {
+                    const Icon = iconForFeature(
+                      feature.slug,
+                      feature.category
+                    );
+                    return (
+                      <RevealOnScroll key={feature.slug} delay={i * 40}>
+                        <Link
+                          href={featurePagePath(feature)}
+                          className="feature-card flex gap-3 p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] h-full hover:border-[var(--accent)] transition"
+                        >
+                          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-subtle)] text-[var(--accent)]">
+                            <Icon className="size-4" aria-hidden />
+                          </span>
+                          <span className="min-w-0">
+                            <h3 className="font-semibold mb-2">
+                              {feature.headline}
+                            </h3>
+                            <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
+                              {feature.subhead}
+                            </p>
+                          </span>
+                        </Link>
+                      </RevealOnScroll>
+                    );
+                  })}
                 </div>
               </section>
             );
           })}
         </div>
+
+        <IntentCoverageSection />
       </main>
       <MarketingFooter />
     </div>

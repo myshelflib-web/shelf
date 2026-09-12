@@ -1,23 +1,88 @@
 import type { ShelfFeature } from "../featureTypes";
 
 export const STUDY_AI_FEATURES: ShelfFeature[] = [
-
+  {
+    slug: "chat-with-pdf",
+    category: "study-ai",
+    title: "Chat with PDF AI — Ask Questions on Your Uploads | Shelf",
+    metaDescription:
+      "Chat with PDF using Shelf Study AI: upload textbooks and notes, ask questions, get cited answers, summarize chapters, and continue across your whole library — free plan included.",
+    keywords: [
+      "chat with PDF",
+      "chat with PDF AI free",
+      "PDF chatbot",
+      "ask questions about PDF",
+      "talk to PDF AI",
+      "PDF Q&A AI",
+    ],
+    headline: "Chat with your PDFs — not the open web",
+    subhead:
+      "Upload a PDF (or a whole collection), then ask Study AI anything about it. Answers retrieve from your file with citations so you can jump back to the page.",
+    bullets: [
+      "Ask on a highlight, a page, or library-wide chat",
+      "Cited excerpts from your uploads",
+      "Summaries, notes, mind maps, and follow-ups in one thread",
+      "Free Study AI limits; Premium for heavier daily use",
+    ],
+    paragraphs: [
+      "“Chat with PDF” tools usually stop at one file. Shelf keeps chat inside a personal study library so tomorrow’s question can span last month’s notes too.",
+      "Students use it for homework grounded in class PDFs; teachers use it to probe worksheets before turning them into quizzes.",
+    ],
+    relatedBlogSlug: "chat-with-pdf-ai",
+    ctaHref: "/login?next=/study-ai",
+    ctaLabel: "Chat with a PDF",
+    secondaryCtaHref: "/features/study-ai",
+    secondaryCtaLabel: "All Study AI features",
+  },
+  {
+    slug: "ai-tutor",
+    category: "study-ai",
+    title: "AI Tutor from Your Notes & PDFs | Shelf Study AI",
+    metaDescription:
+      "Personal AI tutor for students: Shelf Study AI explains concepts from your textbooks and notes, walks through problems, and cites your uploads — not random web pages.",
+    keywords: [
+      "AI tutor for students",
+      "personal AI tutor free",
+      "AI tutor from my notes",
+      "AI study buddy",
+      "virtual tutor PDF",
+      "AI teaching assistant students",
+    ],
+    headline: "An AI tutor that read your syllabus",
+    subhead:
+      "Study AI tutors from the PDFs and notes you uploaded. Ask “explain this like I’m revising tonight” and get answers tied to your material.",
+    bullets: [
+      "Concept explanations grounded in your textbook PDF",
+      "Homework help that cites class notes",
+      "Optional syllabus / relevancy docs per thread",
+      "Depth modes for quick lookup vs deep tutoring (Premium)",
+    ],
+    paragraphs: [
+      "Generic AI tutors invent steps. Shelf’s AI tutor retrieves from your library first — better when marks depend on a specific coaching PDF or lecturer handout.",
+    ],
+    relatedBlogSlug: "ai-tutor-from-notes",
+    ctaHref: "/login?next=/study-ai",
+    ctaLabel: "Open AI tutor",
+  },
   {
 slug: "study-ai",
     category: "study-ai",
-    title: "Study AI — Chat with Your PDFs & Notes | Shelf",
+    title: "Study AI — Ask an LLM About Your PDFs & Notes | Shelf",
     metaDescription:
-      "Study AI on Shelf answers from your uploaded PDFs and notes — not the open web. RAG retrieval, cited excerpts, and exam-aware framing for UPSC, NEET PG, GATE, and more.",
+      "Ask Study AI — Shelf’s LLM grounded in your library — about uploaded PDFs and notes. RAG retrieval, cited excerpts, and chat-with-PDF for study, research, and exams.",
     keywords: [
       "Study AI",
+      "ask LLM about PDFs",
       "chat with PDF",
       "AI study assistant",
+      "AI tutor for students",
       "RAG PDF questions",
+      "LLM grounded in library",
       "AI from your notes",
     ],
-    headline: "AI that knows your material",
+    headline: "An LLM that knows your material",
     subhead:
-      "Study AI retrieves passages from your library, cites sources, and stays grounded in what you uploaded — with optional syllabus docs for exam framing.",
+      "Study AI is Shelf’s LLM layer: it retrieves passages from your library, cites sources, and stays grounded in what you uploaded — with optional syllabus docs for exam framing.",
     bullets: [
       "Quick, Standard, and Deep answer modes (Premium for Standard/Deep)",
       "Library-wide, collection, topic, or page scope",
@@ -39,9 +104,10 @@ slug: "study-ai",
     category: "study-ai",
     title: "Ask Study AI on a PDF Page or Highlight | Shelf",
     metaDescription:
-      "Highlight a paragraph or ask about the full page on Shelf. Study AI reads your PDF and answers with cited excerpts — summaries, notes, and mind maps included.",
+      "Highlight a paragraph or ask about the full page on Shelf. Study AI — an LLM on your PDF — answers with cited excerpts, summaries, notes, and mind maps.",
     keywords: [
       "ask AI from PDF highlight",
+      "ask LLM about PDF page",
       "summarize PDF page",
       "mind map from PDF",
       "PDF question answering",
@@ -67,9 +133,10 @@ slug: "study-ai",
     category: "study-ai",
     title: "Library-Wide Study AI Chat with Scope Filters | Shelf",
     metaDescription:
-      "Chat across your entire Shelf library, one collection, or a single topic. Multi-turn Study AI threads with RAG retrieval and syllabus doc injection for exam prep.",
+      "Ask an LLM across your entire Shelf library, one collection, or a topic. Multi-turn Study AI threads with RAG retrieval and syllabus docs for exam prep.",
     keywords: [
       "AI library search",
+      "ask LLM across PDFs",
       "cross document AI chat",
       "PDF corpus question answering",
       "syllabus aware AI tutor",
@@ -93,14 +160,16 @@ slug: "study-ai",
 {
     slug: "study-ai-summaries",
     category: "study-ai",
-    title: "AI Summaries & Mind Maps from Your PDFs | Shelf",
+    title: "AI PDF Summarizer & Mind Maps from Your Uploads | Shelf",
     metaDescription:
-      "Turn long PDF chapters into revision summaries, bullet notes, or scannable mind maps on Shelf. Outputs stay grounded in your uploaded source material.",
+      "AI PDF summarizer for students: turn long chapters into revision summaries, bullet notes, or mind maps on Shelf — grounded in your textbook, not the open web.",
     keywords: [
-      "AI summary from PDF",
+      "AI PDF summarizer",
+      "summarize PDF AI free",
       "mind map from PDF",
       "PDF to revision notes",
       "chapter summary AI",
+      "PDF to notes AI",
     ],
     headline: "Summarize, note, or mind-map a page",
     subhead:
@@ -114,9 +183,9 @@ slug: "study-ai",
     paragraphs: [
       "Shelf generates study aids from your files — not generic web summaries — so terminology matches your coaching material and textbooks.",
     ],
-    relatedBlogSlug: "study-ai-summaries-mind-maps",
+    relatedBlogSlug: "ai-pdf-summarizer-students",
     ctaHref: "/login",
-    ctaLabel: "Summarize a page",
+    ctaLabel: "Summarize a PDF",
   },
 {
     slug: "study-ai-depth-modes",

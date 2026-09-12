@@ -25,8 +25,9 @@ const STEPS = [
   {
     icon: Sparkles,
     title: "Ask AI",
-    body: "Use Study AI on a single file, a topic, or your wider library so answers stay grounded in what you uploaded.",
-    mini: "Context-aware AI, not generic chat",
+    body: "Use Study AI — Shelf’s LLM — on a single file, a topic, or your wider library so answers stay grounded in what you uploaded, with citations back to your pages.",
+    mini: "Ask an LLM about your PDFs",
+    href: "/features/notes-pdfs-ask-llm",
   },
   {
     icon: ListChecks,
@@ -56,8 +57,8 @@ export function LandingValueSteps() {
             </h2>
           </div>
           <p className="landing-value-copy">
-            Collect material, organize it, ask Study AI, sit exam-style quizzes, and
-            plan revision on one calendar.
+            Collect material, organize it, ask Study AI (an LLM on your files), sit
+            exam-style quizzes, and plan revision on one calendar.
           </p>
         </div>
       </RevealOnScroll>

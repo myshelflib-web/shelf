@@ -147,4 +147,40 @@ slug: "pwa-offline",
     ctaLabel: "View pricing",
     canonicalPath: "/subscribe",
   },
+  {
+    slug: "shelf-vs-alternatives",
+    category: "platform",
+    title:
+      "Shelf vs NotebookLM, Notion, Obsidian & ChatPDF — Features & Pricing",
+    metaDescription:
+      "Compare Shelf to NotebookLM, Notion AI, Obsidian, ChatPDF, and ChatGPT. One study workspace with free AI + quiz; Premium from ~₹149/mo — better stack value than paying for five tools.",
+    keywords: [
+      "Shelf vs alternatives",
+      "best study app features pricing",
+      "NotebookLM alternative pricing",
+      "Notion AI alternative India",
+      "Obsidian alternative students",
+      "ChatPDF alternative free",
+      "affordable AI study app India",
+    ],
+    headline: "More study stack. Fairer pricing.",
+    subhead:
+      "Shelf wins on the combination most students and teachers need — library, Docs, grounded LLM, quizzes, and planner — with a usable free plan and India-friendly Premium instead of stacking five subscriptions.",
+    bullets: [
+      "Feature breadth: PDF library + Docs + Study AI + quiz + planner in one app",
+      "Free plan includes Study AI and exam-style quiz (with fair-use limits)",
+      "Premium ~₹149/month or ~₹1299/year via Razorpay UPI — one bill",
+      "Grounded answers with citations — not paste-into-ChatGPT workflows",
+    ],
+    paragraphs: [
+      "“Best” depends on the job. If you only need a Markdown graph, Obsidian may win. If you only need a quick source notebook, NotebookLM may win. If you need notes + PDFs + ask an LLM + tests + planning without five apps, Shelf is the stronger all-in-one.",
+      "Pricing is part of that win: Free covers real study workflows; Premium expands storage and Study AI for daily power users — typically cheaper than paying separately for a notes app, an AI chat product, and a quiz tool.",
+      "Deep dives: NotebookLM, ChatPDF, Notion AI, and Obsidian comparison posts on the blog, plus /subscribe for live plan details.",
+    ],
+    relatedBlogSlug: "shelf-vs-alternatives-features-pricing",
+    ctaHref: "/subscribe",
+    ctaLabel: "See Free & Premium",
+    secondaryCtaHref: "/features/all-in-one-study-workspace",
+    secondaryCtaLabel: "All-in-one workspace",
+  },
 ];
