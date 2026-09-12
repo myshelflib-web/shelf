@@ -128,10 +128,7 @@ export function FeaturesHub() {
           </RevealOnScroll>
         </section>
 
-        <IntentCoverageSection />
-
-        <div className="px-4 sm:px-6 pb-20 max-w-4xl mx-auto space-y-14">
-          <h2 className="text-xl font-semibold">Browse by product area</h2>
+        <div className="px-4 sm:px-6 pb-14 max-w-4xl mx-auto space-y-14">
           {FEATURE_CATEGORIES.map((category) => {
             const items = SHELF_FEATURES.filter(
               (f) => f.category === category.id
@@ -177,6 +174,8 @@ export function FeaturesHub() {
             );
           })}
         </div>
+
+        <IntentCoverageSection />
       </main>
       <MarketingFooter />
     </div>
