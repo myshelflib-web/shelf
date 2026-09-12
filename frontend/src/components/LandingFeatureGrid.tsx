@@ -1,5 +1,5 @@
 import { RevealOnScroll } from "@/components/RevealOnScroll";
-import { LandingKicker } from "@/components/landing/LandingKicker";
+import { LandingFeatureShowcase } from "@/components/landing/LandingFeatureShowcase";
 import { MARKETING_FEATURES } from "@/lib/marketing";
 
 export function LandingFeatureGrid({
@@ -10,31 +10,7 @@ export function LandingFeatureGrid({
   variant?: "landing";
 }) {
   if (variant === "landing") {
-    return (
-      <section className="landing-features-section">
-        <RevealOnScroll>
-          <LandingKicker index="05">Full feature set</LandingKicker>
-          <div className="landing-value-title">{title}</div>
-          <p className="landing-value-copy mt-2">
-            Research Docs with citations, reader workspace, YouTube lectures,
-            Study AI, originality checks, quiz, planner, Telegram import and
-            send, Spotify focus audio, sharing, and offline PWA — one calm
-            surface for your own material.
-          </p>
-        </RevealOnScroll>
-        <div className="landing-feature-grid">
-          {MARKETING_FEATURES.map((feature, index) => (
-            <RevealOnScroll key={feature.title} delay={index * 40}>
-              <article className="landing-feature-card h-full">
-                <feature.icon />
-                <h3>{feature.title}</h3>
-                <p>{feature.body}</p>
-              </article>
-            </RevealOnScroll>
-          ))}
-        </div>
-      </section>
-    );
+    return <LandingFeatureShowcase title={title} />;
   }
 
   return (

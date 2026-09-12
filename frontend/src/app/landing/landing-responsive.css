@@ -19,6 +19,9 @@
   .landing-feature-grid {
     grid-template-columns: 1fr 1fr;
   }
+  .landing-feature-card-row {
+    grid-template-columns: 1fr 1fr;
+  }
 
   .landing-value-grid-steps {
     grid-template-columns: 1fr 1fr;
@@ -75,6 +78,12 @@
   .landing-value-grid,
   .landing-feature-grid {
     grid-template-columns: 1fr;
+  }
+  .landing-feature-card-row {
+    grid-template-columns: 1fr;
+  }
+  .landing-feature-tabs {
+    gap: 6px;
   }
 
   .landing-value-grid-steps {
@@ -143,6 +152,9 @@
   .landing-value-card:hover,
   .landing-preview-stage:hover {
     transform: none;
+  }
+  .landing-feature-card-animated {
+    animation: none;
   }
   .landing-preview-stage::before {
     opacity: 0.4;
