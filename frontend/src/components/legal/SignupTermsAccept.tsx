@@ -14,15 +14,15 @@ export function SignupTermsAccept({
 
   return (
     <>
-      <label className="flex items-start gap-2 text-xs text-[var(--text-secondary)] leading-relaxed">
+      <label className="flex items-start gap-2.5 text-xs text-[var(--text-secondary)] leading-relaxed cursor-pointer">
         <input
           type="checkbox"
           checked={checked}
           onChange={(e) => onChange(e.target.checked)}
           required
-          className="mt-0.5 rounded border-[var(--border)]"
+          className="size-3.5 shrink-0 rounded border-[var(--border)] translate-y-[2px]"
         />
-        <span>
+        <span className="min-w-0">
           I have read and agree to Shelf&apos;s{" "}
           <button
             type="button"

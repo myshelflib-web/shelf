@@ -15,6 +15,16 @@
     padding-left: 34px;
     padding-right: 34px;
   }
+  .landing-features-marquee-section {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .landing-features-marquee-section .landing-features-head,
+  .landing-feature-static-grid,
+  .landing-feature-all-link {
+    padding-left: 34px;
+    padding-right: 34px;
+  }
   .landing-value-grid,
   .landing-feature-grid {
     grid-template-columns: 1fr 1fr;
@@ -66,6 +76,16 @@
   .landing-mid-cta,
   .landing-features-link,
   .landing-footer {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .landing-features-marquee-section {
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .landing-features-marquee-section .landing-features-head,
+  .landing-feature-static-grid,
+  .landing-feature-all-link {
     padding-left: 18px;
     padding-right: 18px;
   }
@@ -155,6 +175,11 @@
   }
   .landing-feature-card-animated {
     animation: none;
+  }
+  .landing-feature-marquee-left .landing-feature-marquee-track,
+  .landing-feature-marquee-right .landing-feature-marquee-track {
+    animation: none;
+    transform: none;
   }
   .landing-preview-stage::before {
     opacity: 0.4;

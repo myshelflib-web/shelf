@@ -10,6 +10,7 @@ import {
   SHELF_FEATURES,
   featurePagePath,
 } from "@/lib/seo/featureCatalog";
+import { iconForFeature } from "@/lib/seo/featureCatalogIcons";
 import { ArrowRight, BookOpen } from "lucide-react";
 
 export function FeatureLanding({ feature }: { feature: ShelfFeature }) {
@@ -145,19 +146,32 @@ export function FeaturesHub() {
                   </p>
                 </RevealOnScroll>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {items.map((feature, i) => (
-                    <RevealOnScroll key={feature.slug} delay={i * 40}>
-                      <Link
-                        href={featurePagePath(feature)}
-                        className="feature-card block p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] h-full hover:border-[var(--accent)] transition"
-                      >
-                        <h3 className="font-semibold mb-2">{feature.headline}</h3>
-                        <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
-                          {feature.subhead}
-                        </p>
-                      </Link>
-                    </RevealOnScroll>
-                  ))}
+                  {items.map((feature, i) => {
+                    const Icon = iconForFeature(
+                      feature.slug,
+                      feature.category
+                    );
+                    return (
+                      <RevealOnScroll key={feature.slug} delay={i * 40}>
+                        <Link
+                          href={featurePagePath(feature)}
+                          className="feature-card flex gap-3 p-5 rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)] h-full hover:border-[var(--accent)] transition"
+                        >
+                          <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-subtle)] text-[var(--accent)]">
+                            <Icon className="size-4" aria-hidden />
+                          </span>
+                          <span className="min-w-0">
+                            <h3 className="font-semibold mb-2">
+                              {feature.headline}
+                            </h3>
+                            <p className="text-sm text-[var(--text-secondary)] line-clamp-2">
+                              {feature.subhead}
+                            </p>
+                          </span>
+                        </Link>
+                      </RevealOnScroll>
+                    );
+                  })}
                 </div>
               </section>
             );

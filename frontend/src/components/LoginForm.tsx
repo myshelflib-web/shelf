@@ -3,13 +3,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  GoogleSignInButton,
-  isGoogleSignInConfigured,
-} from "@/components/GoogleSignInButton";
-import { useGoogleClientId } from "@/components/GoogleAuthProvider";
-import { TelegramSignInButton } from "@/components/TelegramSignInButton";
-import { isDevEnvironment } from "@/lib/userFacingError";
 import { ShelfLogo } from "@/components/ShelfLogo";
 import { ThinkingIndicator } from "@/components/GreetingAccent";
 import { api, ApiError } from "@/lib/api";
@@ -21,7 +14,9 @@ import {
 } from "@/hooks/useOtpResendCooldown";
 import { needsOnboarding } from "@/lib/onboarding";
 import { destinationAfterSignIn } from "@/lib/postAuthNavigation";
-import { SignupTermsAccept } from "@/components/legal/SignupTermsAccept";
+import { SignupTermsWithHint } from "@/components/legal/SignupTermsWithHint";
+import { useTermsAcceptGate } from "@/components/legal/TermsAcceptGate";
+import { AuthSocialButtons } from "@/components/AuthSocialButtons";
 
 export function safeNextPath(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/my-content";
@@ -56,10 +51,9 @@ export function LoginForm({
   const [socialSigningIn, setSocialSigningIn] = useState(false);
   const [completingSignIn, setCompletingSignIn] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const { hintOpen, requireAccepted, showHint } =
+    useTermsAcceptGate(agreedToTerms);
   const { remaining, coolingDown, start, clear } = useOtpResendCooldown();
-  const googleClientId = useGoogleClientId();
-  const googleFromServer =
-    Boolean(googleClientId) && !googleClientId.includes("your-google-client-id");
   const handledAuthRef = useRef(false);
 
   useLayoutEffect(() => {
@@ -113,10 +107,7 @@ export function LoginForm({
     if (otpSent && coolingDown) return;
     setError("");
     setMessage("");
-    if (!agreedToTerms) {
-      setError("Please accept the Terms of Service and Privacy Policy first");
-      return;
-    }
+    if (!requireAccepted()) return;
     if (!email.trim() || !name.trim() || password.length < 6) {
       setError("Enter name, email, and a password (min 6 characters) first");
       return;
@@ -149,10 +140,7 @@ export function LoginForm({
 
     try {
       if (isRegister) {
-        if (!agreedToTerms) {
-          setError("Please accept the Terms of Service and Privacy Policy to create an account");
-          return;
-        }
+        if (!requireAccepted()) return;
         if (!otpSent) {
           await handleSendOtp();
           return;
@@ -180,9 +168,6 @@ export function LoginForm({
       setLoading(false);
     }
   };
-
-  const showGoogleSignIn =
-    isGoogleSignInConfigured() || googleFromServer || isDevEnvironment();
 
   const socialRedirect = embedded
     ? nextPath
@@ -310,15 +295,16 @@ export function LoginForm({
           )}
 
           {isRegister && (
-            <SignupTermsAccept
+            <SignupTermsWithHint
               checked={agreedToTerms}
               onChange={setAgreedToTerms}
+              hintOpen={hintOpen}
             />
           )}
 
           <button
             type="submit"
-            disabled={loading || sendingOtp || (isRegister && !agreedToTerms)}
+            disabled={loading || sendingOtp}
             className="w-full py-2.5 rounded-lg bg-[var(--accent)] text-white font-medium hover:bg-[var(--accent-hover)] transition disabled:opacity-50"
           >
             {loading || sendingOtp
@@ -354,35 +340,13 @@ export function LoginForm({
             </div>
           </div>
 
-          <div className="space-y-3 w-full">
-            <div
-              className={
-                isRegister && !agreedToTerms
-                  ? "opacity-50 pointer-events-none"
-                  : undefined
-              }
-              aria-disabled={isRegister && !agreedToTerms}
-            >
-              {showGoogleSignIn ? (
-                <GoogleSignInButton
-                  onError={setError}
-                  redirectTo={socialRedirect}
-                  onSigningInChange={handleSocialSigningIn}
-                />
-              ) : null}
-              <TelegramSignInButton
-                onError={setError}
-                redirectTo={socialRedirect}
-                onSigningInChange={handleSocialSigningIn}
-              />
-            </div>
-            {isRegister && !agreedToTerms ? (
-              <p className="text-[11px] text-center text-[var(--text-muted)]">
-                Accept the Terms and Privacy Policy above to continue with Google
-                or Telegram.
-              </p>
-            ) : null}
-          </div>
+          <AuthSocialButtons
+            gateTerms={isRegister && !agreedToTerms}
+            onBlockedByTerms={showHint}
+            redirectTo={socialRedirect}
+            onError={setError}
+            onSigningInChange={handleSocialSigningIn}
+          />
         </>
       </div>
 
