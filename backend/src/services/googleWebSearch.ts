@@ -129,19 +129,25 @@ export async function googleCustomSearchHits(
 /**
  * Gemini native Google Search grounding (same LLM_API_KEY).
  * Uses one Flash-Lite request — paced by the chat RPM limiter.
+ * Skips when a chat slot is not available within `maxSlotWaitMs` so web_search
+ * cannot stall the Study AI stream for a full RPM window.
  */
 export async function geminiGoogleSearchText(
   query: string,
-  opts?: { siteHint?: string }
+  opts?: { siteHint?: string; maxSlotWaitMs?: number }
 ): Promise<string | null> {
   const apiKey = llmApiKey();
   if (!apiKey || !isGeminiBaseUrl(llmBaseUrl())) return null;
   const slug = chatModel().replace(/^models\//, "");
   const path = `${geminiNativeBaseUrl()}/models/${slug}:generateContent`;
-  await acquireGeminiChatSlot();
+  const gotSlot = await acquireGeminiChatSlot(opts?.maxSlotWaitMs ?? 2_500);
+  if (!gotSlot) {
+    logger.warn("study.gemini_google_search_skipped", { reason: "rpm_wait" });
+    return null;
+  }
   const res = await fetchWithRetry(path, {
     method: "POST",
-    timeoutMs: 20_000,
+    timeoutMs: 12_000,
     headers: {
       "Content-Type": "application/json",
       "x-goog-api-key": apiKey,

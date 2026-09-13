@@ -84,6 +84,9 @@ type PreparedRag = {
   tools: ReturnType<typeof studyToolsForRequest>;
 };
 
+/** Below this score, vector/keyword hits are noise for unrelated questions (e.g. weather). */
+const MIN_CITABLE_LIBRARY_SCORE = 0.4;
+
 async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
   const depth = parseStudyDepth(opts.depth);
   const depthCfg = studyDepthConfig(depth);
@@ -94,7 +97,8 @@ async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
   const excerpts = await retrieveLibrary(opts.userId, searchQuery, {
     pageIds: opts.pageIds,
   });
-  const packed = packLibraryExcerpts(excerpts, depthCfg.libraryContextBudget);
+  const relevant = excerpts.filter((e) => e.score >= MIN_CITABLE_LIBRARY_SCORE);
+  const packed = packLibraryExcerpts(relevant, depthCfg.libraryContextBudget);
   const citations = packed.citations;
 
   const system = studySystemPrompt(opts.studyGoal, {
@@ -103,9 +107,12 @@ async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
     withTools: toolsEnabled,
     depth,
   });
+  const webHint = webSearch
+    ? " For weather, news, live facts, or current events, call web_search (sourceScope general) before answering."
+    : "";
   const userPrompt =
-    excerpts.length === 0
-      ? `The library search returned no excerpts.\nQuestion: ${opts.query}\nAnswer helpfully from general knowledge and tools (planner, quiz, web) when useful — do not refuse solely because the library is empty.`
+    relevant.length === 0
+      ? `The library search returned no clearly relevant excerpts.${excerpts.length > 0 ? " (Weak matches were omitted.)" : ""}\nQuestion: ${opts.query}\nAnswer helpfully from general knowledge and tools (planner, quiz, web) when useful — do not refuse solely because the library is empty.${webHint}`
       : `Question: ${opts.query}\n\nLibrary excerpts:\n${packed.numbered}`;
 
   const historyLimit = opts.historyLimit ?? 16;
@@ -141,7 +148,7 @@ async function prepareRagAsk(opts: RagAskOpts): Promise<PreparedRag> {
       },
     ],
     citations,
-    matchCount: excerpts.length,
+    matchCount: relevant.length,
     llm: {
       model: depthCfg.model,
       maxTokens: depthCfg.maxTokens,

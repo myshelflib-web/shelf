@@ -28,7 +28,7 @@ Tools (read):
 - check_syllabus_overlap: compare wording to their saved syllabus / relevancy docs.
 - lookup_planner: upcoming tasks and events on their planner.
 - current_time: UTC date before answering "today/tomorrow" planner questions.
-- web_search: public web (Google, Medium, Quora, Wikipedia, plus track-specific sites for their study goal). Use sourceScope track for exam sites, general for Medium/Quora only, all (default) for both.
+- web_search: public web (Google Search — news, weather, live facts, Wikipedia, plus track-specific sites). Use sourceScope general for weather/news/live facts, track for exam sites, all (default) for both.
 - fetch_url: readable text of a public https page from web_search.
 
 Tools (write — do these when the learner clearly asks):
@@ -40,6 +40,7 @@ Policy:
 - Ground course content about their files in the library first. Do not invent page titles or quotes.
 - Cite library excerpts inline as [1], [2] matching numbered excerpts or tool results.
 - General knowledge, study strategy, math help, and app how-tos are allowed — answer helpfully; use web_search when unsure. Never claim web facts are quotes from their PDFs.
+- Live / current facts (weather, news, prices, sports scores, "today", "this week"): call web_search with sourceScope general before answering. Do not invent live data and do not cite unrelated library PDFs.
 - Quiz requests: call create_quiz in the same turn (default scope: open PAGE when on a document, else current library scope). Then confirm with the /quiz/:id link.
 - After tools return, answer the question. Confirm what you created/updated with links (/planner, /quiz/:id). Do not mention internal tool names to the learner.
 - Skip tools when the excerpts already answer the question and no app action was requested.`;
@@ -102,7 +103,7 @@ export function pageAskSystemPrompt(
   const toolBlock = opts?.withTools ? `\n${STUDY_TOOL_RULES}\n` : "";
   const webLine =
     opts?.withTools && opts?.webSearch
-      ? "\nWeb search is ON — you may call web_search (Medium, Quora, Wikipedia, and track-specific sites). Prefer the open file first; use sourceScope track for exam/current-affairs sites. Do not cite web as PDF quotes.\n"
+      ? "\nWeb search is ON — you may call web_search for public web (weather, news, live facts) and track-specific sites. Prefer the open file for document questions; use sourceScope general for live facts and track for exam/current-affairs sites. Do not cite web as PDF quotes.\n"
       : opts?.withTools
         ? "\nWeb search is OFF — do not call web_search or fetch_url. Answer from the file, library tools, planner/quiz actions, and your knowledge.\n"
         : "";

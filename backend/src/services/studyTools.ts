@@ -88,7 +88,7 @@ const STUDY_LOOKUP_TOOLS: ChatToolDef[] = [
     function: {
       name: "web_search",
       description:
-        "Search Google and other public web sources. Use only when the library does not cover the question.",
+        "Search the public web (Google) for live facts, news, weather, and general knowledge. Use when the library does not cover the question.",
       parameters: {
         type: "object",
         properties: {
@@ -395,7 +395,7 @@ export async function executeStudyTool(
     const sourceScope = parseWebSourceScope(args.sourceScope);
     return {
       text: await webLookup(query, {
-        timeoutMs: 5_000,
+        timeoutMs: 8_000,
         studyGoal: ctx.studyGoal,
         sourceScope,
       }),

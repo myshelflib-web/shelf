@@ -55,28 +55,38 @@ export function parseGeminiRetryMs(body: string, attempt: number): number {
 /**
  * Sliding 60s window. Leaves one slot of headroom so concurrent chat +
  * grounding + embeddings on the same key are less likely to 429.
+ * When `maxWaitMs` is set, returns false instead of blocking past that budget
+ * (used by web grounding so Study AI does not hang on "Still working…").
  */
 export async function acquireSlidingWindow(
   stamps: number[],
   rpm: number,
-  clock: RateClock = defaultClock
-): Promise<void> {
+  clock: RateClock = defaultClock,
+  maxWaitMs?: number
+): Promise<boolean> {
   const windowMs = 60_000;
   const max = Math.max(1, Math.floor(rpm) - (rpm > 1 ? 1 : 0));
+  const deadline =
+    maxWaitMs === undefined ? undefined : clock.now() + Math.max(0, maxWaitMs);
   while (true) {
     const now = clock.now();
     while (stamps.length && now - stamps[0] >= windowMs) stamps.shift();
     if (stamps.length < max) {
       stamps.push(now);
-      return;
+      return true;
     }
     const wait = stamps[0] + windowMs - now + 25;
+    if (deadline !== undefined && now + Math.max(0, wait) > deadline) {
+      return false;
+    }
     if (wait > 0) await clock.sleep(wait);
   }
 }
 
-export async function acquireGeminiChatSlot(): Promise<void> {
-  await acquireSlidingWindow(chatStamps, geminiChatRpm());
+export async function acquireGeminiChatSlot(
+  maxWaitMs?: number
+): Promise<boolean> {
+  return acquireSlidingWindow(chatStamps, geminiChatRpm(), defaultClock, maxWaitMs);
 }
 
 export async function acquireGeminiEmbedSlot(): Promise<void> {

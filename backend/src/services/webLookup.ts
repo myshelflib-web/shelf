@@ -102,45 +102,42 @@ function dedupeHits(hits: WebHit[]): WebHit[] {
   return out;
 }
 
+/** Unrestricted public web — weather, news, live facts (not Medium/Quora-only). */
 async function openWebHits(
   query: string,
-  domains: readonly string[],
-  timeoutMs: number
+  timeoutMs: number,
+  opts?: { allowGemini?: boolean }
 ): Promise<WebHit[]> {
-  const site = siteRestrictClause(domains, 5);
-  if (site) {
-    const restricted = await googleCustomSearchHits(query, {
-      siteRestrict: site,
-    });
-    if (restricted.length) return restricted;
-  }
   const broad = await googleCustomSearchHits(query);
-  if (broad.length) {
-    if (domains.length === 0) return broad;
-    const allowed = new Set(domains.map((d) => d.toLowerCase()));
-    const filtered = broad.filter((h) => {
-      try {
-        const host = new URL(h.url).hostname.replace(/^www\./, "");
-        return [...allowed].some((d) => host === d || host.endsWith(`.${d}`));
-      } catch {
-        return false;
-      }
+  if (broad.length) return broad;
+
+  if (opts?.allowGemini !== false) {
+    const grounded = await geminiGoogleSearchText(query, {
+      maxSlotWaitMs: 2_500,
     });
-    if (filtered.length) return filtered;
+    if (grounded) {
+      return [{ title: "Web summary", url: "", snippet: grounded }];
+    }
   }
-  const siteHint = domains.slice(0, 8).join(", ");
-  const grounded = await geminiGoogleSearchText(query, { siteHint });
-  if (grounded) {
-    return [{ title: "Web summary", url: "", snippet: grounded }];
-  }
+
   const [wiki, ddg] = await Promise.allSettled([
     wikipediaHits(query, timeoutMs),
     duckDuckGoHits(query, timeoutMs),
   ]);
-  return [
+  return dedupeHits([
     ...(wiki.status === "fulfilled" ? wiki.value : []),
     ...(ddg.status === "fulfilled" ? ddg.value : []),
-  ];
+  ]);
+}
+
+/** Soft preference for exam / track sites — never the only path for live facts. */
+async function trackRestrictedHits(
+  query: string,
+  domains: readonly string[]
+): Promise<WebHit[]> {
+  const site = siteRestrictClause(domains, 5);
+  if (!site) return [];
+  return googleCustomSearchHits(query, { siteRestrict: site });
 }
 
 async function collectHits(
@@ -149,33 +146,24 @@ async function collectHits(
   profile: ReturnType<typeof webSourceProfile>,
   timeoutMs: number
 ): Promise<{ track: WebHit[]; general: WebHit[] }> {
-  const tasks: Promise<{ kind: "track" | "general"; hits: WebHit[] }>[] = [];
-
-  if (scope === "all" || scope === "track") {
-    tasks.push(
-      openWebHits(query, profile.preferredDomains, timeoutMs).then((hits) => ({
-        kind: "track" as const,
-        hits,
-      }))
-    );
-  }
-  if (scope === "all" || scope === "general") {
-    tasks.push(
-      openWebHits(query, profile.generalDomains, timeoutMs).then((hits) => ({
-        kind: "general" as const,
-        hits,
-      }))
-    );
+  if (scope === "track") {
+    const track = await trackRestrictedHits(query, profile.preferredDomains);
+    if (track.length) return { track, general: [] };
+    // Fall back to open web so track-only callers still get an answer.
+    const open = await openWebHits(query, timeoutMs);
+    return { track: open, general: [] };
   }
 
-  const settled = await Promise.allSettled(tasks);
-  let track: WebHit[] = [];
-  let general: WebHit[] = [];
-  for (const row of settled) {
-    if (row.status !== "fulfilled") continue;
-    if (row.value.kind === "track") track = row.value.hits;
-    else general = row.value.hits;
+  if (scope === "general") {
+    const general = await openWebHits(query, timeoutMs);
+    return { track: [], general };
   }
+
+  // all: open web first (answers weather / news), track sites in parallel when CSE is set.
+  const [general, track] = await Promise.all([
+    openWebHits(query, timeoutMs),
+    trackRestrictedHits(query, profile.preferredDomains),
+  ]);
   return { track, general };
 }
 
@@ -192,12 +180,10 @@ function formatScopedHits(
     );
   }
   if (scope !== "track" && general.length) {
-    parts.push(
-      `General web (Medium, Quora, etc.):\n${formatWebHits(general.slice(0, 4))}`
-    );
+    parts.push(`Public web:\n${formatWebHits(general.slice(0, 5))}`);
   }
   if (parts.length === 0) {
-    const merged = dedupeHits([...track, ...general]).slice(0, 4);
+    const merged = dedupeHits([...track, ...general]).slice(0, 5);
     if (merged.length === 0) {
       return "No public web results. Answer from the library or say you are unsure.";
     }
@@ -212,7 +198,7 @@ export async function webLookup(
 ): Promise<string> {
   const q = query.trim().slice(0, 200);
   if (!q) return "No search query provided.";
-  const timeoutMs = opts?.timeoutMs ?? 5_000;
+  const timeoutMs = opts?.timeoutMs ?? 8_000;
   const scope = opts?.sourceScope ?? "all";
   const profile = webSourceProfile(opts?.studyGoal);
 

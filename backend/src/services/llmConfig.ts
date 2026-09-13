@@ -36,10 +36,10 @@ const GEMINI_OPENAI_COMPAT =
 /** Process-lifetime: last model that succeeded for a given chat host. */
 const preferredChatModelByBase = new Map<string, string>();
 
-/** Cap completion length (lower = faster on free tier). */
+/** Cap completion length for Quick / default chat (safety valve, not account quota). */
 export function llmMaxOutputTokens(): number {
-  const n = Number(process.env.LLM_MAX_OUTPUT_TOKENS ?? 1024);
-  return Number.isFinite(n) && n > 64 ? Math.min(n, 8192) : 1024;
+  const n = Number(process.env.LLM_MAX_OUTPUT_TOKENS ?? 3072);
+  return Number.isFinite(n) && n > 64 ? Math.min(n, 8192) : 3072;
 }
 
 /** Strip quotes/whitespace Render sometimes wraps around secrets. */

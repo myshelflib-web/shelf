@@ -31,11 +31,12 @@ describe("buildWebSearchTool", () => {
   it("embeds track domains in schema description", () => {
     const tool = buildWebSearchTool("UPSC");
     expect(tool.function.description).toMatch(/UPSC/i);
-    expect(tool.function.description).toMatch(/Medium/);
+    expect(tool.function.description).toMatch(/weather|live facts/i);
     const params = tool.function.parameters as {
-      properties?: { sourceScope?: { enum?: string[] } };
+      properties?: { sourceScope?: { enum?: string[]; description?: string } };
     };
     expect(params.properties?.sourceScope?.enum).toContain("track");
+    expect(params.properties?.sourceScope?.description).toMatch(/open public web/i);
   });
 
   it("covers every study goal", () => {
