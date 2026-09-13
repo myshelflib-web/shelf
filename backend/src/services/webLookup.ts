@@ -8,6 +8,11 @@ import {
   type WebHit,
 } from "./googleWebSearch.js";
 import {
+  duckDuckGoHtmlHits,
+  googleNewsRssHits,
+  wttrWeatherHits,
+} from "./webFreeSources.js";
+import {
   siteRestrictClause,
   webSourceProfile,
   type WebSourceScope,
@@ -51,7 +56,10 @@ async function wikipediaHits(query: string, timeoutMs = 8_000): Promise<WebHit[]
   return hits;
 }
 
-async function duckDuckGoHits(query: string, timeoutMs = 8_000): Promise<WebHit[]> {
+async function duckDuckGoInstantHits(
+  query: string,
+  timeoutMs = 8_000
+): Promise<WebHit[]> {
   const url =
     "https://api.duckduckgo.com/?" +
     new URLSearchParams({
@@ -102,7 +110,26 @@ function dedupeHits(hits: WebHit[]): WebHit[] {
   return out;
 }
 
-/** Unrestricted public web — weather, news, live facts (not Medium/Quora-only). */
+/** Keyless live sources when CSE / Gemini grounding are unset or empty. */
+async function freeLiveHits(
+  query: string,
+  timeoutMs: number
+): Promise<WebHit[]> {
+  const settled = await Promise.allSettled([
+    wttrWeatherHits(query, timeoutMs),
+    googleNewsRssHits(query, timeoutMs),
+    duckDuckGoHtmlHits(query, timeoutMs),
+    wikipediaHits(query, timeoutMs),
+    duckDuckGoInstantHits(query, timeoutMs),
+  ]);
+  const merged: WebHit[] = [];
+  for (const row of settled) {
+    if (row.status === "fulfilled") merged.push(...row.value);
+  }
+  return dedupeHits(merged);
+}
+
+/** Unrestricted public web — weather, news, live facts. */
 async function openWebHits(
   query: string,
   timeoutMs: number,
@@ -110,6 +137,11 @@ async function openWebHits(
 ): Promise<WebHit[]> {
   const broad = await googleCustomSearchHits(query);
   if (broad.length) return broad;
+
+  // Keyless live APIs first (wttr / News RSS / DDG HTML) — work without CSE
+  // and avoid waiting on Gemini grounding RPM when the answer is weather/news.
+  const free = await freeLiveHits(query, timeoutMs);
+  if (free.length) return free;
 
   if (opts?.allowGemini !== false) {
     const grounded = await geminiGoogleSearchText(query, {
@@ -120,14 +152,7 @@ async function openWebHits(
     }
   }
 
-  const [wiki, ddg] = await Promise.allSettled([
-    wikipediaHits(query, timeoutMs),
-    duckDuckGoHits(query, timeoutMs),
-  ]);
-  return dedupeHits([
-    ...(wiki.status === "fulfilled" ? wiki.value : []),
-    ...(ddg.status === "fulfilled" ? ddg.value : []),
-  ]);
+  return [];
 }
 
 /** Soft preference for exam / track sites — never the only path for live facts. */
@@ -149,7 +174,6 @@ async function collectHits(
   if (scope === "track") {
     const track = await trackRestrictedHits(query, profile.preferredDomains);
     if (track.length) return { track, general: [] };
-    // Fall back to open web so track-only callers still get an answer.
     const open = await openWebHits(query, timeoutMs);
     return { track: open, general: [] };
   }
@@ -159,7 +183,6 @@ async function collectHits(
     return { track: [], general };
   }
 
-  // all: open web first (answers weather / news), track sites in parallel when CSE is set.
   const [general, track] = await Promise.all([
     openWebHits(query, timeoutMs),
     trackRestrictedHits(query, profile.preferredDomains),

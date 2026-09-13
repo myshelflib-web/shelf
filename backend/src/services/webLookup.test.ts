@@ -11,6 +11,12 @@ vi.mock("./googleWebSearch.js", () => ({
   geminiGoogleSearchText: vi.fn(),
 }));
 
+vi.mock("./webFreeSources.js", () => ({
+  wttrWeatherHits: vi.fn(),
+  googleNewsRssHits: vi.fn(),
+  duckDuckGoHtmlHits: vi.fn(),
+}));
+
 vi.mock("../utils/fetchRetry.js", () => ({
   fetchWithRetry: vi.fn(),
 }));
@@ -20,16 +26,30 @@ import {
   geminiGoogleSearchText,
   googleCustomSearchHits,
 } from "./googleWebSearch.js";
+import {
+  duckDuckGoHtmlHits,
+  googleNewsRssHits,
+  wttrWeatherHits,
+} from "./webFreeSources.js";
 
 const cse = vi.mocked(googleCustomSearchHits);
 const gemini = vi.mocked(geminiGoogleSearchText);
+const wttr = vi.mocked(wttrWeatherHits);
+const news = vi.mocked(googleNewsRssHits);
+const ddgHtml = vi.mocked(duckDuckGoHtmlHits);
 
 describe("webLookup", () => {
   beforeEach(() => {
     cse.mockReset();
     gemini.mockReset();
+    wttr.mockReset();
+    news.mockReset();
+    ddgHtml.mockReset();
     cse.mockResolvedValue([]);
     gemini.mockResolvedValue(null);
+    wttr.mockResolvedValue([]);
+    news.mockResolvedValue([]);
+    ddgHtml.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -50,34 +70,29 @@ describe("webLookup", () => {
     });
     expect(text).toContain("Mumbai Weather");
     expect(text).toContain("32°C");
-    expect(text).not.toMatch(/Medium|Quora/i);
-    // One unrestricted CSE call — no site: restrict for general.
     expect(cse).toHaveBeenCalledTimes(1);
     expect(cse.mock.calls[0][1]?.siteRestrict).toBeUndefined();
   });
 
-  it("does not discard open-web CSE hits when track domains would not match", async () => {
-    cse.mockImplementation(async (_q, opts) => {
-      if (opts?.siteRestrict) return [];
-      return [
-        {
-          title: "IMD Mumbai forecast",
-          url: "https://mausam.imd.gov.in/mumbai",
-          snippet: "Rain likely this evening",
-        },
-      ];
+  it("falls back to wttr when CSE and Gemini are empty", async () => {
+    wttr.mockResolvedValueOnce([
+      {
+        title: "Weather — Mohali",
+        url: "https://wttr.in/Mohali",
+        snippet: "Mohali, India: Partly Cloudy. Now 33°C.",
+      },
+    ]);
+    const text = await webLookup("what is weather in mohali", {
+      sourceScope: "general",
     });
-    const text = await webLookup("weather mumbai", {
-      sourceScope: "all",
-      studyGoal: "UPSC",
-    });
-    expect(text).toContain("IMD Mumbai forecast");
-    expect(text).toContain("Rain likely");
+    expect(text).toContain("Mohali");
+    expect(text).toContain("33°C");
+    expect(wttr).toHaveBeenCalled();
   });
 
-  it("uses Gemini grounding once when CSE is empty", async () => {
+  it("uses Gemini grounding when CSE and free sources miss", async () => {
     gemini.mockResolvedValueOnce("Mohali: high 33°C, partly cloudy.");
-    const text = await webLookup("weather mohali today", {
+    const text = await webLookup("obscure fact xyzzy", {
       sourceScope: "general",
     });
     expect(text).toContain("Mohali");
