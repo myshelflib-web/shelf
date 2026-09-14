@@ -72,14 +72,19 @@ export async function fetchCurrentAffairsSitemapSlugs(
     const data = (await res.json()) as {
       items?: Array<{ slug: string; lastModified?: string }>;
     };
-    return (data.items ?? []).map((item) => ({
-      url: `${siteUrl}/learn/current-affairs/${item.slug}`,
-      changeFrequency: "daily" as const,
-      priority: 0.82,
-      ...(item.lastModified
-        ? { lastModified: new Date(item.lastModified).toISOString() }
-        : {}),
-    }));
+    return (data.items ?? []).map((item) => {
+      const raw = item.lastModified;
+      const lastModified =
+        raw && !Number.isNaN(new Date(raw).getTime())
+          ? new Date(raw).toISOString()
+          : undefined;
+      return {
+        url: `${siteUrl}/learn/current-affairs/${item.slug}`,
+        changeFrequency: "daily" as const,
+        priority: 0.82,
+        ...(lastModified ? { lastModified } : {}),
+      };
+    });
   } catch {
     return [];
   }

@@ -1,12 +1,18 @@
 import { getEmailFrom, getEmailLogoAttachment, isEmailConfigured } from "./config.js";
 import { getResendClient } from "./resendClient.js";
 import { errorFields, logger } from "../../utils/logger.js";
+import { enqueueEmail, isEmailSqsConfigured } from "./emailQueue.js";
 
 export type SendEmailInput = {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  /** Optional routing metadata when parking on SQS. */
+  meta?: {
+    purpose?: string;
+    userId?: string;
+  };
 };
 
 export class EmailSendError extends Error {
@@ -95,8 +101,32 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
   }
 }
 
-/** Fire-and-forget — auth/payment responses must not wait on email delivery. */
+/**
+ * Prefer SQS when configured (park for the email worker); otherwise send inline.
+ * Auth/payment responses must not wait on delivery.
+ */
 export function sendEmailInBackground(input: SendEmailInput): void {
+  if (isEmailSqsConfigured()) {
+    void enqueueEmail({
+      type: "rendered",
+      to: input.to,
+      subject: input.subject,
+      html: input.html,
+      ...(input.text ? { text: input.text } : {}),
+      ...(input.meta ? { meta: input.meta } : {}),
+    }).catch((err) => {
+      logger.warn("email.sqs.fallback_inline", {
+        to: input.to,
+        subject: input.subject,
+        ...errorFields(err),
+      });
+      void sendEmail(input).catch(() => {
+        /* logged in sendEmail */
+      });
+    });
+    return;
+  }
+
   void sendEmail(input).catch(() => {
     /* logged in sendEmail */
   });

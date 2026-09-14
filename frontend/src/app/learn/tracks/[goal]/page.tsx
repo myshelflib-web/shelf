@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { LearnTrackBrowse } from "@/components/learn/LearnTrackBrowse";
 import { FaqJsonLd } from "@/components/seo/FaqJsonLd";
+import { LearnSeoMain, LearnSeoShell } from "@/components/seo/LearnSeoShell";
 import {
   LEARN_TRACK_SEO,
   goalFromTrackSlug,
@@ -19,10 +20,12 @@ export default async function LearnTrackPage({ params }: PageProps) {
   const seo = LEARN_TRACK_SEO[goal];
 
   return (
-    <>
+    <LearnSeoShell>
       <FaqJsonLd faqs={seo.faqs} />
-      {/* Crawl-only — same visually-hidden pattern as Learn article SEO intros. */}
-      <article className="learn-article-seo-intro" aria-label="About this track">
+      <article
+        className="learn-article-seo-intro learn-article-seo-intro--rich"
+        aria-label="About this track"
+      >
         <nav className="learn-article-seo-breadcrumb" aria-label="Breadcrumb">
           <Link href="/learn">Learn</Link>
           <span aria-hidden> / </span>
@@ -30,13 +33,13 @@ export default async function LearnTrackPage({ params }: PageProps) {
         </nav>
         <h1 className="learn-article-seo-title">{seo.h1}</h1>
         <p className="learn-article-seo-lead">{seo.intro}</p>
-        <p>
+        <p className="learn-article-seo-lead" style={{ marginTop: "0.5rem" }}>
           All articles open in the reader without sign-in.{" "}
           <Link href="/login">Sign in</Link> to save highlights and build a
           private library on <Link href="/my-content">My Content</Link>.
         </p>
         {seo.faqs.length > 0 ? (
-          <section>
+          <section className="learn-article-seo-faqs">
             <h2>Common questions</h2>
             <dl>
               {seo.faqs.map((faq) => (
@@ -49,9 +52,9 @@ export default async function LearnTrackPage({ params }: PageProps) {
           </section>
         ) : null}
       </article>
-      <div className="h-full">
+      <LearnSeoMain>
         <LearnTrackBrowse goal={goal} />
-      </div>
-    </>
+      </LearnSeoMain>
+    </LearnSeoShell>
   );
 }

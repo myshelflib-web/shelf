@@ -34,6 +34,10 @@ model User {
   llmTokensDailyUsed    Int       @default(0)
   llmTokensDailyDate    String?
   vectorChunksUsed      Int       @default(0)
+  /** Last authenticated product activity (throttled). Used for inactivity nudges. */
+  lastActiveAt          DateTime?
+  /** When we last sent an inactivity reminder email. */
+  lastInactivityEmailAt DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -60,6 +64,8 @@ model User {
   citationSources         CitationSource[]
   pageRevisions           PageRevision[]
   pageComments            PageComment[]
+
+  @@index([lastActiveAt])
 }
 
 enum Plan {

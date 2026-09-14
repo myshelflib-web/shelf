@@ -31,6 +31,7 @@ export default function robots(): MetadataRoute.Robots {
           "/quiz",
           "/legal",
           "/legal/",
+          "/llms.txt",
         ],
         disallow: [
           "/quiz/",

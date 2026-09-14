@@ -150,18 +150,131 @@
   line-height: 1.6;
 }
 
-/* Crawlable article / track summary — visually hidden; reader UI shows the title. */
+/* Crawlable Learn summary — must stay VISIBLE (not clipped).
+   Google treats 1×1 / clip / sr-only primary copy as weak or ignored. */
+.learn-seo-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.learn-seo-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
 .learn-article-seo-intro {
-  position: absolute;
-  width: 1px;
-  height: 1px;
+  flex-shrink: 0;
+  padding: 0.7rem 1rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.learn-article-seo-intro--rich {
+  max-height: min(42vh, 26rem);
+  overflow: auto;
+}
+
+.learn-article-seo-breadcrumb {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  margin: 0 0 0.35rem;
+}
+
+.learn-article-seo-breadcrumb a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.learn-article-seo-breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.learn-article-seo-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.learn-article-seo-lead {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  max-width: 48rem;
+}
+
+.learn-article-seo-children {
+  margin: 0.75rem 0 0;
+}
+
+.learn-article-seo-children h2 {
+  margin: 0 0 0.4rem;
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.learn-article-seo-children ul {
+  margin: 0;
   padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-  pointer-events: none;
+  list-style: none;
+  display: grid;
+  gap: 0.25rem 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  max-height: 7.5rem;
+  overflow: auto;
+}
+
+.learn-article-seo-children a {
+  font-size: 0.8125rem;
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.learn-article-seo-children a:hover {
+  text-decoration: underline;
+}
+
+.learn-article-seo-faqs {
+  margin: 0.85rem 0 0;
+}
+
+.learn-article-seo-faqs h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.learn-article-seo-faqs dl {
+  margin: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.learn-article-seo-faqs dt {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.learn-article-seo-faqs dd {
+  margin: 0.2rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
 
 /* Official portal fallback — iframe blocked, link + save instructions */

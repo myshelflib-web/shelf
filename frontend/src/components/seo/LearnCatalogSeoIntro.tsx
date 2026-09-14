@@ -37,7 +37,7 @@ export function LearnCatalogSeoIntro({
       <h1 className="learn-article-seo-title">{title}</h1>
       <p className="learn-article-seo-lead">{description}</p>
       {childrenLinks.length > 0 ? (
-        <section>
+        <section className="learn-article-seo-children">
           <h2>{childrenLabel}</h2>
           <ul>
             {childrenLinks.map((link) => (

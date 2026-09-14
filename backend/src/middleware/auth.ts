@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import { Request, Response, NextFunction } from "express";
 import { enrichLogContext } from "../utils/logContext.js";
 import { logger } from "../utils/logger.js";
+import { touchLastActive } from "../services/userActivity.js";
 
 export interface AuthPayload {
   userId: string;
@@ -42,6 +43,7 @@ export function authMiddleware(
     const token = header.slice(7);
     req.user = jwt.verify(token, process.env.JWT_SECRET!) as AuthPayload;
     attachUserContext(req, req.user);
+    touchLastActive(req.user.userId);
     log.debug("auth.ok", { userRole: req.user.role });
     next();
   } catch {
@@ -67,6 +69,7 @@ export function optionalAuthMiddleware(
     const token = header.slice(7);
     req.user = jwt.verify(token, process.env.JWT_SECRET!) as AuthPayload;
     attachUserContext(req, req.user);
+    touchLastActive(req.user.userId);
     log.debug("auth.optional_ok", { userRole: req.user.role });
   } catch {
     log.debug("auth.optional_guest", { reason: "invalid_token" });
