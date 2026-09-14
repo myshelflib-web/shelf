@@ -15,7 +15,6 @@ import { LandingCtaBanner } from "@/components/landing/LandingCtaBanner";
 import { LandingQuizSection } from "@/components/landing/LandingQuizSection";
 import { LandingIntegrationsSection } from "@/components/landing/LandingIntegrationsSection";
 import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
-import { LandingAeoSection } from "@/components/landing/LandingAeoSection";
 import { useAuth } from "@/hooks/useAuth";
 import {
   BookMarked,
@@ -125,8 +124,6 @@ export function HomePageClient() {
         </section>
 
         <LandingValueSteps />
-
-        <LandingAeoSection />
 
         <LandingShowcases />
 
