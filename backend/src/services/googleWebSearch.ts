@@ -126,22 +126,77 @@ export async function googleCustomSearchHits(
   return hitsFromCustomSearch(data);
 }
 
+/** Brave Search API — optional general web search (https://brave.com/search/api/). */
+export function braveSearchApiKey(): string | null {
+  const key = (process.env.BRAVE_SEARCH_API_KEY ?? "").trim();
+  return key || null;
+}
+
+export async function braveWebSearchHits(query: string): Promise<WebHit[]> {
+  const key = braveSearchApiKey();
+  if (!key) return [];
+  const url =
+    "https://api.search.brave.com/res/v1/web/search?" +
+    new URLSearchParams({
+      q: query.slice(0, 256),
+      count: "5",
+    }).toString();
+  const res = await fetchWithRetry(url, {
+    timeoutMs: 8_000,
+    headers: {
+      Accept: "application/json",
+      "X-Subscription-Token": key,
+      "User-Agent": UA,
+    },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    logger.warn("study.brave_search_failed", {
+      status: res.status,
+      body: body.slice(0, 200),
+    });
+    return [];
+  }
+  const data = (await res.json()) as {
+    web?: {
+      results?: Array<{ title?: string; url?: string; description?: string }>;
+    };
+  };
+  const hits: WebHit[] = [];
+  for (const item of data.web?.results ?? []) {
+    if (!item.title && !item.description) continue;
+    hits.push({
+      title: item.title || "Result",
+      url: item.url || "",
+      snippet: item.description || "",
+    });
+    if (hits.length >= 5) break;
+  }
+  return hits;
+}
+
 /**
  * Gemini native Google Search grounding (same LLM_API_KEY).
  * Uses one Flash-Lite request — paced by the chat RPM limiter.
+ * Skips when a chat slot is not available within `maxSlotWaitMs` so web_search
+ * cannot stall the Study AI stream for a full RPM window.
  */
 export async function geminiGoogleSearchText(
   query: string,
-  opts?: { siteHint?: string }
+  opts?: { siteHint?: string; maxSlotWaitMs?: number }
 ): Promise<string | null> {
   const apiKey = llmApiKey();
   if (!apiKey || !isGeminiBaseUrl(llmBaseUrl())) return null;
   const slug = chatModel().replace(/^models\//, "");
   const path = `${geminiNativeBaseUrl()}/models/${slug}:generateContent`;
-  await acquireGeminiChatSlot();
+  const gotSlot = await acquireGeminiChatSlot(opts?.maxSlotWaitMs ?? 2_500);
+  if (!gotSlot) {
+    logger.warn("study.gemini_google_search_skipped", { reason: "rpm_wait" });
+    return null;
+  }
   const res = await fetchWithRetry(path, {
     method: "POST",
-    timeoutMs: 20_000,
+    timeoutMs: 12_000,
     headers: {
       "Content-Type": "application/json",
       "x-goog-api-key": apiKey,

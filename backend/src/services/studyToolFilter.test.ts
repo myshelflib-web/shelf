@@ -13,6 +13,7 @@ describe("studyToolFilter", () => {
     expect(names).toContain("fetch_url");
     const web = tools.find((t) => t.function.name === "web_search");
     expect(web?.function.description).toMatch(/upsc|UPSC/i);
+    expect(web?.function.description).toMatch(/weather|live|public web/i);
   });
 
   it("includes all non-web tools when web search is allowed", () => {

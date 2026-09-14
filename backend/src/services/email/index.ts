@@ -18,3 +18,13 @@ export {
   welcomeEmail,
   subscriptionThankYouEmail,
 } from "./templates.js";
+export {
+  inactivityReminderEmail,
+  pickInactivityReminderVariant,
+} from "./inactivityReminder.js";
+export {
+  enqueueEmail,
+  isEmailSqsConfigured,
+  getEmailQueueUrl,
+} from "./emailQueue.js";
+export { startEmailQueueWorker, stopEmailQueueWorker } from "./emailQueueWorker.js";

@@ -3,6 +3,7 @@ import { signToken } from "../middleware/auth.js";
 import { toPublicUser } from "../utils/publicUser.js";
 import { logger } from "../utils/logger.js";
 import { enrichLogContext } from "../utils/logContext.js";
+import { markUserActiveNow } from "../services/userActivity.js";
 
 export function issueAuthResponse(
   res: Response,
@@ -21,6 +22,7 @@ export function issueAuthResponse(
   });
 
   enrichLogContext({ userId: user.id, userRole: user.role });
+  markUserActiveNow(user.id);
   (options?.req?.log ?? logger).info("auth.session.issued", {
     userId: user.id,
     userRole: user.role,

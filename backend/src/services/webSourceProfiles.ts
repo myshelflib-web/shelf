@@ -139,6 +139,5 @@ export function siteRestrictClause(
 export function webSourceHintForGoal(goal?: StudyGoal | null): string {
   const profile = webSourceProfile(goal);
   const track = profile.preferredDomains.slice(0, 6).join(", ");
-  const general = profile.generalDomains.slice(0, 4).join(", ");
-  return `${studyGoalLabel(goal ?? "GENERAL")}: prefer ${track}; also Medium/Quora/Wikipedia (${general}).`;
+  return `${studyGoalLabel(goal ?? "GENERAL")}: prefer ${track} for exam topics; use open public web for weather, news, and live facts.`;
 }

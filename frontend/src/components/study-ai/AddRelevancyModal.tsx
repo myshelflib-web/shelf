@@ -5,6 +5,7 @@ import { FileUp, X } from "lucide-react";
 import { api } from "@/lib/api";
 import type { StudyRelevancyDoc } from "@/types";
 
+// TODO: Add loading state for file upload
 export function AddRelevancyModal({
   onClose,
   onCreated,

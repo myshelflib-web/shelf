@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { LearnArticleJsonLd } from "@/components/seo/LearnArticleJsonLd";
 import { LearnArticleSeoIntro } from "@/components/seo/LearnArticleSeoIntro";
 import { LearnBreadcrumbJsonLd } from "@/components/seo/LearnBreadcrumbJsonLd";
+import { LearnSeoMain, LearnSeoShell } from "@/components/seo/LearnSeoShell";
 import { buildArticlePageMetadata } from "@/lib/seo/metadata";
 import {
   fetchLearnArticle,
@@ -79,7 +80,7 @@ export default async function LearnArticleLayout({
   );
 
   return (
-    <>
+    <LearnSeoShell>
       <LearnBreadcrumbJsonLd
         crumbs={[
           { name: "Learn", path: "/learn" },
@@ -110,7 +111,7 @@ export default async function LearnArticleLayout({
         articleTitle={articleTitle}
         description={description}
       />
-      {children}
-    </>
+      <LearnSeoMain>{children}</LearnSeoMain>
+    </LearnSeoShell>
   );
 }

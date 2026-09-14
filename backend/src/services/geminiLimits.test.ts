@@ -24,14 +24,27 @@ describe("geminiLimits", () => {
       },
     };
     const stamps: number[] = [];
-    await acquireSlidingWindow(stamps, 3, clock);
+    expect(await acquireSlidingWindow(stamps, 3, clock)).toBe(true);
     t = 1_000;
-    await acquireSlidingWindow(stamps, 3, clock);
+    expect(await acquireSlidingWindow(stamps, 3, clock)).toBe(true);
     expect(stamps).toHaveLength(2);
     expect(t).toBe(1_000);
-    await acquireSlidingWindow(stamps, 3, clock);
+    expect(await acquireSlidingWindow(stamps, 3, clock)).toBe(true);
     expect(t).toBeGreaterThanOrEqual(60_000);
     expect(stamps.length).toBeGreaterThanOrEqual(1);
     expect(stamps.length).toBeLessThanOrEqual(2);
+  });
+
+  it("returns false when maxWaitMs would be exceeded", async () => {
+    let t = 0;
+    const clock = {
+      now: () => t,
+      sleep: async (ms: number) => {
+        t += ms;
+      },
+    };
+    const stamps = [0, 0];
+    expect(await acquireSlidingWindow(stamps, 3, clock, 500)).toBe(false);
+    expect(t).toBe(0);
   });
 });

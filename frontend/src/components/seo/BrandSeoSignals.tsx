@@ -6,16 +6,16 @@ import {
 } from "@/lib/seo/brandIdentity";
 
 /**
- * Crawlable brand / misspelling signals only — visually hidden.
+ * Light crawlable brand alias signal — keep short for AEO trust.
  * Do not use this for visible landing marketing copy.
  */
 export function BrandSeoSignals() {
   return (
-    <div className="sr-only" aria-hidden="true">
+    <div className="sr-only">
       <p>{brandSeoAliasParagraph()}</p>
       <p>
-        {BRAND_NAME} alternate names for search:{" "}
-        {BRAND_ALTERNATE_NAMES.join(", ")}. Domain: {BRAND_DOMAIN}.
+        {BRAND_NAME} official domain: {BRAND_DOMAIN}. Alternate names:{" "}
+        {BRAND_ALTERNATE_NAMES.join(", ")}.
       </p>
     </div>
   );

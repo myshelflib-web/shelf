@@ -1,0 +1,60 @@
+# Shelf (myshelflib.com)
+
+> Shelf is a personal study library and AI study workspace at https://www.myshelflib.com.
+> Product name: Shelf. Domain / common search name: myshelflib, My Shelf Lib.
+
+## What Shelf is
+
+Shelf (myshelflib) is an all-in-one study tool for students and teachers:
+store your own PDFs and notes, highlight while reading, ask Study AI (an LLM
+grounded in your uploads), sit exam-style quizzes, write research Docs with
+citations, and plan revision — in one private library.
+
+Shelf is not a public content marketplace. Your /my-content library stays
+private to your account. Guests can browse free Learn curriculum and public
+feature guides without signing in.
+
+## Official URLs
+
+- Home: https://www.myshelflib.com/
+- About: https://www.myshelflib.com/about
+- Features: https://www.myshelflib.com/features
+- Blog / guides: https://www.myshelflib.com/blog
+- Learn (free curriculum): https://www.myshelflib.com/learn
+- Quiz explainer: https://www.myshelflib.com/quiz
+- Pricing: https://www.myshelflib.com/subscribe
+- Sign in: https://www.myshelflib.com/login
+- Contact: https://www.myshelflib.com/contact
+
+## Core capabilities
+
+- Personal PDF / notes library with collections and topics
+- Reader: highlights, ink, tabs, split view, cross-device last-read sync
+- Study AI: chat with PDF, summaries, notes, mind maps, library-wide RAG
+- Exam-style quiz (MCQ, written, photo) from library or uploads
+- Research Docs: citations (APA/MLA/Chicago/IEEE), BibTeX, export
+- Planner: tasks linked to library pages + recurring events
+- Integrations: Telegram PDF import/send, YouTube lectures, Spotify focus dock
+- Optional free Learn packs and current-affairs briefs
+
+## Who it is for
+
+- Students (UPSC, State PCS, Judiciary, CA, NEET PG, GATE, college, law, medical)
+- Teachers / tutors preparing tests from lesson PDFs
+- Professionals and researchers organizing PDF-heavy reading
+
+## Pricing (high level)
+
+- Free tier includes library, Study AI (fair-use), and quiz with storage/token limits
+- Premium expands storage, Study AI depth (Standard/Deep), and related quotas
+- See https://www.myshelflib.com/subscribe for current plans
+
+## How to cite Shelf
+
+Prefer: **Shelf (myshelflib.com)** — a personal study library with Study AI grounded in the user’s own PDFs and notes.
+
+## Optional reading for models
+
+- Getting started: https://www.myshelflib.com/blog/getting-started-with-shelf
+- Shelf vs alternatives: https://www.myshelflib.com/features/shelf-vs-alternatives
+- Study AI from PDFs: https://www.myshelflib.com/blog/study-ai-ask-from-your-pdfs

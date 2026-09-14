@@ -14,6 +14,8 @@ const API_URL =
 
 /** Keep sitemap generation fast so Googlebot does not time out. */
 const FETCH_MS = 6_000;
+/** Soft cap so a huge Learn catalog cannot OOM the sitemap route. */
+const LEARN_URL_CAP = 8_000;
 
 type SitemapSlugList = {
   routes?: Array<{ path: string; lastModified?: string }>;
@@ -31,6 +33,13 @@ type SubjectList = {
   }>;
 };
 
+function safeLastModified(value?: string): string | undefined {
+  if (!value) return undefined;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return undefined;
+  return d.toISOString();
+}
+
 function mapSlugRoutes(
   siteUrl: string,
   routes: Array<{ path: string; lastModified?: string }>
@@ -39,16 +48,16 @@ function mapSlugRoutes(
     const depth = route.path.split("/").filter(Boolean).length;
     const priority =
       depth >= 4 ? 0.85 : depth === 3 ? 0.7 : depth === 2 ? 0.8 : 0.75;
+    const lastModified = safeLastModified(route.lastModified);
     return {
       url: `${siteUrl}${route.path}`,
       changeFrequency: "weekly" as const,
       priority,
-      ...(route.lastModified ? { lastModified: route.lastModified } : {}),
+      ...(lastModified ? { lastModified } : {}),
     };
   });
 }
 
-/** Preferred lightweight endpoint (backend ≥ IndexNow deploy). */
 async function fetchLearnRoutesFromSitemapSlugs(
   siteUrl: string
 ): Promise<MetadataRoute.Sitemap> {
@@ -59,13 +68,12 @@ async function fetchLearnRoutesFromSitemapSlugs(
     });
     if (!res.ok) return [];
     const data = (await res.json()) as SitemapSlugList;
-    return mapSlugRoutes(siteUrl, data.routes ?? []);
+    return mapSlugRoutes(siteUrl, (data.routes ?? []).slice(0, LEARN_URL_CAP));
   } catch {
     return [];
   }
 }
 
-/** Fallback when sitemap-slugs is not deployed yet on the API. */
 async function fetchLearnRoutesFromSubjects(
   siteUrl: string
 ): Promise<MetadataRoute.Sitemap> {
@@ -93,10 +101,13 @@ async function fetchLearnRoutesFromSubjects(
             path: `/learn/${subject.slug}/${topic.slug}/${article.slug}`,
             ...(article.updatedAt ? { lastModified: article.updatedAt } : {}),
           });
+          if (routes.length >= LEARN_URL_CAP) break;
         }
+        if (routes.length >= LEARN_URL_CAP) break;
       }
+      if (routes.length >= LEARN_URL_CAP) break;
     }
-    return mapSlugRoutes(siteUrl, routes);
+    return mapSlugRoutes(siteUrl, routes.slice(0, LEARN_URL_CAP));
   } catch {
     return [];
   }
@@ -108,12 +119,8 @@ async function fetchLearnRoutes(siteUrl: string): Promise<MetadataRoute.Sitemap>
   return fetchLearnRoutesFromSubjects(siteUrl);
 }
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = getSiteUrl();
-
-  // Static blog catalog — never block sitemap on a cold backend.
+function buildCoreRoutes(siteUrl: string): MetadataRoute.Sitemap {
   const blogSlugs = STATIC_BLOG_POSTS.map((p) => p.slug);
-
   const featureRoutes: MetadataRoute.Sitemap = getAllFeatureSlugs()
     .filter((slug) => {
       const f = getFeatureBySlug(slug);
@@ -125,7 +132,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
-  const staticRoutes: MetadataRoute.Sitemap = [
+  const trackRoutes: MetadataRoute.Sitemap = INDEXABLE_LEARN_TRACKS.map(
+    (goal) => ({
+      url: `${siteUrl}${learnTrackPath(goal)}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.88,
+    })
+  );
+
+  return [
     { url: `${siteUrl}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${siteUrl}/features`, changeFrequency: "weekly", priority: 0.88 },
     { url: `${siteUrl}/blog`, changeFrequency: "weekly", priority: 0.85 },
@@ -141,6 +156,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}/quiz`, changeFrequency: "weekly", priority: 0.75 },
     { url: `${siteUrl}/contact`, changeFrequency: "monthly", priority: 0.4 },
     {
+      url: `${siteUrl}/llms.txt`,
+      changeFrequency: "monthly",
+      priority: 0.3,
+    },
+    {
       url: `${siteUrl}/legal/copyright`,
       changeFrequency: "yearly",
       priority: 0.3,
@@ -151,21 +171,41 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.75,
     })),
     ...featureRoutes,
-  ];
-
-  const learnRoutes = await fetchLearnRoutes(siteUrl);
-  const currentAffairsRoutes = await fetchCurrentAffairsSitemapSlugs(siteUrl);
-  const trackRoutes: MetadataRoute.Sitemap = INDEXABLE_LEARN_TRACKS.map(
-    (goal) => ({
-      url: `${siteUrl}${learnTrackPath(goal)}`,
-      changeFrequency: "weekly" as const,
-      priority: 0.88,
-    })
-  );
-  return [
-    ...staticRoutes,
     ...trackRoutes,
-    ...learnRoutes,
-    ...currentAffairsRoutes,
   ];
+}
+
+/**
+ * Split sitemaps so a large Learn corpus cannot 500 the single sitemap route.
+ * Served as /sitemap/0.xml, /sitemap/1.xml, /sitemap/2.xml (+ index).
+ */
+export async function generateSitemaps() {
+  return [{ id: 0 }, { id: 1 }, { id: 2 }];
+}
+
+export default async function sitemap({
+  id,
+}: {
+  id: number | string;
+}): Promise<MetadataRoute.Sitemap> {
+  const siteUrl = getSiteUrl();
+  const shard = typeof id === "string" ? Number(id) : id;
+
+  try {
+    if (shard === 0) return buildCoreRoutes(siteUrl);
+    if (shard === 1) return await fetchLearnRoutes(siteUrl);
+    if (shard === 2) {
+      const rows = await fetchCurrentAffairsSitemapSlugs(siteUrl);
+      return rows.map((row) => ({
+        ...row,
+        ...(row.lastModified
+          ? { lastModified: safeLastModified(row.lastModified) }
+          : {}),
+      }));
+    }
+    return [];
+  } catch {
+    // Never 500 the sitemap — static core is enough for crawlers to recover.
+    return shard === 0 ? buildCoreRoutes(siteUrl) : [];
+  }
 }

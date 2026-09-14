@@ -7,7 +7,7 @@ export const FETCH_URL_TOOL: ChatToolDef = {
   function: {
     name: "fetch_url",
     description:
-      "Fetch readable text from a public https page after web_search. Supports Medium, Quora, Wikipedia, and track-specific sites. Do not fetch private or login URLs.",
+      "Fetch readable text from a public https page after web_search. Do not fetch private or login URLs.",
     parameters: {
       type: "object",
       properties: {
@@ -28,7 +28,7 @@ export function buildWebSearchTool(goal?: StudyGoal | null): ChatToolDef {
     function: {
       name: "web_search",
       description:
-        `Search the public web (Google + Medium, Quora, Wikipedia, and ${profile.label} sites such as ${trackExamples}). Use when the library/PDF does not cover the question or for current affairs.`,
+        `Search the full public web for any topic — general knowledge, how-tos, people, places, live facts, news, weather — plus ${profile.label} sites such as ${trackExamples}. Use whenever the library/PDF does not cover the question.`,
       parameters: {
         type: "object",
         properties: {
@@ -40,7 +40,7 @@ export function buildWebSearchTool(goal?: StudyGoal | null): ChatToolDef {
             type: "string",
             enum: ["all", "track", "general"],
             description:
-              "all (default): track sites + general web. track: exam-specific sites only. general: Medium/Quora/Wikipedia only.",
+              "all (default): open web + track sites. track: exam sites (falls back to open web). general: full open web for any topic.",
           },
         },
         required: ["query"],

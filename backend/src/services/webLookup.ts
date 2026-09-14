@@ -2,11 +2,17 @@ import { StudyGoal } from "@prisma/client";
 import { fetchWithRetry } from "../utils/fetchRetry.js";
 import { logger, errorFields } from "../utils/logger.js";
 import {
+  braveWebSearchHits,
   formatWebHits,
   geminiGoogleSearchText,
   googleCustomSearchHits,
   type WebHit,
 } from "./googleWebSearch.js";
+import {
+  duckDuckGoHtmlHits,
+  googleNewsRssHits,
+  wttrWeatherHits,
+} from "./webFreeSources.js";
 import {
   siteRestrictClause,
   webSourceProfile,
@@ -51,7 +57,10 @@ async function wikipediaHits(query: string, timeoutMs = 8_000): Promise<WebHit[]
   return hits;
 }
 
-async function duckDuckGoHits(query: string, timeoutMs = 8_000): Promise<WebHit[]> {
+async function duckDuckGoInstantHits(
+  query: string,
+  timeoutMs = 8_000
+): Promise<WebHit[]> {
   const url =
     "https://api.duckduckgo.com/?" +
     new URLSearchParams({
@@ -102,45 +111,69 @@ function dedupeHits(hits: WebHit[]): WebHit[] {
   return out;
 }
 
-async function openWebHits(
+/**
+ * Keyless overall web search (any query) + optional weather/news boosts.
+ * DDG HTML + Wikipedia cover general topics; wttr / News RSS only fire when relevant.
+ */
+async function freeLiveHits(
   query: string,
-  domains: readonly string[],
   timeoutMs: number
 ): Promise<WebHit[]> {
-  const site = siteRestrictClause(domains, 5);
-  if (site) {
-    const restricted = await googleCustomSearchHits(query, {
-      siteRestrict: site,
-    });
-    if (restricted.length) return restricted;
-  }
-  const broad = await googleCustomSearchHits(query);
-  if (broad.length) {
-    if (domains.length === 0) return broad;
-    const allowed = new Set(domains.map((d) => d.toLowerCase()));
-    const filtered = broad.filter((h) => {
-      try {
-        const host = new URL(h.url).hostname.replace(/^www\./, "");
-        return [...allowed].some((d) => host === d || host.endsWith(`.${d}`));
-      } catch {
-        return false;
-      }
-    });
-    if (filtered.length) return filtered;
-  }
-  const siteHint = domains.slice(0, 8).join(", ");
-  const grounded = await geminiGoogleSearchText(query, { siteHint });
-  if (grounded) {
-    return [{ title: "Web summary", url: "", snippet: grounded }];
-  }
-  const [wiki, ddg] = await Promise.allSettled([
+  const settled = await Promise.allSettled([
+    duckDuckGoHtmlHits(query, timeoutMs),
     wikipediaHits(query, timeoutMs),
-    duckDuckGoHits(query, timeoutMs),
+    duckDuckGoInstantHits(query, timeoutMs),
+    wttrWeatherHits(query, timeoutMs),
+    googleNewsRssHits(query, timeoutMs),
   ]);
-  return [
-    ...(wiki.status === "fulfilled" ? wiki.value : []),
-    ...(ddg.status === "fulfilled" ? ddg.value : []),
-  ];
+  const merged: WebHit[] = [];
+  for (const row of settled) {
+    if (row.status === "fulfilled") merged.push(...row.value);
+  }
+  return dedupeHits(merged);
+}
+
+/**
+ * Overall public web search pipeline (any topic):
+ * 1. Google CSE (if configured)
+ * 2. Brave Search API (if configured)
+ * 3. Keyless general search (DDG HTML + Wikipedia + Instant Answer)
+ * 4. Gemini Google Search grounding (last resort)
+ */
+async function openWebHits(
+  query: string,
+  timeoutMs: number,
+  opts?: { allowGemini?: boolean }
+): Promise<WebHit[]> {
+  const cse = await googleCustomSearchHits(query);
+  if (cse.length) return cse;
+
+  const brave = await braveWebSearchHits(query);
+  if (brave.length) return brave;
+
+  const free = await freeLiveHits(query, timeoutMs);
+  if (free.length) return free;
+
+  if (opts?.allowGemini !== false) {
+    const grounded = await geminiGoogleSearchText(query, {
+      maxSlotWaitMs: 2_500,
+    });
+    if (grounded) {
+      return [{ title: "Web summary", url: "", snippet: grounded }];
+    }
+  }
+
+  return [];
+}
+
+/** Soft preference for exam / track sites — never the only path for live facts. */
+async function trackRestrictedHits(
+  query: string,
+  domains: readonly string[]
+): Promise<WebHit[]> {
+  const site = siteRestrictClause(domains, 5);
+  if (!site) return [];
+  return googleCustomSearchHits(query, { siteRestrict: site });
 }
 
 async function collectHits(
@@ -149,33 +182,22 @@ async function collectHits(
   profile: ReturnType<typeof webSourceProfile>,
   timeoutMs: number
 ): Promise<{ track: WebHit[]; general: WebHit[] }> {
-  const tasks: Promise<{ kind: "track" | "general"; hits: WebHit[] }>[] = [];
-
-  if (scope === "all" || scope === "track") {
-    tasks.push(
-      openWebHits(query, profile.preferredDomains, timeoutMs).then((hits) => ({
-        kind: "track" as const,
-        hits,
-      }))
-    );
-  }
-  if (scope === "all" || scope === "general") {
-    tasks.push(
-      openWebHits(query, profile.generalDomains, timeoutMs).then((hits) => ({
-        kind: "general" as const,
-        hits,
-      }))
-    );
+  if (scope === "track") {
+    const track = await trackRestrictedHits(query, profile.preferredDomains);
+    if (track.length) return { track, general: [] };
+    const open = await openWebHits(query, timeoutMs);
+    return { track: open, general: [] };
   }
 
-  const settled = await Promise.allSettled(tasks);
-  let track: WebHit[] = [];
-  let general: WebHit[] = [];
-  for (const row of settled) {
-    if (row.status !== "fulfilled") continue;
-    if (row.value.kind === "track") track = row.value.hits;
-    else general = row.value.hits;
+  if (scope === "general") {
+    const general = await openWebHits(query, timeoutMs);
+    return { track: [], general };
   }
+
+  const [general, track] = await Promise.all([
+    openWebHits(query, timeoutMs),
+    trackRestrictedHits(query, profile.preferredDomains),
+  ]);
   return { track, general };
 }
 
@@ -192,12 +214,10 @@ function formatScopedHits(
     );
   }
   if (scope !== "track" && general.length) {
-    parts.push(
-      `General web (Medium, Quora, etc.):\n${formatWebHits(general.slice(0, 4))}`
-    );
+    parts.push(`Public web:\n${formatWebHits(general.slice(0, 5))}`);
   }
   if (parts.length === 0) {
-    const merged = dedupeHits([...track, ...general]).slice(0, 4);
+    const merged = dedupeHits([...track, ...general]).slice(0, 5);
     if (merged.length === 0) {
       return "No public web results. Answer from the library or say you are unsure.";
     }
@@ -212,7 +232,7 @@ export async function webLookup(
 ): Promise<string> {
   const q = query.trim().slice(0, 200);
   if (!q) return "No search query provided.";
-  const timeoutMs = opts?.timeoutMs ?? 5_000;
+  const timeoutMs = opts?.timeoutMs ?? 8_000;
   const scope = opts?.sourceScope ?? "all";
   const profile = webSourceProfile(opts?.studyGoal);
 

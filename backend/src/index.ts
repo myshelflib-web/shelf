@@ -58,6 +58,8 @@ import {
 import { startVectorIndexWorker } from "./services/vectorIndexWorker.js";
 import { startIngestScheduler, startLinkHealthScheduler } from "./services/ingest/ingestScheduler.js";
 import { startPreloadedLinkHealthScheduler } from "./services/preloaded/linkHealthScheduler.js";
+import { startInactivityEmailWorker } from "./services/inactivityEmailWorker.js";
+import { startEmailQueueWorker } from "./services/email/emailQueueWorker.js";
 import { isVectorConfigured, vectorConfigSummary } from "./services/vectorStore.js";
 import { logEmbeddingConfig } from "./services/embeddings.js";
 import { llmConfigSummary } from "./services/llmConfig.js";
@@ -253,6 +255,8 @@ app.listen(PORT, () => {
   startIngestScheduler();
   startLinkHealthScheduler();
   startPreloadedLinkHealthScheduler();
+  startInactivityEmailWorker();
+  startEmailQueueWorker();
   void resumePendingContentGenJobs();
   void pruneStalePreloadedArticles().catch((err) =>
     logger.warn("preloaded.prune.boot_failed", errorFields(err))

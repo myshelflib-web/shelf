@@ -16,6 +16,7 @@ export function registerSubjectsSitemapRoutes(router: Router): void {
     const subjects = await prisma.subject.findMany({
       where: publicLearnSubjectWhere(),
       orderBy: { order: "asc" },
+      take: 200,
       select: {
         slug: true,
         createdAt: true,
@@ -35,6 +36,7 @@ export function registerSubjectsSitemapRoutes(router: Router): void {
     });
 
     const routes: SitemapRoute[] = [];
+    const ROUTE_CAP = 8_000;
 
     for (const subject of subjects) {
       const topics = subject.topics.filter((t) => t.articles.length > 0);
@@ -60,8 +62,11 @@ export function registerSubjectsSitemapRoutes(router: Router): void {
             path: `/learn/${subject.slug}/${topic.slug}/${article.slug}`,
             lastModified: article.updatedAt.toISOString(),
           });
+          if (routes.length >= ROUTE_CAP) break;
         }
+        if (routes.length >= ROUTE_CAP) break;
       }
+      if (routes.length >= ROUTE_CAP) break;
     }
 
     res.json({ routes });
