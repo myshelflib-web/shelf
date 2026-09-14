@@ -88,7 +88,7 @@ const STUDY_LOOKUP_TOOLS: ChatToolDef[] = [
     function: {
       name: "web_search",
       description:
-        "Search the public web (Google) for live facts, news, weather, and general knowledge. Use when the library does not cover the question.",
+        "Search the full public web for any topic (facts, how-tos, news, weather). Use when the library does not cover the question.",
       parameters: {
         type: "object",
         properties: {

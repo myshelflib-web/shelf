@@ -28,7 +28,7 @@ export function buildWebSearchTool(goal?: StudyGoal | null): ChatToolDef {
     function: {
       name: "web_search",
       description:
-        `Search the public web (Google) for live facts, news, weather, and general knowledge. Also covers ${profile.label} sites such as ${trackExamples}. Use when the library/PDF does not cover the question, or for anything time-sensitive.`,
+        `Search the full public web for any topic — general knowledge, how-tos, people, places, live facts, news, weather — plus ${profile.label} sites such as ${trackExamples}. Use whenever the library/PDF does not cover the question.`,
       parameters: {
         type: "object",
         properties: {
@@ -40,7 +40,7 @@ export function buildWebSearchTool(goal?: StudyGoal | null): ChatToolDef {
             type: "string",
             enum: ["all", "track", "general"],
             description:
-              "all (default): public web + track sites. track: exam-specific sites (falls back to public web). general: open public web (weather, news, Wikipedia) — not limited to Medium/Quora.",
+              "all (default): open web + track sites. track: exam sites (falls back to open web). general: full open web for any topic.",
           },
         },
         required: ["query"],

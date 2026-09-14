@@ -2,6 +2,7 @@ import { StudyGoal } from "@prisma/client";
 import { fetchWithRetry } from "../utils/fetchRetry.js";
 import { logger, errorFields } from "../utils/logger.js";
 import {
+  braveWebSearchHits,
   formatWebHits,
   geminiGoogleSearchText,
   googleCustomSearchHits,
@@ -110,17 +111,20 @@ function dedupeHits(hits: WebHit[]): WebHit[] {
   return out;
 }
 
-/** Keyless live sources when CSE / Gemini grounding are unset or empty. */
+/**
+ * Keyless overall web search (any query) + optional weather/news boosts.
+ * DDG HTML + Wikipedia cover general topics; wttr / News RSS only fire when relevant.
+ */
 async function freeLiveHits(
   query: string,
   timeoutMs: number
 ): Promise<WebHit[]> {
   const settled = await Promise.allSettled([
-    wttrWeatherHits(query, timeoutMs),
-    googleNewsRssHits(query, timeoutMs),
     duckDuckGoHtmlHits(query, timeoutMs),
     wikipediaHits(query, timeoutMs),
     duckDuckGoInstantHits(query, timeoutMs),
+    wttrWeatherHits(query, timeoutMs),
+    googleNewsRssHits(query, timeoutMs),
   ]);
   const merged: WebHit[] = [];
   for (const row of settled) {
@@ -129,17 +133,24 @@ async function freeLiveHits(
   return dedupeHits(merged);
 }
 
-/** Unrestricted public web — weather, news, live facts. */
+/**
+ * Overall public web search pipeline (any topic):
+ * 1. Google CSE (if configured)
+ * 2. Brave Search API (if configured)
+ * 3. Keyless general search (DDG HTML + Wikipedia + Instant Answer)
+ * 4. Gemini Google Search grounding (last resort)
+ */
 async function openWebHits(
   query: string,
   timeoutMs: number,
   opts?: { allowGemini?: boolean }
 ): Promise<WebHit[]> {
-  const broad = await googleCustomSearchHits(query);
-  if (broad.length) return broad;
+  const cse = await googleCustomSearchHits(query);
+  if (cse.length) return cse;
 
-  // Keyless live APIs first (wttr / News RSS / DDG HTML) — work without CSE
-  // and avoid waiting on Gemini grounding RPM when the answer is weather/news.
+  const brave = await braveWebSearchHits(query);
+  if (brave.length) return brave;
+
   const free = await freeLiveHits(query, timeoutMs);
   if (free.length) return free;
 

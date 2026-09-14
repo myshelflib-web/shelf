@@ -126,6 +126,55 @@ export async function googleCustomSearchHits(
   return hitsFromCustomSearch(data);
 }
 
+/** Brave Search API — optional general web search (https://brave.com/search/api/). */
+export function braveSearchApiKey(): string | null {
+  const key = (process.env.BRAVE_SEARCH_API_KEY ?? "").trim();
+  return key || null;
+}
+
+export async function braveWebSearchHits(query: string): Promise<WebHit[]> {
+  const key = braveSearchApiKey();
+  if (!key) return [];
+  const url =
+    "https://api.search.brave.com/res/v1/web/search?" +
+    new URLSearchParams({
+      q: query.slice(0, 256),
+      count: "5",
+    }).toString();
+  const res = await fetchWithRetry(url, {
+    timeoutMs: 8_000,
+    headers: {
+      Accept: "application/json",
+      "X-Subscription-Token": key,
+      "User-Agent": UA,
+    },
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    logger.warn("study.brave_search_failed", {
+      status: res.status,
+      body: body.slice(0, 200),
+    });
+    return [];
+  }
+  const data = (await res.json()) as {
+    web?: {
+      results?: Array<{ title?: string; url?: string; description?: string }>;
+    };
+  };
+  const hits: WebHit[] = [];
+  for (const item of data.web?.results ?? []) {
+    if (!item.title && !item.description) continue;
+    hits.push({
+      title: item.title || "Result",
+      url: item.url || "",
+      snippet: item.description || "",
+    });
+    if (hits.length >= 5) break;
+  }
+  return hits;
+}
+
 /**
  * Gemini native Google Search grounding (same LLM_API_KEY).
  * Uses one Flash-Lite request — paced by the chat RPM limiter.

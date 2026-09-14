@@ -36,7 +36,7 @@ describe("buildWebSearchTool", () => {
       properties?: { sourceScope?: { enum?: string[]; description?: string } };
     };
     expect(params.properties?.sourceScope?.enum).toContain("track");
-    expect(params.properties?.sourceScope?.description).toMatch(/open public web/i);
+    expect(params.properties?.sourceScope?.description).toMatch(/full open web/i);
   });
 
   it("covers every study goal", () => {

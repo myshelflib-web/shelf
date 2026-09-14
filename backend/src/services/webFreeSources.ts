@@ -19,7 +19,7 @@ export function looksLikeNewsQuery(query: string): boolean {
 
 /** Strip weather filler words so wttr.in gets a place name. */
 export function weatherPlaceFromQuery(query: string): string {
-  let place = query
+  const place = query
     .replace(WEATHER_RE, " ")
     .replace(
       /\b(what|whats|what's|is|the|like|today|tonight|now|current|in|at|for|please|tell|me|about)\b/gi,
